@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../components/GeneratorForm";
 
 export async function getStaticPaths() {
   return [
@@ -8,6 +9,7 @@ export async function getStaticPaths() {
       props: {
         title: "PhonePe QR Generator",
         headline: "Create a free PhonePe compatible UPI QR code",
+        presetType: "phonepe",
         intro:
           "Generate a UPI QR that users can scan from PhonePe and other major UPI apps without signup."
       }
@@ -17,6 +19,7 @@ export async function getStaticPaths() {
       props: {
         title: "Google Pay QR Generator",
         headline: "Create a free Google Pay compatible UPI QR code",
+        presetType: "gpay",
         intro:
           "Make a Google Pay friendly UPI payment QR with optional amount and note for faster collections."
       }
@@ -26,6 +29,7 @@ export async function getStaticPaths() {
       props: {
         title: "Paytm QR Generator",
         headline: "Create a free Paytm compatible UPI QR code",
+        presetType: "paytm",
         intro:
           "Build a Paytm compatible UPI QR for shops, local businesses, and daily payment collections."
       }
@@ -35,6 +39,7 @@ export async function getStaticPaths() {
       props: {
         title: "Donation QR Generator",
         headline: "Create a donation UPI QR for temples, NGOs, and causes",
+        presetType: "donation",
         intro:
           "Set up a free donation QR for events, religious institutions, and community fundraising campaigns."
       }
@@ -42,7 +47,7 @@ export async function getStaticPaths() {
   ];
 }
 
-const { title, headline, intro } = Astro.props;
+const { title, headline, intro, presetType } = Astro.props;
 const description = `${headline}. ${intro}`;
 ---
 
@@ -50,7 +55,7 @@ const description = `${headline}. ${intro}`;
   <main class="px-4 py-16 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to UPI QR Generator</a>
-      <p class="mt-6 text-sm font-black uppercase tracking-[0.2em] text-leaf">Payment Quick-Links</p>
+      <p class="mt-6 text-sm font-black uppercase tracking-[0.2em] text-leaf font-bold">Payment Quick-Links</p>
       <h1 class="mt-3 text-4xl font-black tracking-tight text-forest md:text-6xl">{headline}</h1>
       <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/72">{intro}</p>
 
@@ -75,12 +80,10 @@ const description = `${headline}. ${intro}`;
         </div>
       </div>
 
-      <a
-        href="/#generator"
-        class="mt-8 inline-flex rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
-      >
-        Generate your QR now
-      </a>
+      <div class="mt-12 pt-8 border-t border-forest/10">
+        <h2 class="text-2xl font-black text-forest mb-6">Customize & Generate</h2>
+        <GeneratorForm client:load presetType={presetType as any} />
+      </div>
     </div>
   </main>
 </BaseLayout>
