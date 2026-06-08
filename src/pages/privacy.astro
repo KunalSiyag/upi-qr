@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "Privacy Policy | UPI QR";
+const description = "Privacy Policy for UPI QR Generator. We value your privacy and do not collect personal financial data or transactions.";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Generator</a>
+      
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Privacy Policy</h1>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: June 8, 2026</p>
+
+      <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">1. Introduction</h2>
+          <p>
+            Welcome to UPI QR ("we," "our," or "us"). We are committed to protecting your personal privacy. This Privacy Policy explains how our web application operates and details our data practices. By using our website and tools, you consent to the data practices described in this policy.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">2. No Payment or Transaction Data Collection</h2>
+          <p>
+            UPI QR is a local-first browser utility. <strong>We do not collect, store, process, or transmit any financial transaction data, bank accounts, UPI PINs, or transaction histories.</strong> The generation of the UPI payment QR code happens entirely client-side inside your web browser. When users scan the QR code using a mobile device, the transaction is processed directly through the secure UPI network by your selected bank application.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">3. Local Browser Storage (Draft Persistence)</h2>
+          <p>
+            For your convenience, we utilize your browser's local storage (LocalStorage) to save your form fields (Payee name, VPA, and layout selections) as drafts. This allows you to close the tab and return later without re-typing. This data remains on your local device and is never uploaded to our servers. You can clear this draft at any time by clearing your browser cache/storage.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. Cookies and Analytical Tools</h2>
+          <p>
+            We may use cookies and tracking technologies (such as Google Analytics) to gather anonymous, aggregated usage statistics (e.g., page views, session duration, device types) to help us analyze traffic and improve user experience. These tools do not collect personally identifiable information. You can configure your browser settings to refuse cookies if you prefer.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Advertising (Google AdSense)</h2>
+          <p>
+            We may display third-party advertisements via Google AdSense to fund our free utility. Google AdSense uses cookies (like the DoubleClick cookie) to serve ads based on users' visits to our site and other sites on the internet. Users may opt out of personalized advertising by visiting Google's Ad Settings.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. Contact Us</h2>
+          <p>
+            If you have any questions or feedback regarding this Privacy Policy, please feel free to reach out to us at <a href="mailto:support@upiqr.in" class="text-leaf underline font-semibold">support@upiqr.in</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "Terms of Service | UPI QR";
+const description = "Terms of Service for UPI QR. Use our free tool to generate standard compliant UPI payment codes and posters.";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Generator</a>
+      
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Terms of Service</h1>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: June 8, 2026</p>
+
+      <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">1. Acceptance of Terms</h2>
+          <p>
+            By accessing or using the UPI QR website and tool (the "Service"), you agree to be bound by these Terms of Service. If you do not agree to these terms, you must not use or access our utility.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">2. Description of Service</h2>
+          <p>
+            UPI QR provides a free browser-based tool to compile standard Unified Payments Interface (UPI) parameters (VPA ID, payee name, amount, note) into standardized QR codes and custom designed poster standees. The Service is offered strictly as-is for convenience and educational purposes.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">3. User Responsibility & VPA Accuracy</h2>
+          <p>
+            You are solely responsible for ensuring the accuracy of the Payee Name, UPI ID (Virtual Payment Address/VPA), Amount, and Note that you input into the generator. <strong>We are not responsible for transactions sent to incorrect, misspelled, or fraudulent UPI addresses.</strong> You must verify the QR code scans and displays correct merchant info prior to publishing, printing, or placing it in a commercial environment.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. Disclaimer of Warranties</h2>
+          <p>
+            The Service is provided "as is" and "as available" without any warranty of any kind, express or implied. We do not guarantee that the generated QR codes will scan correctly on all devices or with all mobile banking software. We disclaim any liability for failed payments, transaction timeouts, banking system downtime, or financial loss of any kind arising from the use of QR codes built on this website.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Limitations of Liability</h2>
+          <p>
+            In no event shall UPI QR, its developers, or affiliates be liable for any direct, indirect, incidental, special, consequential, or exemplary damages, including but not limited to damages for loss of profits, goodwill, use, data, or other intangible losses resulting from the use or inability to use this service.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. Modifications to Terms</h2>
+          <p>
+            We reserve the right to modify or replace these terms at any time. Your continued use of the website following any changes constitutes acceptance of those new terms.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

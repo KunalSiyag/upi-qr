@@ -1,0 +1,86 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+export async function getStaticPaths() {
+  return [
+    {
+      params: { slug: "phonepe-qr-generator" },
+      props: {
+        title: "PhonePe QR Generator",
+        headline: "Create a free PhonePe compatible UPI QR code",
+        intro:
+          "Generate a UPI QR that users can scan from PhonePe and other major UPI apps without signup."
+      }
+    },
+    {
+      params: { slug: "google-pay-qr-generator" },
+      props: {
+        title: "Google Pay QR Generator",
+        headline: "Create a free Google Pay compatible UPI QR code",
+        intro:
+          "Make a Google Pay friendly UPI payment QR with optional amount and note for faster collections."
+      }
+    },
+    {
+      params: { slug: "paytm-qr-generator" },
+      props: {
+        title: "Paytm QR Generator",
+        headline: "Create a free Paytm compatible UPI QR code",
+        intro:
+          "Build a Paytm compatible UPI QR for shops, local businesses, and daily payment collections."
+      }
+    },
+    {
+      params: { slug: "donation-qr-generator" },
+      props: {
+        title: "Donation QR Generator",
+        headline: "Create a donation UPI QR for temples, NGOs, and causes",
+        intro:
+          "Set up a free donation QR for events, religious institutions, and community fundraising campaigns."
+      }
+    }
+  ];
+}
+
+const { title, headline, intro } = Astro.props;
+const description = `${headline}. ${intro}`;
+---
+
+<BaseLayout title={`${title} | UPI QR`} description={description}>
+  <main class="px-4 py-16 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to UPI QR Generator</a>
+      <p class="mt-6 text-sm font-black uppercase tracking-[0.2em] text-leaf">Payment Quick-Links</p>
+      <h1 class="mt-3 text-4xl font-black tracking-tight text-forest md:text-6xl">{headline}</h1>
+      <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/72">{intro}</p>
+
+      <div class="mt-8 grid gap-4 md:grid-cols-3">
+        <div class="rounded-[1.5rem] bg-mint p-5">
+          <h2 class="text-lg font-black text-forest">100% Secure Transfers</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            All payments are processed peer-to-peer over the NPCI network directly from customer bank to your bank.
+          </p>
+        </div>
+        <div class="rounded-[1.5rem] bg-cream p-5">
+          <h2 class="text-lg font-black text-forest">No Commissions</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            UPI QR is a completely free utility. We do not intermediate payment services or levy any platform fees.
+          </p>
+        </div>
+        <div class="rounded-[1.5rem] bg-[#f2e5cd] p-5">
+          <h2 class="text-lg font-black text-forest">High-Quality Output</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            Download clean, high-resolution poster images ready to print or share instantly via email, messaging, or chat.
+          </p>
+        </div>
+      </div>
+
+      <a
+        href="/#generator"
+        class="mt-8 inline-flex rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
+      >
+        Generate your QR now
+      </a>
+    </div>
+  </main>
+</BaseLayout>
