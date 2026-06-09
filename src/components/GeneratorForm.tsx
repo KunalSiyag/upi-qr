@@ -9,6 +9,14 @@ const presetLogos = {
   bhim: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="30" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" /><path d="M25 25 L60 85 L25 85 Z" fill="#f05a28" /><path d="M95 95 L60 35 L95 35 Z" fill="#00a651" /><text x="60" y="112" font-family="sans-serif" font-weight="900" font-size="22" fill="#002e6e" text-anchor="middle">BHIM</text></svg>`)}`
 };
 
+const presetCovers = {
+  saffron: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#ff7e5f"/><stop offset="100%" stop-color="#feb47b"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><circle cx="200" cy="100" r="85" fill="#ffffff" opacity="0.08"/><circle cx="200" cy="100" r="115" fill="#ffffff" opacity="0.04"/></svg>`)}`,
+  grid: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><defs><pattern id="p" width="20" height="20" patternUnits="userSpaceOnUse"><path d="M 20 0 L 0 0 0 20" fill="none" stroke="#287a57" stroke-width="0.75" stroke-opacity="0.12"/></pattern></defs><rect width="400" height="200" fill="#fafafa"/><rect width="400" height="200" fill="url(#p)"/></svg>`)}`,
+  cafe: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#6f4e37"/><stop offset="100%" stop-color="#a67b5b"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><path d="M20 20h20v20H20zm100 80h20v20h-20zm120-60h20v20h-20z" fill="#ffffff" opacity="0.05"/></svg>`)}`,
+  waves: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#4f46e5"/><stop offset="100%" stop-color="#ec4899"/></linearGradient></defs><rect width="400" height="200" fill="url(#g)"/><path d="M 0 100 Q 100 50 200 100 T 400 100 L 400 200 L 0 200 Z" fill="#ffffff" opacity="0.1"/></svg>`)}`,
+  ruled: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="400" height="200" viewBox="0 0 400 200"><defs><pattern id="p" width="10" height="20" patternUnits="userSpaceOnUse"><line x1="0" y1="20" x2="10" y2="20" stroke="#bae6fd" stroke-width="1"/></pattern></defs><rect width="400" height="200" fill="#f8fafc"/><rect width="400" height="200" fill="url(#p)"/><line x1="40" y1="0" x2="40" y2="200" stroke="#f87171" stroke-width="1" opacity="0.4"/></svg>`)}`
+};
+
 function loadImage(src: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -17,6 +25,16 @@ function loadImage(src: string): Promise<HTMLImageElement> {
     img.onload = () => resolve(img);
     img.onerror = (e) => reject(e);
   });
+}
+
+function getContrastColor(hexColor: string) {
+  if (!hexColor || hexColor.length < 7) return "#ffffff";
+  const hex = hexColor.replace("#", "");
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  const yiq = (r * 299 + g * 587 + b * 114) / 1000;
+  return yiq >= 128 ? "#000000" : "#ffffff";
 }
 
 type FormState = {
@@ -29,10 +47,14 @@ type FormState = {
   logoUrl: string;
   logoSize: string;
   logoPosition: "qr-center" | "header";
-  coverType: "none" | "custom";
+  coverType: "none" | "custom" | "saffron" | "grid" | "cafe" | "waves" | "ruled";
   coverUrl: string;
   coverPosition: "top-banner" | "full-bg";
   coverOpacity: string;
+  themeType: "default" | "custom";
+  customBgColor: string;
+  customTextColor: string;
+  customAccentColor: string;
 };
 
 type TemplateId =
@@ -218,7 +240,11 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
     coverType: "none",
     coverUrl: "",
     coverPosition: "top-banner",
-    coverOpacity: "30"
+    coverOpacity: "30",
+    themeType: "default",
+    customBgColor: "#ffffff",
+    customTextColor: "#113b2c",
+    customAccentColor: "#287a57"
   });
   const [error, setError] = useState("");
   const [generated, setGenerated] = useState(false);
@@ -383,6 +409,18 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
     setForm((current) => ({ ...current, [field]: value }));
   }
 
+  function selectCoverType(type: FormState["coverType"]) {
+    let url = "";
+    if (type !== "none" && type !== "custom") {
+      url = presetCovers[type as keyof typeof presetCovers];
+    }
+    setForm((current) => ({
+      ...current,
+      coverType: type,
+      coverUrl: url
+    }));
+  }
+
   function handleLogoUpload(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -470,9 +508,44 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
     try {
       setDownloadState("busy");
-      const dataUrl = await toPng(posterRef.current, {
+      const el = posterRef.current;
+      
+      // Create a temporary clone to measure the exact height at 360px width
+      const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'absolute';
+      clone.style.left = '-9999px';
+      clone.style.top = '-9999px';
+      clone.style.width = '360px';
+      clone.style.minWidth = '360px';
+      clone.style.maxWidth = '360px';
+      clone.style.padding = '16px';
+      clone.style.boxSizing = 'border-box';
+      clone.style.height = 'auto';
+      
+      document.body.appendChild(clone);
+      const measuredHeight = clone.offsetHeight;
+      document.body.removeChild(clone);
+
+      const targetHeight = measuredHeight || 520;
+
+      const dataUrl = await toPng(el, {
         cacheBust: true,
-        pixelRatio: 2
+        pixelRatio: 3,
+        width: 360,
+        height: targetHeight,
+        style: {
+          transform: 'none',
+          transformOrigin: 'top left',
+          width: '360px',
+          height: `${targetHeight}px`,
+          maxWidth: '360px',
+          maxHeight: `${targetHeight}px`,
+          minWidth: '360px',
+          minHeight: `${targetHeight}px`,
+          margin: '0',
+          padding: '16px',
+          boxSizing: 'border-box'
+        }
       });
       const safeName = (form.payee || activeTemplate.name)
         .toLowerCase()
@@ -495,6 +568,22 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
   function renderTemplateContent() {
     const customLabel = form.customField.trim();
+    const isCustomTheme = form.themeType === "custom";
+
+    const containerStyle = isCustomTheme ? {
+      backgroundColor: form.customBgColor,
+      backgroundImage: "none",
+      color: form.customTextColor,
+      borderColor: `${form.customTextColor}20`,
+    } : {};
+
+    const textColorStyle = isCustomTheme ? { color: form.customTextColor } : {};
+    const textSubColorStyle = isCustomTheme ? { color: `${form.customTextColor}80` } : {};
+    const labelBgStyle = isCustomTheme ? { backgroundColor: `${form.customTextColor}0c` } : {};
+    const badgeStyle = isCustomTheme ? {
+      backgroundColor: form.customAccentColor,
+      color: getContrastColor(form.customAccentColor)
+    } : {};
 
     const headerLogoBlock =
       form.logoPosition === "header" && form.logoType !== "none" ? (
@@ -512,18 +601,18 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       ) : null;
 
     const coverTopBlock =
-      form.coverType === "custom" && form.coverUrl && form.coverPosition === "top-banner" ? (
+      form.coverType !== "none" && form.coverUrl && form.coverPosition === "top-banner" ? (
         <div className="mb-4 overflow-hidden rounded-xl h-24 w-full relative shrink-0 shadow-inner z-10 border border-black/5">
-          <img src={form.coverUrl} className="w-full h-full object-cover" alt="Custom Banner" />
+          <img src={form.coverUrl} className="w-full h-full object-cover" alt="Banner" />
         </div>
       ) : null;
 
     const coverBgBlock =
-      form.coverType === "custom" && form.coverUrl && form.coverPosition === "full-bg" ? (
+      form.coverType !== "none" && form.coverUrl && form.coverPosition === "full-bg" ? (
         <div
           className="absolute inset-0 z-0 pointer-events-none rounded-[1.45rem]"
           style={{
-            backgroundImage: `url(${form.coverUrl})`,
+            backgroundImage: `url("${form.coverUrl}")`,
             backgroundSize: "cover",
             backgroundPosition: "center",
             opacity: Number(form.coverOpacity) / 100
@@ -551,24 +640,30 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
     switch (activeTemplate.layout) {
       case "shop":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-leaf/5 rounded-full -mr-8 -mt-8 pointer-events-none" />
+            {!isCustomTheme && <div className="absolute top-0 right-0 w-24 h-24 bg-leaf/5 rounded-full -mr-8 -mt-8 pointer-events-none" />}
             
             <div className="relative z-10 w-full">
               {coverTopBlock}
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-leaf/80">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-leaf/80" style={textSubColorStyle}>
                     {activeTemplate.kicker}
                   </p>
-                  <h4 className="mt-1 max-w-[12rem] text-2xl font-black leading-tight text-forest">
+                  <h4 className="mt-1 max-w-[12rem] text-2xl font-black leading-tight text-forest" style={textColorStyle}>
                     {activeTemplate.headline}
                   </h4>
                 </div>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
-                  <span className={`rounded-full px-3 py-1 text-[10px] font-black tracking-wider ${activeTemplate.badgeClass}`}>
+                  <span 
+                    className={`rounded-full px-3 py-1 text-[10px] font-black tracking-wider ${activeTemplate.badgeClass}`}
+                    style={badgeStyle}
+                  >
                     UPI PAY
                   </span>
                 </div>
@@ -577,101 +672,131 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
               {qrBlock}
 
               <div className="mt-5 space-y-4">
-                <div className="border-b border-forest/10 pb-3 text-center">
-                  <p className="text-xl font-black tracking-tight text-forest truncate">{payeeLabel}</p>
+                <div className="border-b border-forest/10 pb-3 text-center" style={isCustomTheme ? { borderColor: `${form.customTextColor}20` } : {}}>
+                  <p className="text-xl font-black tracking-tight text-forest truncate" style={textColorStyle}>{payeeLabel}</p>
                   {customLabel ? (
-                    <p className="mt-1 text-xs font-bold text-leaf bg-mint/50 inline-block px-3 py-0.5 rounded-full truncate max-w-full">
+                    <p 
+                      className="mt-1 text-xs font-bold text-leaf bg-mint/50 inline-block px-3 py-0.5 rounded-full truncate max-w-full"
+                      style={isCustomTheme ? { color: form.customTextColor, backgroundColor: `${form.customTextColor}12` } : {}}
+                    >
                       {customLabel}
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <p className="mt-1 text-xs font-bold text-leaf/50 bg-mint/30 inline-block px-3 py-0.5 rounded-full border border-dashed border-leaf/25">
+                    <p 
+                      className="mt-1 text-xs font-bold text-leaf/50 bg-mint/30 inline-block px-3 py-0.5 rounded-full border border-dashed border-leaf/25"
+                      style={isCustomTheme ? { color: `${form.customTextColor}60`, backgroundColor: `${form.customTextColor}06`, borderColor: `${form.customTextColor}25` } : {}}
+                    >
                       {activeTemplate.customFieldPlaceholder} (Sample)
                     </p>
                   ) : null}
                 </div>
                 
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl bg-forest/5 p-2.5">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">Amount</p>
-                    <p className="mt-0.5 font-extrabold text-forest text-sm">{amountLabel}</p>
+                  <div className="rounded-xl bg-forest/5 p-2.5" style={labelBgStyle}>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Amount</p>
+                    <p className="mt-0.5 font-extrabold text-forest text-sm" style={textColorStyle}>{amountLabel}</p>
                   </div>
-                  <div className="rounded-xl bg-forest/5 p-2.5">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">UPI ID</p>
-                    <p className="mt-0.5 font-extrabold text-forest truncate text-sm">{upiLabel}</p>
+                  <div className="rounded-xl bg-forest/5 p-2.5" style={labelBgStyle}>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>UPI ID</p>
+                    <p className="mt-0.5 font-extrabold text-forest truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
-                  <div className="rounded-xl bg-forest/5 p-2.5 text-xs">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">Message</p>
-                    <p className="mt-0.5 font-semibold text-forest truncate">{noteLabel}</p>
+                  <div className="rounded-xl bg-forest/5 p-2.5 text-xs" style={labelBgStyle}>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Message</p>
+                    <p className="mt-0.5 font-semibold text-forest truncate" style={textColorStyle}>{noteLabel}</p>
                   </div>
                 )}
               </div>
             </div>
 
             <div className="mt-5 flex items-center justify-center gap-2 opacity-60 relative z-10">
-              <span className="w-1.5 h-1.5 rounded-full bg-forest" />
-              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-forest">Scan with any UPI App</p>
-              <span className="w-1.5 h-1.5 rounded-full bg-forest" />
+              <span className="w-1.5 h-1.5 rounded-full bg-forest" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
+              <p className="text-[10px] font-bold uppercase tracking-[0.15em] text-forest" style={textColorStyle}>Scan with any UPI App</p>
+              <span className="w-1.5 h-1.5 rounded-full bg-forest" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
             </div>
           </div>
         );
 
       case "donation":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border-2 border-sun/30 min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border-2 border-sun/30 min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute inset-2 border border-sun/20 pointer-events-none rounded-[1rem] z-0" />
+            {!isCustomTheme && <div className="absolute inset-2 border border-sun/20 pointer-events-none rounded-[1rem] z-0" />}
             
             <div className="relative z-10 w-full">
               {coverTopBlock}
               <div className="text-center pt-2">
                 <div className="flex items-center justify-center gap-2.5">
                   {headerLogoBlock}
-                  <span className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest ${activeTemplate.badgeClass}`}>
+                  <span 
+                    className={`inline-block rounded-full px-3 py-0.5 text-[9px] font-black uppercase tracking-widest ${activeTemplate.badgeClass}`}
+                    style={badgeStyle}
+                  >
                     DONATION
                   </span>
                 </div>
-                <h4 className="mt-2 text-2xl font-black leading-tight text-white drop-shadow-sm px-2">
+                <h4 className="mt-2 text-2xl font-black leading-tight text-white drop-shadow-sm px-2" style={textColorStyle}>
                   {activeTemplate.headline}
                 </h4>
-                <p className="mt-1 text-xs text-white/80 italic font-medium truncate px-2">
+                <p className="mt-1 text-xs text-white/80 italic font-medium truncate px-2" style={textSubColorStyle}>
                   "{activeTemplate.helper}"
                 </p>
               </div>
 
               {qrBlock}
 
-              <div className="mt-4 space-y-3 text-center text-white">
-                <div className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10">
-                  <p className="text-xs uppercase tracking-wider text-sun font-bold">Beneficiary</p>
+              <div className="mt-4 space-y-3 text-center text-white" style={textColorStyle}>
+                <div 
+                  className="bg-white/10 backdrop-blur-sm rounded-xl p-3 border border-white/10"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-xs uppercase tracking-wider text-sun font-bold" style={textSubColorStyle}>Beneficiary</p>
                   <p className="text-lg font-black tracking-wide mt-0.5 truncate">{payeeLabel}</p>
                   {customLabel ? (
-                    <p className="text-xs text-white font-semibold mt-1 bg-white/15 inline-block px-3 py-0.5 rounded-full truncate max-w-full">
+                    <p 
+                      className="text-xs text-white font-semibold mt-1 bg-white/15 inline-block px-3 py-0.5 rounded-full truncate max-w-full"
+                      style={isCustomTheme ? { color: form.customTextColor, backgroundColor: `${form.customTextColor}15` } : {}}
+                    >
                       {customLabel}
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <p className="text-xs text-white/50 font-semibold mt-1 bg-white/5 inline-block px-3 py-0.5 rounded-full border border-dashed border-white/20">
+                    <p 
+                      className="text-xs text-white/50 font-semibold mt-1 bg-white/5 inline-block px-3 py-0.5 rounded-full border border-dashed border-white/20"
+                      style={isCustomTheme ? { color: `${form.customTextColor}60`, backgroundColor: `${form.customTextColor}06`, borderColor: `${form.customTextColor}20` } : {}}
+                    >
                       {activeTemplate.customFieldPlaceholder} (Sample)
                     </p>
                   ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-2.5 text-left">
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
-                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold">Suggested Amount</p>
+                  <div 
+                    className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold" style={textSubColorStyle}>Suggested Amount</p>
                     <p className="text-sm font-bold mt-0.5">{amountLabel}</p>
                   </div>
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10">
-                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold">UPI ID</p>
+                  <div 
+                    className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold" style={textSubColorStyle}>UPI ID</p>
                     <p className="text-sm font-bold truncate mt-0.5">{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
-                  <div className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10 text-left">
-                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold">Campaign Code / Purpose</p>
+                  <div 
+                    className="bg-white/10 backdrop-blur-sm rounded-xl p-2.5 border border-white/10 text-left"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sun font-bold" style={textSubColorStyle}>Campaign Code / Purpose</p>
                     <p className="text-xs font-semibold mt-0.5 truncate">{noteLabel}</p>
                   </div>
                 )}
@@ -679,41 +804,53 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             </div>
 
             <div className="mt-4 text-center relative z-10">
-              <p className="text-[9px] font-bold uppercase tracking-widest text-sun">May the divine bless your support</p>
+              <p className="text-[9px] font-bold uppercase tracking-widest text-sun" style={textSubColorStyle}>May the divine bless your support</p>
             </div>
           </div>
         );
 
       case "restaurant":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 left-0 right-0 h-2 bg-coral pointer-events-none z-10" />
+            {!isCustomTheme && <div className="absolute top-0 left-0 right-0 h-2 bg-coral pointer-events-none z-10" />}
             
             <div className="relative z-10 w-full">
               {coverTopBlock}
               <div className="flex items-start justify-between gap-3 pt-2">
                 <div>
-                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-coral">
+                  <p className="text-[10px] font-black uppercase tracking-[0.22em] text-coral" style={textSubColorStyle}>
                     {activeTemplate.kicker}
                   </p>
-                  <h4 className="mt-1 text-2xl font-black leading-tight text-forest">
+                  <h4 className="mt-1 text-2xl font-black leading-tight text-forest" style={textColorStyle}>
                     {activeTemplate.headline}
                   </h4>
                 </div>
                 <div className="flex flex-col items-end gap-1.5">
                   <div className="flex items-center gap-2">
                     {headerLogoBlock}
-                    <span className={`rounded-full px-2.5 py-0.5 text-[10px] font-black ${activeTemplate.badgeClass}`}>
+                    <span 
+                      className={`rounded-full px-2.5 py-0.5 text-[10px] font-black ${activeTemplate.badgeClass}`}
+                      style={badgeStyle}
+                    >
                       TABLE PAY
                     </span>
                   </div>
                   {customLabel ? (
-                    <span className="bg-forest text-white text-xs font-black px-2.5 py-1 rounded-md shadow-sm truncate max-w-[120px]">
+                    <span 
+                      className="bg-forest text-white text-xs font-black px-2.5 py-1 rounded-md shadow-sm truncate max-w-[120px]"
+                      style={isCustomTheme ? { backgroundColor: form.customAccentColor, color: getContrastColor(form.customAccentColor) } : {}}
+                    >
                       {customLabel}
                     </span>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <span className="bg-forest/20 text-forest/40 text-xs font-black px-2.5 py-1 rounded-md border border-dashed border-forest/20">
+                    <span 
+                      className="bg-forest/20 text-forest/40 text-xs font-black px-2.5 py-1 rounded-md border border-dashed border-forest/20"
+                      style={isCustomTheme ? { color: `${form.customTextColor}50`, backgroundColor: `${form.customTextColor}10`, borderColor: `${form.customTextColor}25` } : {}}
+                    >
                       {activeTemplate.customFieldPlaceholder} (Sample)
                     </span>
                   ) : null}
@@ -722,25 +859,28 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
               {qrBlock}
 
-              <div className="mt-4 border-2 border-dashed border-coral/20 rounded-2xl p-4 bg-white/50 space-y-3">
-                <div className="text-center border-b border-coral/10 pb-2">
-                  <p className="text-[10px] uppercase tracking-wider text-forest/50 font-bold">Merchant Partner</p>
-                  <p className="text-lg font-black text-forest truncate">{payeeLabel}</p>
+              <div 
+                className="mt-4 border-2 border-dashed border-coral/20 rounded-2xl p-4 bg-white/50 space-y-3"
+                style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+              >
+                <div className="text-center border-b border-coral/10 pb-2" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                  <p className="text-[10px] uppercase tracking-wider text-forest/50 font-bold" style={textSubColorStyle}>Merchant Partner</p>
+                  <p className="text-lg font-black text-forest truncate" style={textColorStyle}>{payeeLabel}</p>
                 </div>
 
-                <div className="space-y-1.5 text-xs text-forest/80">
+                <div className="space-y-1.5 text-xs text-forest/80" style={textColorStyle}>
                   <div className="flex justify-between">
-                    <span className="font-semibold text-forest/60">Amount Payable:</span>
-                    <span className="font-bold text-forest">{amountLabel}</span>
+                    <span className="font-semibold text-forest/60" style={textSubColorStyle}>Amount Payable:</span>
+                    <span className="font-bold text-forest" style={textColorStyle}>{amountLabel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-semibold text-forest/60">VPA Address:</span>
-                    <span className="font-bold text-forest truncate max-w-[120px]">{upiLabel}</span>
+                    <span className="font-semibold text-forest/60" style={textSubColorStyle}>VPA Address:</span>
+                    <span className="font-bold text-forest truncate max-w-[120px]" style={textColorStyle}>{upiLabel}</span>
                   </div>
                   {form.note.trim() && (
-                    <div className="flex justify-between pt-1 border-t border-coral/10">
-                      <span className="font-semibold text-forest/60">Order Note:</span>
-                      <span className="font-bold text-forest truncate max-w-[120px]">{noteLabel}</span>
+                    <div className="flex justify-between pt-1 border-t border-coral/10" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                      <span className="font-semibold text-forest/60" style={textSubColorStyle}>Order Note:</span>
+                      <span className="font-bold text-forest truncate max-w-[120px]" style={textColorStyle}>{noteLabel}</span>
                     </div>
                   )}
                 </div>
@@ -748,70 +888,88 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             </div>
 
             <div className="mt-4 text-center relative z-10">
-              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-coral">Self Service • Secure Checkout</p>
+              <p className="text-[9px] font-black uppercase tracking-[0.2em] text-coral" style={textSubColorStyle}>Self Service • Secure Checkout</p>
             </div>
           </div>
         );
 
       case "freelancer":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 right-0 w-32 h-32 bg-mint/30 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />
+            {!isCustomTheme && <div className="absolute top-0 right-0 w-32 h-32 bg-mint/30 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none" />}
             
             <div className="relative z-10 w-full">
               {coverTopBlock}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-leaf animate-pulse" />
-                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-leaf">
+                  <span className="w-2 h-2 rounded-full bg-leaf animate-pulse" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
+                  <p className="text-[10px] font-black uppercase tracking-[0.2em] text-leaf" style={textSubColorStyle}>
                     {activeTemplate.kicker}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
-                  <span className={`rounded-full px-3 py-1 text-[9px] font-black tracking-wider ${activeTemplate.badgeClass}`}>
+                  <span 
+                    className={`rounded-full px-3 py-1 text-[9px] font-black tracking-wider ${activeTemplate.badgeClass}`}
+                    style={badgeStyle}
+                  >
                     DIRECT PAY
                   </span>
                 </div>
               </div>
 
-              <h4 className="mt-3 text-2xl font-black leading-tight text-forest">
+              <h4 className="mt-3 text-2xl font-black leading-tight text-forest" style={textColorStyle}>
                 {activeTemplate.headline}
               </h4>
 
               {qrBlock}
 
               <div className="mt-4 space-y-3.5">
-                <div className="rounded-xl border border-leaf/10 bg-mint/20 p-3">
-                  <p className="text-[9px] uppercase tracking-wider text-forest/50 font-bold">Recipient</p>
-                  <p className="text-base font-black text-forest truncate">{payeeLabel}</p>
+                <div 
+                  className="rounded-xl border border-leaf/10 bg-mint/20 p-3"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-[9px] uppercase tracking-wider text-forest/50 font-bold" style={textSubColorStyle}>Recipient</p>
+                  <p className="text-base font-black text-forest truncate" style={textColorStyle}>{payeeLabel}</p>
                   {customLabel ? (
-                    <p className="text-xs font-bold text-leaf mt-1 truncate">
+                    <p className="text-xs font-bold text-leaf mt-1 truncate" style={textColorStyle}>
                       💼 {customLabel}
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <p className="text-xs font-bold text-leaf/50 mt-1 italic">
+                    <p className="text-xs font-bold text-leaf/50 mt-1 italic" style={textSubColorStyle}>
                       💼 {activeTemplate.customFieldPlaceholder} (Sample)
                     </p>
                   ) : null}
                 </div>
 
                 <div className="grid grid-cols-2 gap-3 text-xs">
-                  <div className="rounded-xl border border-forest/10 p-2.5 bg-white">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">Requested Amount</p>
-                    <p className="mt-0.5 font-bold text-forest text-sm">{amountLabel}</p>
+                  <div 
+                    className="rounded-xl border border-forest/10 p-2.5 bg-white"
+                    style={isCustomTheme ? { backgroundColor: `${form.customBgColor}`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Requested Amount</p>
+                    <p className="mt-0.5 font-bold text-forest text-sm" style={textColorStyle}>{amountLabel}</p>
                   </div>
-                  <div className="rounded-xl border border-forest/10 p-2.5 bg-white">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">UPI Address</p>
-                    <p className="mt-0.5 font-bold text-forest truncate text-sm">{upiLabel}</p>
+                  <div 
+                    className="rounded-xl border border-forest/10 p-2.5 bg-white"
+                    style={isCustomTheme ? { backgroundColor: `${form.customBgColor}`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>UPI Address</p>
+                    <p className="mt-0.5 font-bold text-forest truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
-                  <div className="rounded-xl border border-forest/10 p-2.5 text-xs bg-mint/5">
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]">Reference Note</p>
-                    <p className="mt-0.5 font-medium text-forest truncate">{noteLabel}</p>
+                  <div 
+                    className="rounded-xl border border-forest/10 p-2.5 text-xs bg-mint/5"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}05`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Reference Note</p>
+                    <p className="mt-0.5 font-medium text-forest truncate" style={textColorStyle}>{noteLabel}</p>
                   </div>
                 )}
               </div>
@@ -821,41 +979,47 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       case "event":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-gradient-to-br from-[#1e1b4b] to-[#311042] text-white min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-gradient-to-br from-[#1e1b4b] to-[#311042] text-white min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/10 rounded-full blur-xl pointer-events-none" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />
+            {!isCustomTheme && <div className="absolute top-0 right-0 w-24 h-24 bg-pink-500/10 rounded-full blur-xl pointer-events-none" />}
+            {!isCustomTheme && <div className="absolute bottom-0 left-0 w-24 h-24 bg-indigo-500/10 rounded-full blur-xl pointer-events-none" />}
 
             <div className="relative z-10 w-full">
               {coverTopBlock}
-              <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center justify-between border-b border-white/10 pb-3" style={isCustomTheme ? { borderColor: `${form.customTextColor}20` } : {}}>
                 <div>
-                  <span className="text-[9px] font-black bg-pink-600 text-white px-2 py-0.5 rounded uppercase tracking-widest">
+                  <span 
+                    className="text-[9px] font-black bg-pink-600 text-white px-2 py-0.5 rounded uppercase tracking-widest"
+                    style={badgeStyle}
+                  >
                     EVENT PASS
                   </span>
                   {customLabel ? (
-                    <p className="text-xs font-bold text-pink-300 mt-1.5 truncate max-w-[150px]">
+                    <p className="text-xs font-bold text-pink-300 mt-1.5 truncate max-w-[150px]" style={textColorStyle}>
                       📅 {customLabel}
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <p className="text-xs font-bold text-pink-300/50 mt-1.5 truncate max-w-[150px] italic">
+                    <p className="text-xs font-bold text-pink-300/50 mt-1.5 truncate max-w-[150px] italic" style={textSubColorStyle}>
                       📅 {activeTemplate.customFieldPlaceholder} (Sample)
                     </p>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
-                  <span className="text-right text-[10px] font-bold text-white/60">
+                  <span className="text-right text-[10px] font-bold text-white/60" style={textSubColorStyle}>
                     ADMIT ONE
                   </span>
                 </div>
               </div>
 
               <div className="text-center pt-3">
-                <h4 className="text-xl font-black leading-tight tracking-tight text-white">
+                <h4 className="text-xl font-black leading-tight tracking-tight text-white" style={textColorStyle}>
                   {activeTemplate.headline}
                 </h4>
-                <p className="text-[10px] text-white/70 mt-1 truncate px-2">
+                <p className="text-[10px] text-white/70 mt-1 truncate px-2" style={textSubColorStyle}>
                   {activeTemplate.helper}
                 </p>
               </div>
@@ -863,32 +1027,38 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
               {qrBlock}
 
               <div className="my-4 flex items-center justify-between gap-1">
-                <div className="w-3 h-6 bg-[#312e81] -ml-6 rounded-r-full border-r border-white/10" />
-                <div className="border-t border-dashed border-white/20 flex-1 h-0" />
-                <div className="w-3 h-6 bg-[#701a75] -mr-6 rounded-l-full border-l border-white/10" />
+                <div 
+                  className="w-3 h-6 bg-[#312e81] -ml-6 rounded-r-full border-r border-white/10" 
+                  style={isCustomTheme ? { backgroundColor: form.customBgColor, borderColor: `${form.customTextColor}20` } : {}}
+                />
+                <div className="border-t border-dashed border-white/20 flex-1 h-0" style={isCustomTheme ? { borderColor: `${form.customTextColor}30` } : {}} />
+                <div 
+                  className="w-3 h-6 bg-[#701a75] -mr-6 rounded-l-full border-l border-white/10" 
+                  style={isCustomTheme ? { backgroundColor: form.customBgColor, borderColor: `${form.customTextColor}20` } : {}}
+                />
               </div>
 
-              <div className="space-y-2.5 text-xs">
+              <div className="space-y-2.5 text-xs" style={textColorStyle}>
                 <div>
-                  <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold">Organized By</p>
-                  <p className="font-extrabold text-white text-sm truncate">{payeeLabel}</p>
+                  <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold" style={textSubColorStyle}>Organized By</p>
+                  <p className="font-extrabold text-white text-sm truncate" style={textColorStyle}>{payeeLabel}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold">Ticket Price</p>
-                    <p className="font-bold text-pink-300">{amountLabel}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold" style={textSubColorStyle}>Ticket Price</p>
+                    <p className="font-bold text-pink-300" style={isCustomTheme ? { color: form.customAccentColor } : {}}>{amountLabel}</p>
                   </div>
                   <div>
-                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold">UPI ID</p>
-                    <p className="font-bold text-white truncate">{upiLabel}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold" style={textSubColorStyle}>UPI ID</p>
+                    <p className="font-bold text-white truncate" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
                   <div>
-                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold">Event Note</p>
-                    <p className="font-medium text-white/80 truncate">{noteLabel}</p>
+                    <p className="text-[9px] uppercase tracking-wider text-white/50 font-bold" style={textSubColorStyle}>Event Note</p>
+                    <p className="font-medium text-white/80 truncate" style={textSubColorStyle}>{noteLabel}</p>
                   </div>
                 )}
               </div>
@@ -898,61 +1068,79 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       case "education":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-white min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-white min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 bottom-0 left-4 w-[1px] bg-red-400 opacity-60 pointer-events-none" />
-            <div className="absolute top-0 bottom-0 left-[18px] w-[1px] bg-red-400 opacity-30 pointer-events-none" />
+            {!isCustomTheme && <div className="absolute top-0 bottom-0 left-4 w-[1px] bg-red-400 opacity-60 pointer-events-none" />}
+            {!isCustomTheme && <div className="absolute top-0 bottom-0 left-[18px] w-[1px] bg-red-400 opacity-30 pointer-events-none" />}
             
             <div className="pl-5 relative z-10 w-full">
               {coverTopBlock}
-              <div className="flex items-center justify-between gap-2 border-b-2 border-sky-100 pb-2">
+              <div className="flex items-center justify-between gap-2 border-b-2 border-sky-100 pb-2" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
                 <div>
-                  <span className={`inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${activeTemplate.badgeClass}`}>
+                  <span 
+                    className={`inline-block rounded px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${activeTemplate.badgeClass}`}
+                    style={badgeStyle}
+                  >
                     EDUCATION
                   </span>
                   {customLabel ? (
-                    <p className="text-xs font-bold text-sky-600 mt-1 truncate max-w-[150px]">
+                    <p className="text-xs font-bold text-sky-600 mt-1 truncate max-w-[150px]" style={textColorStyle}>
                       📚 {customLabel}
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <p className="text-xs font-bold text-sky-600/50 mt-1 italic">
+                    <p className="text-xs font-bold text-sky-600/50 mt-1 italic" style={textSubColorStyle}>
                       📚 {activeTemplate.customFieldPlaceholder} (Sample)
                     </p>
                   ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
-                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest">{activeTemplate.kicker}</p>
+                  <p className="text-[10px] font-bold text-sky-400 uppercase tracking-widest" style={textSubColorStyle}>{activeTemplate.kicker}</p>
                 </div>
               </div>
 
-              <h4 className="mt-3 text-2xl font-black leading-tight text-sky-900">
+              <h4 className="mt-3 text-2xl font-black leading-tight text-sky-900" style={textColorStyle}>
                 {activeTemplate.headline}
               </h4>
 
               {qrBlock}
 
-              <div className="mt-4 space-y-3 text-sky-950">
-                <div className="bg-sky-50 rounded-xl p-3 border border-sky-100/50">
-                  <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold">Institution / Tutor</p>
-                  <p className="text-base font-extrabold text-sky-950 truncate">{payeeLabel}</p>
+              <div className="mt-4 space-y-3 text-sky-950" style={textColorStyle}>
+                <div 
+                  className="bg-sky-50 rounded-xl p-3 border border-sky-100/50"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold" style={textSubColorStyle}>Institution / Tutor</p>
+                  <p className="text-base font-extrabold text-sky-950 truncate" style={textColorStyle}>{payeeLabel}</p>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
-                  <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50">
-                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold">Fee Amount</p>
-                    <p className="font-bold text-sky-900 text-sm">{amountLabel}</p>
+                  <div 
+                    className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold" style={textSubColorStyle}>Fee Amount</p>
+                    <p className="font-bold text-sky-900 text-sm" style={textColorStyle}>{amountLabel}</p>
                   </div>
-                  <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50">
-                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold">UPI ID</p>
-                    <p className="font-bold text-sky-900 truncate text-sm">{upiLabel}</p>
+                  <div 
+                    className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold" style={textSubColorStyle}>UPI ID</p>
+                    <p className="font-bold text-sky-900 truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
-                  <div className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50">
-                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold">Payment Description</p>
-                    <p className="font-semibold text-sky-900 text-xs truncate">{noteLabel}</p>
+                  <div 
+                    className="bg-sky-50 rounded-xl p-2.5 border border-sky-100/50"
+                    style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                  >
+                    <p className="text-[9px] uppercase tracking-wider text-sky-600/60 font-bold" style={textSubColorStyle}>Payment Description</p>
+                    <p className="font-semibold text-sky-900 text-xs truncate" style={textColorStyle}>{noteLabel}</p>
                   </div>
                 )}
               </div>
@@ -962,68 +1150,94 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       case "taxi":
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-neutral-950 text-[#fef08a] min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-neutral-950 text-[#fef08a] min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
-            <div className="absolute top-0 left-0 right-0 h-3 flex overflow-hidden opacity-90 pointer-events-none z-10">
-              {Array.from({ length: 18 }).map((_, i) => (
-                <div key={i} className={`flex-1 h-full ${i % 2 === 0 ? "bg-[#eab308]" : "bg-black"}`} />
-              ))}
-            </div>
+            {!isCustomTheme && (
+              <div className="absolute top-0 left-0 right-0 h-3 flex overflow-hidden opacity-90 pointer-events-none z-10">
+                {Array.from({ length: 18 }).map((_, i) => (
+                  <div key={i} className={`flex-1 h-full ${i % 2 === 0 ? "bg-[#eab308]" : "bg-black"}`} />
+                ))}
+              </div>
+            )}
             
             <div className="pt-3 relative z-10">
               {coverTopBlock}
               <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-black bg-[#eab308] text-black px-2 py-0.5 rounded tracking-widest">
+                <span 
+                  className="text-[10px] font-black bg-[#eab308] text-black px-2 py-0.5 rounded tracking-widest"
+                  style={badgeStyle}
+                >
                   CAB / AUTO
                 </span>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
                   {customLabel ? (
-                    <span className="border border-[#eab308] text-[#eab308] text-xs font-black px-2.5 py-0.5 rounded truncate max-w-[120px]">
+                    <span 
+                      className="border border-[#eab308] text-[#eab308] text-xs font-black px-2.5 py-0.5 rounded truncate max-w-[120px]"
+                      style={isCustomTheme ? { borderColor: `${form.customTextColor}40`, color: form.customTextColor } : {}}
+                    >
                       {customLabel}
                     </span>
                   ) : activeTemplate.customFieldPlaceholder ? (
-                    <span className="border border-[#eab308]/30 text-[#eab308]/40 text-xs font-black px-2.5 py-0.5 rounded border-dashed">
+                    <span 
+                      className="border border-[#eab308]/30 text-[#eab308]/40 text-xs font-black px-2.5 py-0.5 rounded border-dashed"
+                      style={isCustomTheme ? { borderColor: `${form.customTextColor}20`, color: `${form.customTextColor}50` } : {}}
+                    >
                       {activeTemplate.customFieldPlaceholder} (Sample)
                     </span>
                   ) : null}
                 </div>
               </div>
 
-              <h4 className="mt-3 text-2xl font-black leading-none tracking-tight text-white uppercase text-left">
+              <h4 className="mt-3 text-2xl font-black leading-none tracking-tight text-white uppercase text-left" style={textColorStyle}>
                 {activeTemplate.headline}
               </h4>
             </div>
 
             {qrBlock}
 
-            <div className="mt-4 space-y-3 text-white relative z-10">
-              <div className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-3">
-                <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold">Driver / Owner</p>
-                <p className="text-lg font-black tracking-wide text-white uppercase mt-0.5 truncate">{payeeLabel}</p>
+            <div className="mt-4 space-y-3 text-white relative z-10" style={textColorStyle}>
+              <div 
+                className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-3"
+                style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+              >
+                <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold" style={textSubColorStyle}>Driver / Owner</p>
+                <p className="text-lg font-black tracking-wide text-white uppercase mt-0.5 truncate" style={textColorStyle}>{payeeLabel}</p>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5">
-                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold">Fare Amount</p>
-                  <p className="font-bold text-[#eab308] text-sm">{amountLabel}</p>
+                <div 
+                  className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold" style={textSubColorStyle}>Fare Amount</p>
+                  <p className="font-bold text-[#eab308] text-sm" style={isCustomTheme ? { color: form.customAccentColor } : {}}>{amountLabel}</p>
                 </div>
-                <div className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5">
-                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold">UPI VPA</p>
-                  <p className="font-bold text-white truncate text-sm">{upiLabel}</p>
+                <div 
+                  className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold" style={textSubColorStyle}>UPI VPA</p>
+                  <p className="font-bold text-white truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                 </div>
               </div>
 
               {form.note.trim() && (
-                <div className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5 text-xs">
-                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold">Ride Code / Message</p>
-                  <p className="font-medium text-[#eab308]/80 mt-0.5 truncate">{noteLabel}</p>
+                <div 
+                  className="border border-[#eab308]/20 bg-neutral-900 rounded-xl p-2.5 text-xs"
+                  style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
+                >
+                  <p className="text-[9px] uppercase tracking-wider text-[#eab308] font-bold" style={textSubColorStyle}>Ride Code / Message</p>
+                  <p className="font-medium text-[#eab308]/80 mt-0.5 truncate" style={textColorStyle}>{noteLabel}</p>
                 </div>
               )}
             </div>
 
             <div className="mt-4 text-center relative z-10">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[#eab308]/60">Thank you for riding safe!</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#eab308]/60" style={textSubColorStyle}>Thank you for riding safe!</p>
             </div>
           </div>
         );
@@ -1031,58 +1245,61 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       case "minimal":
       default:
         return (
-          <div className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border border-neutral-200 shadow-sm bg-white min-h-[460px] flex flex-col justify-between`}>
+          <div 
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border border-neutral-200 shadow-sm bg-white min-h-[460px] flex flex-col justify-between`}
+            style={containerStyle}
+          >
             {coverBgBlock}
             <div className="relative z-10 w-full">
               {coverTopBlock}
-              <div className="flex items-center justify-between border-b border-neutral-200 pb-3">
-                <span className="text-[10px] font-extrabold text-neutral-800 tracking-widest uppercase">
+              <div className="flex items-center justify-between border-b border-neutral-200 pb-3" style={isCustomTheme ? { borderColor: `${form.customTextColor}20` } : {}}>
+                <span className="text-[10px] font-extrabold text-neutral-800 tracking-widest uppercase" style={textSubColorStyle}>
                   {activeTemplate.kicker}
                 </span>
                 <div className="flex items-center gap-2">
                   {headerLogoBlock}
-                  <span className="w-2 h-2 rounded-full bg-neutral-800" />
+                  <span className="w-2 h-2 rounded-full bg-neutral-800" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
                 </div>
               </div>
 
-              <h4 className="mt-3 text-xl font-bold text-neutral-900 tracking-tight text-center">
+              <h4 className="mt-3 text-xl font-bold text-neutral-900 tracking-tight text-center" style={textColorStyle}>
                 {activeTemplate.headline}
               </h4>
 
               {qrBlock}
 
-              <div className="mt-4 space-y-2.5 text-xs text-neutral-800">
-                <div className="flex justify-between border-b border-neutral-100 pb-1.5">
-                  <span className="font-semibold text-neutral-500">Payee Name:</span>
-                  <span className="font-bold text-neutral-900 truncate max-w-[150px]">{payeeLabel}</span>
+              <div className="mt-4 space-y-2.5 text-xs text-neutral-800" style={textColorStyle}>
+                <div className="flex justify-between border-b border-neutral-100 pb-1.5" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                  <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Payee Name:</span>
+                  <span className="font-bold text-neutral-900 truncate max-w-[150px]" style={textColorStyle}>{payeeLabel}</span>
                 </div>
                 
                 {customLabel ? (
-                  <div className="flex justify-between border-b border-neutral-100 pb-1.5">
-                    <span className="font-semibold text-neutral-500">Reference:</span>
-                    <span className="font-bold text-neutral-900 truncate max-w-[150px]">{customLabel}</span>
+                  <div className="flex justify-between border-b border-neutral-100 pb-1.5" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                    <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Reference:</span>
+                    <span className="font-bold text-neutral-900 truncate max-w-[150px]" style={textColorStyle}>{customLabel}</span>
                   </div>
                 ) : activeTemplate.customFieldPlaceholder ? (
-                  <div className="flex justify-between border-b border-neutral-100 pb-1.5 opacity-50">
-                    <span className="font-semibold text-neutral-500">Reference:</span>
-                    <span className="font-bold text-neutral-900 italic truncate max-w-[150px]">{activeTemplate.customFieldPlaceholder} (Sample)</span>
+                  <div className="flex justify-between border-b border-neutral-100 pb-1.5 opacity-50" style={isCustomTheme ? { borderColor: `${form.customTextColor}10` } : {}}>
+                    <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Reference:</span>
+                    <span className="font-bold text-neutral-900 italic truncate max-w-[150px]" style={textSubColorStyle}>{activeTemplate.customFieldPlaceholder} (Sample)</span>
                   </div>
                 ) : null}
 
-                <div className="flex justify-between border-b border-neutral-100 pb-1.5">
-                  <span className="font-semibold text-neutral-500">Amount:</span>
-                  <span className="font-bold text-neutral-900">{amountLabel}</span>
+                <div className="flex justify-between border-b border-neutral-100 pb-1.5" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                  <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Amount:</span>
+                  <span className="font-bold text-neutral-900" style={textColorStyle}>{amountLabel}</span>
                 </div>
 
-                <div className="flex justify-between border-b border-neutral-100 pb-1.5">
-                  <span className="font-semibold text-neutral-500">UPI VPA:</span>
-                  <span className="font-bold text-neutral-900 truncate max-w-[150px]">{upiLabel}</span>
+                <div className="flex justify-between border-b border-neutral-100 pb-1.5" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
+                  <span className="font-semibold text-neutral-500" style={textSubColorStyle}>UPI VPA:</span>
+                  <span className="font-bold text-neutral-900 truncate max-w-[150px]" style={textColorStyle}>{upiLabel}</span>
                 </div>
 
                 {form.note.trim() && (
                   <div className="flex justify-between">
-                    <span className="font-semibold text-neutral-500">Note:</span>
-                    <span className="font-bold text-neutral-900 truncate max-w-[150px]">{noteLabel}</span>
+                    <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Note:</span>
+                    <span className="font-bold text-neutral-900 truncate max-w-[150px]" style={textColorStyle}>{noteLabel}</span>
                   </div>
                 )}
               </div>
@@ -1338,19 +1555,31 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                     {/* Cover Settings */}
                     <div className="space-y-3">
                       <span className="text-xs font-bold text-forest/70 block">Background Cover Banner</span>
-                      <div className="grid grid-cols-2 gap-1.5">
-                        {(["none", "custom"] as const).map((type) => (
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {(["none", "saffron", "grid", "cafe", "waves", "ruled", "custom"] as const).map((type) => (
                           <button
                             key={type}
                             type="button"
-                            onClick={() => updateField("coverType", type)}
-                            className={`px-2 py-1.5 text-[10px] font-bold rounded-lg border text-center transition ${
+                            onClick={() => selectCoverType(type)}
+                            className={`px-1 py-1.5 text-[9px] font-bold rounded-lg border text-center transition capitalize ${
                               form.coverType === type
                                 ? "border-forest bg-forest text-white"
                                 : "border-forest/10 bg-white text-forest hover:border-leaf"
                             }`}
                           >
-                            {type === "none" ? "No Custom Cover" : "Upload Custom"}
+                            {type === "none"
+                              ? "None"
+                              : type === "saffron"
+                                ? "Saffron"
+                                : type === "grid"
+                                  ? "Blueprint"
+                                  : type === "cafe"
+                                    ? "Cafe"
+                                    : type === "waves"
+                                      ? "Waves"
+                                      : type === "ruled"
+                                        ? "Notebook"
+                                        : "Custom"}
                           </button>
                         ))}
                       </div>
@@ -1397,6 +1626,106 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                         </div>
                       )}
                     </div>
+                  </div>
+
+                  {/* Card Theme Colors */}
+                  <div className="space-y-3 pt-4 border-t border-forest/10 mt-2">
+                    <span className="text-xs font-bold text-forest/70 block">Card Theme Mode</span>
+                    <div className="grid grid-cols-2 gap-1.5 max-w-xs">
+                      {(["default", "custom"] as const).map((type) => (
+                        <button
+                          key={type}
+                          type="button"
+                          onClick={() => updateField("themeType", type)}
+                          className={`px-2 py-1.5 text-[10px] font-bold rounded-lg border text-center transition capitalize ${
+                            form.themeType === type
+                              ? "border-forest bg-forest text-white"
+                              : "border-forest/10 bg-white text-forest hover:border-leaf"
+                          }`}
+                        >
+                          {type === "default" ? "Template Default" : "Custom Theme"}
+                        </button>
+                      ))}
+                    </div>
+
+                    {form.themeType === "custom" && (
+                      <div className="space-y-4 bg-white p-4 rounded-xl border border-forest/10 mt-2 animate-fadeIn max-w-md">
+                        <div className="grid grid-cols-3 gap-3">
+                          <label className="grid gap-1 text-center">
+                            <span className="text-[10px] font-bold text-forest/60 block">Background</span>
+                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
+                              <input
+                                type="color"
+                                value={form.customBgColor}
+                                onChange={(e) => updateField("customBgColor", e.target.value)}
+                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
+                              />
+                              <span className="text-[9px] font-mono text-forest/70">{form.customBgColor.toUpperCase()}</span>
+                            </div>
+                          </label>
+
+                          <label className="grid gap-1 text-center">
+                            <span className="text-[10px] font-bold text-forest/60 block">Text Color</span>
+                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
+                              <input
+                                type="color"
+                                value={form.customTextColor}
+                                onChange={(e) => updateField("customTextColor", e.target.value)}
+                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
+                              />
+                              <span className="text-[9px] font-mono text-forest/70">{form.customTextColor.toUpperCase()}</span>
+                            </div>
+                          </label>
+
+                          <label className="grid gap-1 text-center">
+                            <span className="text-[10px] font-bold text-forest/60 block">Badge & Accent</span>
+                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
+                              <input
+                                type="color"
+                                value={form.customAccentColor}
+                                onChange={(e) => updateField("customAccentColor", e.target.value)}
+                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
+                              />
+                              <span className="text-[9px] font-mono text-forest/70">{form.customAccentColor.toUpperCase()}</span>
+                            </div>
+                          </label>
+                        </div>
+
+                        {/* Quick color preset cards */}
+                        <div className="space-y-1.5">
+                          <span className="text-[10px] font-bold text-forest/50 block">Quick Palettes</span>
+                          <div className="grid grid-cols-4 gap-2">
+                            {[
+                              { bg: "#ffffff", text: "#113b2c", accent: "#287a57", name: "Forest Light" },
+                              { bg: "#113b2c", text: "#ffffff", accent: "#f8b84e", name: "Classic Dark" },
+                              { bg: "#fafafa", text: "#18181b", accent: "#4f46e5", name: "Modern Indigo" },
+                              { bg: "#09090b", text: "#f4f4f5", accent: "#f43f5e", name: "Midnight Red" }
+                            ].map((pal, idx) => (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => {
+                                  setForm((prev) => ({
+                                    ...prev,
+                                    customBgColor: pal.bg,
+                                    customTextColor: pal.text,
+                                    customAccentColor: pal.accent
+                                  }));
+                                }}
+                                className="border border-forest/10 rounded-lg p-1.5 bg-white hover:border-leaf transition text-left flex flex-col justify-between h-[42px]"
+                              >
+                                <div className="flex gap-0.5 w-full h-2 rounded overflow-hidden">
+                                  <div className="flex-1" style={{ backgroundColor: pal.bg }} />
+                                  <div className="flex-1" style={{ backgroundColor: pal.text }} />
+                                  <div className="flex-1" style={{ backgroundColor: pal.accent }} />
+                                </div>
+                                <span className="text-[7.5px] font-bold text-forest/70 text-center block w-full truncate mt-1">{pal.name}</span>
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}
@@ -1534,7 +1863,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated}
                 className="rounded-full bg-sun px-5 py-3 text-sm font-bold text-forest transition hover:bg-[#f2ad37] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Download PNG
+                Download QR Code
               </button>
               <button
                 type="button"

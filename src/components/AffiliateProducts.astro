@@ -1,0 +1,68 @@
+---
+const products = [
+  {
+    title: "Acrylic QR Standee (A6 Size)",
+    tag: "Most Popular",
+    desc: "The gold standard display stand used by retail counters, cafes, and billing desks. Double-sided, clear, and durable.",
+    priceEst: "Under ₹300",
+    affiliateUrl: "https://amzn.to/4vJnYC5",
+    imgSrc: "/images/product-acrylic.png?v=2"
+  },
+  {
+    title: "Premium Wooden QR Card Holder",
+    tag: "Elegant Design",
+    desc: "A rustic wooden standee to display your printed payment card. Fits perfectly in boutique shops, clinics, and creative spaces.",
+    priceEst: "Under ₹400",
+    affiliateUrl: "https://amzn.to/4xpYco3",
+    imgSrc: "/images/product-wooden.png?v=2"
+  },
+  {
+    title: "Wireless Bluetooth Thermal Printer",
+    tag: "Billing Essential",
+    desc: "Print instant billing receipts and transactional slips on-the-go. Perfect for delivery agents, cabs, and mobile shops.",
+    priceEst: "Under ₹2,000",
+    affiliateUrl: "https://amzn.to/4vDBfvM",
+    imgSrc: "/images/product-printer.png?v=2"
+  }
+];
+---
+
+<section class="mt-16 border-t border-forest/10 pt-16">
+  <div class="max-w-3xl">
+    <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Physical Display</p>
+    <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">
+      Print & Frame Your QR Code
+    </h2>
+    <p class="mt-3 text-base leading-7 text-forest/72">
+      Boost your store's credibility and scan success rates by framing your printed payment QR in standard acrylic standees or using portable billing printers.
+    </p>
+  </div>
+
+  <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    {products.map((product) => (
+      <article class="flex flex-col justify-between rounded-[2rem] border border-white/75 bg-white/86 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+        <div>
+          <div class="relative w-full h-48 flex items-center justify-center rounded-2xl bg-cream border border-forest/5 p-4 overflow-hidden">
+            <img src={product.imgSrc} alt={product.title} class="max-h-full max-w-full object-contain mix-blend-multiply" />
+            <span class="absolute top-3 right-3 rounded-full bg-mint px-3 py-1 text-[10px] font-bold text-forest uppercase tracking-wider">
+              {product.tag}
+            </span>
+          </div>
+          <h3 class="mt-5 text-lg font-black text-forest">{product.title}</h3>
+          <p class="mt-2.5 text-sm leading-relaxed text-forest/72">{product.desc}</p>
+        </div>
+        <div class="mt-6 pt-4 border-t border-forest/5 flex items-center justify-between">
+          <span class="text-sm font-bold text-forest">{product.priceEst}</span>
+          <a
+            href={product.affiliateUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            class="rounded-full bg-forest px-4 py-2 text-xs font-black text-white hover:bg-leaf transition-colors shadow-sm"
+          >
+            Check Price &rarr;
+          </a>
+        </div>
+      </article>
+    ))}
+  </div>
+</section>

@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
 
 export async function getStaticPaths() {
   return [
@@ -84,6 +85,8 @@ const description = `${headline}. ${intro}`;
         <h2 class="text-2xl font-black text-forest mb-6">Customize & Generate</h2>
         <GeneratorForm client:load presetType={presetType as any} />
       </div>
+
+      <AffiliateProducts />
     </div>
   </main>
 </BaseLayout>
