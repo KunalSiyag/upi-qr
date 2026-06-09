@@ -87,48 +87,56 @@ const features = [
 const templates = [
   {
     name: "Shop Payment Standee",
+    image: "/images/template/abc-shop-standee.png",
     value: "Counter-ready display for retail stores, grocery counters, and local shops.",
     bestFor: "Best for: retail cashier counters, grocery shops, and pharmacies.",
     status: "Available now"
   },
   {
     name: "Temple Donation Poster",
+    image: "/images/template/abc-temple-donation.png",
     value: "Devotional layout with larger type and donation-first messaging for trust and transparency.",
     bestFor: "Best for: community donation boxes, religious centers, and charity desks.",
     status: "Available now"
   },
   {
     name: "Restaurant Table QR",
+    image: "/images/template/abc-restaurant-table.png",
     value: "Compact table tent design displaying table numbers and direct dine-in scan-to-pay instructions.",
     bestFor: "Best for: dine-in tables, cafe counters, and food truck displays.",
     status: "Available now"
   },
   {
     name: "Freelancer Payment Card",
+    image: "/images/template/abc-freelancer-card.png",
     value: "Modern card layout for client billing, repeat services, and instant invoice links.",
     bestFor: "Best for: invoices, digital resumes, portfolio sites, and WhatsApp sharing.",
     status: "Available now"
   },
   {
     name: "Event Pass Ticket",
+    image: "/images/template/abc-event-ticket.png",
     value: "Vibrant ticket-stub design featuring event date, venue details, and scan-to-register flow.",
     bestFor: "Best for: ticketing booths, workshops, registrations, and seminar passes.",
     status: "Available now"
   },
   {
     name: "Tuition Fees Card",
+    image: "/images/template/abc-custom-minimal.png",
     value: "School notebook inspired theme designed for classroom displays, batches, and coaching fee collections.",
     bestFor: "Best for: schools, coaching batches, class notice boards, and tutors.",
     status: "Available now"
   },
   {
     name: "Cab / Taxi Dashboard Card",
+    image: "/images/template/abc-taxi-cab.png",
     value: "High-contrast driver-friendly dashboard card with large readable taxi/cab credentials.",
     bestFor: "Best for: cab dashboards, auto-rickshaw screens, and delivery riders.",
     status: "Available now"
   },
   {
     name: "Custom Minimalist Card",
+    image: "/images/template/abc-custom-minimal.png",
     value: "Clean, professional executive card structure for direct fund transfers and formal business needs.",
     bestFor: "Best for: corporate invoices, business cards, and direct fund transfers.",
     status: "Available now"
@@ -301,136 +309,14 @@ const landingLinks = [
               <h3 class="mt-3.5 text-lg font-black text-forest">{template.name}</h3>
               <p class="mt-2 text-xs text-forest/72 leading-relaxed h-[52px] overflow-hidden">{template.value}</p>
 
-              {/* Mini CSS QR Poster Preview with sample images */}
+              {/* Template preview image */}
               <div class="mt-4 rounded-2xl bg-cream p-4 border border-forest/5 flex flex-col items-center justify-center min-h-[170px] relative overflow-hidden shadow-inner">
-                {/* Shop Standee Preview */}
-                {idx === 0 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-sun rounded-xl p-3 text-forest shadow">
-                    <div class="w-full bg-forest text-[8px] font-black py-1 text-center rounded text-white tracking-widest">SCAN & PAY</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-forest/10 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-forest w-3 h-3"></div>
-                        <div class="border border-forest w-3 h-3 flex items-end justify-end"><div class="bg-forest w-1.5 h-1.5"></div></div>
-                        <div class="border border-forest w-3 h-3 flex items-start justify-end"><div class="bg-forest w-1.5 h-1.5"></div></div>
-                        <div class="w-3 h-3 bg-forest rounded-sm"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">💰</div>
-                    </div>
-                    <div class="text-[9px] font-bold tracking-tight">GPay / PhonePe / Paytm</div>
-                  </div>
-                )}
-                {/* Temple Donation Preview */}
-                {idx === 1 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#ffefe3] border border-orange-200 rounded-xl p-3 text-[#e65c00] shadow">
-                    <div class="text-[9px] font-black uppercase tracking-wider">🙏 DEVOTIONAL CONTRIBUTIONS</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-orange-100 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-[#e65c00] w-3 h-3"></div>
-                        <div class="border border-[#e65c00] w-3 h-3"></div>
-                        <div class="border border-[#e65c00] w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-[#e65c00]"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">🕉️</div>
-                    </div>
-                    <div class="text-[8px] font-bold text-center">Every contribution supports our temple</div>
-                  </div>
-                )}
-                {/* Restaurant Table Preview */}
-                {idx === 2 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#113b2c] rounded-xl p-3 text-white shadow border border-forest/10">
-                    <div class="text-[8px] font-black uppercase tracking-widest text-sun">TABLE NO. 07</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-forest w-3 h-3"></div>
-                        <div class="border border-forest w-3 h-3"></div>
-                        <div class="border border-forest w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-forest"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">🍔</div>
-                    </div>
-                    <div class="text-[8px] font-bold text-sun/90">Scan to View Menu & Pay</div>
-                  </div>
-                )}
-                {/* Freelancer Payment Preview */}
-                {idx === 3 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#f3f4f6] border border-neutral-300 rounded-xl p-3 text-neutral-800 shadow">
-                    <div class="text-[9px] font-black tracking-widest uppercase text-neutral-500">INVOICE REMITTANCE</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-neutral-200 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-neutral-800"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">💼</div>
-                    </div>
-                    <div class="text-[7px] font-bold text-neutral-600">Scan code to clear outstanding balance</div>
-                  </div>
-                )}
-                {/* Event Pass Preview */}
-                {idx === 4 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-gradient-to-br from-purple-600 to-indigo-700 rounded-xl p-3 text-white shadow">
-                    <div class="text-[8px] font-bold uppercase tracking-wider text-purple-200">🎫 TECH FEST 2026</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-purple-800 w-3 h-3"></div>
-                        <div class="border border-purple-800 w-3 h-3"></div>
-                        <div class="border border-purple-800 w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-purple-800"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">🚀</div>
-                    </div>
-                    <div class="text-[7px] font-black text-sun tracking-wider">ENTRY TICKET CODE</div>
-                  </div>
-                )}
-                {/* Tuition Fees Preview */}
-                {idx === 5 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#fffbeb] border border-amber-200 rounded-xl p-3 text-amber-900 shadow">
-                    <div class="text-[9px] font-black tracking-widest uppercase">ACADEMY TUITION</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-amber-100 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-amber-900 w-3 h-3"></div>
-                        <div class="border border-amber-900 w-3 h-3"></div>
-                        <div class="border border-amber-900 w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-amber-900"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">✏️</div>
-                    </div>
-                    <div class="text-[8px] font-bold">Class Fee Installment</div>
-                  </div>
-                )}
-                {/* Cab/Taxi Preview */}
-                {idx === 6 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#facc15] rounded-xl p-3 text-neutral-900 shadow">
-                    <div class="w-full bg-black text-[7px] font-black py-0.5 text-center text-yellow-400 tracking-wider">METRO CAB TRANSIT</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-yellow-500 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-neutral-900 w-3 h-3"></div>
-                        <div class="border border-neutral-900 w-3 h-3"></div>
-                        <div class="border border-neutral-900 w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-neutral-900"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">🚕</div>
-                    </div>
-                    <div class="text-[8px] font-bold tracking-tight">Scan to Pay Fare Instantly</div>
-                  </div>
-                )}
-                {/* Custom Minimalist Preview */}
-                {idx === 7 && (
-                  <div class="w-full h-full min-h-[140px] flex flex-col items-center justify-between bg-[#fafafa] border border-neutral-200 rounded-xl p-3 text-neutral-800 shadow">
-                    <div class="text-[8px] font-black uppercase tracking-wider text-neutral-400">MINIMAL DIRECT</div>
-                    <div class="w-14 h-14 bg-white p-1 rounded border border-neutral-200 flex items-center justify-center relative shadow-sm">
-                      <div class="grid grid-cols-2 gap-1 w-full h-full p-0.5 opacity-80">
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="border border-neutral-800 w-3 h-3"></div>
-                        <div class="w-3 h-3 bg-neutral-800"></div>
-                      </div>
-                      <div class="absolute inset-0 m-auto w-3 h-3 bg-white rounded-full flex items-center justify-center shadow-xs text-[6px]">⭐</div>
-                    </div>
-                    <div class="text-[8px] font-bold text-neutral-500">Peer-to-Peer Transfer</div>
-                  </div>
-                )}
+                <img
+                  src={template.image}
+                  alt={template.name}
+                  class="h-full w-full rounded-xl object-cover object-top"
+                  loading={idx < 2 ? "eager" : "lazy"}
+                />
               </div>
 
               <div class="mt-4 pt-3 border-t border-forest/10 flex items-center justify-between text-[11px] font-bold text-forest/70">
