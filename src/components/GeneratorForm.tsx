@@ -510,19 +510,15 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       setDownloadState("busy");
       const el = posterRef.current;
       
-      // Create a parent container that is hidden from view to hold the clone
-      const container = document.createElement("div");
-      container.style.position = 'fixed';
-      container.style.left = '0';
-      container.style.top = '0';
-      container.style.width = '0';
-      container.style.height = '0';
-      container.style.overflow = 'hidden';
-      container.style.zIndex = '-9999';
-      container.style.pointerEvents = 'none';
-
-      // Create a temporary clone styled with standard positive coords, 100% opacity, and desktop layout width
+      // Create a temporary clone styled with standard positive coords, desktop layout width, and 0 opacity.
+      // 0 opacity hides it from the viewport, but keeping it visible to the layout engine guarantees mobile browsers render it.
       const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'fixed';
+      clone.style.left = '0';
+      clone.style.top = '0';
+      clone.style.zIndex = '-9999';
+      clone.style.opacity = '0';
+      clone.style.pointerEvents = 'none';
       clone.style.width = '360px';
       clone.style.minWidth = '360px';
       clone.style.maxWidth = '360px';
@@ -530,22 +526,22 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       clone.style.boxSizing = 'border-box';
       clone.style.height = 'auto';
       
-      container.appendChild(clone);
-      document.body.appendChild(container);
+      document.body.appendChild(clone);
       
-      // Give a tiny layout and image decoding settle time
-      await new Promise((resolve) => setTimeout(resolve, 150));
+      // Give a layout and image decoding settle time (200ms for mobile network/cache decoding)
+      await new Promise((resolve) => setTimeout(resolve, 200));
       
       const measuredHeight = clone.offsetHeight;
       const targetHeight = measuredHeight || 520;
 
-      // Render the clone (which has a fixed layout, 100% opacity, and standard coordinates)
+      // Render the clone. We explicitly set style opacity to '1' so the generated canvas/PNG has 100% visibility.
       const dataUrl = await toPng(clone, {
         cacheBust: true,
         pixelRatio: 3, // High-res export
         width: 360,
         height: targetHeight,
         style: {
+          opacity: '1',
           transform: 'none',
           transformOrigin: 'top left',
           width: '360px',
@@ -560,7 +556,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
         }
       });
       
-      document.body.removeChild(container);
+      document.body.removeChild(clone);
 
       const safeName = (form.payee || activeTemplate.name)
           .toLowerCase()
@@ -1326,11 +1322,11 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start">
+    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start w-full max-w-full overflow-hidden">
       {/* Hidden canvas for QR Code generation */}
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
-      <div className="rounded-[2rem] border border-white/70 bg-white/85 p-5 backdrop-blur md:p-7">
+      <div className="w-full min-w-0 rounded-[2rem] border border-white/70 bg-white/85 p-4 sm:p-5 backdrop-blur md:p-7">
         {/* Simple vs Advanced Mode Tab Selector */}
         <div className="mb-6 flex rounded-2xl bg-cream p-1 border border-forest/10 max-w-[280px]">
           <button
@@ -1777,7 +1773,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       {/* Preview Column */}
       {mode === "simple" ? (
-        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
+        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
@@ -1841,7 +1837,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           </div>
         </div>
       ) : (
-        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
+        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
