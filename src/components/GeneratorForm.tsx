@@ -510,7 +510,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       setDownloadState("busy");
       const el = posterRef.current;
       
-      // Create a temporary clone to measure the exact height at 360px width
+      // Create a temporary clone to measure and render at a fixed width
       const clone = el.cloneNode(true) as HTMLDivElement;
       clone.style.position = 'absolute';
       clone.style.left = '-9999px';
@@ -523,14 +523,17 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       clone.style.height = 'auto';
       
       document.body.appendChild(clone);
+      
+      // Give a tiny layout settle time
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      
       const measuredHeight = clone.offsetHeight;
-      document.body.removeChild(clone);
-
       const targetHeight = measuredHeight || 520;
 
-      const dataUrl = await toPng(el, {
+      // Render the clone (which has a fixed layout) instead of the squished viewport element 'el'
+      const dataUrl = await toPng(clone, {
         cacheBust: true,
-        pixelRatio: 3,
+        pixelRatio: 3, // High-res export
         width: 360,
         height: targetHeight,
         style: {
@@ -547,16 +550,20 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           boxSizing: 'border-box'
         }
       });
+      
+      document.body.removeChild(clone);
+
       const safeName = (form.payee || activeTemplate.name)
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, "-")
+          .replace(/^-|-$/g, "");
       const link = document.createElement("a");
       link.href = dataUrl;
       link.download = `${safeName || "upi-template"}-${activeTemplate.id}.png`;
       link.click();
       setDownloadState("idle");
-    } catch {
+    } catch (err) {
+      console.error("Download failed:", err);
       setDownloadState("error");
     }
   }
@@ -1761,7 +1768,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       {/* Preview Column */}
       {mode === "simple" ? (
-        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-5 md:p-7">
+        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
@@ -1774,7 +1781,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             </span>
           </div>
 
-          <div className="rounded-[1.75rem] border border-forest/10 bg-white p-5 text-center">
+          <div className="rounded-[1.75rem] border border-forest/10 bg-white p-3 sm:p-5 text-center">
             {generated && qrDataUrl ? (
               <div className="flex flex-col items-center justify-center">
                 <div className="p-4 bg-white rounded-2xl border border-forest/5 shadow-sm inline-block">
@@ -1825,7 +1832,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           </div>
         </div>
       ) : (
-        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-5 md:p-7">
+        <div className="hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
@@ -1838,10 +1845,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             </span>
           </div>
 
-          <div className="rounded-[1.75rem] border border-forest/10 bg-white p-5 text-center">
+          <div className="rounded-[1.75rem] border border-forest/10 bg-white p-3 sm:p-5 text-center">
             <div
               ref={posterRef}
-              className={`mx-auto flex max-w-[360px] flex-col overflow-hidden rounded-[1.75rem] bg-gradient-to-br ${activeTemplate.accentClass} p-4 text-left shadow-md relative`}
+              className={`mx-auto flex w-full max-w-[360px] flex-col overflow-hidden rounded-[1.75rem] bg-gradient-to-br ${activeTemplate.accentClass} p-4 text-left shadow-md relative`}
             >
               {renderTemplateContent()}
             </div>
