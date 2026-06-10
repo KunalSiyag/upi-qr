@@ -47,6 +47,7 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toStri
     )}
 
     {/* Google Tag (gtag.js) - Google Analytics Tag */}
+    {/* Google Analytics - Placeholder (Uncomment and replace G-XXXXXXXXXX when ready)
     <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
@@ -54,9 +55,11 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toStri
       gtag('js', new Date());
       gtag('config', 'G-XXXXXXXXXX');
     </script>
+    */}
 
-    {/* Google AdSense - Auto Ads Script Tag */}
+    {/* Google AdSense - Auto Ads Script Tag - Placeholder (Uncomment and replace ca-pub-XXXXXXXXXXXXXXXX when ready)
     <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-XXXXXXXXXXXXXXXX" crossorigin="anonymous"></script>
+    */}
   </head>
   <body class="font-sans text-ink antialiased bg-[#fffdf6] min-h-screen flex flex-col justify-between overflow-x-hidden">
     <div class="flex-1 overflow-x-hidden">
