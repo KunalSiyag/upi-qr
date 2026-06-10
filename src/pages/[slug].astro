@@ -50,9 +50,24 @@ export async function getStaticPaths() {
 
 const { title, headline, intro, presetType } = Astro.props;
 const description = `${headline}. ${intro}`;
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": `${title} | Pro UPI QR`,
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": new URL(Astro.url.pathname, Astro.site).toString(),
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR`} description={description}>
+<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
   <main class="px-4 py-16 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Pro UPI QR Generator</a>

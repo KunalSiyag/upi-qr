@@ -15,9 +15,34 @@ const { Content } = await post.render();
 
 const title = `${post.data.title} | Pro UPI QR`;
 const description = post.data.description;
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "headline": post.data.title,
+  "description": post.data.description,
+  "datePublished": post.data.pubDate.toISOString(),
+  "author": {
+    "@type": "Person",
+    "name": post.data.author
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Pro UPI QR",
+    "url": "https://www.proupiqr.in",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.proupiqr.in/favicon.svg"
+    }
+  },
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": new URL(Astro.url.pathname, Astro.site).toString()
+  }
+};
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} schema={schema}>
   <main class="mx-auto max-w-4xl px-4 py-16 md:px-6 lg:px-8">
     <article class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-12">
       
