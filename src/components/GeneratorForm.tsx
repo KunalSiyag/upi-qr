@@ -510,15 +510,19 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       setDownloadState("busy");
       const el = posterRef.current;
       
-      // Create a temporary clone to measure and render at a fixed width.
-      // Use fixed coordinates and opacity instead of negative offsets to prevent bounding box clipping in html-to-image.
+      // Create a parent container that is hidden from view to hold the clone
+      const container = document.createElement("div");
+      container.style.position = 'fixed';
+      container.style.left = '0';
+      container.style.top = '0';
+      container.style.width = '0';
+      container.style.height = '0';
+      container.style.overflow = 'hidden';
+      container.style.zIndex = '-9999';
+      container.style.pointerEvents = 'none';
+
+      // Create a temporary clone styled with standard positive coords, 100% opacity, and desktop layout width
       const clone = el.cloneNode(true) as HTMLDivElement;
-      clone.style.position = 'fixed';
-      clone.style.left = '0';
-      clone.style.top = '0';
-      clone.style.zIndex = '-100';
-      clone.style.opacity = '0.01';
-      clone.style.pointerEvents = 'none';
       clone.style.width = '360px';
       clone.style.minWidth = '360px';
       clone.style.maxWidth = '360px';
@@ -526,7 +530,8 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       clone.style.boxSizing = 'border-box';
       clone.style.height = 'auto';
       
-      document.body.appendChild(clone);
+      container.appendChild(clone);
+      document.body.appendChild(container);
       
       // Give a tiny layout and image decoding settle time
       await new Promise((resolve) => setTimeout(resolve, 150));
@@ -534,7 +539,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       const measuredHeight = clone.offsetHeight;
       const targetHeight = measuredHeight || 520;
 
-      // Render the clone (which has a fixed layout and positive coordinates)
+      // Render the clone (which has a fixed layout, 100% opacity, and standard coordinates)
       const dataUrl = await toPng(clone, {
         cacheBust: true,
         pixelRatio: 3, // High-res export
@@ -555,7 +560,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
         }
       });
       
-      document.body.removeChild(clone);
+      document.body.removeChild(container);
 
       const safeName = (form.payee || activeTemplate.name)
           .toLowerCase()
