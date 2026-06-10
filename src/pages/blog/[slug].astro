@@ -1,0 +1,204 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.slug },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+
+const title = `${post.data.title} | Pro UPI QR`;
+const description = post.data.description;
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="mx-auto max-w-4xl px-4 py-16 md:px-6 lg:px-8">
+    <article class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-12">
+      
+      {/* Back to Blog */}
+      <div class="mb-8">
+        <a href="/blog/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Blog Guides</a>
+      </div>
+
+      {/* Frontmatter Metadata */}
+      <header class="border-b border-forest/10 pb-8">
+        <div class="flex flex-wrap items-center gap-3 text-xs font-semibold text-forest/50">
+          <time datetime={post.data.pubDate.toISOString()}>
+            {post.data.pubDate.toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </time>
+          <span>&bull;</span>
+          <span>By {post.data.author}</span>
+        </div>
+
+        <h1 class="mt-4 text-3xl font-black leading-tight text-forest md:text-5xl">
+          {post.data.title}
+        </h1>
+        
+        <p class="mt-4 text-base font-medium text-forest/72 leading-relaxed">
+          {post.data.description}
+        </p>
+
+        <div class="mt-6 flex flex-wrap gap-2">
+          {post.data.tags.map((tag) => (
+            <span class="rounded-full bg-mint px-3 py-0.5 text-xs font-bold text-forest">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      </header>
+
+      {/* Rendered Markdown Body Content */}
+      <div class="blog-content mt-8">
+        <Content />
+      </div>
+
+      {/* Footer CTA */}
+      <footer class="mt-12 border-t border-forest/10 pt-8 text-center">
+        <h3 class="text-xl font-black text-forest">Need to create your own UPI QR Code standee?</h3>
+        <p class="mt-2 text-sm text-forest/70">Create, customize, and print standard compliant posters in 30 seconds.</p>
+        <a 
+          href="/" 
+          class="mt-5 inline-block rounded-full bg-forest px-8 py-3 text-sm font-bold text-white transition hover:bg-leaf"
+        >
+          Generate Free QR Code Now
+        </a>
+      </footer>
+
+    </article>
+  </main>
+</BaseLayout>
+
+<style is:global>
+  /* Localized Prose Styling for Rendered Markdown */
+  .blog-content {
+    color: #16211f;
+    font-size: 1rem;
+    line-height: 1.8;
+  }
+  @media (min-width: 768px) {
+    .blog-content {
+      font-size: 1.0625rem;
+    }
+  }
+
+  .blog-content p {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .blog-content strong {
+    font-weight: 700;
+    color: #113b2c;
+  }
+
+  .blog-content h2 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: #113b2c;
+    margin-top: 2.25rem;
+    margin-bottom: 1rem;
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+  @media (min-width: 768px) {
+    .blog-content h2 {
+      font-size: 1.75rem;
+    }
+  }
+
+  .blog-content h3 {
+    font-size: 1.25rem;
+    font-weight: 800;
+    color: #113b2c;
+    margin-top: 1.75rem;
+    margin-bottom: 0.75rem;
+    line-height: 1.3;
+  }
+
+  .blog-content ul, .blog-content ol {
+    margin-top: 1.25rem;
+    margin-bottom: 1.25rem;
+    padding-left: 1.5rem;
+  }
+
+  .blog-content ul {
+    list-style-type: disc;
+  }
+
+  .blog-content ol {
+    list-style-type: decimal;
+  }
+
+  .blog-content li {
+    margin-top: 0.5rem;
+    margin-bottom: 0.5rem;
+  }
+
+  .blog-content a {
+    color: #287a57;
+    text-decoration: underline;
+    font-weight: 600;
+  }
+  .blog-content a:hover {
+    color: #113b2c;
+  }
+
+  .blog-content hr {
+    border: 0;
+    border-top: 1px solid rgba(17, 59, 44, 0.1);
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+  }
+
+  /* Table styling */
+  .blog-content table {
+    width: 100%;
+    margin-top: 1.5rem;
+    margin-bottom: 1.5rem;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+  }
+
+  .blog-content th, .blog-content td {
+    padding: 0.75rem 1rem;
+    border: 1px solid rgba(17, 59, 44, 0.1);
+    text-align: left;
+  }
+
+  .blog-content th {
+    background-color: #dff6e7;
+    color: #113b2c;
+    font-weight: 800;
+  }
+
+  .blog-content td {
+    background-color: #fffaf1;
+  }
+
+  /* Blockquote block styling */
+  .blog-content blockquote {
+    border-left: 4px solid #287a57;
+    padding-left: 1.25rem;
+    font-style: italic;
+    color: rgba(22, 33, 31, 0.85);
+    margin: 1.5rem 0;
+    background-color: rgba(223, 246, 231, 0.35);
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-radius: 0 0.75rem 0.75rem 0;
+  }
+
+  .blog-content blockquote p {
+    margin: 0;
+  }
+</style>

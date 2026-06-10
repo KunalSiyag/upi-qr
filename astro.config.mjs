@@ -3,6 +3,6 @@ import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
 
 export default defineConfig({
-  site: "https://www.upiqr.in",
+  site: "https://www.proupiqr.in",
   integrations: [react(), tailwind()]
 });
