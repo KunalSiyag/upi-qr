@@ -1322,13 +1322,13 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start w-full max-w-full overflow-hidden">
+    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start w-full max-w-full">
       {/* Hidden canvas for QR Code generation */}
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
       <div className="w-full min-w-0 rounded-[2rem] border border-white/70 bg-white/85 p-4 sm:p-5 backdrop-blur md:p-7">
         {/* Simple vs Advanced Mode Tab Selector */}
-        <div className="mb-6 flex rounded-2xl bg-cream p-1 border border-forest/10 max-w-[280px]">
+        <div className="mb-6 flex w-full max-w-[280px] rounded-2xl bg-cream p-1 border border-forest/10">
           <button
             key="tab-simple"
             type="button"
@@ -1363,7 +1363,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 value={form.payee}
                 onChange={(event) => updateField("payee", event.target.value)}
                 placeholder="Shree Ganesh Store"
-                className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
+                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
@@ -1373,7 +1373,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 value={form.upiId}
                 onChange={(event) => updateField("upiId", event.target.value)}
                 placeholder="ganeshstore@oksbi"
-                className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
+                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
           </div>
@@ -1384,7 +1384,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value as TemplateId)}
-                className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm font-bold text-forest cursor-pointer hover:border-leaf"
+                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm font-bold text-forest cursor-pointer hover:border-leaf"
               >
                 {templateDefinitions.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -1400,7 +1400,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 value={form.payee}
                 onChange={(event) => updateField("payee", event.target.value)}
                 placeholder="Shree Ganesh Store"
-                className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
+                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
@@ -1410,7 +1410,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 value={form.upiId}
                 onChange={(event) => updateField("upiId", event.target.value)}
                 placeholder="ganeshstore@oksbi"
-                className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
+                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
@@ -1421,7 +1421,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                   value={form.customField}
                   onChange={(event) => updateField("customField", event.target.value)}
                   placeholder={activeTemplate.customFieldPlaceholder}
-                  className="rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
+                  className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
                 />
               </label>
             )}
@@ -1451,7 +1451,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                         onChange={(event) => updateField("amount", event.target.value)}
                         inputMode="decimal"
                         placeholder="250"
-                        className="rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
+                        className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
                       />
                     </label>
 
@@ -1466,7 +1466,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                       value={form.note}
                       onChange={(event) => updateField("note", event.target.value)}
                       placeholder="June tuition fee"
-                      className="rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
+                      className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
                     />
                   </label>
                 </div>
@@ -1789,8 +1789,8 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           <div className="rounded-[1.75rem] border border-forest/10 bg-white p-3 sm:p-5 text-center">
             {generated && qrDataUrl ? (
               <div className="flex flex-col items-center justify-center">
-                <div className="p-4 bg-white rounded-2xl border border-forest/5 shadow-sm inline-block">
-                  <img src={qrDataUrl} className="w-[240px] h-[240px] mx-auto" alt="UPI QR Code" />
+                <div className="p-4 bg-white rounded-2xl border border-forest/5 shadow-sm inline-block w-full max-w-[272px]">
+                  <img src={qrDataUrl} className="w-full max-w-[240px] h-auto aspect-square mx-auto" alt="UPI QR Code" />
                 </div>
                 <div className="mt-5 space-y-2 rounded-[1.25rem] bg-mint/55 p-4 text-left w-full">
                   <p className="text-sm font-semibold text-forest truncate">
