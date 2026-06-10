@@ -510,11 +510,15 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       setDownloadState("busy");
       const el = posterRef.current;
       
-      // Create a temporary clone to measure and render at a fixed width
+      // Create a temporary clone to measure and render at a fixed width.
+      // Use fixed coordinates and opacity instead of negative offsets to prevent bounding box clipping in html-to-image.
       const clone = el.cloneNode(true) as HTMLDivElement;
-      clone.style.position = 'absolute';
-      clone.style.left = '-9999px';
-      clone.style.top = '-9999px';
+      clone.style.position = 'fixed';
+      clone.style.left = '0';
+      clone.style.top = '0';
+      clone.style.zIndex = '-100';
+      clone.style.opacity = '0.01';
+      clone.style.pointerEvents = 'none';
       clone.style.width = '360px';
       clone.style.minWidth = '360px';
       clone.style.maxWidth = '360px';
@@ -524,13 +528,13 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
       
       document.body.appendChild(clone);
       
-      // Give a tiny layout settle time
-      await new Promise((resolve) => setTimeout(resolve, 50));
+      // Give a tiny layout and image decoding settle time
+      await new Promise((resolve) => setTimeout(resolve, 150));
       
       const measuredHeight = clone.offsetHeight;
       const targetHeight = measuredHeight || 520;
 
-      // Render the clone (which has a fixed layout) instead of the squished viewport element 'el'
+      // Render the clone (which has a fixed layout and positive coordinates)
       const dataUrl = await toPng(clone, {
         cacheBust: true,
         pixelRatio: 3, // High-res export
