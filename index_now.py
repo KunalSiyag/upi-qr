@@ -4,7 +4,7 @@ import xml.etree.ElementTree as ET
 import sys
 import os
 
-KEY = "3b8ef6c98da14e4eb120364f780cd2f1"
+KEY = "7e4c2b9a8f1d4c3ab5d6e7f80a1c2b3d"
 HOST = "www.proupiqr.in"
 KEY_LOCATION = f"https://{HOST}/{KEY}.txt"
 
