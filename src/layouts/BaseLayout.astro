@@ -7,10 +7,14 @@ interface Props {
   description: string;
   canonical?: string;
   schema?: Record<string, unknown>;
+  image?: string;
 }
 
-const { title, description, canonical, schema } = Astro.props;
+const { title, description, canonical, schema, image } = Astro.props;
 const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toString();
+const ogImageUrl = image 
+  ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
+  : new URL("/images/og-image.png", Astro.site).toString();
 ---
 
 <!doctype html>
@@ -33,8 +37,8 @@ const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toStri
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta property="og:image" content={new URL("/images/og-image.png", Astro.site).toString()} />
-    <meta name="twitter:image" content={new URL("/images/og-image.png", Astro.site).toString()} />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta name="twitter:image" content={ogImageUrl} />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />

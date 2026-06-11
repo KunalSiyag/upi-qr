@@ -16,12 +16,29 @@ const { Content } = await post.render();
 const title = `${post.data.title} | Pro UPI QR`;
 const description = post.data.description;
 
+// Fetch related posts based on matching tags and publication date
+const posts = await getCollection("blog");
+const relatedPosts = posts
+  .filter((p) => p.slug !== post.slug)
+  .map((p) => {
+    const commonTags = p.data.tags.filter((t) => post.data.tags.includes(t)).length;
+    return { post: p, score: commonTags };
+  })
+  .sort((a, b) => b.score - a.score || b.post.data.pubDate.valueOf() - a.post.data.pubDate.valueOf())
+  .slice(0, 3)
+  .map((item) => item.post);
+
+const postImageUrl = post.data.image 
+  ? (post.data.image.startsWith("http") ? post.data.image : new URL(post.data.image, Astro.site).toString())
+  : new URL("/images/og-image.png", Astro.site).toString();
+
 const schema = {
   "@context": "https://schema.org",
   "@type": "BlogPosting",
   "headline": post.data.title,
   "description": post.data.description,
   "datePublished": post.data.pubDate.toISOString(),
+  "image": postImageUrl,
   "author": {
     "@type": "Person",
     "name": post.data.author
@@ -42,7 +59,7 @@ const schema = {
 };
 ---
 
-<BaseLayout title={title} description={description} schema={schema}>
+<BaseLayout title={title} description={description} schema={schema} image={post.data.image}>
   <main class="mx-auto max-w-4xl px-4 py-16 md:px-6 lg:px-8">
     <article class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-12">
       
@@ -103,6 +120,41 @@ const schema = {
           </div>
         </div>
       </div>
+
+      {/* Related Articles */}
+      {relatedPosts.length > 0 && (
+        <div class="mt-12 border-t border-forest/10 pt-10">
+          <h3 class="text-2xl font-black text-forest mb-6">Related Articles</h3>
+          <div class="grid gap-6 md:grid-cols-3">
+            {relatedPosts.map((rPost) => (
+              <a 
+                href={`/blog/${rPost.slug}/`}
+                class="group flex flex-col justify-between rounded-2xl border border-forest/5 bg-[#fffdf6] p-5 transition-all duration-300 hover:scale-[1.02] hover:border-leaf/20 hover:shadow-md"
+              >
+                <div>
+                  <span class="text-[10px] font-bold text-forest/40">
+                    {rPost.data.pubDate.toLocaleDateString("en-US", {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </span>
+                  <h4 class="mt-2 text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
+                    {rPost.data.title}
+                  </h4>
+                  <p class="mt-2 text-xs text-forest/70 line-clamp-3 leading-relaxed">
+                    {rPost.data.description}
+                  </p>
+                </div>
+                <div class="mt-4 pt-3 border-t border-forest/5 flex items-center justify-between text-[11px] font-bold text-leaf">
+                  <span>Read Guide</span>
+                  <span class="group-hover:translate-x-1 transition-transform">&rarr;</span>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Footer CTA */}
       <footer class="mt-12 border-t border-forest/10 pt-8 text-center">
