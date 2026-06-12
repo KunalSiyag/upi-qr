@@ -5,13 +5,14 @@ import { getCollection } from "astro:content";
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
   return posts.map((post) => ({
-    params: { slug: post.slug },
+    params: { slug: post.id },
     props: { post },
   }));
 }
 
 const { post } = Astro.props;
-const { Content } = await post.render();
+import { render } from "astro:content";
+const { Content } = await render(post);
 
 const title = `${post.data.title} | Pro UPI QR`;
 const description = post.data.description;
@@ -19,7 +20,7 @@ const description = post.data.description;
 // Fetch related posts based on matching tags and publication date
 const posts = await getCollection("blog");
 const relatedPosts = posts
-  .filter((p) => p.slug !== post.slug)
+  .filter((p) => p.id !== post.id)
   .map((p) => {
     const commonTags = p.data.tags.filter((t) => post.data.tags.includes(t)).length;
     return { post: p, score: commonTags };
@@ -128,7 +129,7 @@ const schema = {
           <div class="grid gap-6 md:grid-cols-3">
             {relatedPosts.map((rPost) => (
               <a 
-                href={`/blog/${rPost.slug}/`}
+                href={`/blog/${rPost.id}/`}
                 class="group flex flex-col justify-between rounded-2xl border border-forest/5 bg-[#fffdf6] p-5 transition-all duration-300 hover:scale-[1.02] hover:border-leaf/20 hover:shadow-md"
               >
                 <div>

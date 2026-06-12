@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "404 - Page Not Found | Pro UPI QR";
+const description = "The page you are looking for does not exist.";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center md:px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl rounded-[2rem] border border-white/75 bg-white/86 p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <h1 class="text-6xl font-black text-forest">404</h1>
+      <p class="mt-4 text-2xl font-bold text-forest">Page Not Found</p>
+      <p class="mt-4 text-lg text-forest/72">The page you are looking for might have been removed, had its name changed, or is temporarily unavailable.</p>
+      <div class="mt-8">
+        <a href="/" class="inline-block rounded-full bg-forest px-8 py-3 text-sm font-bold text-white transition hover:bg-leaf">
+          Go back home
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
