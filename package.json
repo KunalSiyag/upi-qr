@@ -8,6 +8,11 @@
     "build": "astro build",
     "preview": "astro preview"
   },
+  "overrides": {
+    "@astrojs/tailwind": {
+      "astro": "$astro"
+    }
+  },
   "dependencies": {
     "@astrojs/react": "^5.0.7",
     "@astrojs/tailwind": "^6.0.2",

@@ -1,0 +1,21 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "500 - Server Error | Pro UPI QR";
+const description = "An unexpected error occurred on the server.";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="flex min-h-[60vh] flex-col items-center justify-center px-4 py-16 text-center md:px-6 lg:px-8">
+    <div class="mx-auto max-w-2xl rounded-[2rem] border border-white/75 bg-white/86 p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <h1 class="text-6xl font-black text-forest">500</h1>
+      <p class="mt-4 text-2xl font-bold text-forest">Server Error</p>
+      <p class="mt-4 text-lg text-forest/72">We're sorry, but an unexpected error occurred on our end. Please try again later.</p>
+      <div class="mt-8">
+        <a href="/" class="inline-block rounded-full bg-forest px-8 py-3 text-sm font-bold text-white transition hover:bg-leaf">
+          Go back home
+        </a>
+      </div>
+    </div>
+  </main>
+</BaseLayout>
