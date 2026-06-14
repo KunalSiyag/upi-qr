@@ -1859,7 +1859,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
       {/* Preview Column */}
       {mode === "simple" ? (
-        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
+        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7 lg:sticky lg:top-28 lg:self-start">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
@@ -1923,7 +1923,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           </div>
         </div>
       ) : (
-        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7">
+        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7 lg:sticky lg:top-28 lg:self-start">
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
