@@ -1,0 +1,32 @@
+# Pro UPI QR Code Generator
+
+A local-first, privacy-first, SEO-optimized UPI QR Code and payment poster generator designed for Indian merchants, retail shops, freelancers, restaurants, and nonprofit organizations.
+
+## Core Features
+- **100% Client-Side Generation**: QR code vectors are generated entirely in the browser using the client's CPU. No payee names, payment amounts, or UPI IDs are ever sent to external servers or logged.
+- **UPI Deep Link Integration**: Generates standard-compliant `upi://pay` deep links. Automatically compatible with major Indian payment apps: Google Pay, PhonePe, Paytm, BHIM, Cred, and bank apps.
+- **Custom Poster Templates**: Includes multiple pre-designed print layouts:
+  - Shop Standee (standard checkout counter display)
+  - Temple Donation (donation/charity drives)
+  - Restaurant Table (dine-in table numbers and payment)
+  - Freelancer Card (client billing & invoices)
+  - Event Pass (ticket & registration fees)
+  - Tuition Fees (classes & coaching)
+  - Cab / Taxi Card (driver dashboard display)
+  - Custom Minimal (clean executive card)
+- **Branding Customization**: Allows configuring custom logos, background colors, accent colors, and custom header cover banners.
+- **Affiliate Integration**: Displays suggestions for physical acrylic stands and card holders.
+
+## Technical Architecture
+- **Framework**: Astro v4 (Static Site Generation for fast load times and Core Web Vitals)
+- **Component Model**: React (for stateful rendering of the interactive QR/poster form)
+- **Styling**: Tailwind CSS
+- **Deployment**: Vercel (pre-configured with secure HTTP headers & CSP)
+
+## Page Index / Routing
+- **Main Generator Page**: `/`
+- **PhonePe Preset**: `/phonepe-qr-generator/` (preconfigured for PhonePe payments)
+- **Google Pay Preset**: `/google-pay-qr-generator/` (preconfigured for Google Pay payments)
+- **Paytm Preset**: `/paytm-qr-generator/` (preconfigured for Paytm payments)
+- **Donation Preset**: `/donation-qr-generator/` (preconfigured for NGO/temple donations)
+- **Blog & Guides**: `/blog/`

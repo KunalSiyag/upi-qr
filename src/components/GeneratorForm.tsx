@@ -260,58 +260,97 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
   const upiUrl = useMemo(() => buildUpiUrl(form), [form]);
 
+  const isInitialized = useRef(false);
+
   useEffect(() => {
-    if (presetType) {
-      setMode("advanced");
-      if (presetType === "phonepe") {
-        setForm((prev) => ({ ...prev, logoType: "phonepe", logoPosition: "qr-center" }));
-        setShowBrandingFields(true);
-      } else if (presetType === "gpay") {
-        setForm((prev) => ({ ...prev, logoType: "gpay", logoPosition: "qr-center" }));
-        setShowBrandingFields(true);
-      } else if (presetType === "paytm") {
-        setForm((prev) => ({ ...prev, logoType: "paytm", logoPosition: "qr-center" }));
-        setShowBrandingFields(true);
-      } else if (presetType === "donation") {
-        setSelectedTemplate("temple-donation");
+    let initialForm: FormState = {
+      payee: "",
+      upiId: "",
+      amount: "",
+      note: "",
+      customField: "",
+      logoType: "none",
+      logoUrl: "",
+      logoSize: "45",
+      logoPosition: "qr-center",
+      coverType: "none",
+      coverUrl: "",
+      coverPosition: "top-banner",
+      coverOpacity: "30",
+      themeType: "default",
+      customBgColor: "#ffffff",
+      customTextColor: "#113b2c",
+      customAccentColor: "#287a57"
+    };
+    let initialTemplate: TemplateId = "shop-standee";
+    let initialMode: "simple" | "advanced" = "simple";
+    let initialShowOptional = false;
+    let initialShowBranding = false;
+
+    // 1. Try to load from draft
+    const savedDraft = window.localStorage.getItem(draftKey);
+    if (savedDraft) {
+      try {
+        const parsed = JSON.parse(savedDraft) as Partial<FormState>;
+        initialForm = {
+          ...initialForm,
+          ...parsed,
+          logoUrl: "",
+          coverUrl: ""
+        };
+        if (parsed.amount || parsed.note) {
+          initialShowOptional = true;
+        }
+        if ((parsed.logoType && parsed.logoType !== "none") || (parsed.coverType && parsed.coverType !== "none")) {
+          initialShowBranding = true;
+        }
+      } catch {
+        window.localStorage.removeItem(draftKey);
       }
     }
+
+    // 2. If presetType is defined, override specific preset settings
+    if (presetType) {
+      initialMode = "advanced";
+      if (presetType === "phonepe") {
+        initialForm.logoType = "phonepe";
+        initialForm.logoPosition = "qr-center";
+        initialShowBranding = true;
+      } else if (presetType === "gpay") {
+        initialForm.logoType = "gpay";
+        initialForm.logoPosition = "qr-center";
+        initialShowBranding = true;
+      } else if (presetType === "paytm") {
+        initialForm.logoType = "paytm";
+        initialForm.logoPosition = "qr-center";
+        initialShowBranding = true;
+      } else if (presetType === "donation") {
+        initialTemplate = "temple-donation";
+      }
+    }
+
+    // Apply all initial states
+    setForm(initialForm);
+    setSelectedTemplate(initialTemplate);
+    setMode(initialMode);
+    setShowOptionalFields(initialShowOptional);
+    setShowBrandingFields(initialShowBranding);
+    
+    // Mark as initialized so saving effect can write updates
+    isInitialized.current = true;
   }, [presetType]);
-  const activeTemplate =
-    templateDefinitions.find((template) => template.id === selectedTemplate) ?? templateDefinitions[0];
 
   useEffect(() => {
-    const savedDraft = window.localStorage.getItem(draftKey);
-
-    if (!savedDraft) {
+    if (!isInitialized.current) {
       return;
     }
-
-    try {
-      const parsed = JSON.parse(savedDraft) as Partial<FormState>;
-      setForm((current) => ({
-        ...current,
-        ...parsed,
-        logoUrl: "",
-        coverUrl: ""
-      }));
-
-      if (parsed.amount || parsed.note) {
-        setShowOptionalFields(true);
-      }
-      if ((parsed.logoType && parsed.logoType !== "none") || (parsed.coverType && parsed.coverType !== "none")) {
-        setShowBrandingFields(true);
-      }
-    } catch {
-      window.localStorage.removeItem(draftKey);
-    }
-  }, []);
-
-  useEffect(() => {
     // Exclude large dataURLs from localStorage to prevent quota limit errors
     const { logoUrl, coverUrl, ...savableForm } = form;
     window.localStorage.setItem(draftKey, JSON.stringify(savableForm));
   }, [form]);
+
+  const activeTemplate =
+    templateDefinitions.find((template) => template.id === selectedTemplate) ?? templateDefinitions[0];
 
   useEffect(() => {
     if (!generated) {
@@ -1376,6 +1415,53 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
+
+            <div className="grid gap-2">
+              <span className="text-sm font-semibold text-forest">QR Logo Badge</span>
+              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
+                {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
+                  <button
+                    key={type}
+                    type="button"
+                    onClick={() => {
+                      updateField("logoType", type);
+                      if (type !== "none") {
+                        updateField("logoPosition", "qr-center");
+                      }
+                    }}
+                    className={`px-2 py-2 text-xs font-bold rounded-xl border text-center transition capitalize ${
+                      form.logoType === type
+                        ? "border-forest bg-forest text-white"
+                        : "border-forest/10 bg-cream text-forest hover:border-leaf"
+                    }`}
+                  >
+                    {type === "none"
+                      ? "None"
+                      : type === "gpay"
+                        ? "GPay"
+                        : type === "phonepe"
+                          ? "PhonePe"
+                          : type === "bhim"
+                            ? "BHIM"
+                            : type === "paytm"
+                              ? "Paytm"
+                              : "Custom"}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {form.logoType === "custom" && (
+              <div className="space-y-2 bg-cream/40 p-3 rounded-2xl border border-forest/10 animate-fadeIn">
+                <span className="text-xs font-semibold text-forest block">Upload Custom Logo</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleLogoUpload}
+                  className="text-xs text-forest/70 w-full file:mr-2 file:py-1.5 file:px-4 file:rounded-full file:border-0 file:text-xs file:font-semibold file:bg-mint file:text-forest hover:file:bg-leaf hover:file:text-white"
+                />
+              </div>
+            )}
           </div>
         ) : (
           <div className="grid gap-4">
