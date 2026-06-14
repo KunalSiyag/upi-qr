@@ -1,0 +1,385 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../../components/GeneratorForm";
+import AffiliateProducts from "../../components/AffiliateProducts.astro";
+
+const title = "मुफ्त UPI QR कोड जनरेटर | दुकानों के लिए UPI QR कोड बनाएं";
+const description =
+  "मुफ्त में राशि के साथ UPI QR कोड जनरेटर। हमारा यूनिवर्सल UPI QR कोड जनरेटर Paytm, PhonePe और Google Pay (GPay) के लिए काम करता है। अपनी दुकान के लिए तुरंत UPI QR कोड बनाएं।";
+
+const faqs = [
+  {
+    question: "UPI QR कोड कैसे जनरेट करें?",
+    answer:
+      "UPI QR कोड जनरेट करने के लिए, बस हमारे मुफ्त UPI QR कोड जनरेटर में अपना प्राप्तकर्ता का नाम और UPI आईडी दर्ज करें। आप भुगतान QR को तुरंत उच्च-रिज़ॉल्यूशन छवि के रूप में डाउनलोड कर सकते हैं।"
+  },
+  {
+    question: "क्या यह एक यूनिवर्सल UPI QR कोड जनरेटर है?",
+    answer:
+      "हां, यह एक यूनिवर्सल UPI QR कोड जनरेटर है। बनाए गए QR कोड PhonePe, Google Pay (GPay), Paytm, BHIM और सभी प्रमुख बैंकिंग ऐप्स सहित सभी प्रमुख भुगतान ऐप्स पर काम करेंगे।"
+  },
+  {
+    question: "राशि के साथ UPI QR कोड कैसे बनाएं?",
+    answer:
+      "आप हमारे टूल का उपयोग करके आसानी से राशि के साथ UPI QR कोड बना सकते हैं। बस 'राशि' फ़ील्ड में अपनी निश्चित राशि दर्ज करें, और जनरेट किया गया UPI QR कोड स्वचालित रूप से ग्राहक से उस सटीक भुगतान का अनुरोध करेगा।"
+  },
+  {
+    question: "UPI QR कोड क्या है?",
+    answer:
+      "एक UPI QR कोड एक स्कैन करने योग्य बारकोड है जिसमें आपकी वर्चुअल भुगतान पता (VPA) और बैंकिंग विवरण सुरक्षित रूप से शामिल होते हैं। जब किसी भी UPI भुगतान ऐप द्वारा स्कैन किया जाता है, तो यह ग्राहक को सीधे आपके बैंक खाते में पैसे स्थानांतरित करने की अनुमति देता है।"
+  },
+  {
+    question: "दुकान के लिए UPI QR कोड कैसे प्राप्त करें?",
+    answer:
+      "अपनी दुकान के लिए UPI QR कोड प्राप्त करने के लिए, हमारे जनरेटर में अपना मर्चेंट UPI आईडी दर्ज करें। एक पेशेवर पोस्टर टेम्पलेट चुनें, जनरेट पर क्लिक करें, और अपने बिलिंग काउंटर के लिए परिणामी स्टैंडी प्रिंट करें।"
+  },
+  {
+    question: "QR कोड से UPI आईडी कैसे प्राप्त करें?",
+    answer:
+      "किसी मौजूदा QR कोड से UPI आईडी प्राप्त करने के लिए, बस अपने फोन पर किसी भी मानक QR कोड रीडर ऐप का उपयोग करके इसे स्कैन करें। परिणामी पाठ एक 'upi://pay' लिंक होगा। आपकी UPI आईडी उस लिंक में 'pa=' के ठीक बाद वाला हिस्सा है।"
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Pro UPI QR",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/hi/",
+      description,
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "INR"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: faq.answer
+        }
+      }))
+    }
+  ]
+};
+
+const useCases = [
+  "दुकानें और किराना स्टोर",
+  "फ्रीलांसर और सलाहकार",
+  "रेस्तरां और कैफे",
+  "मंदिर दान काउंटर",
+  "स्कूल और ट्यूशन फीस",
+  "इवेंट और पंजीकरण"
+];
+
+const features = [
+  {
+    title: "तुरंत ब्राउज़र जनरेशन",
+    copy: "बिना लॉगिन, साइनअप या किसी डैशबोर्ड की प्रतीक्षा किए सीधे अपने ब्राउज़र में QR बनाएं।"
+  },
+  {
+    title: "भुगतान-तैयार UPI प्रारूप",
+    copy: "प्राप्तकर्ता का नाम, UPI आईडी, निश्चित राशि और नोट जोड़ें ताकि स्कैनर सही भुगतान ऐप पर पहुंचे।"
+  },
+  {
+    title: "पोस्टर-फर्स्ट डिज़ाइन",
+    copy: "आज ही एक QR से शुरुआत करें, फिर इसे स्टैंडी, दान पोस्टर, टेबल कार्ड और फीस संग्रह सामग्री में बदलें।"
+  }
+];
+
+const templates = [
+  {
+    name: "दुकान भुगतान स्टैंडी",
+    image: "/images/template/abc-shop-standee.png",
+    value: "खुदरा स्टोर, किराना काउंटर और स्थानीय दुकानों के लिए काउंटर-रेडी डिस्प्ले।",
+    bestFor: "सर्वोत्तम: खुदरा कैशियर काउंटर, किराना दुकान और फार्मेसियों के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "मंदिर दान पोस्टर",
+    image: "/images/template/abc-temple-donation.png",
+    value: "विश्वास और पारदर्शिता के लिए बड़े फोंट और दान-प्रथम संदेशों के साथ भक्तिमय लेआउट।",
+    bestFor: "सर्वोत्तम: सामुदायिक दान बक्से, धार्मिक केंद्र और धर्मार्थ डेस्क के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "रेस्तरां टेबल QR",
+    image: "/images/template/abc-restaurant-table.png",
+    value: "टेबल नंबर और डायरेक्ट डाइन-इन स्कैन-टू-पे निर्देशों को प्रदर्शित करने वाला कॉम्पैक्ट डिज़ाइन।",
+    bestFor: "सर्वोत्तम: डाइन-इन टेबल, कैफे काउंटर और फूड ट्रक डिस्प्ले के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "फ्रीलांसर भुगतान कार्ड",
+    image: "/images/template/abc-freelancer-card.png",
+    value: "क्लाइंट बिलिंग, बार-बार दी जाने वाली सेवाओं और त्वरित चालान लिंक के लिए आधुनिक कार्ड लेआउट।",
+    bestFor: "सर्वोत्तम: इनवॉइस, डिजिटल रिज्यूमे, पोर्टफोलियो साइट और व्हाट्सएप शेयरिंग के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "इवेंट पास टिकट",
+    image: "/images/template/abc-event-ticket.png",
+    value: "इवेंट की तारीख, स्थान विवरण और स्कैन-टू-रजिस्टर फ्लो की विशेषता वाला जीवंत टिकट डिज़ाइन।",
+    bestFor: "सर्वोत्तम: टिकटिंग बूथ, कार्यशालाओं, पंजीकरणों और सेमिनार पास के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "ट्यूशन फीस कार्ड",
+    image: "/images/template/abc-custom-minimal.png",
+    value: "क्लासरूम डिस्प्ले, बैच और कोचिंग फीस संग्रह के लिए डिज़ाइन किया गया स्कूल नोटबुक प्रेरित थीम।",
+    bestFor: "सर्वोत्तम: स्कूलों, कोचिंग बैचों, क्लास नोटिस बोर्ड और ट्यूटर्स के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "कैब / टैक्सी डैशबोर्ड कार्ड",
+    image: "/images/template/abc-taxi-cab.png",
+    value: "बड़े पठनीय टैक्सी/कैब क्रेडेंशियल के साथ उच्च-कंट्रास्ट ड्राइवर-अनुकूल डैशबोर्ड कार्ड।",
+    bestFor: "सर्वोत्तम: कैब डैशबोर्ड, ऑटो-रिक्शा स्क्रीन और डिलीवरी राइडर्स के लिए।",
+    status: "अभी उपलब्ध है"
+  },
+  {
+    name: "कस्टम मिनिमलिस्ट कार्ड",
+    image: "/images/template/abc-custom-minimal.png",
+    value: "सीधे फंड ट्रांसफर और औपचारिक व्यावसायिक आवश्यकताओं के लिए साफ, पेशेवर कार्यकारी कार्ड संरचना।",
+    bestFor: "सर्वोत्तम: कॉर्पोरेट चालान, बिजनेस कार्ड और प्रत्यक्ष फंड ट्रांसफर के लिए।",
+    status: "अभी उपलब्ध है"
+  }
+];
+
+const landingLinks = [
+  { href: "/hi/phonepe-qr-generator", label: "PhonePe QR जनरेटर" },
+  { href: "/hi/google-pay-qr-generator", label: "Google Pay QR जनरेटर" },
+  { href: "/hi/paytm-qr-generator", label: "Paytm QR जनरेटर" },
+  { href: "/hi/donation-qr-generator", label: "Donation QR जनरेटर" }
+];
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-24 md:pb-32 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[28rem] pointer-events-none"></div>
+      <div class="mx-auto max-w-7xl">
+
+        <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
+          <div class="pt-4 min-w-0">
+            <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+              पेशेवर UPI भुगतान स्टैंडी और QR पोस्टर बिल्डर
+            </p>
+            <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
+              मुफ्त UPI QR कोड जनरेटर
+            </h1>
+            <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
+              तुरंत राशि के साथ UPI QR कोड बनाएं। हमारा यूनिवर्सल UPI QR कोड जनरेटर बिना लॉग इन या साइनअप के PhonePe, Google Pay और Paytm के लिए सुरक्षित भुगतान पोस्टर बनाता है।
+            </p>
+
+            <div class="mt-8 flex flex-wrap gap-3">
+              <a
+                href="#generator"
+                class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
+              >
+                अपना QR अभी बनाएं
+              </a>
+              <a
+                href="#templates"
+                class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white"
+              >
+                पोस्टर डिज़ाइन देखें
+              </a>
+            </div>
+
+            <div class="mt-8 overflow-hidden relative w-full py-3 border-y border-forest/10">
+              <div class="flex animate-marquee gap-4 whitespace-nowrap">
+                {useCases.map((item) => (
+                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-2 text-xs font-bold text-forest backdrop-blur">
+                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
+                    {item}
+                  </span>
+                ))}
+                {useCases.map((item) => (
+                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-2 text-xs font-bold text-forest backdrop-blur">
+                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
+                    {item}
+                  </span>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div class="hero-card-shadow rounded-[2rem] border border-white/75 bg-white/88 p-4 backdrop-blur md:p-5">
+            <div class="rounded-[1.7rem] border border-forest/10 bg-[#f7f3e7] p-4 overflow-hidden">
+              <div class="relative flex flex-col md:flex-row items-center justify-center p-6 gap-6 md:gap-0 min-h-[380px] md:min-h-auto">
+                {/* Standee Card */}
+                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-white p-4 border border-forest/10 shadow-xl transition-all duration-300 hover:scale-105 hover:-rotate-2 hover:z-25 md:rotate-[-4deg] md:translate-x-4">
+                  <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">स्टैंडी (Standee)</p>
+                  <div class="mt-3 rounded-[1.1rem] bg-mint p-4">
+                    <p class="text-base font-black text-forest text-center">स्कैन और पे</p>
+                    <div class="mt-3 overflow-hidden rounded-xl border border-forest/10 bg-white shadow-sm">
+                      <img
+                        src="/images/template/abc-shop-standee.png"
+                        alt="Shop payment standee template"
+                        class="h-[240px] w-full object-cover object-top"
+                        loading="eager"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Donation Card */}
+                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-forest p-4 text-white shadow-xl transition-all duration-300 hover:scale-105 hover:rotate-2 hover:z-25 md:rotate-[4deg] md:-translate-x-4 mt-[-24px] md:mt-0">
+                  <p class="text-xs font-black uppercase tracking-[0.2em] text-sun">दान (Donation)</p>
+                  <div class="mt-3 rounded-[1.1rem] bg-white/10 p-4">
+                    <p class="text-base font-black text-center">समर्थन करें</p>
+                    <div class="mt-3 overflow-hidden rounded-xl border border-white/15 bg-white shadow-sm">
+                      <img
+                        src="/images/template/abc-temple-donation.png"
+                        alt="Temple donation template"
+                        class="h-[240px] w-full object-cover object-top"
+                        loading="eager"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <p class="mt-4 text-sm leading-7 text-forest/72">
+                चेकआउट काउंटर पर प्रिंट, फ्रेम और उच्च-रिज़ॉल्यूशन वाले भुगतान स्टैंडी रखें। आपके ग्राहकों के साथ तत्काल विश्वास बनाने के लिए साफ और पेशेवर दिखने के लिए डिज़ाइन किया गया।
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="generator" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-8 max-w-3xl">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">जनरेटर</p>
+          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+            30 सेकंड से कम समय में राशि के साथ UPI QR कोड जनरेट करें।
+          </h2>
+          <p class="mt-4 text-lg leading-8 text-forest/72">
+            PhonePe, Google Pay, Paytm, BHIM और अन्य UPI ऐप्स के लिए काम करता है जो मानक `upi://pay` लिंक्स का समर्थन करते हैं।
+          </p>
+          <div class="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
+            <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">
+              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+              </svg>
+              100% गोपनीयता: आपके ब्राउज़र में स्थानीय रूप से जनरेट। हम कभी भी आपके भुगतान विवरण एकत्र या संग्रहीत नहीं करते हैं।
+            </span>
+          </div>
+        </div>
+        <GeneratorForm client:load lang="hi" />
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
+        {features.map((feature) => (
+          <article class="section-card rounded-[1.75rem] border border-white/75 bg-white/86 p-6">
+            <h3 class="text-xl font-black text-forest">{feature.title}</h3>
+            <p class="mt-3 text-base leading-7 text-forest/72">{feature.copy}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section id="templates" class="scroll-mt-28 relative z-20 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-8 max-w-3xl">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">टेम्पलेट्स</p>
+          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+            आठ तैयार पेमेंट पोस्टर टेम्पलेट्स के साथ शुरुआत करें।
+          </h2>
+          <p class="mt-4 text-lg leading-8 text-forest/72">
+            एक बार जनरेट करें, तुरंत शैलियों को बदलें, और अपने काउंटर, टेबल, दान डेस्क या क्लाइंट शेयर फ्लो के लिए एक प्रिंट करने योग्य भुगतान छवि डाउनलोड करें।
+          </p>
+        </div>
+
+        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {templates.map((template) => (
+            <article class="flex flex-col justify-between rounded-[2rem] border border-white/75 bg-white/86 p-6 shadow-sm">
+              <div>
+                <div class="overflow-hidden rounded-2xl border border-forest/10 bg-[#f7f3e7] p-2">
+                  <img
+                    src={template.image}
+                    alt={template.name}
+                    class="h-[280px] w-full rounded-xl object-cover object-top shadow-inner"
+                    loading="lazy"
+                  />
+                </div>
+                <h3 class="mt-5 text-xl font-black text-forest">{template.name}</h3>
+                <p class="mt-2 text-xs font-semibold text-leaf">{template.bestFor}</p>
+                <p class="mt-3 text-sm leading-relaxed text-forest/70">{template.value}</p>
+              </div>
+              <div class="mt-6 pt-4 border-t border-forest/5 flex items-center justify-between">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3 py-1 text-[10px] font-bold text-forest">
+                  <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
+                  {template.status}
+                </span>
+                <a
+                  href="#generator"
+                  class="text-xs font-black text-forest hover:text-leaf hover:underline"
+                >
+                  उपयोग करें &rarr;
+                </a>
+              </div>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="relative overflow-hidden bg-forest px-4 py-20 text-white md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-0 opacity-10 pointer-events-none"></div>
+      <div class="relative mx-auto max-w-4xl text-center">
+        <h2 class="text-3xl font-black tracking-tight md:text-5xl">
+          विशिष्ट पेमेंट ऐप्स के लिए अनुकूलित जनरेटर
+        </h2>
+        <p class="mx-auto mt-4 max-w-2xl text-lg text-white/75">
+          यदि आप विशेष रूप से PhonePe, Google Pay, या Paytm के लिए QR कोड पोस्टर डिज़ाइन करना चाहते हैं, तो हमारे विशेष रूप से तैयार जनरेटर का उपयोग करें।
+        </p>
+        <div class="mt-8 flex flex-wrap justify-center gap-3">
+          {landingLinks.map((link) => (
+            <a
+              href={link.href}
+              class="rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-white transition hover:bg-white hover:text-forest"
+            >
+              {link.label}
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <div class="mb-8 max-w-2xl">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">अक्सर पूछे जाने वाले प्रश्न (FAQ)</p>
+          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+            भुगतान QR पर भरोसा करने से पहले लोग अक्सर जो प्रश्न पूछते हैं।
+          </h2>
+        </div>
+        <div class="grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest flex justify-between items-center outline-none">
+                <span>{faq.question}</span>
+                <span class="text-leaf text-sm ml-2">▼</span>
+              </summary>
+              <p class="mt-4 text-base leading-7 text-forest/72 border-t border-forest/5 pt-4">
+                {faq.answer}
+              </p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

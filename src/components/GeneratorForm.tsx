@@ -220,11 +220,126 @@ function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
 
+const translations = {
+  en: {
+    simpleQr: "Simple QR",
+    advancedPoster: "Advanced Poster",
+    payeeName: "Payee name",
+    payeePlaceholder: "Shree Ganesh Store",
+    upiId: "UPI ID",
+    upiIdPlaceholder: "ganeshstore@oksbi",
+    qrLogoBadge: "QR Logo Badge",
+    none: "None",
+    gpay: "GPay",
+    phonepe: "PhonePe",
+    bhim: "BHIM",
+    paytm: "Paytm",
+    custom: "Custom",
+    uploadCustomLogo: "Upload Custom Logo",
+    posterTemplateStyle: "Poster template style",
+    addAmountNote: "💰 Add Amount & Note (Optional)",
+    hide: "Hide ▲",
+    configure: "Configure ▼",
+    amount: "Amount",
+    amountPlaceholder: "250",
+    amountHelper: "{t.amountHelper}",
+    note: "Note / Message",
+    notePlaceholder: "June tuition fee",
+    customizeDesign: "🎨 Customize Design (Logos & Covers)",
+    themePreset: "Theme Color Preset",
+    default: "Default Green",
+    mintyFresh: "Minty Fresh",
+    goldenSun: "Golden Sun",
+    midnightRed: "Midnight Red",
+    customColors: "Custom Colors",
+    bgColor: "Background Color",
+    accentColor: "Accent Color",
+    textColor: "Text Color",
+    generateUpiQr: "Generate UPI QR",
+    exploreTemplates: "Explore templates",
+    enterDetailsClick: "Enter details & click Generate",
+    instantScanToPay: "Your instant scan-to-pay QR code will appear here.",
+    downloadQrCode: "Download QR Code",
+    copyUpiLink: "Copy UPI link",
+    copied: "Copied",
+    copyFailed: "Copy failed",
+    preparingPoster: "Preparing poster...",
+    downloadPoster: "Download poster",
+    draftAutoSaves: "{t.draftAutoSaves}",
+    enterNameError: "Enter the name that should appear on the payment QR.",
+    enterUpiIdError: "Enter a valid UPI ID (e.g. name@bank).",
+    invalidUpiIdError: "Please enter a valid UPI ID (e.g. name@bank).",
+    qrPreview: "QR Preview",
+    simpleScanQr: "Simple Scan QR",
+    standardFormat: "Standard format",
+    templatePreview: "Template preview",
+    yourBusinessName: "Your business name",
+    yourNameBank: "yourname@bank"
+  },
+  hi: {
+    simpleQr: "साधारण QR",
+    advancedPoster: "एडवांस्ड पोस्टर",
+    payeeName: "प्राप्तकर्ता का नाम",
+    payeePlaceholder: "श्री गणेश स्टोर",
+    upiId: "UPI आईडी",
+    upiIdPlaceholder: "ganeshstore@oksbi",
+    qrLogoBadge: "QR लोगो बैज",
+    none: "कोई नहीं",
+    gpay: "GPay",
+    phonepe: "PhonePe",
+    bhim: "BHIM",
+    paytm: "Paytm",
+    custom: "कस्टम",
+    uploadCustomLogo: "कस्टम लोगो अपलोड करें",
+    posterTemplateStyle: "पोस्टर टेम्पलेट स्टाइल",
+    addAmountNote: "💰 राशि और संदेश जोड़ें (वैकल्पिक)",
+    hide: "छिपाएं ▲",
+    configure: "सेट करें ▼",
+    amount: "राशि (रुपये)",
+    amountPlaceholder: "250",
+    amountHelper: "निश्चित राशि तभी दर्ज करें जब आप फीस, इवेंट या तय कीमत के लिए बिलिंग करना चाहते हैं।",
+    note: "संदेश / नोट",
+    notePlaceholder: "जून की ट्यूशन फीस",
+    customizeDesign: "🎨 डिज़ाइन बदलें (लोगो और कवर्स)",
+    themePreset: "थीम कलर प्रीसेट",
+    default: "डिफ़ॉल्ट हरा",
+    mintyFresh: "ताज़ा पुदीना",
+    goldenSun: "सुनहरा सूरज",
+    midnightRed: "आधी रात का लाल",
+    customColors: "कस्टम रंग",
+    bgColor: "पृष्ठभूमि (Background) रंग",
+    accentColor: "मुख्य (Accent) रंग",
+    textColor: "टेक्स्ट का रंग",
+    generateUpiQr: "UPI QR जनरेट करें",
+    exploreTemplates: "टेम्पलेट्स देखें",
+    enterDetailsClick: "विवरण दर्ज करें और जनरेट पर क्लिक करें",
+    instantScanToPay: "आपका तुरंत स्कैन-टू-पे QR कोड यहाँ दिखाई देगा।",
+    downloadQrCode: "QR कोड डाउनलोड करें",
+    copyUpiLink: "UPI लिंक कॉपी करें",
+    copied: "कॉपी हो गया",
+    copyFailed: "कॉपी करने में विफल",
+    preparingPoster: "पोस्टर तैयार हो रहा है...",
+    downloadPoster: "पोस्टर डाउनलोड करें",
+    draftAutoSaves: "ड्राफ्ट इस ब्राउज़र में ऑटो-सेव होता है ताकि आप वापस आकर बदलाव कर सकें।",
+    enterNameError: "वह नाम दर्ज करें जो भुगतान QR पर दिखाई देना चाहिए।",
+    enterUpiIdError: "एक वैध UPI आईडी दर्ज करें (जैसे name@bank)।",
+    invalidUpiIdError: "कृपया एक वैध UPI आईडी दर्ज करें (जैसे name@bank)।",
+    qrPreview: "QR पूर्वावलोकन",
+    simpleScanQr: "साधारण स्कैन QR",
+    standardFormat: "मानक प्रारूप",
+    templatePreview: "टेम्पलेट पूर्वावलोकन",
+    yourBusinessName: "आपके व्यवसाय का नाम",
+    yourNameBank: "yourname@bank"
+  }
+};
+
 export interface GeneratorFormProps {
   presetType?: "phonepe" | "gpay" | "paytm" | "donation";
+  lang?: "en" | "hi";
 }
 
-export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
+export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = {}) {
+  const t = translations[lang];
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const posterRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -418,7 +533,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
   async function handleGenerate() {
     if (!form.payee.trim()) {
-      setError("Enter the name that should appear on the payment QR.");
+      setError(t.enterNameError);
       return;
     }
 
@@ -1378,7 +1493,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 : "text-forest/70 hover:text-forest"
             }`}
           >
-            Simple QR
+            {t.simpleQr}
           </button>
           <button
             key="tab-advanced"
@@ -1390,34 +1505,34 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 : "text-forest/70 hover:text-forest"
             }`}
           >
-            Advanced Poster
+            {t.advancedPoster}
           </button>
         </div>
 
         {mode === "simple" ? (
           <div className="grid gap-4">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">Payee name</span>
+              <span className="text-sm font-semibold text-forest">{t.payeeName}</span>
               <input
                 value={form.payee}
                 onChange={(event) => updateField("payee", event.target.value)}
-                placeholder="Shree Ganesh Store"
+                placeholder={t.payeePlaceholder}
                 className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">UPI ID</span>
+              <span className="text-sm font-semibold text-forest">{t.upiId}</span>
               <input
                 value={form.upiId}
                 onChange={(event) => updateField("upiId", event.target.value)}
-                placeholder="ganeshstore@oksbi"
+                placeholder={t.upiIdPlaceholder}
                 className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
             <div className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">QR Logo Badge</span>
+              <span className="text-sm font-semibold text-forest">{t.qrLogoBadge}</span>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
                 {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
                   <button
@@ -1436,16 +1551,16 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                     }`}
                   >
                     {type === "none"
-                      ? "None"
+                      ? t.none
                       : type === "gpay"
-                        ? "GPay"
+                        ? t.gpay
                         : type === "phonepe"
-                          ? "PhonePe"
+                          ? t.phonepe
                           : type === "bhim"
-                            ? "BHIM"
+                            ? t.bhim
                             : type === "paytm"
-                              ? "Paytm"
-                              : "Custom"}
+                              ? t.paytm
+                              : t.custom}
                   </button>
                 ))}
               </div>
@@ -1453,7 +1568,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
             {form.logoType === "custom" && (
               <div className="space-y-2 bg-cream/40 p-3 rounded-2xl border border-forest/10 animate-fadeIn">
-                <span className="text-xs font-semibold text-forest block">Upload Custom Logo</span>
+                <span className="text-xs font-semibold text-forest block">{t.uploadCustomLogo}</span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1466,7 +1581,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
         ) : (
           <div className="grid gap-4">
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">Poster template style</span>
+              <span className="text-sm font-semibold text-forest">{t.posterTemplateStyle}</span>
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value as TemplateId)}
@@ -1481,21 +1596,21 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">Payee name</span>
+              <span className="text-sm font-semibold text-forest">{t.payeeName}</span>
               <input
                 value={form.payee}
                 onChange={(event) => updateField("payee", event.target.value)}
-                placeholder="Shree Ganesh Store"
+                placeholder={t.payeePlaceholder}
                 className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
 
             <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">UPI ID</span>
+              <span className="text-sm font-semibold text-forest">{t.upiId}</span>
               <input
                 value={form.upiId}
                 onChange={(event) => updateField("upiId", event.target.value)}
-                placeholder="ganeshstore@oksbi"
+                placeholder={t.upiIdPlaceholder}
                 className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
               />
             </label>
@@ -1520,10 +1635,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 className="flex items-center justify-between w-full py-3 px-4 rounded-xl border border-forest/10 bg-cream/50 text-xs font-bold text-forest hover:bg-cream transition text-left"
               >
                 <span className="flex items-center gap-2">
-                  <span>💰</span> Add Amount & Note (Optional)
+                  {t.addAmountNote}
                 </span>
                 <span className="text-forest/60 text-[10px]">
-                  {showOptionalFields ? "Hide ▲" : "Configure ▼"}
+                  {showOptionalFields ? t.hide : t.configure}
                 </span>
               </button>
 
@@ -1531,27 +1646,27 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 <div className="grid gap-4 mt-3 p-4 rounded-2xl bg-cream/30 border border-forest/5 animate-fadeIn">
                   <div className="grid gap-4 md:grid-cols-2">
                     <label className="grid gap-2">
-                      <span className="text-xs font-bold text-forest/75">Amount</span>
+                      <span className="text-xs font-bold text-forest/75">{t.amount}</span>
                       <input
                         value={form.amount}
                         onChange={(event) => updateField("amount", event.target.value)}
                         inputMode="decimal"
-                        placeholder="250"
+                        placeholder={t.amountPlaceholder}
                         className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
                       />
                     </label>
 
                     <div className="rounded-[1.35rem] border border-leaf/10 bg-mint/50 px-4 py-3 text-xs leading-5 text-forest/72 flex items-center">
-                      Add a fixed amount only when you want a preset payment value for fees, events, or standard-priced orders.
+                      {t.amountHelper}
                     </div>
                   </div>
 
                   <label className="grid gap-2">
-                    <span className="text-xs font-bold text-forest/75">Note / Message</span>
+                    <span className="text-xs font-bold text-forest/75">{t.note}</span>
                     <input
                       value={form.note}
                       onChange={(event) => updateField("note", event.target.value)}
-                      placeholder="June tuition fee"
+                      placeholder={t.notePlaceholder}
                       className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
                     />
                   </label>
@@ -1567,10 +1682,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 className="flex items-center justify-between w-full py-3 px-4 rounded-xl border border-forest/10 bg-cream/50 text-xs font-bold text-forest hover:bg-cream transition text-left"
               >
                 <span className="flex items-center gap-2">
-                  <span>🎨</span> Customize Design (Logos & Covers)
+                  {t.customizeDesign}
                 </span>
                 <span className="text-forest/60 text-[10px]">
-                  {showBrandingFields ? "Hide ▲" : "Configure ▼"}
+                  {showBrandingFields ? t.hide : t.configure}
                 </span>
               </button>
 
@@ -1579,7 +1694,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                   <div className="grid gap-6 sm:grid-cols-2">
                     {/* Logo Settings */}
                     <div className="space-y-3">
-                      <span className="text-xs font-bold text-forest/70 block">Logo Badge Preset</span>
+                      <span className="text-xs font-bold text-forest/70 block">{t.qrLogoBadge}</span>
                       <div className="grid grid-cols-3 gap-1.5">
                         {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
                           <button
@@ -1609,7 +1724,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
                       {form.logoType === "custom" && (
                         <div className="space-y-2 bg-white p-3 rounded-xl border border-forest/10">
-                          <span className="text-[10px] font-bold text-forest/60 block">Upload Logo (PNG/JPG)</span>
+                          <span className="text-[10px] font-bold text-forest/60 block">{t.uploadCustomLogo}</span>
                           <input
                             type="file"
                             accept="image/*"
@@ -1837,14 +1952,14 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
             onClick={() => void handleGenerate()}
             className="rounded-full bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-leaf disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Generate UPI QR
+            {t.generateUpiQr}
           </button>
           {mode === "advanced" && (
             <a
               href="#templates"
               className="rounded-full border border-forest/12 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest hover:text-white"
             >
-              Explore templates
+              {t.exploreTemplates}
             </a>
           )}
         </div>
@@ -1852,7 +1967,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
         {error && <p className="mt-4 text-sm font-medium text-coral">{error}</p>}
         {!error && (
           <p className="mt-4 text-sm text-forest/62">
-            Draft auto-saves in this browser so you can come back and keep editing.
+            {t.draftAutoSaves}
           </p>
         )}
       </div>
@@ -1863,12 +1978,12 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
-                QR Preview
+                {t.qrPreview}
               </p>
-              <h3 className="mt-2 text-2xl font-black text-forest">Simple Scan QR</h3>
+              <h3 className="mt-2 text-2xl font-black text-forest">{t.simpleScanQr}</h3>
             </div>
             <span className="rounded-full bg-sun/20 px-3 py-1 text-xs font-bold text-forest">
-              Standard format
+              {t.standardFormat}
             </span>
           </div>
 
@@ -1880,10 +1995,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 </div>
                 <div className="mt-5 space-y-2 rounded-[1.25rem] bg-mint/55 p-4 text-left w-full">
                   <p className="text-sm font-semibold text-forest truncate">
-                    {form.payee.trim() || "Your business name"}
+                    {form.payee.trim() || t.yourBusinessName}
                   </p>
                   <p className="text-xs text-forest/70 font-semibold">
-                    {form.upiId.trim() || "yourname@bank"}
+                    {form.upiId.trim() || t.yourNameBank}
                   </p>
                   <p className="truncate text-[10px] text-forest/50">{upiUrl}</p>
                 </div>
@@ -1894,10 +2009,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                   <span className="text-4xl text-forest/40">📱</span>
                 </div>
                 <p className="text-sm font-semibold text-forest/80">
-                  Enter details & click Generate
+                  {t.enterDetailsClick}
                 </p>
                 <p className="text-xs text-forest/60 max-w-[220px]">
-                  Your instant scan-to-pay QR code will appear here.
+                  {t.instantScanToPay}
                 </p>
               </div>
             )}
@@ -1909,7 +2024,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated}
                 className="rounded-full bg-sun px-5 py-3 text-sm font-bold text-forest transition hover:bg-[#f2ad37] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Download QR Code
+                {t.downloadQrCode}
               </button>
               <button
                 type="button"
@@ -1917,7 +2032,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated}
                 className="rounded-full border border-forest/12 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy UPI link"}
+                {copyState === "copied" ? t.copied : copyState === "error" ? t.copyFailed : t.copyUpiLink}
               </button>
             </div>
           </div>
@@ -1927,7 +2042,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
-                Template preview
+                {t.templatePreview}
               </p>
               <h3 className="mt-2 text-2xl font-black text-forest">{activeTemplate.name}</h3>
             </div>
@@ -1946,10 +2061,10 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
 
             <div className="mt-5 space-y-2 rounded-[1.25rem] bg-mint/55 p-4 text-left">
               <p className="text-sm font-semibold text-forest truncate">
-                {form.payee.trim() || "Your business name"}
+                {form.payee.trim() || t.yourBusinessName}
               </p>
               <p className="text-xs text-forest/70">
-                {form.upiId.trim() || "yourname@bank"} {form.amount ? `• ₹${form.amount}` : ""}
+                {form.upiId.trim() || t.yourNameBank} {form.amount ? `• ₹${form.amount}` : ""}
               </p>
               <p className="truncate text-[11px] text-forest/55">{upiUrl}</p>
             </div>
@@ -1961,7 +2076,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated}
                 className="rounded-full bg-sun px-5 py-3 text-sm font-bold text-forest transition hover:bg-[#f2ad37] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                Download QR Code
+                {t.downloadQrCode}
               </button>
               <button
                 type="button"
@@ -1969,7 +2084,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated || downloadState === "busy"}
                 className="rounded-full bg-forest px-5 py-3 text-sm font-bold text-white transition hover:bg-leaf disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {downloadState === "busy" ? "Preparing poster..." : "Download poster"}
+                {downloadState === "busy" ? t.preparingPoster : t.downloadPoster}
               </button>
               <button
                 type="button"
@@ -1977,7 +2092,7 @@ export function GeneratorForm({ presetType }: GeneratorFormProps = {}) {
                 disabled={!generated}
                 className="rounded-full border border-forest/12 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {copyState === "copied" ? "Copied" : copyState === "error" ? "Copy failed" : "Copy UPI link"}
+                {copyState === "copied" ? t.copied : copyState === "error" ? t.copyFailed : t.copyUpiLink}
               </button>
             </div>
 

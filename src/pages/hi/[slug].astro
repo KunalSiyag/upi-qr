@@ -1,0 +1,115 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../../components/GeneratorForm";
+import AffiliateProducts from "../../components/AffiliateProducts.astro";
+
+export async function getStaticPaths() {
+  return [
+    {
+      params: { slug: "phonepe-qr-generator" },
+      props: {
+        title: "PhonePe QR जनरेटर",
+        headline: "मुफ्त PhonePe अनुकूल UPI QR कोड बनाएं",
+        presetType: "phonepe",
+        intro:
+          "एक UPI QR कोड बनाएं जिसे ग्राहक बिना किसी साइनअप के PhonePe और अन्य प्रमुख UPI ऐप्स से स्कैन कर सकें।"
+      }
+    },
+    {
+      params: { slug: "google-pay-qr-generator" },
+      props: {
+        title: "Google Pay QR जनरेटर",
+        headline: "मुफ्त Google Pay अनुकूल UPI QR कोड बनाएं",
+        presetType: "gpay",
+        intro:
+          "तेजी से भुगतान प्राप्त करने के लिए वैकल्पिक राशि और नोट के साथ Google Pay अनुकूल UPI QR कोड बनाएं।"
+      }
+    },
+    {
+      params: { slug: "paytm-qr-generator" },
+      props: {
+        title: "Paytm QR जनरेटर",
+        headline: "मुफ्त Paytm अनुकूल UPI QR कोड बनाएं",
+        presetType: "paytm",
+        intro:
+          "दुकानों, स्थानीय व्यवसायों और दैनिक भुगतान संग्रह के लिए Paytm अनुकूल UPI QR कोड बनाएं।"
+      }
+    },
+    {
+      params: { slug: "donation-qr-generator" },
+      props: {
+        title: "दान (Donation) QR जनरेटर",
+        headline: "मंदिरों, गैर-सरकारी संगठनों (NGOs) और सामाजिक कार्यों के लिए दान UPI QR बनाएं",
+        presetType: "donation",
+        intro:
+          "इवेंट्स, धार्मिक संस्थानों और सामुदायिक धन जुटाने के अभियानों के लिए एक मुफ्त दान QR सेट करें।"
+      }
+    }
+  ];
+}
+
+const { title, headline, intro, presetType } = Astro.props;
+const description = `${headline}. ${intro}`;
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": `${title} | Pro UPI QR`,
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": new URL(Astro.url.pathname, Astro.site).toString(),
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
+  <main class="px-4 py-16 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; मुख्य Pro UPI QR जनरेटर पर वापस जाएं</a>
+      <p class="mt-6 text-sm font-black uppercase tracking-[0.2em] text-leaf font-bold">पेमेंट क्विक-लिंक्स</p>
+      <h1 class="mt-3 text-4xl font-black tracking-tight text-forest md:text-6xl">{headline}</h1>
+      <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/72">{intro}</p>
+      <div class="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
+        <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">
+          <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+          </svg>
+          100% गोपनीयता: ब्राउज़र में स्थानीय रूप से जनरेट। हम कभी भी आपके भुगतान विवरण एकत्र या संग्रहीत नहीं करते हैं।
+        </span>
+      </div>
+
+      <div class="mt-8 grid gap-4 md:grid-cols-3">
+        <div class="rounded-[1.5rem] bg-mint p-5">
+          <h2 class="text-lg font-black text-forest">100% सुरक्षित स्थानान्तरण</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            सभी भुगतान NPCI नेटवर्क पर सीधे ग्राहक के बैंक से आपके बैंक में पीयर-टू-पीयर ट्रांसफर किए जाते हैं।
+          </p>
+        </div>
+        <div class="rounded-[1.5rem] bg-cream p-5">
+          <h2 class="text-lg font-black text-forest">कोई कमीशन नहीं</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            Pro UPI QR एक पूरी तरह से मुफ्त उपयोगिता है। हम कोई मध्यस्थता शुल्क या प्लेटफ़ॉर्म कमीशन नहीं लेते हैं।
+          </p>
+        </div>
+        <div class="rounded-[1.5rem] bg-[#f2e5cd] p-5">
+          <h2 class="text-lg font-black text-forest">उच्च गुणवत्ता आउटपुट</h2>
+          <p class="mt-3 text-sm leading-relaxed text-forest/72">
+            तुरंत प्रिंट करने या शेयर करने के लिए तैयार साफ, उच्च-रिज़ॉल्यूशन वाले पोस्टर चित्र डाउनलोड करें।
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-12 pt-8 border-t border-forest/10">
+        <h2 class="text-2xl font-black text-forest mb-6">कस्टमाइज़ और जनरेट करें</h2>
+        <GeneratorForm client:load presetType={presetType as any} lang="hi" />
+      </div>
+
+      <AffiliateProducts />
+    </div>
+  </main>
+</BaseLayout>
