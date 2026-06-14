@@ -5,7 +5,7 @@ import { getCollection } from "astro:content";
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
   return posts.map((post) => ({
-    params: { slug: post.id },
+    params: { slug: post.id.replace(/\.mdx?$/, "") },
     props: { post },
   }));
 }
@@ -129,7 +129,7 @@ const schema = {
           <div class="grid gap-6 md:grid-cols-3">
             {relatedPosts.map((rPost) => (
               <a 
-                href={`/blog/${rPost.id}/`}
+                href={`/blog/${rPost.id.replace(/\.mdx?$/, "")}/`}
                 class="group flex flex-col justify-between rounded-2xl border border-forest/5 bg-[#fffdf6] p-5 transition-all duration-300 hover:scale-[1.02] hover:border-leaf/20 hover:shadow-md"
               >
                 <div>

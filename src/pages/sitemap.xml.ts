@@ -10,7 +10,16 @@ const staticPages = [
   "privacy",
   "terms",
   "disclaimer",
-  "blog"
+  "blog",
+  // Hindi versions
+  "hi",
+  "hi/phonepe-qr-generator",
+  "hi/google-pay-qr-generator",
+  "hi/paytm-qr-generator",
+  "hi/donation-qr-generator",
+  "hi/privacy",
+  "hi/terms",
+  "hi/disclaimer"
 ];
 
 export const GET: APIRoute = async ({ site }) => {
@@ -19,7 +28,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   // Fetch dynamic blog posts
   const blogPosts = await getCollection("blog");
-  const blogUrls = blogPosts.map((post) => `blog/${post.slug}`);
+  const blogUrls = blogPosts.map((post) => `blog/${post.id.replace(/\.mdx?$/, "")}`);
 
   const allPages = [...staticPages, ...blogUrls];
 

@@ -28,6 +28,12 @@ const langLink = isHindi
   ? normalizedPath.replace(/^\/hi\//, "/") 
   : `/hi${normalizedPath}`;
 const langLabel = isHindi ? "English" : "हिन्दी";
+
+const isBlog = Astro.url.pathname.startsWith("/blog");
+const hasAlternate = !isBlog;
+const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
+const englishUrl = `${baseUrl}${isHindi ? normalizedPath.replace(/^\/hi\//, "/") : normalizedPath}`;
+const hindiUrl = `${baseUrl}${isHindi ? normalizedPath : `/hi${normalizedPath}`}`;
 ---
 
 <!doctype html>
@@ -38,6 +44,11 @@ const langLabel = isHindi ? "English" : "हिन्दी";
     <title>{title}</title>
     <meta name="description" content={description} />
     <link rel="canonical" href={canonicalUrl} />
+    {hasAlternate && (
+      <link rel="alternate" hreflang="en" href={englishUrl} />
+      <link rel="alternate" hreflang="hi" href={hindiUrl} />
+      <link rel="alternate" hreflang="x-default" href={englishUrl} />
+    )}
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#113b2c" />
 
@@ -69,16 +80,16 @@ const langLabel = isHindi ? "English" : "हिन्दी";
     <div class="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 pb-2 md:px-6 lg:px-8 pointer-events-none">
       <div class="mx-auto max-w-7xl">
         <header class="flex items-center justify-between gap-4 rounded-full border border-white/70 bg-white/65 px-4 py-3 backdrop-blur shadow-[0_8px_30px_rgb(0,0,0,0.04)] pointer-events-auto">
-          <a href={isHindi ? "/hi/" : "/"} class="text-lg font-black tracking-tight text-forest">Pro UPI QR</a>
-          <div class="flex items-center gap-4 sm:gap-6">
-            <nav class="hidden gap-5 text-sm font-semibold text-forest/80 md:flex">
+          <a href={isHindi ? "/hi/" : "/"} class="text-sm sm:text-lg font-black tracking-tight text-forest shrink-0">Pro UPI QR</a>
+          <div class="flex items-center gap-2.5 sm:gap-6">
+            <nav class="flex gap-2.5 sm:gap-5 text-[10px] sm:text-xs md:text-sm font-semibold text-forest/80">
               <a href={generatorPath} class="hover:text-leaf transition-colors">{isHindi ? "जनरेटर" : "Generator"}</a>
               <a href={templatesPath} class="hover:text-leaf transition-colors">{isHindi ? "टेम्पलेट्स" : "Templates"}</a>
-              <a href={faqPath} class="hover:text-leaf transition-colors">{isHindi ? "अक्सर पूछे जाने वाले प्रश्न" : "FAQ"}</a>
+              <a href={faqPath} class="hover:text-leaf transition-colors">{isHindi ? "FAQ" : "FAQ"}</a>
               <a href={blogPath} class="hover:text-leaf transition-colors">{isHindi ? "ब्लॉग" : "Blog"}</a>
             </nav>
-            <span class="hidden md:inline text-forest/20">|</span>
-            <a href={langLink} class="rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200">
+            <span class="text-forest/20">|</span>
+            <a href={langLink} class="rounded-full bg-forest/5 border border-forest/10 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200 shrink-0">
               {langLabel}
             </a>
           </div>

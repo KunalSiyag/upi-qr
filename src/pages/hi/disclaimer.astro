@@ -1,0 +1,53 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const title = "अस्वीकरण | Pro UPI QR";
+const description = "Pro UPI QR के लिए कानूनी अस्वीकरण। हम एक स्वतंत्र उपकरण हैं और NPCI के साथ हमारा कोई आधिकारिक संबंध नहीं है।";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; जनरेटर पर वापस जाएं</a>
+      
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">कानूनी अस्वीकरण</h1>
+      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 8 जून, 2026</p>
+
+      <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">1. NPCI / BHIM / UPI के साथ कोई संबद्धता नहीं</h2>
+          <p>
+            Pro UPI QR एक स्वतंत्र वेब उपयोगिता है और <strong>भारतीय राष्ट्रीय भुगतान निगम (NPCI), BHIM, एकीकृत भुगतान इंटरफ़ेस (UPI) नेटवर्क, या किसी भी सरकारी नियामक निकायों के साथ आधिकारिक क्षमता में संबद्ध, संबंधित, अधिकृत, समर्थित या किसी भी तरह से जुड़ा नहीं है।</strong> 
+          </p>
+          <p>
+            NPCI की आधिकारिक वेबसाइट को <a href="https://www.npci.org.in" target="_blank" rel="noopener noreferrer" class="text-leaf underline font-semibold">npci.org.in</a> पर देखा जा सकता है। एकीकृत भुगतान इंटरफ़ेस से संबंधित सभी आधिकारिक नियम, नीतियां और API विशिष्टताएं NPCI द्वारा शासित होती हैं।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">2. ट्रेडमार्क अस्वीकरण</h2>
+          <p>
+            इस साइट पर प्रदर्शित सभी उत्पाद नाम, ब्रांड लोगो और पंजीकृत ट्रेडमार्क—जिसमें <strong>Paytm, PhonePe, Google Pay, GPay, BHIM, और NPCI</strong> शामिल हैं, लेकिन इन्हीं तक सीमित नहीं हैं—उनके संबंधित स्वामियों की अनन्य संपत्ति हैं। 
+          </p>
+          <p>
+            ब्रांड-स्टाइल वाले टेम्पलेट विकल्पों, ब्रांड प्रीसेट या ब्रांड लोगो को शामिल करना पूरी तरह से उपभोक्ता सुविधा के लिए किया गया है (जैसे, व्यापारियों को यह इंगित करने में मदद करना कि उनके QR कोड किन स्कैनर ऐप्स को स्वीकार करते हैं)। इन ट्रेडमार्कों का उपयोग ट्रेडमार्क धारकों और Pro UPI QR के बीच किसी भी समर्थन, प्रायोजन या संबद्धता का संकेत नहीं देता है।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">3. कोई वित्तीय सेवाएं प्रदान नहीं की जाती हैं</h2>
+          <p>
+            Pro UPI QR <strong>लेनदेन को संसाधित नहीं करता है, धन नहीं रखता है, भुगतानों में मध्यस्थता नहीं करता है, या बैंकिंग या वित्तीय सेवाएं प्रदान नहीं करता है</strong>। हम एक स्थिर पाठ संकलन उपकरण प्रदान करते हैं। हमारे एप्लिकेशन द्वारा जनरेट किए गए QR कोड केवल उपयोगकर्ता के इनपुट मापदंडों को NPCI द्वारा परिभाषित एक मानक URI योजना (`upi://pay?...`) में संकलित करते हैं। सभी वास्तविक वित्तीय लेनदेन उपयोगकर्ता के बैंकिंग ऐप के भीतर मानक UPI चैनल के माध्यम से होते हैं।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. अपने जोखिम पर उपयोग करें</h2>
+          <p>
+            हम छोटे व्यवसाय मालिकों और सामग्री रचनाकारों की सहायता के लिए यह उपकरण मुफ्त में प्रदान करते हैं। हम कोई गारंटी नहीं देते हैं कि जनरेट किए गए QR कोड निर्बाध रूप से काम करेंगे, हर डिवाइस पर सही ढंग से स्कैन करेंगे, या बिना किसी विफलता के संसाधित होंगे। उपयोगकर्ताओं को भुगतान चेकआउट काउंटरों पर प्रिंट करने या रखने से पहले एक परीक्षण स्कैन करके जनरेट किए गए QR कोड को सत्यापित करना होगा। हम किसी भी त्रुटि, लेनदेन की विफलता, या खोए हुए राजस्व के लिए कोई दायित्व स्वीकार नहीं करते हैं।
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

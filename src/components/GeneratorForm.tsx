@@ -265,7 +265,7 @@ const translations = {
     copyFailed: "Copy failed",
     preparingPoster: "Preparing poster...",
     downloadPoster: "Download poster",
-    draftAutoSaves: "{t.draftAutoSaves}",
+    draftAutoSaves: "Draft auto-saves in this browser so you can come back and keep editing.",
     enterNameError: "Enter the name that should appear on the payment QR.",
     enterUpiIdError: "Enter a valid UPI ID (e.g. name@bank).",
     invalidUpiIdError: "Please enter a valid UPI ID (e.g. name@bank).",

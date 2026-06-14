@@ -43,7 +43,7 @@ const description =
               </div>
 
               <h2 class="mt-4 text-2xl font-black text-forest hover:text-leaf transition-colors">
-                <a href={`/blog/${post.slug}/`}>{post.data.title}</a>
+                <a href={`/blog/${post.id.replace(/\.mdx?$/, "")}/`}>{post.data.title}</a>
               </h2>
 
               <p class="mt-3 text-sm leading-relaxed text-forest/72">
@@ -60,7 +60,7 @@ const description =
                 ))}
               </div>
               <a
-                href={`/blog/${post.slug}/`}
+                href={`/blog/${post.id.replace(/\.mdx?$/, "")}/`}
                 class="text-xs font-black text-leaf hover:underline shrink-0"
               >
                 Read Article &rarr;

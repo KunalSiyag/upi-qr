@@ -1,5 +1,6 @@
 ---
 const currentYear = new Date().getFullYear();
+const isHindi = Astro.url.pathname.startsWith("/hi");
 ---
 
 <footer class="border-t border-forest/10 bg-cream/40 px-4 py-12 md:px-6 lg:px-8">
@@ -7,38 +8,44 @@ const currentYear = new Date().getFullYear();
     <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
       {/* Brand Section */}
       <div class="space-y-4">
-        <a href="/" class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
+        <a href={isHindi ? "/hi/" : "/"} class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
         <p class="text-xs leading-relaxed text-forest/70">
-          Create customized, printable UPI payment posters, counter standees, and table cards. Built for local merchants, freelancers, event hosts, and donation campaigns.
+          {isHindi 
+            ? "कस्टम, प्रिंट करने योग्य UPI भुगतान पोस्टर, काउंटर स्टैंडी और टेबल कार्ड बनाएं। स्थानीय व्यापारियों, फ्रीलांसरों, इवेंट आयोजकों और दान अभियानों के लिए निर्मित।"
+            : "Create customized, printable UPI payment posters, counter standees, and table cards. Built for local merchants, freelancers, event hosts, and donation campaigns."
+          }
         </p>
       </div>
 
       {/* Quick Links */}
       <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">Tools</h4>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "उपकरण" : "Tools"}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href="/#generator" class="hover:text-leaf hover:underline">QR Code Generator</a></li>
-          <li><a href="/#templates" class="hover:text-leaf hover:underline">Poster Templates</a></li>
-          <li><a href="/#faq" class="hover:text-leaf hover:underline">Frequently Asked Questions</a></li>
-          <li><a href="/blog/" class="hover:text-leaf hover:underline">Blog & Guides</a></li>
+          <li><a href={isHindi ? "/hi/#generator" : "/#generator"} class="hover:text-leaf hover:underline">{isHindi ? "QR कोड जनरेटर" : "QR Code Generator"}</a></li>
+          <li><a href={isHindi ? "/hi/#templates" : "/#templates"} class="hover:text-leaf hover:underline">{isHindi ? "पोस्टर टेम्पलेट्स" : "Poster Templates"}</a></li>
+          <li><a href={isHindi ? "/hi/#faq" : "/#faq"} class="hover:text-leaf hover:underline">{isHindi ? "अक्सर पूछे जाने वाले प्रश्न" : "Frequently Asked Questions"}</a></li>
+          <li><a href="/blog/" class="hover:text-leaf hover:underline">{isHindi ? "ब्लॉग और गाइड" : "Blog & Guides"}</a></li>
         </ul>
       </div>
 
       {/* Compliance Links */}
       <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">Compliance</h4>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "अनुपालन" : "Compliance"}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href="/privacy" class="hover:text-leaf hover:underline">Privacy Policy</a></li>
-          <li><a href="/terms" class="hover:text-leaf hover:underline">Terms of Service</a></li>
-          <li><a href="/disclaimer" class="hover:text-leaf hover:underline">Disclaimer</a></li>
+          <li><a href={isHindi ? "/hi/privacy/" : "/privacy/"} class="hover:text-leaf hover:underline">{isHindi ? "गोपनीयता नीति" : "Privacy Policy"}</a></li>
+          <li><a href={isHindi ? "/hi/terms/" : "/terms/"} class="hover:text-leaf hover:underline">{isHindi ? "सेवा की शर्तें" : "Terms of Service"}</a></li>
+          <li><a href={isHindi ? "/hi/disclaimer/" : "/disclaimer/"} class="hover:text-leaf hover:underline">{isHindi ? "अस्वीकरण" : "Disclaimer"}</a></li>
         </ul>
       </div>
 
       {/* Support & Contact */}
       <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">Contact</h4>
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "संपर्क" : "Contact"}</h4>
         <p class="text-xs text-forest/70 leading-relaxed">
-          For business inquiries, support request, or feedback, email us at:
+          {isHindi 
+            ? "व्यावसायिक पूछताछ, सहायता अनुरोध या प्रतिक्रिया के लिए, हमें ईमेल करें:"
+            : "For business inquiries, support request, or feedback, email us at:"
+          }
         </p>
         <p class="text-xs font-bold text-forest">
           <a href="mailto:support@proupiqr.in" class="hover:underline">support@proupiqr.in</a>
@@ -49,20 +56,29 @@ const currentYear = new Date().getFullYear();
     {/* Compliance & Regulatory Disclaimer */}
     <div class="mt-8 border-t border-forest/5 pt-6 text-[10px] leading-relaxed text-forest/60 space-y-3">
       <p>
-        <strong>NPCI Disclaimer:</strong> Pro UPI QR is a free independent utility provider and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the National Payments Corporation of India (NPCI), BHIM, or any government authorities. The official NPCI website can be found at <a href="https://www.npci.org.in" target="_blank" rel="noopener noreferrer" class="underline hover:text-leaf">npci.org.in</a>.
+        <strong>{isHindi ? "NPCI अस्वीकरण:" : "NPCI Disclaimer:"}</strong> {isHindi 
+          ? "Pro UPI QR एक मुफ्त स्वतंत्र उपयोगिता प्रदाता है और नेशनल पेमेंट्स कॉरपोरेशन ऑफ इंडिया (NPCI), BHIM या किसी भी सरकारी प्राधिकरण के साथ आधिकारिक रूप से संबद्ध, संबंधित, अधिकृत या समर्थित नहीं है। आधिकारिक NPCI वेबसाइट npci.org.in पर देखी जा सकती है।"
+          : "Pro UPI QR is a free independent utility provider and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the National Payments Corporation of India (NPCI), BHIM, or any government authorities. The official NPCI website can be found at npci.org.in."
+        }
       </p>
       <p>
-        <strong>Brand Disclaimer:</strong> All brand names, logos, trademarks, and registered trademarks (including Paytm, PhonePe, Google Pay, GPay) displayed on this website are the property of their respective owners. Use of these names, trademarks, and brands does not imply endorsement, affiliation, or sponsorship.
+        <strong>{isHindi ? "ब्रांड अस्वीकरण:" : "Brand Disclaimer:"}</strong> {isHindi 
+          ? "इस वेबसाइट पर प्रदर्शित सभी ब्रांड नाम, लोगो, ट्रेडमार्क और पंजीकृत ट्रेडमार्क (Paytm, PhonePe, Google Pay, GPay सहित) उनके संबंधित स्वामियों की संपत्ति हैं। इन नामों, ट्रेडमार्क और ब्रांडों के उपयोग का अर्थ समर्थन, संबद्धता या प्रायोजन नहीं है।"
+          : "All brand names, logos, trademarks, and registered trademarks (including Paytm, PhonePe, Google Pay, GPay) displayed on this website are the property of their respective owners. Use of these names, trademarks, and brands does not imply endorsement, affiliation, or sponsorship."
+        }
       </p>
       <p>
-        <strong>Safety & Security Note:</strong> Transactions generated by UPI QR codes on this website are processed directly through the standard UPI Unified Payments Interface protocol. Payment validation, processing, and security are handled entirely on the customer's mobile device via their chosen bank/payment app. We do not store, process, intermediate, or track payment details or funds.
+        <strong>{isHindi ? "सुरक्षा नोट:" : "Safety & Security Note:"}</strong> {isHindi 
+          ? "इस वेबसाइट पर UPI QR कोड द्वारा उत्पन्न लेनदेन सीधे मानक UPI एकीकृत भुगतान इंटरफ़ेस प्रोटोकॉल के माध्यम से संसाधित होते हैं। भुगतान सत्यापन, प्रसंस्करण और सुरक्षा पूरी तरह से ग्राहक के मोबाइल डिवाइस पर उनके चयनित बैंक/भुगतान ऐप के माध्यम से संभाली जाती है। हम भुगतान विवरण या धन को संग्रहीत, संसाधित, मध्यस्थ या ट्रैक नहीं करते हैं।"
+          : "Transactions generated by UPI QR codes on this website are processed directly through the standard UPI Unified Payments Interface protocol. Payment validation, processing, and security are handled entirely on the customer's mobile device via their chosen bank/payment app. We do not store, process, intermediate, or track payment details or funds."
+        }
       </p>
     </div>
 
     {/* Copyright Section */}
     <div class="mt-6 flex flex-col items-center justify-between gap-4 border-t border-forest/5 pt-6 text-center text-xs text-forest/65 md:flex-row">
-      <p>&copy; {currentYear} Pro UPI QR. Made for local businesses and independent creators.</p>
-      <p class="text-[10px] text-forest/50">All payments are subject to terms set by your VPA provider bank.</p>
+      <p>&copy; {currentYear} Pro UPI QR. {isHindi ? "स्थानीय व्यवसायों और स्वतंत्र रचनाकारों के लिए निर्मित।" : "Made for local businesses and independent creators."}</p>
+      <p class="text-[10px] text-forest/50">{isHindi ? "सभी भुगतान आपके VPA प्रदाता बैंक द्वारा निर्धारित शर्तों के अधीन हैं।" : "All payments are subject to terms set by your VPA provider bank."}</p>
     </div>
   </div>
 </footer>
