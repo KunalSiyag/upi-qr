@@ -11,7 +11,8 @@ interface Props {
 }
 
 const { title, description, canonical, schema, image } = Astro.props;
-const canonicalUrl = canonical ?? new URL(Astro.url.pathname, Astro.site).toString();
+const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
+const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
 const ogImageUrl = image 
   ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
   : new URL("/images/og-image.png", Astro.site).toString();
@@ -23,7 +24,6 @@ const faqPath = isHindi ? "/hi/#faq" : "/#faq";
 const blogPath = "/blog/";
 
 // Dynamic language switcher target
-const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const langLink = isHindi 
   ? normalizedPath.replace(/^\/hi\//, "/") 
   : `/hi${normalizedPath}`;
