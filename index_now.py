@@ -17,7 +17,7 @@ try:
     tree = ET.parse("dist/sitemap.xml")
     root = tree.getroot()
     # Handle XML Namespace
-    ns = {"ns": "https://www.sitemaps.org/schemas/sitemap/0.9"}
+    ns = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
     urls = [loc.text for loc in root.findall(".//ns:loc", ns)]
 except Exception as e:
     print(f"Failed to parse sitemap: {e}")

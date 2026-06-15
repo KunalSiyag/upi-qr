@@ -42,7 +42,7 @@ For legal, regulatory, and tax compliance:
 
 Informational and devotional setups require a design that looks official and trustworthy. 
 
-1. Go to the [Pro UPI QR Generator](https://www.proupiqr.in/donation-qr-generator).
+1. Go to the [Pro UPI QR Generator](https://www.proupiqr.in/donation-qr-generator/).
 2. Enter the registered name of the trust/organization in the **Payee Name** field.
 3. Enter your official organization **UPI ID / VPA**.
 4. Choose the **Temple Donation Poster** template from the design deck. This template is designed with a prominent header, a clean white card for the QR, and space for transaction details.
@@ -78,4 +78,4 @@ This is particularly useful if your NGO provides tax exemptions under Section 80
 
 By utilizing free UPI tools, your trust or NGO can redirect payment gateway fees back to where they are needed most—your cause.
 
-**[Build a custom Donation QR card for free on Pro UPI QR &rarr;](https://www.proupiqr.in/donation-qr-generator)**
+**[Build a custom Donation QR card for free on Pro UPI QR &rarr;](https://www.proupiqr.in/donation-qr-generator/)**
