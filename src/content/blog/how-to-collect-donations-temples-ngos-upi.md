@@ -42,7 +42,7 @@ For legal, regulatory, and tax compliance:
 
 Informational and devotional setups require a design that looks official and trustworthy. 
 
-1. Go to the [Pro UPI QR Generator](https://www.proupiqr.in/donation-qr-generator/).
+1. Go to the [Donation QR Generator](/donation-qr-generator/).
 2. Enter the registered name of the trust/organization in the **Payee Name** field.
 3. Enter your official organization **UPI ID / VPA**.
 4. Choose the **Temple Donation Poster** template from the design deck. This template is designed with a prominent header, a clean white card for the QR, and space for transaction details.
@@ -72,10 +72,12 @@ This is particularly useful if your NGO provides tax exemptions under Section 80
 
 ## Summary Checklists for Donation QR Codes
 
-* **Verify the Payee Name:** Scan the QR code using Google Pay, PhonePe, and Paytm. Check that the verified merchant name matches your trust/NGO name exactly.
+* **Verify the Payee Name:** Scan the QR code using [Google Pay](/google-pay-qr-generator/), [PhonePe](/phonepe-qr-generator/), and [Paytm](/paytm-qr-generator/). Check that the verified merchant name matches your trust/NGO name exactly.
 * **Test the Limits:** Verify with your bank if there are monthly inbound caps on your merchant account.
 * **Maintain Security:** Keep your UPI PIN safe. Remember: **You never need to enter your UPI PIN to receive money.**
 
 By utilizing free UPI tools, your trust or NGO can redirect payment gateway fees back to where they are needed most—your cause.
 
-**[Build a custom Donation QR card for free on Pro UPI QR &rarr;](https://www.proupiqr.in/donation-qr-generator/)**
+**[Build a custom Donation QR card for free on Pro UPI QR &rarr;](/donation-qr-generator/)**
+
+Related guides: [How to print a UPI standee](/blog/how-to-create-print-upi-qr-code-standee/) · [Prevent QR tampering & fraud](/blog/prevent-upi-qr-code-tampering-frauds/) · [Collect event registration fees via UPI](/blog/collect-event-registration-fees-upi-qr/)

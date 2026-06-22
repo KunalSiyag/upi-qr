@@ -1,11 +1,14 @@
 ---
+import { generators, getFeaturedGuides, generatorPath, guidePath } from "../data/internalLinks";
+
 const currentYear = new Date().getFullYear();
 const isHindi = Astro.url.pathname.startsWith("/hi");
+const featuredGuides = getFeaturedGuides(4);
 ---
 
 <footer class="border-t border-forest/10 bg-cream/40 px-4 py-12 md:px-6 lg:px-8">
   <div class="mx-auto max-w-7xl">
-    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-4">
+    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
       {/* Brand Section */}
       <div class="space-y-4">
         <a href={isHindi ? "/hi/" : "/"} class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
@@ -25,6 +28,34 @@ const isHindi = Astro.url.pathname.startsWith("/hi");
           <li><a href={isHindi ? "/hi/#templates" : "/#templates"} class="hover:text-leaf hover:underline">{isHindi ? "पोस्टर टेम्पलेट्स" : "Poster Templates"}</a></li>
           <li><a href={isHindi ? "/hi/#faq" : "/#faq"} class="hover:text-leaf hover:underline">{isHindi ? "अक्सर पूछे जाने वाले प्रश्न" : "Frequently Asked Questions"}</a></li>
           <li><a href="/blog/" class="hover:text-leaf hover:underline">{isHindi ? "ब्लॉग और गाइड" : "Blog & Guides"}</a></li>
+        </ul>
+      </div>
+
+      {/* Generator Pages */}
+      <div class="space-y-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "जनरेटर" : "Generators"}</h4>
+        <ul class="space-y-2 text-xs font-medium text-forest/75">
+          {generators.map((gen) => (
+            <li>
+              <a href={generatorPath(gen.slug, isHindi)} class="hover:text-leaf hover:underline">
+                {gen.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Popular Guides */}
+      <div class="space-y-4">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "लोकप्रिय गाइड" : "Popular Guides"}</h4>
+        <ul class="space-y-2 text-xs font-medium text-forest/75">
+          {featuredGuides.map((guide) => (
+            <li>
+              <a href={guidePath(guide.slug)} class="hover:text-leaf hover:underline line-clamp-2">
+                {guide.title}
+              </a>
+            </li>
+          ))}
         </ul>
       </div>
 

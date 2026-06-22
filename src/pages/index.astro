@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
+import { getFeaturedGuides, guidePath } from "../data/internalLinks";
 
 const title = "Free Universal UPI QR Code Generator | Create UPI QR Code for Shops";
 const description =
@@ -21,7 +22,8 @@ const faqs = [
   {
     question: "How to create UPI QR code with amount?",
     answer:
-      "You can easily create a UPI QR code with amount using our tool. Simply enter your fixed price in the 'Amount' field, and the generated UPI QR code will automatically request that exact payment from the customer."
+      "You can easily create a UPI QR code with amount using our tool. Simply enter your fixed price in the 'Amount' field, and the generated UPI QR code will automatically request that exact payment from the customer. Read our guide on generating UPI QR with a fixed amount for billing workflows.",
+    answerLink: { href: "/blog/how-to-generate-upi-qr-with-amount/", label: "generating UPI QR with a fixed amount" }
   },
   {
     question: "What is UPI QR code?",
@@ -31,7 +33,8 @@ const faqs = [
   {
     question: "How to get UPI QR code for shop?",
     answer:
-      "To get a UPI QR code for your shop, enter your merchant UPI ID into our generator. Select a professional poster template, click generate, and print the resulting standee for your billing counter."
+      "To get a UPI QR code for your shop, enter your merchant UPI ID into our generator. Select a professional poster template, click generate, and print the resulting standee for your billing counter. Our standee printing guide covers sizing, DPI, and laminate choices.",
+    answerLink: { href: "/blog/how-to-create-print-upi-qr-code-standee/", label: "standee printing guide" }
   },
   {
     question: "How to get UPI ID from QR code?",
@@ -159,6 +162,8 @@ const landingLinks = [
   { href: "/paytm-qr-generator/", label: "Paytm QR Generator" },
   { href: "/donation-qr-generator/", label: "Donation QR Generator" }
 ];
+
+const featuredGuides = getFeaturedGuides(6);
 ---
 
 <BaseLayout title={title} description={description} schema={schema}>
@@ -402,6 +407,43 @@ const landingLinks = [
       </div>
     </section>
 
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <div class="mb-8 max-w-3xl">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Guides</p>
+          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+            Learn how to print, set up, and secure your payment QR.
+          </h2>
+          <p class="mt-4 text-lg leading-8 text-forest/72">
+            Practical tutorials for shop owners, NGOs, and freelancers — from standee printing to Google Pay activation.
+          </p>
+        </div>
+
+        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+          {featuredGuides.map((guide) => (
+            <a
+              href={guidePath(guide.slug)}
+              class="group flex flex-col justify-between rounded-[1.75rem] border border-white/75 bg-white/86 p-6 transition-all duration-300 hover:border-leaf/20 hover:shadow-[0_18px_48px_rgba(17,59,44,0.08)]"
+            >
+              <div>
+                <h3 class="text-lg font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
+                  {guide.title}
+                </h3>
+                <p class="mt-3 text-sm leading-7 text-forest/72 line-clamp-3">{guide.description}</p>
+              </div>
+              <span class="mt-5 text-xs font-bold text-leaf group-hover:translate-x-1 transition-transform inline-block">
+                Read guide &rarr;
+              </span>
+            </a>
+          ))}
+        </div>
+
+        <a href="/blog/" class="mt-8 inline-block text-sm font-bold text-leaf hover:underline">
+          Browse all blog guides &rarr;
+        </a>
+      </div>
+    </section>
+
     <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
         <div class="mb-8 max-w-2xl">
@@ -416,7 +458,19 @@ const landingLinks = [
               <summary class="cursor-pointer list-none text-lg font-black text-forest">
                 {faq.question}
               </summary>
-              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">
+                {faq.answerLink ? (
+                  <>
+                    {faq.answer.split(faq.answerLink.label)[0]}
+                    <a href={faq.answerLink.href} class="text-leaf font-semibold underline hover:text-forest">
+                      {faq.answerLink.label}
+                    </a>
+                    {faq.answer.split(faq.answerLink.label)[1]}
+                  </>
+                ) : (
+                  faq.answer
+                )}
+              </p>
             </details>
           ))}
         </div>

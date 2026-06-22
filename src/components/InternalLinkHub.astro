@@ -1,0 +1,122 @@
+---
+import {
+  getFeaturedGuides,
+  getGuidesForPreset,
+  getOtherGenerators,
+  generatorPath,
+  guidePath,
+  type GeneratorSlug,
+  type PresetType,
+} from "../data/internalLinks";
+
+interface Props {
+  variant?: "generators" | "guides" | "both";
+  currentGenerator?: GeneratorSlug;
+  currentGuide?: string;
+  presetType?: PresetType;
+  isHindi?: boolean;
+  guideLimit?: number;
+}
+
+const {
+  variant = "both",
+  currentGenerator,
+  currentGuide,
+  presetType,
+  isHindi = false,
+  guideLimit = 4,
+} = Astro.props;
+
+const showGenerators = variant === "generators" || variant === "both";
+const showGuides = variant === "guides" || variant === "both";
+
+const otherGenerators = showGenerators ? getOtherGenerators(currentGenerator) : [];
+const relatedGuides = showGuides
+  ? presetType
+    ? getGuidesForPreset(presetType, { excludeSlug: currentGuide, limit: guideLimit })
+    : getFeaturedGuides(guideLimit).filter((g) => g.slug !== currentGuide)
+  : [];
+
+const labels = isHindi
+  ? {
+      generatorsTitle: "अन्य UPI जनरेटर",
+      generatorsSubtitle: "हर प्रमुख भुगतान ऐप के लिए तैयार-किए गए टूल।",
+      guidesTitle: "संबंधित गाइड",
+      guidesSubtitle: "प्रिंटिंग, सेटअप और सुरक्षा पर चरण-दर-चरण लेख।",
+      readGuide: "गाइड पढ़ें",
+      openGenerator: "जनरेटर खोलें",
+      allGuides: "सभी ब्लॉग गाइड देखें",
+    }
+  : {
+      generatorsTitle: "Other UPI QR Generators",
+      generatorsSubtitle: "Purpose-built tools for every major payment app.",
+      guidesTitle: "Related Guides",
+      guidesSubtitle: "Step-by-step articles on printing, setup, and security.",
+      readGuide: "Read Guide",
+      openGenerator: "Open Generator",
+      allGuides: "Browse all blog guides",
+    };
+---
+
+{(otherGenerators.length > 0 || relatedGuides.length > 0) && (
+  <section class="mt-12 border-t border-forest/10 pt-10 space-y-10">
+    {otherGenerators.length > 0 && (
+      <div>
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">{labels.generatorsTitle}</p>
+        <p class="mt-2 text-sm text-forest/70">{labels.generatorsSubtitle}</p>
+        <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {otherGenerators.map((gen) => (
+            <a
+              href={generatorPath(gen.slug, isHindi)}
+              class="group flex flex-col justify-between rounded-2xl border border-forest/8 bg-[#fffdf6] p-5 transition-all duration-300 hover:border-leaf/25 hover:shadow-md"
+            >
+              <div>
+                <span
+                  class="inline-block h-2 w-2 rounded-full"
+                  style={`background-color: ${gen.accent}`}
+                />
+                <h3 class="mt-3 text-base font-black text-forest group-hover:text-leaf transition-colors">
+                  {gen.label}
+                </h3>
+                <p class="mt-2 text-xs leading-relaxed text-forest/70">{gen.description}</p>
+              </div>
+              <span class="mt-4 text-[11px] font-bold text-leaf group-hover:translate-x-1 transition-transform inline-block">
+                {labels.openGenerator} &rarr;
+              </span>
+            </a>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {relatedGuides.length > 0 && (
+      <div>
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">{labels.guidesTitle}</p>
+        <p class="mt-2 text-sm text-forest/70">{labels.guidesSubtitle}</p>
+        <div class="mt-5 grid gap-4 sm:grid-cols-2">
+          {relatedGuides.map((guide) => (
+            <a
+              href={guidePath(guide.slug)}
+              class="group flex flex-col justify-between rounded-2xl border border-forest/8 bg-white p-5 transition-all duration-300 hover:border-leaf/25 hover:shadow-md"
+            >
+              <div>
+                <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
+                  {guide.title}
+                </h3>
+                <p class="mt-2 text-xs leading-relaxed text-forest/70 line-clamp-2">
+                  {guide.description}
+                </p>
+              </div>
+              <span class="mt-4 text-[11px] font-bold text-leaf group-hover:translate-x-1 transition-transform inline-block">
+                {labels.readGuide} &rarr;
+              </span>
+            </a>
+          ))}
+        </div>
+        <a href="/blog/" class="mt-5 inline-block text-sm font-bold text-leaf hover:underline">
+          {labels.allGuides} &rarr;
+        </a>
+      </div>
+    )}
+  </section>
+)}

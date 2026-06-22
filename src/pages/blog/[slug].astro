@@ -1,6 +1,8 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
+import InternalLinkHub from "../../components/InternalLinkHub.astro";
+import { getGeneratorCtaForTags, getGuidesForTags } from "../../data/internalLinks";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
@@ -17,8 +19,12 @@ const { Content } = await render(post);
 const title = `${post.data.title} | Pro UPI QR`;
 const description = post.data.description;
 
+const postSlug = post.id.replace(/\.mdx?$/, "");
+const generatorCta = getGeneratorCtaForTags(post.data.tags);
+
 // Fetch related posts based on matching tags and publication date
 const posts = await getCollection("blog");
+const curatedGuides = getGuidesForTags(post.data.tags, { excludeSlug: postSlug, limit: 3 });
 const relatedPosts = posts
   .filter((p) => p.id !== post.id)
   .map((p) => {
@@ -123,28 +129,43 @@ const schema = {
       </div>
 
       {/* Related Articles */}
-      {relatedPosts.length > 0 && (
+      {(curatedGuides.length > 0 || relatedPosts.length > 0) && (
         <div class="mt-12 border-t border-forest/10 pt-10">
           <h3 class="text-2xl font-black text-forest mb-6">Related Articles</h3>
           <div class="grid gap-6 md:grid-cols-3">
-            {relatedPosts.map((rPost) => (
-              <a 
-                href={`/blog/${rPost.id.replace(/\.mdx?$/, "")}/`}
+            {(curatedGuides.length > 0
+              ? curatedGuides.map((guide) => ({
+                  href: `/blog/${guide.slug}/`,
+                  title: guide.title,
+                  description: guide.description,
+                  date: null as Date | null,
+                }))
+              : relatedPosts.map((rPost) => ({
+                  href: `/blog/${rPost.id.replace(/\.mdx?$/, "")}/`,
+                  title: rPost.data.title,
+                  description: rPost.data.description,
+                  date: rPost.data.pubDate,
+                }))
+            ).map((item) => (
+              <a
+                href={item.href}
                 class="group flex flex-col justify-between rounded-2xl border border-forest/5 bg-[#fffdf6] p-5 transition-all duration-300 hover:scale-[1.02] hover:border-leaf/20 hover:shadow-md"
               >
                 <div>
-                  <span class="text-[10px] font-bold text-forest/40">
-                    {rPost.data.pubDate.toLocaleDateString("en-US", {
-                      year: "numeric",
-                      month: "short",
-                      day: "numeric",
-                    })}
-                  </span>
-                  <h4 class="mt-2 text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
-                    {rPost.data.title}
+                  {item.date && (
+                    <span class="text-[10px] font-bold text-forest/40">
+                      {item.date.toLocaleDateString("en-US", {
+                        year: "numeric",
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                  )}
+                  <h4 class={`text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2 ${item.date ? "mt-2" : ""}`}>
+                    {item.title}
                   </h4>
                   <p class="mt-2 text-xs text-forest/70 line-clamp-3 leading-relaxed">
-                    {rPost.data.description}
+                    {item.description}
                   </p>
                 </div>
                 <div class="mt-4 pt-3 border-t border-forest/5 flex items-center justify-between text-[11px] font-bold text-leaf">
@@ -157,15 +178,17 @@ const schema = {
         </div>
       )}
 
+      <InternalLinkHub variant="both" currentGuide={postSlug} guideLimit={4} />
+
       {/* Footer CTA */}
       <footer class="mt-12 border-t border-forest/10 pt-8 text-center">
-        <h3 class="text-xl font-black text-forest">Need to create your own UPI QR Code standee?</h3>
-        <p class="mt-2 text-sm text-forest/70">Create, customize, and print standard compliant posters in 30 seconds.</p>
-        <a 
-          href="/" 
+        <h3 class="text-xl font-black text-forest">{generatorCta.headline}</h3>
+        <p class="mt-2 text-sm text-forest/70">{generatorCta.description}</p>
+        <a
+          href={generatorCta.href}
           class="mt-5 inline-block rounded-full bg-forest px-8 py-3 text-sm font-bold text-white transition hover:bg-leaf"
         >
-          Generate Free QR Code Now
+          {generatorCta.label}
         </a>
       </footer>
 

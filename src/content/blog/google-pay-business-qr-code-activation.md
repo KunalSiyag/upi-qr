@@ -33,4 +33,16 @@ Here is the step-by-step walkthrough to get your business verified on Google Pay
 
 ## Fetching Your GPay QR Code
 
-You can view your QR code under the **QR Code** tab on the app dashboard. You can download the image directly to your phone. If you want a more stylish, branded standee sheet, you can copy your GPay merchant UPI ID and paste it into **Pro UPI QR** to design custom checkout cards.
+You can view your QR code under the **QR Code** tab on the app dashboard. You can download the image directly to your phone. If you want a more stylish, branded standee sheet, copy your GPay merchant UPI ID into our [Google Pay QR Generator](/google-pay-qr-generator/) to design custom checkout cards.
+
+---
+
+## Next Steps After Activation
+
+Once your GPay merchant account is live, use these resources to get more from your QR:
+
+1. **[Create and print a shop standee](/blog/how-to-create-print-upi-qr-code-standee/)** — layout, sizing, and 300 DPI printing tips for your billing counter.
+2. **[Custom design templates for GPay & PhonePe](/blog/custom-design-templates-gpay-phonepe-qr/)** — branding ideas for professional payment posters.
+3. **[Generate UPI QR with a fixed amount](/blog/how-to-generate-upi-qr-with-amount/)** — useful when you sell items at a set price.
+
+**[Open the Google Pay QR Generator &rarr;](/google-pay-qr-generator/)**

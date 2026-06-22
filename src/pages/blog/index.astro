@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
+import { generators, generatorPath } from "../../data/internalLinks";
 
 const posts = await getCollection("blog");
 const sortedPosts = posts.sort(
@@ -24,6 +25,26 @@ const description =
         Learn how to optimize your checkouts, design eye-catching standees, and collect commission-free payments.
       </p>
     </div>
+
+    <section class="mb-12 rounded-[2rem] border border-white/75 bg-forest px-6 py-8 text-white md:px-8">
+      <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Free Tools</p>
+      <h2 class="mt-3 text-2xl font-black tracking-tight md:text-3xl">
+        Generate your UPI QR before you read the guides.
+      </h2>
+      <p class="mt-3 max-w-2xl text-sm leading-7 text-white/76">
+        Each generator is preset for PhonePe, Google Pay, Paytm, or donation posters — then download a print-ready standee.
+      </p>
+      <div class="mt-6 flex flex-wrap gap-3">
+        {generators.map((gen) => (
+          <a
+            href={generatorPath(gen.slug)}
+            class="rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-white transition hover:bg-white hover:text-forest"
+          >
+            {gen.label}
+          </a>
+        ))}
+      </div>
+    </section>
 
     <div class="grid gap-8 md:grid-cols-2">
       {

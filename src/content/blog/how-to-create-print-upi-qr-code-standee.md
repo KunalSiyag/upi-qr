@@ -22,7 +22,7 @@ Many merchants use default QR stickers pasted on cardboard. While functional, cu
 
 1. **Better Visibility:** A well-designed, upright standee is easier to scan from a distance of 3–5 feet.
 2. **Branding Opportunities:** Adding your merchant/shop name and official UPI credentials in a large, legible font reassures customers that they are paying the correct account.
-3. **Multi-App Compatibility:** A standard UPI QR code conforms to NPCI guidelines, meaning a single standee will work seamlessly with Google Pay, PhonePe, Paytm, BHIM, and any mobile banking app.
+3. **Multi-App Compatibility:** A standard UPI QR code conforms to NPCI guidelines, meaning a single standee will work seamlessly with [Google Pay](/google-pay-qr-generator/), [PhonePe](/phonepe-qr-generator/), [Paytm](/paytm-qr-generator/), BHIM, and any mobile banking app.
 4. **Professional Look:** High-quality standees elevate the overall look of your cash counter.
 
 ---
@@ -31,7 +31,7 @@ Many merchants use default QR stickers pasted on cardboard. While functional, cu
 
 To generate a payment-ready QR code, you need a **Virtual Payment Address (VPA)**, commonly known as a UPI ID (e.g., `shopname@okaxis` or `merchant@ybl`).
 
-1. Go to the [Pro UPI QR Generator](https://www.proupiqr.in).
+1. Go to the [Pro UPI QR Generator](/).
 2. Enter your **Payee Name** (the name registered with your bank account).
 3. Enter your **UPI ID / VPA**.
 4. *(Optional)* If you want to create a static payment desk, leave the amount empty. If you are billing a specific product, you can enter a preset amount.
@@ -71,7 +71,7 @@ To ensure customer phones can scan your QR code instantly, even in low-light con
 
 * **Use High DPI:** Print at **300 DPI** or higher. Low-resolution prints create fuzzy pixels, making it difficult for camera lenses to resolve the code.
 * **Choose Matte Finish over Glossy:** Glossy lamination reflects overhead lights, creating glares that block camera scanners. Matte lamination or matte paper is ideal.
-* **Test Before Displaying:** Always scan the printed standee with your own phone (using Google Pay or PhonePe) before placing it on the counter. Make sure the payee name is correct and no transaction is initiated unless intended.
+* **Test Before Displaying:** Always scan the printed standee with your own phone (using Google Pay or PhonePe) before placing it on the counter. Make sure the payee name is correct and no transaction is initiated unless intended. For outdoor or high-traffic counters, read our guide on [printing durable waterproof QR stickers](/blog/how-to-print-durable-waterproof-qr-stickers/).
 
 ---
 
@@ -79,4 +79,6 @@ To ensure customer phones can scan your QR code instantly, even in low-light con
 
 A clean, legible payment standee shows customers that your business is modern, trustworthy, and organized. By spending a few minutes printing a professional standee, you ensure a smoother billing experience for your customers.
 
-**[Create your custom standee code on Pro UPI QR now &rarr;](https://www.proupiqr.in)**
+**[Create your custom standee code on Pro UPI QR now &rarr;](/)**
+
+Related guides: [Generate UPI QR with a fixed amount](/blog/how-to-generate-upi-qr-with-amount/) · [Custom GPay & PhonePe templates](/blog/custom-design-templates-gpay-phonepe-qr/) · [Is it safe to scan a UPI QR?](/blog/is-it-safe-to-scan-upi-qr-code/)

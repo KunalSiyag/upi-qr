@@ -22,21 +22,41 @@ const staticPages = [
   "hi/disclaimer"
 ];
 
+function formatLastmod(date: Date): string {
+  return date.toISOString();
+}
+
+function escapeXml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
 export const GET: APIRoute = async ({ site }) => {
   const baseUrl = site?.toString().replace(/\/$/, "") ?? "https://www.proupiqr.in";
-  const lastModified = new Date().toISOString();
+  const siteLastModified = formatLastmod(new Date());
 
-  // Fetch dynamic blog posts
   const blogPosts = await getCollection("blog");
-  const blogUrls = blogPosts.map((post) => `blog/${post.id.replace(/\.mdx?$/, "")}`);
 
-  const allPages = [...staticPages, ...blogUrls];
+  const entries = [
+    ...staticPages.map((page) => ({
+      path: page ? `/${page}/` : "/",
+      lastmod: siteLastModified,
+    })),
+    ...blogPosts.map((post) => ({
+      path: `/blog/${post.id.replace(/\.mdx?$/, "")}/`,
+      lastmod: formatLastmod(post.data.pubDate),
+    })),
+  ];
 
-  const urls = allPages
-    .map((page) => {
-      const path = page ? `/${page}/` : "/";
-      return `<url><loc>${baseUrl}${path}</loc><lastmod>${lastModified}</lastmod></url>`;
-    })
+  const urls = entries
+    .map(
+      (entry) =>
+        `<url><loc>${escapeXml(`${baseUrl}${entry.path}`)}</loc><lastmod>${entry.lastmod}</lastmod><changefreq>weekly</changefreq><priority>${entry.path.startsWith("/blog/") ? "0.7" : entry.path === "/" ? "1.0" : "0.8"}</priority></url>`
+    )
     .join("");
 
   const body = `<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">${urls}</urlset>`;

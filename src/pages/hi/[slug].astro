@@ -2,6 +2,8 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
+import InternalLinkHub from "../../components/InternalLinkHub.astro";
+import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
 
 export async function getStaticPaths() {
   return [
@@ -50,6 +52,8 @@ export async function getStaticPaths() {
 
 const { title, headline, intro, presetType } = Astro.props;
 const description = `${headline}. ${intro}`;
+const generatorSlug = Astro.params.slug as GeneratorSlug;
+const resolvedPreset = getPresetFromSlug(generatorSlug);
 
 const schema = {
   "@context": "https://schema.org",
@@ -110,6 +114,13 @@ const schema = {
       </div>
 
       <AffiliateProducts />
+
+      <InternalLinkHub
+        variant="both"
+        currentGenerator={generatorSlug}
+        presetType={resolvedPreset}
+        isHindi
+      />
     </div>
   </main>
 </BaseLayout>
