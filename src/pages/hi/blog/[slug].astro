@@ -1,0 +1,28 @@
+---
+import { getCollection } from "astro:content";
+
+export async function getStaticPaths() {
+  const posts = await getCollection("blog");
+  return posts.map((post) => ({
+    params: { slug: post.id.replace(/\.mdx?$/, "") },
+  }));
+}
+
+const { slug } = Astro.params;
+const target = `/blog/${slug}/`;
+const canonical = new URL(target, Astro.site).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="noindex, follow" />
+    <title>Redirecting to article…</title>
+  </head>
+  <body>
+    <p><a href={target}>Continue to article &rarr;</a></p>
+  </body>
+</html>

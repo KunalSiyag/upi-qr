@@ -1,0 +1,18 @@
+---
+const target = "/blog/";
+const canonical = new URL(target, Astro.site).toString();
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="refresh" content={`0;url=${target}`} />
+    <link rel="canonical" href={canonical} />
+    <meta name="robots" content="noindex, follow" />
+    <title>Redirecting to blog…</title>
+  </head>
+  <body>
+    <p><a href={target}>Continue to Pro UPI QR Blog &rarr;</a></p>
+  </body>
+</html>

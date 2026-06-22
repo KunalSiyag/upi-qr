@@ -23,17 +23,34 @@ const templatesPath = isHindi ? "/hi/#templates" : "/#templates";
 const faqPath = isHindi ? "/hi/#faq" : "/#faq";
 const blogPath = "/blog/";
 
-// Dynamic language switcher target
-const langLink = isHindi 
-  ? normalizedPath.replace(/^\/hi\//, "/") 
-  : `/hi${normalizedPath}`;
+const isBlogIndex = normalizedPath === "/blog/";
+const isBlogPost = normalizedPath.startsWith("/blog/") && !isBlogIndex;
+
+// Blog is English-only; Hindi switcher goes to translated generator hub
+let langLink = `/hi${normalizedPath}`;
+if (isHindi) {
+  langLink = normalizedPath.replace(/^\/hi\//, "/");
+  if (langLink === "") langLink = "/";
+} else if (isBlogIndex || isBlogPost) {
+  langLink = "/hi/";
+}
 const langLabel = isHindi ? "English" : "हिन्दी";
 
-const isBlog = Astro.url.pathname.startsWith("/blog");
-const hasAlternate = !isBlog;
+const hasAlternate = !isBlogIndex && !isBlogPost;
 const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
-const englishUrl = `${baseUrl}${isHindi ? normalizedPath.replace(/^\/hi\//, "/") : normalizedPath}`;
-const hindiUrl = `${baseUrl}${isHindi ? normalizedPath : `/hi${normalizedPath}`}`;
+let englishPath = normalizedPath;
+if (isHindi) {
+  englishPath = normalizedPath.replace(/^\/hi\//, "/");
+  if (englishPath === "") englishPath = "/";
+}
+const englishUrl = `${baseUrl}${englishPath}`;
+let hindiPath = normalizedPath;
+if (isBlogIndex || isBlogPost) {
+  hindiPath = "/hi/";
+} else if (!isHindi) {
+  hindiPath = `/hi${normalizedPath}`;
+}
+const hindiUrl = `${baseUrl}${hindiPath}`;
 ---
 
 <!doctype html>
