@@ -22,6 +22,7 @@ A professional, local-first, SEO-optimized UPI QR Code Generator designed for In
 * **Google Pay Intent:** [Google Pay QR Generator](https://www.proupiqr.in/google-pay-qr-generator/)
 * **Paytm Intent:** [Paytm QR Generator](https://www.proupiqr.in/paytm-qr-generator/)
 * **Charity & Fundraising:** [Donation QR Code Generator](https://www.proupiqr.in/donation-qr-generator/)
+* **Universal / General QR:** [Universal QR Code Generator](https://www.proupiqr.in/universal-qr-generator/) (URL, Text, WiFi)
 * **Merchant & Travel Guides:** [Pro UPI QR Blog & Guides](https://www.proupiqr.in/blog/)
 
 ---

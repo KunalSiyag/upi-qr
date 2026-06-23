@@ -59,6 +59,14 @@ export const generators: GeneratorLink[] = [
   },
 ];
 
+// New universal entry for internal linking
+export const universalQrLink = {
+  href: "/universal-qr-generator/",
+  label: "Universal QR Generator",
+  description: "Free editor for URL, PDF, Contact, App, SMS, WiFi and more with 13 templates.",
+};
+
+
 export const guides: GuideLink[] = [
   {
     slug: "how-to-create-print-upi-qr-code-standee",

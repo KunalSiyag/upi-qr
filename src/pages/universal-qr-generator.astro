@@ -1,0 +1,90 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { UniversalQrForm } from "../components/UniversalQrForm";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+
+const title = "Free Universal QR Code Generator | All Types + Templates";
+const description = "Generate free QR codes for websites, PDFs, contacts, apps, SMS, email, phone, WiFi and more. 13 templates, logo support, full customization. All static codes generated privately in your browser. No signup required.";
+---
+
+<BaseLayout title={title} description={description}>
+  <main>
+    <!-- Hero (relaxed) -->
+    <section class="px-5 pt-8 pb-6 text-center max-w-3xl mx-auto">
+      <h1 class="text-5xl md:text-6xl font-black tracking-[-1.2px] text-forest">Universal QR Code Generator</h1>
+      <p class="mt-3 text-xl text-forest/70">Create static QR codes for websites, PDFs, contacts, apps, SMS, WiFi and more. Private, free, no signup. Customize with templates and your logo.</p>
+
+      <div class="mt-5">
+        <a href="#editor" class="inline-block rounded-full bg-forest px-6 py-2 text-sm font-bold text-white">Start creating</a>
+        <span class="mx-3 text-forest/30">or</span>
+        <a href="/" class="text-sm font-medium text-forest hover:underline">Use for UPI payments →</a>
+      </div>
+    </section>
+
+    <!-- The Compact Powerful Editor -->
+    <section id="editor" class="px-4 pb-10">
+      <UniversalQrForm client:load />
+    </section>
+
+    <!-- QR Code types -->
+    <section id="types" class="max-w-6xl mx-auto px-5 py-10">
+      <h2 class="text-center text-3xl font-black tracking-tight mb-6">Supported QR Types</h2>
+      <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
+        {[
+          ["URL / Website", "Link to any page"],
+          ["PDF", "Share documents"],
+          ["Multi-Link", "Several destinations"],
+          ["Contact (vCard)", "Save name + details"],
+          ["Plain Text", "Any message"],
+          ["App Links", "iOS + Android"],
+          ["SMS", "Pre-filled text"],
+          ["Email", "Pre-filled message"],
+          ["Phone", "Call directly"],
+          ["WiFi", "Join network"],
+        ].map(([title, desc]) => (
+          <div class="bg-white rounded-2xl p-4 border border-forest/10">
+            <div class="font-bold">{title}</div>
+            <div class="text-forest/70 text-sm mt-0.5">{desc}</div>
+          </div>
+        ))}
+      </div>
+      <p class="text-center mt-4 text-xs text-forest/60">All codes are static: the data lives inside the image itself.</p>
+    </section>
+
+    <!-- How it works -->
+    <section class="bg-white/60 py-9">
+      <div class="max-w-4xl mx-auto px-5">
+        <h2 class="text-center font-black text-2xl mb-6">How it works</h2>
+        <div class="grid md:grid-cols-3 gap-5 text-sm">
+          <div>1. Choose a type (URL, contact, WiFi, etc.)</div>
+          <div>2. Fill details + pick a template + add logo if you want</div>
+          <div>3. Download PNG or styled card. Ready to use.</div>
+        </div>
+        <p class="text-center text-xs mt-4 text-forest/60">Everything happens in your browser. No data leaves your device.</p>
+      </div>
+    </section>
+
+    <!-- Practical uses -->
+    <section class="max-w-5xl mx-auto px-5 py-10">
+      <h3 class="font-black text-xl mb-4">Common uses</h3>
+      <div class="text-sm grid sm:grid-cols-2 gap-x-8 gap-y-1 text-forest/80">
+        <div>Business cards &amp; networking</div>
+        <div>Product packaging &amp; manuals</div>
+        <div>Event tickets &amp; check-in</div>
+        <div>Restaurant menus &amp; feedback</div>
+        <div>WiFi for guests or offices</div>
+        <div>Share PDFs, links, or contact info</div>
+      </div>
+    </section>
+
+    <!-- Cross link to UPI tool -->
+    <section class="border-t border-white/70 py-10 text-center max-w-md mx-auto px-5">
+      <p class="text-sm">For Indian shops and payments, try our specialized tool.</p>
+      <a href="/" class="mt-3 inline-block rounded-full bg-forest text-white px-6 py-2 text-sm font-bold">UPI QR with printable posters →</a>
+    </section>
+
+    <div class="max-w-4xl mx-auto px-5 pb-12">
+      <AffiliateProducts />
+    </div>
+  </main>
+</BaseLayout>

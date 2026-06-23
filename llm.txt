@@ -29,4 +29,5 @@ A local-first, privacy-first, SEO-optimized UPI QR Code and payment poster gener
 - **Google Pay Preset**: `/google-pay-qr-generator/` (preconfigured for Google Pay payments)
 - **Paytm Preset**: `/paytm-qr-generator/` (preconfigured for Paytm payments)
 - **Donation Preset**: `/donation-qr-generator/` (preconfigured for NGO/temple donations)
+- **Universal QR Generator**: `/universal-qr-generator/` (for websites, WiFi, plain text, and other non-UPI use cases)
 - **Blog & Guides**: `/blog/`

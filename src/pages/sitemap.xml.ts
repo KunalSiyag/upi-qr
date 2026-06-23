@@ -7,6 +7,8 @@ const staticPages = [
   "google-pay-qr-generator",
   "paytm-qr-generator",
   "donation-qr-generator",
+  "universal-qr-generator",
+  "dynamic-qr-generator",
   "privacy",
   "terms",
   "disclaimer",

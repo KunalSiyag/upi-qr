@@ -1,0 +1,41 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+---
+
+<BaseLayout title="Dynamic QR Codes (Coming Soon) | Pro UPI QR" description="Dynamic QR codes with scan tracking, editable destinations, and no reprinting.">
+  <div class="max-w-2xl mx-auto px-5 py-16">
+    <h1 class="text-5xl font-black tracking-tighter">Dynamic QR Codes</h1>
+    <p class="mt-4 text-lg text-forest/70">A future addition for cases where you need to track scans or change the destination after printing.</p>
+
+    <div class="mt-8 p-6 rounded-2xl border bg-white">
+      <div class="font-semibold">Currently available:</div>
+      <ul class="mt-3 space-y-1 text-sm list-disc list-inside text-forest/80">
+        <li>Powerful static QR codes (free, private, unlimited)</li>
+        <li>13 professional design templates</li>
+        <li>Logo + full color customization</li>
+        <li>All content types: URL, PDF, Contact, App, SMS, etc.</li>
+      </ul>
+    </div>
+
+    <div class="mt-8">
+      <div class="font-bold mb-2">What Dynamic will unlock</div>
+      <div class="grid gap-3 md:grid-cols-2 text-sm">
+        <div class="p-4 border rounded-2xl">Scan analytics (when someone scans and from where)</div>
+        <div class="p-4 border rounded-2xl">Edit the destination later without reprinting</div>
+        <div class="p-4 border rounded-2xl">Advanced campaign management</div>
+      </div>
+    </div>
+
+    <div class="mt-10">
+      <form class="flex gap-2" onsubmit="alert('Thank you! We will notify you when Dynamic QR is ready.'); return false;">
+        <input type="email" required placeholder="your@email.com" class="flex-1 rounded-xl border px-4 py-2" />
+        <button type="submit" class="bg-forest text-white px-6 rounded-xl font-semibold">Notify me</button>
+      </form>
+      <p class="text-xs text-forest/50 mt-2">No spam. We'll only email when the feature launches.</p>
+    </div>
+
+    <div class="mt-12 text-sm">
+      In the meantime, use our full <a href="/universal-qr-generator/" class="underline">Universal QR Editor</a> or the <a href="/" class="underline">specialized UPI QR tool</a>.
+    </div>
+  </div>
+</BaseLayout>

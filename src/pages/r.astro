@@ -1,0 +1,22 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const url = Astro.url.searchParams.get("u") || Astro.url.searchParams.get("url") || "/";
+---
+
+<BaseLayout title="Redirecting..." description="QR redirect">
+  <div class="min-h-[50vh] flex items-center justify-center p-8 text-center">
+    <div>
+      <p class="text-sm text-forest/60">Redirecting you...</p>
+      <a href={url} class="text-2xl font-bold text-forest underline">{url}</a>
+      <p class="text-xs mt-8 text-forest/50 max-w-xs mx-auto">This is a basic redirect layer. Full Dynamic QR with analytics and editable destinations is in development.</p>
+    </div>
+  </div>
+
+  <script is:inline>
+    const target = new URLSearchParams(location.search).get('u') || new URLSearchParams(location.search).get('url');
+    if (target) {
+      setTimeout(() => { window.location.href = target; }, 1200);
+    }
+  </script>
+</BaseLayout>

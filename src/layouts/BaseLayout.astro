@@ -100,10 +100,10 @@ const hindiUrl = `${baseUrl}${hindiPath}`;
           <a href={isHindi ? "/hi/" : "/"} class="text-sm sm:text-lg font-black tracking-tight text-forest shrink-0">Pro UPI QR</a>
           <div class="flex items-center gap-2.5 sm:gap-6">
             <nav class="flex gap-2.5 sm:gap-5 text-[10px] sm:text-xs md:text-sm font-semibold text-forest/80">
-              <a href={generatorPath} class="hover:text-leaf transition-colors">{isHindi ? "जनरेटर" : "Generator"}</a>
-              <a href={templatesPath} class="hover:text-leaf transition-colors">{isHindi ? "टेम्पलेट्स" : "Templates"}</a>
-              <a href={faqPath} class="hover:text-leaf transition-colors">{isHindi ? "FAQ" : "FAQ"}</a>
-              <a href={blogPath} class="hover:text-leaf transition-colors">{isHindi ? "ब्लॉग" : "Blog"}</a>
+              <a href="/universal-qr-generator/" class="hover:text-leaf transition-colors">Universal QR</a>
+              <a href="/" class="hover:text-leaf transition-colors">UPI QR</a>
+              <a href="/blog/" class="hover:text-leaf transition-colors">Guides</a>
+              <a href="/universal-qr-generator/#types" class="hover:text-leaf transition-colors hidden md:inline">Types</a>
             </nav>
             <span class="text-forest/20">|</span>
             <a href={langLink} class="rounded-full bg-forest/5 border border-forest/10 px-2 py-0.5 sm:px-3 sm:py-1 text-[10px] sm:text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200 shrink-0">

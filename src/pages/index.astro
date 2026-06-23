@@ -4,9 +4,9 @@ import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import { getFeaturedGuides, guidePath } from "../data/internalLinks";
 
-const title = "Free Universal UPI QR Code Generator | Create UPI QR Code for Shops";
+const title = "Free UPI QR Code Generator + Universal QR Codes | Pro UPI QR";
 const description =
-  "Generate UPI QR code with amount for free. Our universal UPI QR code generator works for Paytm, PhonePe, and GPay. Create your UPI QR code for shops instantly.";
+  "Create professional UPI payment QR codes with beautiful printable templates for shops. Also get a powerful free Universal QR generator for URL, PDF, Contact, App, SMS and more. No signup required.";
 
 const faqs = [
   {
@@ -160,7 +160,8 @@ const landingLinks = [
   { href: "/phonepe-qr-generator/", label: "PhonePe QR Generator" },
   { href: "/google-pay-qr-generator/", label: "Google Pay QR Generator" },
   { href: "/paytm-qr-generator/", label: "Paytm QR Generator" },
-  { href: "/donation-qr-generator/", label: "Donation QR Generator" }
+  { href: "/donation-qr-generator/", label: "Donation QR Generator" },
+  { href: "/universal-qr-generator/", label: "Universal QR Generator" }
 ];
 
 const featuredGuides = getFeaturedGuides(6);
@@ -231,6 +232,13 @@ const featuredGuides = getFeaturedGuides(6);
                 >
                   <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
                   Donation QR
+                </a>
+                <a
+                  href="/universal-qr-generator/"
+                  class="inline-flex items-center gap-2 rounded-full border border-forest/25 bg-white px-4 py-2 text-xs font-bold text-forest transition hover:bg-forest hover:text-white"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
+                  Universal QR (URL, WiFi, Text)
                 </a>
               </div>
             </div>
@@ -444,12 +452,32 @@ const featuredGuides = getFeaturedGuides(6);
       </div>
     </section>
 
+    <!-- Universal QR promotion + relaxed content -->
+    <section class="px-4 py-12 md:px-6 lg:px-8 border-t border-forest/10">
+      <div class="max-w-6xl mx-auto">
+        <div class="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 mb-8">
+          <div>
+            <p class="text-xs uppercase tracking-[2px] text-leaf font-black">ALSO AVAILABLE</p>
+            <h2 class="text-4xl font-black tracking-tight">Full Universal QR Code Generator</h2>
+            <p class="text-forest/70 mt-1 max-w-md">Create QR Codes for websites, PDFs, contacts, apps, SMS, WiFi and more. 13 beautiful templates. 100% free and private.</p>
+          </div>
+          <a href="/universal-qr-generator/" class="rounded-full bg-forest text-white px-6 py-3 text-sm font-bold whitespace-nowrap">Open Universal QR Editor →</a>
+        </div>
+
+        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
+          {["Website / URL", "PDF Files", "Contact (vCard)", "Multi-URL", "App Links", "SMS", "Email", "Phone", "Plain Text", "WiFi"].map((item) => (
+            <a href="/universal-qr-generator/" class="block p-3 rounded-2xl border border-white/70 bg-white/80 hover:border-leaf/40">{item}</a>
+          ))}
+        </div>
+      </div>
+    </section>
+
     <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
         <div class="mb-8 max-w-2xl">
           <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
           <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
-            Questions people ask before trusting a payment QR.
+            Questions about UPI &amp; Universal QR Codes
           </h2>
         </div>
         <div class="grid gap-4">
