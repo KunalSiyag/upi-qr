@@ -39,30 +39,63 @@ const postImageUrl = post.data.image
   ? (post.data.image.startsWith("http") ? post.data.image : new URL(post.data.image, Astro.site).toString())
   : new URL("/images/og-image.png", Astro.site).toString();
 
+const faqs: { question: string; answer: string }[] = [];
+if (post.body) {
+  const regex = /###\s+Q\d*\.\s*(.+?)\r?\n([^\n]+(?:\r?\n(?![#\s]).*)*)/g;
+  let match;
+  while ((match = regex.exec(post.body)) !== null) {
+    const question = match[1].trim();
+    const answer = match[2].trim();
+    faqs.push({ question, answer });
+  }
+}
+
+const graph: any[] = [
+  {
+    "@type": "BlogPosting",
+    "@id": new URL(Astro.url.pathname, Astro.site).toString() + "#blogposting",
+    "headline": post.data.title,
+    "description": post.data.description,
+    "datePublished": post.data.pubDate.toISOString(),
+    "image": postImageUrl,
+    "author": {
+      "@type": "Person",
+      "name": post.data.author
+    },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Pro UPI QR",
+      "url": "https://www.proupiqr.in",
+      "logo": {
+        "@type": "ImageObject",
+        "url": "https://www.proupiqr.in/favicon.svg"
+      }
+    },
+    "mainEntityOfPage": {
+      "@type": "WebPage",
+      "@id": new URL(Astro.url.pathname, Astro.site).toString()
+    }
+  }
+];
+
+if (faqs.length > 0) {
+  graph.push({
+    "@type": "FAQPage",
+    "@id": new URL(Astro.url.pathname, Astro.site).toString() + "#faq",
+    "mainEntity": faqs.map((faq) => ({
+      "@type": "Question",
+      "name": faq.question,
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": faq.answer.replace(/\[([^\]]+)\]\([^)]+\)/g, "$1") // Strip markdown links for schema text
+      }
+    }))
+  });
+}
+
 const schema = {
   "@context": "https://schema.org",
-  "@type": "BlogPosting",
-  "headline": post.data.title,
-  "description": post.data.description,
-  "datePublished": post.data.pubDate.toISOString(),
-  "image": postImageUrl,
-  "author": {
-    "@type": "Person",
-    "name": post.data.author
-  },
-  "publisher": {
-    "@type": "Organization",
-    "name": "Pro UPI QR",
-    "url": "https://www.proupiqr.in",
-    "logo": {
-      "@type": "ImageObject",
-      "url": "https://www.proupiqr.in/favicon.svg"
-    }
-  },
-  "mainEntityOfPage": {
-    "@type": "WebPage",
-    "@id": new URL(Astro.url.pathname, Astro.site).toString()
-  }
+  "@graph": graph
 };
 ---
 

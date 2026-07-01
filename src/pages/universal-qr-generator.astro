@@ -5,9 +5,59 @@ import AffiliateProducts from "../components/AffiliateProducts.astro";
 
 const title = "Free Universal QR Code Generator | All Types + Templates";
 const description = "Generate free QR codes for websites, PDFs, contacts, apps, SMS, email, phone, WiFi and more. 13 templates, logo support, full customization. All static codes generated privately in your browser. No signup required.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": "https://www.proupiqr.in/universal-qr-generator/#webapp",
+      "name": "Universal QR Code Generator | Pro UPI QR",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/universal-qr-generator/",
+      "description": "Generate free static QR codes for websites, PDFs, contacts, apps, SMS, email, phone, and WiFi networks instantly in your browser without signup.",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://www.proupiqr.in/universal-qr-generator/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Are these QR codes free and permanent?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, all QR codes generated are 100% free, static, and permanent. They do not expire and there are no scan limits, because the data is encoded directly into the QR code image itself."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Can I add a custom logo to the QR code?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes, our universal QR code generator allows you to upload a custom logo or select from popular presets to display in the center of the QR code."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does this QR generator require sign up?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No, you can generate unlimited QR codes without creating an account or providing any personal details."
+          }
+        }
+      ]
+    }
+  ]
+};
 ---
 
-<BaseLayout title={title} description={description}>
+<BaseLayout title={title} description={description} schema={schema}>
   <main>
     <!-- Hero (relaxed) -->
     <section class="px-5 pt-8 pb-6 text-center max-w-3xl mx-auto">

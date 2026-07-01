@@ -1,0 +1,58 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../components/GeneratorForm";
+
+const title = "UPI QR Generator - Full Editor | Pro UPI QR";
+const description = "Create UPI QR codes with amount instantly. Full screen focused editor for fast entry. Works for PhonePe, Google Pay, Paytm and all UPI apps.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "@id": "https://www.proupiqr.in/generator/#webapp",
+  "name": "UPI QR Code Generator (Full Editor) | Pro UPI QR",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/generator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <div class="min-h-[100dvh] flex flex-col bg-[#fffdf6]">
+    <!-- Minimal focused header -->
+    <header class="border-b border-forest/10 bg-white/90 backdrop-blur sticky top-0 z-50">
+      <div class="max-w-7xl mx-auto px-4 h-14 flex items-center justify-between">
+        <a href="/" class="font-black text-forest text-lg tracking-tight">Pro UPI QR</a>
+        
+        <div class="flex items-center gap-3 text-sm">
+          <a href="/" class="text-forest/70 hover:text-forest">← Back to home</a>
+          <a href="/universal-qr-generator/" class="px-3 py-1 text-xs rounded-full border border-forest/20 hover:bg-white">Universal QR</a>
+        </div>
+      </div>
+    </header>
+
+    <div class="flex-1 flex flex-col">
+      <div class="max-w-7xl mx-auto w-full px-4 pt-4 pb-2">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Full Screen Editor</p>
+            <h1 class="text-2xl md:text-3xl font-black tracking-tight text-forest">Create UPI QR Code</h1>
+          </div>
+          <div class="hidden md:block text-xs text-forest/60">
+            100% private • Generated in your browser
+          </div>
+        </div>
+      </div>
+
+      <!-- Full focused generator -->
+      <div class="flex-1 px-4 pb-6">
+        <GeneratorForm client:load fullScreen={true} />
+      </div>
+    </div>
+  </div>
+</BaseLayout>

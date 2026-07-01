@@ -336,9 +336,10 @@ const translations = {
 export interface GeneratorFormProps {
   presetType?: "phonepe" | "gpay" | "paytm" | "donation";
   lang?: "en" | "hi";
+  fullScreen?: boolean;
 }
 
-export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = {}) {
+export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: GeneratorFormProps = {}) {
   const t = translations[lang];
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const posterRef = useRef<HTMLDivElement | null>(null);
@@ -466,6 +467,8 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
 
   const activeTemplate =
     templateDefinitions.find((template) => template.id === selectedTemplate) ?? templateDefinitions[0];
+
+  const posterHeightClass = fullScreen ? 'min-h-[380px]' : 'min-h-[460px]';
 
   useEffect(() => {
     if (!generated) {
@@ -807,7 +810,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "shop":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -888,7 +891,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "donation":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border-2 border-sun/30 min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border-2 border-sun/30 ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -978,7 +981,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "restaurant":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1062,7 +1065,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "freelancer":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1146,7 +1149,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "event":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-gradient-to-br from-[#1e1b4b] to-[#311042] text-white min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-gradient-to-br from-[#1e1b4b] to-[#311042] text-white ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1235,7 +1238,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "education":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-white min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-white ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1317,7 +1320,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       case "taxi":
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-neutral-950 text-[#fef08a] min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative overflow-hidden bg-neutral-950 text-[#fef08a] ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1412,7 +1415,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
       default:
         return (
           <div 
-            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border border-neutral-200 shadow-sm bg-white min-h-[460px] flex flex-col justify-between`}
+            className={`rounded-[1.45rem] ${activeTemplate.shellClass} p-5 relative border border-neutral-200 shadow-sm bg-white ${posterHeightClass} flex flex-col justify-between`}
             style={containerStyle}
           >
             {coverBgBlock}
@@ -1476,13 +1479,14 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
   }
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start w-full max-w-full">
+    <div className={`w-full max-w-full ${fullScreen ? 'flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-[70dvh] lg:min-h-[78dvh]' : 'grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start'}`}>
       {/* Hidden canvas for QR Code generation */}
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
-      <div className="w-full min-w-0 rounded-[2rem] border border-white/70 bg-white/85 p-4 sm:p-5 backdrop-blur md:p-7">
+      {/* Form Inputs */}
+      <div className={`w-full min-w-0 ${fullScreen ? 'lg:w-5/12 rounded-3xl border border-forest/10 bg-white p-4 md:p-5 lg:overflow-auto lg:max-h-[78dvh]' : 'rounded-[2rem] border border-white/70 bg-white/85 p-4 sm:p-5 backdrop-blur md:p-7'}`}>
         {/* Simple vs Advanced Mode Tab Selector */}
-        <div className="mb-6 flex w-full max-w-[280px] rounded-2xl bg-cream p-1 border border-forest/10">
+        <div className={`mb-4 flex w-full max-w-[280px] rounded-2xl bg-cream p-1 border border-forest/10 ${fullScreen ? 'text-sm' : ''}`}>
           <button
             key="tab-simple"
             type="button"
@@ -1510,26 +1514,28 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
         </div>
 
         {mode === "simple" ? (
-          <div className="grid gap-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">{t.payeeName}</span>
-              <input
-                value={form.payee}
-                onChange={(event) => updateField("payee", event.target.value)}
-                placeholder={t.payeePlaceholder}
-                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
-              />
-            </label>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="grid gap-1">
+                <span className="text-xs font-semibold text-forest">{t.payeeName}</span>
+                <input
+                  value={form.payee}
+                  onChange={(event) => updateField("payee", event.target.value)}
+                  placeholder={t.payeePlaceholder}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
+                />
+              </label>
 
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">{t.upiId}</span>
-              <input
-                value={form.upiId}
-                onChange={(event) => updateField("upiId", event.target.value)}
-                placeholder={t.upiIdPlaceholder}
-                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
-              />
-            </label>
+              <label className="grid gap-1">
+                <span className="text-xs font-semibold text-forest">{t.upiId}</span>
+                <input
+                  value={form.upiId}
+                  onChange={(event) => updateField("upiId", event.target.value)}
+                  placeholder={t.upiIdPlaceholder}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
+                />
+              </label>
+            </div>
 
             <div className="grid gap-2">
               <span className="text-sm font-semibold text-forest">{t.qrLogoBadge}</span>
@@ -1579,13 +1585,35 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
             )}
           </div>
         ) : (
-          <div className="grid gap-4">
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">{t.posterTemplateStyle}</span>
+          <div className="grid gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <label className="grid gap-1">
+                <span className="text-xs font-semibold text-forest">{t.payeeName}</span>
+                <input
+                  value={form.payee}
+                  onChange={(event) => updateField("payee", event.target.value)}
+                  placeholder={t.payeePlaceholder}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
+                />
+              </label>
+
+              <label className="grid gap-1">
+                <span className="text-xs font-semibold text-forest">{t.upiId}</span>
+                <input
+                  value={form.upiId}
+                  onChange={(event) => updateField("upiId", event.target.value)}
+                  placeholder={t.upiIdPlaceholder}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
+                />
+              </label>
+            </div>
+
+            <div>
+              <span className="text-xs font-semibold text-forest block mb-1">{t.posterTemplateStyle}</span>
               <select
                 value={selectedTemplate}
                 onChange={(e) => setSelectedTemplate(e.target.value as TemplateId)}
-                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm font-bold text-forest cursor-pointer hover:border-leaf"
+                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm font-bold text-forest outline-none ring-0 transition focus:border-leaf"
               >
                 {templateDefinitions.map((template) => (
                   <option key={template.id} value={template.id}>
@@ -1593,27 +1621,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
                   </option>
                 ))}
               </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">{t.payeeName}</span>
-              <input
-                value={form.payee}
-                onChange={(event) => updateField("payee", event.target.value)}
-                placeholder={t.payeePlaceholder}
-                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="text-sm font-semibold text-forest">{t.upiId}</span>
-              <input
-                value={form.upiId}
-                onChange={(event) => updateField("upiId", event.target.value)}
-                placeholder={t.upiIdPlaceholder}
-                className="w-full min-w-0 rounded-2xl border border-forest/10 bg-cream px-4 py-3 outline-none ring-0 transition focus:border-leaf"
-              />
-            </label>
+            </div>
 
             {activeTemplate.customFieldLabel && (
               <label className="grid gap-2">
@@ -1643,306 +1651,37 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
               </button>
 
               {showOptionalFields && (
-                <div className="grid gap-4 mt-3 p-4 rounded-2xl bg-cream/30 border border-forest/5 animate-fadeIn">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <label className="grid gap-2">
-                      <span className="text-xs font-bold text-forest/75">{t.amount}</span>
+                <div className="grid gap-3 mt-3 p-3 rounded-2xl bg-cream/30 border border-forest/5 animate-fadeIn">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <label className="grid gap-1">
+                      <span className="text-[10px] font-bold text-forest/75">{t.amount}</span>
                       <input
                         value={form.amount}
                         onChange={(event) => updateField("amount", event.target.value)}
                         inputMode="decimal"
                         placeholder={t.amountPlaceholder}
-                        className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
+                        className="w-full min-w-0 rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
                       />
                     </label>
 
-                    <div className="rounded-[1.35rem] border border-leaf/10 bg-mint/50 px-4 py-3 text-xs leading-5 text-forest/72 flex items-center">
-                      {t.amountHelper}
-                    </div>
+                    <label className="grid gap-1">
+                      <span className="text-[10px] font-bold text-forest/75">{t.note}</span>
+                      <input
+                        value={form.note}
+                        onChange={(event) => updateField("note", event.target.value)}
+                        placeholder={t.notePlaceholder}
+                        className="w-full min-w-0 rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm outline-none ring-0 transition focus:border-leaf"
+                      />
+                    </label>
                   </div>
-
-                  <label className="grid gap-2">
-                    <span className="text-xs font-bold text-forest/75">{t.note}</span>
-                    <input
-                      value={form.note}
-                      onChange={(event) => updateField("note", event.target.value)}
-                      placeholder={t.notePlaceholder}
-                      className="w-full min-w-0 rounded-2xl border border-forest/10 bg-white px-4 py-3 outline-none ring-0 transition focus:border-leaf text-sm"
-                    />
-                  </label>
-                </div>
-              )}
-            </div>
-
-            {/* Branding & Design Accordion */}
-            <div className="border-t border-forest/10 pt-4 mt-1">
-              <button
-                type="button"
-                onClick={() => setShowBrandingFields(!showBrandingFields)}
-                className="flex items-center justify-between w-full py-3 px-4 rounded-xl border border-forest/10 bg-cream/50 text-xs font-bold text-forest hover:bg-cream transition text-left"
-              >
-                <span className="flex items-center gap-2">
-                  {t.customizeDesign}
-                </span>
-                <span className="text-forest/60 text-[10px]">
-                  {showBrandingFields ? t.hide : t.configure}
-                </span>
-              </button>
-
-              {showBrandingFields && (
-                <div className="mt-3 p-4 rounded-2xl bg-cream/30 border border-forest/5 space-y-4 animate-fadeIn">
-                  <div className="grid gap-6 sm:grid-cols-2">
-                    {/* Logo Settings */}
-                    <div className="space-y-3">
-                      <span className="text-xs font-bold text-forest/70 block">{t.qrLogoBadge}</span>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => updateField("logoType", type)}
-                            className={`px-2 py-1.5 text-[10px] font-bold rounded-lg border text-center transition capitalize ${
-                              form.logoType === type
-                                ? "border-forest bg-forest text-white"
-                                : "border-forest/10 bg-white text-forest hover:border-leaf"
-                            }`}
-                          >
-                            {type === "none"
-                              ? "None"
-                              : type === "gpay"
-                                ? "GPay"
-                                : type === "phonepe"
-                                  ? "PhonePe"
-                                  : type === "bhim"
-                                    ? "BHIM"
-                                    : type === "paytm"
-                                      ? "Paytm"
-                                      : "Custom"}
-                          </button>
-                        ))}
-                      </div>
-
-                      {form.logoType === "custom" && (
-                        <div className="space-y-2 bg-white p-3 rounded-xl border border-forest/10">
-                          <span className="text-[10px] font-bold text-forest/60 block">{t.uploadCustomLogo}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleLogoUpload}
-                            className="text-xs text-forest/70 w-full file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-mint file:text-forest hover:file:bg-leaf hover:file:text-white"
-                          />
-                        </div>
-                      )}
-
-                      {form.logoType !== "none" && (
-                        <div className="grid grid-cols-2 gap-3 bg-white p-3 rounded-xl border border-forest/10">
-                          <div>
-                            <span className="text-[10px] font-semibold text-forest/60 block mb-1">Placement</span>
-                            <select
-                              value={form.logoPosition}
-                              onChange={(e) => updateField("logoPosition", e.target.value)}
-                              className="w-full text-xs rounded-lg border border-forest/10 bg-cream p-1.5 outline-none focus:border-leaf"
-                            >
-                              <option value="qr-center">Center of QR</option>
-                              <option value="header">Top Header</option>
-                            </select>
-                          </div>
-
-                          {form.logoPosition === "qr-center" && (
-                            <div>
-                              <span className="text-[10px] font-semibold text-forest/60 block mb-1">Logo Size: {form.logoSize}px</span>
-                              <input
-                                type="range"
-                                min="30"
-                                max="60"
-                                value={form.logoSize}
-                                onChange={(e) => updateField("logoSize", e.target.value)}
-                                className="w-full accent-leaf"
-                              />
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Cover Settings */}
-                    <div className="space-y-3">
-                      <span className="text-xs font-bold text-forest/70 block">Background Cover Banner</span>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {(["none", "saffron", "grid", "cafe", "waves", "ruled", "custom"] as const).map((type) => (
-                          <button
-                            key={type}
-                            type="button"
-                            onClick={() => selectCoverType(type)}
-                            className={`px-1 py-1.5 text-[9px] font-bold rounded-lg border text-center transition capitalize ${
-                              form.coverType === type
-                                ? "border-forest bg-forest text-white"
-                                : "border-forest/10 bg-white text-forest hover:border-leaf"
-                            }`}
-                          >
-                            {type === "none"
-                              ? "None"
-                              : type === "saffron"
-                                ? "Saffron"
-                                : type === "grid"
-                                  ? "Blueprint"
-                                  : type === "cafe"
-                                    ? "Cafe"
-                                    : type === "waves"
-                                      ? "Waves"
-                                      : type === "ruled"
-                                        ? "Notebook"
-                                        : "Custom"}
-                          </button>
-                        ))}
-                      </div>
-
-                      {form.coverType === "custom" && (
-                        <div className="space-y-2 bg-white p-3 rounded-xl border border-forest/10">
-                          <span className="text-[10px] font-bold text-forest/60 block">Upload Cover Image</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={handleCoverUpload}
-                            className="text-xs text-forest/70 w-full file:mr-2 file:py-1 file:px-3 file:rounded-full file:border-0 file:text-[10px] file:font-semibold file:bg-mint file:text-forest hover:file:bg-leaf hover:file:text-white"
-                          />
-
-                          {form.coverUrl && (
-                            <div className="grid grid-cols-2 gap-3 mt-2">
-                              <div>
-                                <span className="text-[10px] font-semibold text-forest/60 block mb-1">Cover Style</span>
-                                <select
-                                  value={form.coverPosition}
-                                  onChange={(e) => updateField("coverPosition", e.target.value)}
-                                  className="w-full text-xs rounded-lg border border-forest/10 bg-cream p-1.5 outline-none focus:border-leaf"
-                                >
-                                  <option value="top-banner">Top Banner</option>
-                                  <option value="full-bg">Full Wallpaper</option>
-                                </select>
-                              </div>
-
-                              {form.coverPosition === "full-bg" && (
-                                <div>
-                                  <span className="text-[10px] font-semibold text-forest/60 block mb-1">Bg Opacity: {form.coverOpacity}%</span>
-                                  <input
-                                    type="range"
-                                    min="10"
-                                    max="100"
-                                    value={form.coverOpacity}
-                                    onChange={(e) => updateField("coverOpacity", e.target.value)}
-                                    className="w-full accent-leaf"
-                                  />
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Card Theme Colors */}
-                  <div className="space-y-3 pt-4 border-t border-forest/10 mt-2">
-                    <span className="text-xs font-bold text-forest/70 block">Card Theme Mode</span>
-                    <div className="grid grid-cols-2 gap-1.5 max-w-xs">
-                      {(["default", "custom"] as const).map((type) => (
-                        <button
-                          key={type}
-                          type="button"
-                          onClick={() => updateField("themeType", type)}
-                          className={`px-2 py-1.5 text-[10px] font-bold rounded-lg border text-center transition capitalize ${
-                            form.themeType === type
-                              ? "border-forest bg-forest text-white"
-                              : "border-forest/10 bg-white text-forest hover:border-leaf"
-                          }`}
-                        >
-                          {type === "default" ? "Template Default" : "Custom Theme"}
-                        </button>
-                      ))}
-                    </div>
-
-                    {form.themeType === "custom" && (
-                      <div className="space-y-4 bg-white p-4 rounded-xl border border-forest/10 mt-2 animate-fadeIn max-w-md">
-                        <div className="grid grid-cols-3 gap-3">
-                          <label className="grid gap-1 text-center">
-                            <span className="text-[10px] font-bold text-forest/60 block">Background</span>
-                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
-                              <input
-                                type="color"
-                                value={form.customBgColor}
-                                onChange={(e) => updateField("customBgColor", e.target.value)}
-                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
-                              />
-                              <span className="text-[9px] font-mono text-forest/70">{form.customBgColor.toUpperCase()}</span>
-                            </div>
-                          </label>
-
-                          <label className="grid gap-1 text-center">
-                            <span className="text-[10px] font-bold text-forest/60 block">Text Color</span>
-                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
-                              <input
-                                type="color"
-                                value={form.customTextColor}
-                                onChange={(e) => updateField("customTextColor", e.target.value)}
-                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
-                              />
-                              <span className="text-[9px] font-mono text-forest/70">{form.customTextColor.toUpperCase()}</span>
-                            </div>
-                          </label>
-
-                          <label className="grid gap-1 text-center">
-                            <span className="text-[10px] font-bold text-forest/60 block">Badge & Accent</span>
-                            <div className="flex items-center justify-center gap-1.5 border border-forest/10 rounded-lg p-1.5 bg-cream/30 hover:border-leaf transition cursor-pointer">
-                              <input
-                                type="color"
-                                value={form.customAccentColor}
-                                onChange={(e) => updateField("customAccentColor", e.target.value)}
-                                className="w-5 h-5 rounded border-0 p-0 cursor-pointer accent-leaf"
-                              />
-                              <span className="text-[9px] font-mono text-forest/70">{form.customAccentColor.toUpperCase()}</span>
-                            </div>
-                          </label>
-                        </div>
-
-                        {/* Quick color preset cards */}
-                        <div className="space-y-1.5">
-                          <span className="text-[10px] font-bold text-forest/50 block">Quick Palettes</span>
-                          <div className="grid grid-cols-4 gap-2">
-                            {[
-                              { bg: "#ffffff", text: "#113b2c", accent: "#287a57", name: "Forest Light" },
-                              { bg: "#113b2c", text: "#ffffff", accent: "#f8b84e", name: "Classic Dark" },
-                              { bg: "#fafafa", text: "#18181b", accent: "#4f46e5", name: "Modern Indigo" },
-                              { bg: "#09090b", text: "#f4f4f5", accent: "#f43f5e", name: "Midnight Red" }
-                            ].map((pal, idx) => (
-                              <button
-                                key={idx}
-                                type="button"
-                                onClick={() => {
-                                  setForm((prev) => ({
-                                    ...prev,
-                                    customBgColor: pal.bg,
-                                    customTextColor: pal.text,
-                                    customAccentColor: pal.accent
-                                  }));
-                                }}
-                                className="border border-forest/10 rounded-lg p-1.5 bg-white hover:border-leaf transition text-left flex flex-col justify-between h-[42px]"
-                              >
-                                <div className="flex gap-0.5 w-full h-2 rounded overflow-hidden">
-                                  <div className="flex-1" style={{ backgroundColor: pal.bg }} />
-                                  <div className="flex-1" style={{ backgroundColor: pal.text }} />
-                                  <div className="flex-1" style={{ backgroundColor: pal.accent }} />
-                                </div>
-                                <span className="text-[7.5px] font-bold text-forest/70 text-center block w-full truncate mt-1">{pal.name}</span>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
+                  <div className="text-[10px] text-forest/60 leading-tight overflow-hidden">
+                    {t.amountHelper}
                   </div>
                 </div>
               )}
             </div>
+
+            {/* Custom design via button on poster */}
           </div>
         )}
 
@@ -1965,7 +1704,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
         </div>
 
         {error && <p className="mt-4 text-sm font-medium text-coral">{error}</p>}
-        {!error && (
+        {!error && !fullScreen && (
           <p className="mt-4 text-sm text-forest/62">
             {t.draftAutoSaves}
           </p>
@@ -1974,7 +1713,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
 
       {/* Preview Column */}
       {mode === "simple" ? (
-        <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7 lg:sticky lg:top-28 lg:self-start">
+        <div className={`w-full min-w-0 ${fullScreen ? 'lg:w-7/12 rounded-3xl border border-forest/10 bg-white p-5 lg:sticky lg:top-4 lg:self-start' : 'hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7 lg:sticky lg:top-28 lg:self-start'}`}>
           <div className="mb-5 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
@@ -2039,42 +1778,37 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
         </div>
       ) : (
         <div className="w-full min-w-0 hero-card-shadow rounded-[2rem] border border-white/70 bg-[#fffdf6] p-3 sm:p-5 md:p-7 lg:sticky lg:top-28 lg:self-start">
-          <div className="mb-5 flex items-start justify-between gap-4">
+          <div className="mb-3 flex items-start justify-between gap-4">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.24em] text-leaf">
                 {t.templatePreview}
               </p>
-              <h3 className="mt-2 text-2xl font-black text-forest">{activeTemplate.name}</h3>
+              <h3 className="mt-1 text-lg font-black text-forest">{activeTemplate.name}</h3>
             </div>
-            <span className="rounded-full bg-sun/20 px-3 py-1 text-xs font-bold text-forest">
-              {activeTemplate.kicker}
-            </span>
+            <button
+              type="button"
+              onClick={() => setShowBrandingFields(!showBrandingFields)}
+              className="h-6 w-6 rounded-full border border-forest/20 bg-white flex items-center justify-center text-[10px]"
+              title="Custom Design"
+            >
+              🎨
+            </button>
           </div>
 
           <div className="rounded-[1.75rem] border border-forest/10 bg-white p-3 sm:p-5 text-center">
             <div
               ref={posterRef}
-              className={`mx-auto flex w-full max-w-[360px] flex-col overflow-hidden rounded-[1.75rem] bg-gradient-to-br ${activeTemplate.accentClass} p-4 text-left shadow-md relative`}
+              className={`mx-auto flex w-full max-w-[320px] flex-col overflow-hidden rounded-[1.5rem] bg-gradient-to-br ${activeTemplate.accentClass} p-3 text-left shadow-sm relative`}
             >
               {renderTemplateContent()}
             </div>
 
-            <div className="mt-5 space-y-2 rounded-[1.25rem] bg-mint/55 p-4 text-left">
-              <p className="text-sm font-semibold text-forest truncate">
-                {form.payee.trim() || t.yourBusinessName}
-              </p>
-              <p className="text-xs text-forest/70">
-                {form.upiId.trim() || t.yourNameBank} {form.amount ? `• ₹${form.amount}` : ""}
-              </p>
-              <p className="truncate text-[11px] text-forest/55">{upiUrl}</p>
-            </div>
-
-            <div className="mt-5 flex flex-wrap justify-center gap-3">
+            <div className="mt-4 flex flex-wrap justify-center gap-2">
               <button
                 type="button"
                 onClick={downloadPng}
                 disabled={!generated}
-                className="rounded-full bg-sun px-5 py-3 text-sm font-bold text-forest transition hover:bg-[#f2ad37] disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-sun px-4 py-2 text-xs font-bold text-forest transition hover:bg-[#f2ad37] disabled:opacity-50"
               >
                 {t.downloadQrCode}
               </button>
@@ -2082,7 +1816,7 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
                 type="button"
                 onClick={() => void downloadPoster()}
                 disabled={!generated || downloadState === "busy"}
-                className="rounded-full bg-forest px-5 py-3 text-sm font-bold text-white transition hover:bg-leaf disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white transition hover:bg-leaf disabled:opacity-50"
               >
                 {downloadState === "busy" ? t.preparingPoster : t.downloadPoster}
               </button>
@@ -2090,18 +1824,23 @@ export function GeneratorForm({ presetType, lang = "en" }: GeneratorFormProps = 
                 type="button"
                 onClick={() => void copyUpiLink()}
                 disabled={!generated}
-                className="rounded-full border border-forest/12 px-5 py-3 text-sm font-semibold text-forest transition hover:bg-forest hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-full border border-forest/12 px-4 py-2 text-xs font-semibold text-forest transition hover:bg-forest hover:text-white disabled:opacity-50"
               >
-                {copyState === "copied" ? t.copied : copyState === "error" ? t.copyFailed : t.copyUpiLink}
+                {copyState === "copied" ? t.copied : t.copyUpiLink}
               </button>
             </div>
-
-            {downloadState === "error" && (
-              <p className="mt-4 text-sm font-medium text-coral">
-                Poster download failed. Please try again after generating the QR once more.
-              </p>
-            )}
           </div>
+
+          {showBrandingFields && (
+            <div className="mt-3 p-3 rounded-xl border bg-white text-xs text-left">
+              <div>Logo & Cover options (compact)</div>
+              <div className="flex gap-1 mt-1">
+                {(["none", "phonepe", "paytm", "gpay", "custom"] as const).map((type) => (
+                  <button key={type} onClick={() => updateField("logoType", type)} className={`px-2 py-0.5 text-[10px] rounded ${form.logoType === type ? "bg-forest text-white" : "bg-cream"}`}>{type}</button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
     </div>
