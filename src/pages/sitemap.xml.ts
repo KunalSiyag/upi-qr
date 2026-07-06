@@ -9,6 +9,7 @@ const staticPages = [
   "donation-qr-generator",
   "universal-qr-generator",
   "generator",
+  "invoice-generator",
   "dynamic-qr-generator",
   "privacy",
   "terms",
