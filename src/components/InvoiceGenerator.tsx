@@ -1,9 +1,7 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
-type CustomField = { id: number; label: string; value: string };
 
 const draftKey = "proupiqr-invoice-draft";
 
@@ -22,10 +20,6 @@ function buildUpiUrl(upiId: string, payee: string, amount: number, note: string)
   return `upi://pay?${params.toString()}`;
 }
 
-function isSafeLogoData(value: unknown): value is string {
-  return typeof value === "string" && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value);
-}
-
 const today = new Date().toISOString().slice(0, 10);
 
 const initialItems: InvoiceItem[] = [
@@ -33,13 +27,7 @@ const initialItems: InvoiceItem[] = [
   { id: 2, name: "Maintenance", qty: "1", price: "999" }
 ];
 
-const initialCustomFields: CustomField[] = [
-  { id: 1, label: "GSTIN", value: "" },
-  { id: 2, label: "Project", value: "" }
-];
-
 export function InvoiceGenerator() {
-  const invoiceRef = useRef<HTMLElement>(null);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [upiId, setUpiId] = useState("merchant@upi");
   const [customer, setCustomer] = useState("Client Name");
@@ -50,8 +38,6 @@ export function InvoiceGenerator() {
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState("Thank you for your business. Scan the QR to pay instantly via any UPI app.");
   const [items, setItems] = useState<InvoiceItem[]>(initialItems);
-  const [customFields, setCustomFields] = useState<CustomField[]>(initialCustomFields);
-  const [logoData, setLogoData] = useState<string | null>(null);
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
@@ -69,8 +55,6 @@ export function InvoiceGenerator() {
       setDiscount(draft.discount ?? "0");
       setNotes(draft.notes ?? "");
       setItems(Array.isArray(draft.items) && draft.items.length ? draft.items : initialItems);
-      setCustomFields(Array.isArray(draft.customFields) ? draft.customFields : initialCustomFields);
-      setLogoData(isSafeLogoData(draft.logoData) ? draft.logoData : null);
     } catch {
       // Ignore broken local drafts and keep the built-in sample invoice.
     }
@@ -85,7 +69,6 @@ export function InvoiceGenerator() {
     return { subtotal, discountValue, taxable, gst, total };
   }, [items, gstPercent, discount]);
 
-  const visibleCustomFields = customFields.filter((field) => field.label.trim() || field.value.trim());
   const paymentNote = `${invoiceNo} - ${customer}`.slice(0, 80);
   const upiUrl = useMemo(() => buildUpiUrl(upiId, merchant, totals.total, paymentNote), [upiId, merchant, totals.total, paymentNote]);
 
@@ -96,51 +79,16 @@ export function InvoiceGenerator() {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items, customFields, logoData }));
-  }, [merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items, customFields, logoData]);
+    localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
+  }, [merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
 
   const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const updateCustomField = (id: number, field: keyof CustomField, value: string) => {
-    setCustomFields((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
-  };
-
   const addItem = () => setItems((current) => [...current, { id: Date.now(), name: "New item", qty: "1", price: "0" }]);
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
-  const addCustomField = () => setCustomFields((current) => [...current, { id: Date.now(), label: "PO Number", value: "" }]);
-  const removeCustomField = (id: number) => setCustomFields((current) => current.filter((field) => field.id !== id));
-
-  const handleLogoUpload = (file?: File) => {
-    if (!file) return;
-    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
-      setLogoData(null);
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => setLogoData(isSafeLogoData(reader.result) ? reader.result : null);
-    reader.readAsDataURL(file);
-  };
-
-  const downloadInvoiceImage = async () => {
-    if (!invoiceRef.current) return;
-    const dataUrl = await toPng(invoiceRef.current, {
-      cacheBust: true,
-      pixelRatio: 2,
-      backgroundColor: "#ffffff"
-    });
-    const link = document.createElement("a");
-    link.href = dataUrl;
-    link.download = `${invoiceNo || "invoice"}-upi-qr-invoice.png`;
-    link.click();
-  };
-
-  const printInvoice = () => {
-    document.body.classList.add("printing-invoice-only");
-    window.print();
-    window.setTimeout(() => document.body.classList.remove("printing-invoice-only"), 250);
-  };
+  const printInvoice = () => window.print();
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
@@ -150,10 +98,7 @@ export function InvoiceGenerator() {
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Invoice builder</p>
             <h2 className="mt-2 text-2xl font-black text-forest">Create invoice + embedded UPI QR</h2>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <button onClick={() => void downloadInvoiceImage()} className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white hover:bg-leaf">Download invoice</button>
-            <button onClick={printInvoice} className="rounded-full border border-forest/15 px-4 py-2 text-sm font-bold text-forest hover:bg-mint">Print / save PDF</button>
-          </div>
+          <button onClick={printInvoice} className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white hover:bg-leaf">Download PDF</button>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -165,15 +110,6 @@ export function InvoiceGenerator() {
           <label className="text-sm font-bold text-forest">Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">GST %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Discount ₹<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        </div>
-
-        <div className="mt-6 rounded-2xl bg-cream p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h3 className="font-black text-forest">Brand logo</h3>
-            {logoData && <button onClick={() => setLogoData(null)} className="text-sm font-bold text-red-600">Remove logo</button>}
-          </div>
-          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleLogoUpload(event.target.files?.[0])} className="mt-3 w-full rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm" />
-          <p className="mt-2 text-xs leading-5 text-forest/60">PNG, JPEG, and WebP logos are stored only in your browser draft and appear on the invoice PDF.</p>
         </div>
 
         <div className="mt-6 space-y-3">
@@ -188,30 +124,16 @@ export function InvoiceGenerator() {
           ))}
         </div>
 
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-black text-forest">Custom invoice fields</h3><button onClick={addCustomField} className="text-sm font-bold text-leaf">+ Add field</button></div>
-          {customFields.map((field) => (
-            <div key={field.id} className="grid gap-2 rounded-2xl bg-cream p-3 sm:grid-cols-[150px_1fr_28px]">
-              <input aria-label="Field label" value={field.label} onChange={(e) => updateCustomField(field.id, "label", e.target.value)} placeholder="Label" className="rounded-xl border border-forest/10 px-3 py-2" />
-              <input aria-label="Field value" value={field.value} onChange={(e) => updateCustomField(field.id, "value", e.target.value)} placeholder="Value" className="rounded-xl border border-forest/10 px-3 py-2" />
-              <button onClick={() => removeCustomField(field.id)} className="rounded-xl bg-white text-forest/60 hover:text-red-600" aria-label="Remove custom field">×</button>
-            </div>
-          ))}
-        </div>
-
         <label className="mt-5 block text-sm font-bold text-forest">Invoice notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
       </div>
 
-      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex items-start gap-4">
-            {logoData && <img src={logoData} alt="Business logo" className="h-16 w-16 rounded-2xl border border-forest/10 object-contain p-1" />}
-            <div>
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Tax invoice</p>
-              <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
-              <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
-            </div>
+          <div>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Tax invoice</p>
+            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
+            <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
           </div>
           <div className="rounded-2xl bg-mint p-4 text-right">
             <p className="text-sm font-black text-forest">{invoiceNo}</p>
@@ -224,17 +146,6 @@ export function InvoiceGenerator() {
           <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Bill to</p><p className="mt-2 text-lg font-black text-forest">{customer || "Customer"}</p></div>
           <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Amount payable</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
         </section>
-
-        {visibleCustomFields.length > 0 && (
-          <section className="mt-4 grid gap-3 rounded-2xl border border-forest/10 p-4 sm:grid-cols-2">
-            {visibleCustomFields.map((field) => (
-              <div key={field.id}>
-                <p className="text-[10px] font-black uppercase tracking-[0.16em] text-forest/45">{field.label || "Custom field"}</p>
-                <p className="mt-1 text-sm font-bold text-forest">{field.value || "—"}</p>
-              </div>
-            ))}
-          </section>
-        )}
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
           <table className="w-full text-left text-sm">
