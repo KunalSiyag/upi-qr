@@ -31,3 +31,7 @@ A local-first, privacy-first, SEO-optimized UPI QR Code and payment poster gener
 - **Donation Preset**: `/donation-qr-generator/` (preconfigured for NGO/temple donations)
 - **Universal QR Generator**: `/universal-qr-generator/` (for websites, WiFi, plain text, and other non-UPI use cases)
 - **Blog & Guides**: `/blog/`
+
+## Merchant toolkit expansion
+- `/invoice-generator/` is a free UPI invoice generator that creates print-ready invoices with embedded UPI QR codes, GST, discounts, local browser drafts, and PDF download via browser print.
+- Future platform surfaces include developer API, JavaScript payment widget, hosted payment links, bulk CSV QR/invoice generation, receipt PDFs, and QR poster redesign from uploaded bank QR images.

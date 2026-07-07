@@ -35,3 +35,31 @@ body {
 .section-card {
   box-shadow: 0 18px 48px rgba(17, 59, 44, 0.08);
 }
+
+@media print {
+  body {
+    background: #ffffff !important;
+  }
+
+  .no-print,
+  body > div.fixed,
+  footer {
+    display: none !important;
+  }
+
+  .invoice-paper {
+    max-width: 100% !important;
+    width: 100% !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+  }
+
+  main,
+  section,
+  .flex-1 {
+    padding: 0 !important;
+    margin: 0 !important;
+  }
+}
