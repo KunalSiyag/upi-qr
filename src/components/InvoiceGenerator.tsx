@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { toPng } from "html-to-image";
 import QRCode from "qrcode";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
@@ -38,6 +39,7 @@ const initialCustomFields: CustomField[] = [
 ];
 
 export function InvoiceGenerator() {
+  const invoiceRef = useRef<HTMLElement>(null);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [upiId, setUpiId] = useState("merchant@upi");
   const [customer, setCustomer] = useState("Client Name");
@@ -121,6 +123,19 @@ export function InvoiceGenerator() {
     reader.readAsDataURL(file);
   };
 
+  const downloadInvoiceImage = async () => {
+    if (!invoiceRef.current) return;
+    const dataUrl = await toPng(invoiceRef.current, {
+      cacheBust: true,
+      pixelRatio: 2,
+      backgroundColor: "#ffffff"
+    });
+    const link = document.createElement("a");
+    link.href = dataUrl;
+    link.download = `${invoiceNo || "invoice"}-upi-qr-invoice.png`;
+    link.click();
+  };
+
   const printInvoice = () => {
     document.body.classList.add("printing-invoice-only");
     window.print();
@@ -135,7 +150,10 @@ export function InvoiceGenerator() {
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Invoice builder</p>
             <h2 className="mt-2 text-2xl font-black text-forest">Create invoice + embedded UPI QR</h2>
           </div>
-          <button onClick={printInvoice} className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white hover:bg-leaf">Download invoice PDF</button>
+          <div className="flex flex-wrap gap-2">
+            <button onClick={() => void downloadInvoiceImage()} className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white hover:bg-leaf">Download invoice</button>
+            <button onClick={printInvoice} className="rounded-full border border-forest/15 px-4 py-2 text-sm font-bold text-forest hover:bg-mint">Print / save PDF</button>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -185,7 +203,7 @@ export function InvoiceGenerator() {
         {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
       </div>
 
-      <article className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
             {logoData && <img src={logoData} alt="Business logo" className="h-16 w-16 rounded-2xl border border-forest/10 object-contain p-1" />}
