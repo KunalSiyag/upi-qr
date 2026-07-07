@@ -63,3 +63,29 @@ body {
     margin: 0 !important;
   }
 }
+
+@media print {
+  body.printing-invoice-only * {
+    visibility: hidden !important;
+  }
+
+  body.printing-invoice-only .invoice-paper,
+  body.printing-invoice-only .invoice-paper * {
+    visibility: visible !important;
+  }
+
+  body.printing-invoice-only .invoice-paper {
+    position: absolute !important;
+    left: 0 !important;
+    top: 0 !important;
+    max-width: none !important;
+    width: 100% !important;
+    background: #ffffff !important;
+  }
+}
+
+@media print {
+  body.printing-invoice-only .invoice-paper {
+    padding: 18mm !important;
+  }
+}
