@@ -21,6 +21,10 @@ function buildUpiUrl(upiId: string, payee: string, amount: number, note: string)
   return `upi://pay?${params.toString()}`;
 }
 
+function isSafeLogoData(value: unknown): value is string {
+  return typeof value === "string" && /^data:image\/(png|jpeg|webp);base64,[a-zA-Z0-9+/=]+$/.test(value);
+}
+
 const today = new Date().toISOString().slice(0, 10);
 
 const initialItems: InvoiceItem[] = [
@@ -64,7 +68,7 @@ export function InvoiceGenerator() {
       setNotes(draft.notes ?? "");
       setItems(Array.isArray(draft.items) && draft.items.length ? draft.items : initialItems);
       setCustomFields(Array.isArray(draft.customFields) ? draft.customFields : initialCustomFields);
-      setLogoData(draft.logoData ?? null);
+      setLogoData(isSafeLogoData(draft.logoData) ? draft.logoData : null);
     } catch {
       // Ignore broken local drafts and keep the built-in sample invoice.
     }
@@ -108,8 +112,12 @@ export function InvoiceGenerator() {
 
   const handleLogoUpload = (file?: File) => {
     if (!file) return;
+    if (!["image/png", "image/jpeg", "image/webp"].includes(file.type)) {
+      setLogoData(null);
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => setLogoData(typeof reader.result === "string" ? reader.result : null);
+    reader.onload = () => setLogoData(isSafeLogoData(reader.result) ? reader.result : null);
     reader.readAsDataURL(file);
   };
 
@@ -146,8 +154,8 @@ export function InvoiceGenerator() {
             <h3 className="font-black text-forest">Brand logo</h3>
             {logoData && <button onClick={() => setLogoData(null)} className="text-sm font-bold text-red-600">Remove logo</button>}
           </div>
-          <input type="file" accept="image/*" onChange={(event) => handleLogoUpload(event.target.files?.[0])} className="mt-3 w-full rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm" />
-          <p className="mt-2 text-xs leading-5 text-forest/60">Logo is stored only in your browser draft and appears on the invoice PDF.</p>
+          <input type="file" accept="image/png,image/jpeg,image/webp" onChange={(event) => handleLogoUpload(event.target.files?.[0])} className="mt-3 w-full rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm" />
+          <p className="mt-2 text-xs leading-5 text-forest/60">PNG, JPEG, and WebP logos are stored only in your browser draft and appear on the invoice PDF.</p>
         </div>
 
         <div className="mt-6 space-y-3">
@@ -180,7 +188,7 @@ export function InvoiceGenerator() {
       <article className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex items-start gap-4">
-            {logoData && <img src={logoData} alt={`${merchant || "Business"} logo`} className="h-16 w-16 rounded-2xl border border-forest/10 object-contain p-1" />}
+            {logoData && <img src={logoData} alt="Business logo" className="h-16 w-16 rounded-2xl border border-forest/10 object-contain p-1" />}
             <div>
               <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Tax invoice</p>
               <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
