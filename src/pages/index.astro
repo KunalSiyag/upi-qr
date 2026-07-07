@@ -248,6 +248,13 @@ const featuredGuides = getFeaturedGuides(6);
                   <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
                   Universal QR (URL, WiFi, Text)
                 </a>
+                <a
+                  href="/invoice-generator/"
+                  class="inline-flex items-center gap-2 rounded-full border border-leaf/25 bg-mint px-4 py-2 text-xs font-bold text-forest transition hover:bg-leaf hover:text-white"
+                >
+                  <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
+                  Invoice QR PDF
+                </a>
               </div>
             </div>
 
@@ -332,11 +339,6 @@ const featuredGuides = getFeaturedGuides(6);
               100% Privacy: Generated locally in your browser. We never collect, transmit, or store your payment details.
             </span>
           </div>
-        </div>
-        <div class="mb-3 flex justify-end">
-          <a href="/generator/" class="text-sm font-bold text-leaf hover:underline inline-flex items-center gap-1">
-            Open full-screen editor <span aria-hidden="true">→</span>
-          </a>
         </div>
         <GeneratorForm client:load />
       </div>

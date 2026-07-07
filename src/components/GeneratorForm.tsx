@@ -1787,11 +1787,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
             </div>
             <button
               type="button"
-              onClick={() => setShowBrandingFields(!showBrandingFields)}
-              className="h-6 w-6 rounded-full border border-forest/20 bg-white flex items-center justify-center text-[10px]"
-              title="Custom Design"
+              onClick={() => setShowBrandingFields((current) => !current)}
+              className="rounded-full border border-forest/20 bg-white px-3 py-1.5 text-xs font-black text-forest transition hover:bg-mint hover:text-leaf"
+              aria-expanded={showBrandingFields}
             >
-              🎨
+              🎨 Customize
             </button>
           </div>
 
@@ -1832,12 +1832,82 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           </div>
 
           {showBrandingFields && (
-            <div className="mt-3 p-3 rounded-xl border bg-white text-xs text-left">
-              <div>Logo & Cover options (compact)</div>
-              <div className="flex gap-1 mt-1">
-                {(["none", "phonepe", "paytm", "gpay", "custom"] as const).map((type) => (
-                  <button key={type} onClick={() => updateField("logoType", type)} className={`px-2 py-0.5 text-[10px] rounded ${form.logoType === type ? "bg-forest text-white" : "bg-cream"}`}>{type}</button>
-                ))}
+            <div className="mt-3 space-y-4 rounded-2xl border border-forest/10 bg-white p-4 text-left text-xs shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-forest">Customize design</p>
+                  <p className="mt-1 text-[11px] leading-5 text-forest/60">Logo, cover image, QR logo size, and brand colors update the poster preview instantly.</p>
+                </div>
+                <button type="button" onClick={() => setShowBrandingFields(false)} className="rounded-full bg-cream px-3 py-1 text-[11px] font-bold text-forest">Close</button>
+              </div>
+
+              <div>
+                <p className="mb-2 font-bold text-forest">Logo badge</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => {
+                        updateField("logoType", type);
+                        if (type !== "none") updateField("logoPosition", "qr-center");
+                      }}
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold capitalize ${form.logoType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                {form.logoType === "custom" && (
+                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
+                )}
+                {form.logoType !== "none" && (
+                  <label className="mt-3 grid gap-1">
+                    <span className="font-bold text-forest/70">QR logo size</span>
+                    <input type="range" min="28" max="72" value={form.logoSize} onChange={(event) => updateField("logoSize", event.target.value)} />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <p className="mb-2 font-bold text-forest">Cover style</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {(["none", "saffron", "grid", "cafe", "waves", "ruled", "custom"] as const).map((type) => (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => selectCoverType(type)}
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold capitalize ${form.coverType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
+                    >
+                      {type}
+                    </button>
+                  ))}
+                </div>
+                {form.coverType === "custom" && (
+                  <input type="file" accept="image/*" onChange={handleCoverUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
+                )}
+                {form.coverType !== "none" && (
+                  <label className="mt-3 grid gap-1">
+                    <span className="font-bold text-forest/70">Cover opacity</span>
+                    <input type="range" min="10" max="80" value={form.coverOpacity} onChange={(event) => updateField("coverOpacity", event.target.value)} />
+                  </label>
+                )}
+              </div>
+
+              <div>
+                <div className="mb-2 flex items-center justify-between gap-3">
+                  <p className="font-bold text-forest">Brand colors</p>
+                  <button type="button" onClick={() => updateField("themeType", form.themeType === "custom" ? "default" : "custom")} className="rounded-full bg-cream px-3 py-1 text-[11px] font-bold text-forest">
+                    {form.themeType === "custom" ? "Use template colors" : "Use custom colors"}
+                  </button>
+                </div>
+                {form.themeType === "custom" && (
+                  <div className="grid grid-cols-3 gap-2">
+                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Background</span><input type="color" value={form.customBgColor} onChange={(event) => updateField("customBgColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Text</span><input type="color" value={form.customTextColor} onChange={(event) => updateField("customTextColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Accent</span><input type="color" value={form.customAccentColor} onChange={(event) => updateField("customAccentColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                  </div>
+                )}
               </div>
             </div>
           )}

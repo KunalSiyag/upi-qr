@@ -6,6 +6,29 @@ import AffiliateProducts from "../components/AffiliateProducts.astro";
 const title = "Free Universal QR Code Generator | All Types + Templates";
 const description = "Generate free QR codes for websites, PDFs, contacts, apps, SMS, email, phone, WiFi and more. 13 templates, logo support, full customization. All static codes generated privately in your browser. No signup required.";
 
+const highIntentQueries = [
+  { query: "universal qr code generator", href: "#editor", copy: "Create QR codes for URL, PDF, WiFi, contact, text, email, phone, apps, and more from one editor." },
+  { query: "universal upi qr code generator", href: "/", copy: "Need payments to a bank account or UPI ID? Use the dedicated UPI QR tool with amount and poster templates." },
+  { query: "universal qr code generator for bank account", href: "/#generator", copy: "For Indian bank account collections, generate a standard UPI payment QR using your VPA/UPI ID." },
+  { query: "universal qr code generator free", href: "#editor", copy: "Generate static QR images in your browser with no login, no expiry, and no scan limits." }
+];
+
+const conversionFeatures = [
+  ["Pick the right tool fast", "Universal QR for links and documents, UPI QR for bank payments, Invoice QR for client billing."],
+  ["No signup friction", "Start at the editor immediately and download PNG or styled QR cards from the browser."],
+  ["Privacy-first generation", "Static QR data is created locally, so URLs, WiFi passwords, contacts, and UPI details do not need a server round trip."],
+  ["Print and share ready", "Use templates, logos, and high-contrast designs for posters, packaging, invoices, menus, and events."]
+];
+
+const needBasedWorkflows = [
+  ["Creators & freelancers", "Portfolio URL, invoice PDF, WhatsApp contact, payment page, and downloadable rate card QR codes."],
+  ["Restaurants & cafes", "Menu PDF, table feedback form, WiFi login, Instagram profile, and UPI payment QR posters."],
+  ["Events & workshops", "Registration forms, ticket check-in links, venue maps, speaker bios, sponsor pages, and feedback surveys."],
+  ["Schools & coaching", "Fee payment QR, class notes PDF, parent WhatsApp groups, attendance forms, and timetable links."],
+  ["Retail & packaging", "Product manuals, warranty forms, review links, offer pages, and support contact cards."],
+  ["Offices & teams", "Guest WiFi, visitor forms, employee contact cards, meeting room booking links, and policy PDFs."]
+];
+
 const schema = {
   "@context": "https://schema.org",
   "@graph": [
@@ -45,6 +68,14 @@ const schema = {
         },
         {
           "@type": "Question",
+          "name": "Which QR generator should I use for a bank account or UPI payment?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Use the dedicated UPI QR generator when you want customers to pay a bank account through a UPI ID or VPA. Use the universal QR generator for non-payment QR codes like URLs, PDFs, WiFi, contact cards, and text."
+          }
+        },
+        {
+          "@type": "Question",
           "name": "Does this QR generator require sign up?",
           "acceptedAnswer": {
             "@type": "Answer",
@@ -71,9 +102,51 @@ const schema = {
       </div>
     </section>
 
+    <section class="max-w-6xl mx-auto px-5 pb-8">
+      <div class="rounded-[2rem] border border-white/75 bg-white/88 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-6">
+        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Popular searches</p>
+            <h2 class="mt-2 text-2xl font-black text-forest">Choose the right universal QR workflow</h2>
+          </div>
+          <a href="/#generator" class="rounded-full border border-forest/10 px-4 py-2 text-sm font-bold text-forest hover:bg-mint">Need bank payment QR?</a>
+        </div>
+        <div class="mt-5 grid gap-3 md:grid-cols-2">
+          {highIntentQueries.map((item) => (
+            <a href={item.href} class="group rounded-2xl border border-forest/10 bg-cream p-4 transition hover:border-leaf/30 hover:bg-mint">
+              <span class="text-sm font-black text-forest group-hover:text-leaf">{item.query}</span>
+              <p class="mt-2 text-sm leading-6 text-forest/70">{item.copy}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
     <!-- The Compact Powerful Editor -->
     <section id="editor" class="px-4 pb-10">
       <UniversalQrForm client:load />
+    </section>
+
+    <section class="max-w-6xl mx-auto px-5 py-8">
+      <div class="grid gap-4 md:grid-cols-4">
+        {conversionFeatures.map(([title, copy]) => (
+          <article class="rounded-2xl border border-white/75 bg-white/86 p-4 shadow-[0_12px_32px_rgba(17,59,44,0.06)]">
+            <h3 class="text-base font-black text-forest">{title}</h3>
+            <p class="mt-2 text-sm leading-6 text-forest/70">{copy}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="max-w-6xl mx-auto px-5 py-8">
+      <div class="grid gap-4 rounded-[2rem] bg-forest p-5 text-white md:grid-cols-3 md:p-7">
+        <div>
+          <p class="text-xs font-black uppercase tracking-[0.2em] text-sun">Tool map</p>
+          <h2 class="mt-2 text-2xl font-black">How Pro UPI QR tools connect</h2>
+        </div>
+        <a href="/universal-qr-generator/" class="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><strong>Universal QR</strong><span class="mt-2 block text-sm leading-6 text-white/70">General QR codes for content, links, WiFi, contact cards, PDFs, and apps.</span></a>
+        <a href="/invoice-generator/" class="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><strong>Invoice QR</strong><span class="mt-2 block text-sm leading-6 text-white/70">Use your UPI QR inside an invoice PDF when billing customers or clients.</span></a>
+      </div>
     </section>
 
     <!-- QR Code types -->
@@ -124,6 +197,24 @@ const schema = {
         <div>Restaurant menus &amp; feedback</div>
         <div>WiFi for guests or offices</div>
         <div>Share PDFs, links, or contact info</div>
+      </div>
+    </section>
+
+
+    <section class="max-w-6xl mx-auto px-5 py-10">
+      <div class="flex flex-col gap-3 text-center md:text-left">
+        <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">All needs covered</p>
+        <h2 class="text-3xl font-black tracking-tight text-forest">Universal QR ideas by business type</h2>
+        <p class="max-w-3xl text-sm leading-6 text-forest/70">If a user arrives from a broad “universal QR” search, these examples quickly show what they can make and push them back to the editor with a clearer goal.</p>
+      </div>
+      <div class="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {needBasedWorkflows.map(([title, copy]) => (
+          <a href="#editor" class="rounded-[1.5rem] border border-forest/10 bg-white/88 p-5 transition hover:border-leaf/30 hover:shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+            <h3 class="text-lg font-black text-forest">{title}</h3>
+            <p class="mt-3 text-sm leading-7 text-forest/70">{copy}</p>
+            <span class="mt-4 inline-block text-xs font-black uppercase tracking-[0.16em] text-leaf">Create this QR →</span>
+          </a>
+        ))}
       </div>
     </section>
 
