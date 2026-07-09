@@ -32,4 +32,4 @@ This guide outlines how to register for a PhonePe Business merchant account and 
 
 ## Getting a Physical PhonePe Standee
 
-Once your digital profile is active, you can order a physical QR standee card from inside the PhonePe Business app. Tap on **Manage QR Codes**, select **Request New Standee**, and enter your shipping address. PhonePe will ship a physical standee to your store, usually within 7-10 working days. Alternatively, you can copy your merchant VPA and paste it into the **Pro UPI QR Generator** to create a custom-designed printable standee instantly.
+Once your digital profile is active, you can order a physical QR standee card from inside the PhonePe Business app. Tap on **Manage QR Codes**, select **Request New Standee**, and enter your shipping address. PhonePe will ship a physical standee to your store, usually within 7-10 working days. Alternatively, you can copy your merchant VPA and paste it into the **Pro UPI QR Generator** to create a custom-designed printable standee instantly. For a step-by-step tutorial, see our guide on [how to create and print a UPI QR standee](/blog/how-to-create-print-upi-qr-code-standee/).

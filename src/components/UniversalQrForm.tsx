@@ -393,55 +393,13 @@ export function UniversalQrForm() {
               </div>
             )}
 
+
             {/* Honest note */}
             <div className="mt-4 text-[11px] text-forest/60 leading-snug">
               Static QR code. All data is encoded directly in the image. Works offline and never expires.
             </div>
-          </div>
-        </div>
 
-        {/* Preview + Templates */}
-        <div className="lg:col-span-7">
-          <div ref={previewRef} className={`rounded-3xl p-6 transition-all ${currentTemplate.frame}`}>
-            <div className="flex justify-center">
-              <div className="relative">
-                <canvas ref={canvasRef} width={300} height={300} className="rounded-2xl bg-white shadow-sm" />
-                {!isValid && (
-                  <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-forest/50 bg-white/70 rounded-2xl">
-                    Enter details to see your QR
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {isValid && (
-              <div className="mt-3 px-3 py-2 bg-white/70 rounded-xl text-[10px] text-forest/60 break-all font-mono">
-                {payload.length > 180 ? payload.slice(0, 177) + "..." : payload}
-              </div>
-            )}
-          </div>
-
-          {/* Template selector */}
-          <div className="mt-4">
-            <div className="text-xs font-bold text-forest/70 mb-2 px-1">TEMPLATES</div>
-            <div className="flex gap-2 overflow-x-auto pb-2">
-              {templates.map(t => {
-                const active = form.selectedTemplate === t.id;
-                return (
-                  <button
-                    key={t.id}
-                    onClick={() => applyTemplate(t.id)}
-                    className={`shrink-0 px-3 py-1.5 rounded-2xl border text-xs font-medium ${active ? "border-forest bg-forest text-white" : "border-forest/15 bg-white hover:bg-mint/30"}`}
-                    title={t.name}
-                  >
-                    {t.name}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Customization - restored */}
+            {/* Customization - restored */}
           <div className="mt-6 rounded-3xl border border-forest/10 bg-white p-5">
             <div className="font-semibold text-sm mb-3">Customize</div>
 
@@ -470,6 +428,57 @@ export function UniversalQrForm() {
                     <button onClick={removeLogo} className="text-xs text-red-600">Remove</button>
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+
+
+          </div>
+        </div>
+
+        {/* Preview + Templates */}
+
+        <div className="lg:col-span-7">
+          <div className="flex flex-col sm:flex-row gap-6">
+            {/* QR Code Preview */}
+            <div className="flex-1">
+              <div ref={previewRef} className={`rounded-3xl p-6 transition-all h-full flex flex-col items-center justify-center ${currentTemplate.frame}`}>
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <canvas ref={canvasRef} width={300} height={300} className="rounded-2xl bg-white shadow-sm" />
+                    {!isValid && (
+                      <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-forest/50 bg-white/70 rounded-2xl">
+                        Enter details to see your QR
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {isValid && (
+                  <div className="mt-4 px-3 py-2 bg-white/70 rounded-xl text-[10px] text-forest/60 break-all font-mono max-w-[300px] text-center w-full">
+                    {payload.length > 180 ? payload.slice(0, 177) + "..." : payload}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Template selector (Vertical Scroll) */}
+            <div className="sm:w-48 flex flex-col">
+              <div className="text-xs font-bold text-forest/70 mb-2 px-1">TEMPLATES</div>
+              <div className="flex flex-col gap-2 overflow-y-auto pr-2 pb-2 custom-scrollbar" style={{ maxHeight: "calc(300px + 48px)" }}>
+                {templates.map(t => {
+                  const active = form.selectedTemplate === t.id;
+                  return (
+                    <button
+                      key={t.id}
+                      onClick={() => applyTemplate(t.id)}
+                      className={`w-full text-left px-4 py-2.5 rounded-xl border text-xs font-medium transition-colors ${active ? "border-forest bg-forest text-white" : "border-forest/15 bg-white hover:bg-mint/30"}`}
+                      title={t.name}
+                    >
+                      {t.name}
+                    </button>
+                  );
+                })}
               </div>
             </div>
           </div>
