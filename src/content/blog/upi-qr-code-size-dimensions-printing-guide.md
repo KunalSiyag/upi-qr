@@ -59,6 +59,6 @@ Full material advice: [durable waterproof QR stickers](/blog/how-to-print-durabl
 
 If scans fail, increase QR size before reprinting — do not rely on customers to move closer.
 
-**[Download a print-ready UPI standee &rarr;](/)**
+**[Download a print-ready UPI standee &rarr;](/)** or try our [Free Universal QR Generator](/universal-qr-generator/) for non-payment links.
 
 Related: [Create and print a shop standee](/blog/how-to-create-print-upi-qr-code-standee/) · [QR not scanning fixes](/blog/upi-qr-code-not-scanning-troubleshooting/)
