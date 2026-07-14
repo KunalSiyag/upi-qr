@@ -16,6 +16,7 @@
 
 ## V3
 
+- [x] Developer Embed Widget & Redirect API (Playground live at `/developer`)
 - Visual editor for multi-format payment materials
 - Language packs and regional SEO
 - Conversion-optimized donation and collection kits

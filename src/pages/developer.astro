@@ -1,0 +1,144 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { DeveloperConsole } from "../components/DeveloperConsole";
+
+const title = "Free UPI QR Embed & Developer API Portal | Pro UPI QR";
+const description =
+  "Integrate free UPI payment widgets, buttons, and redirection APIs into your HTML website, React, Vue or mobile app. 100% free, commission-free gateway.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Pro UPI QR Developer Tools",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/developer/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-16 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md">
+      {/* Breadcrumb Nav */}
+      <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <span class="text-forest">Developers</span>
+      </nav>
+
+      {/* Hero Header */}
+      <div class="max-w-3xl">
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+          Developer Toolkit
+        </p>
+        <h1 class="mt-5 text-4xl font-black leading-[1.05] tracking-tight text-forest sm:text-6xl">
+          Integrate Free UPI Payments On Your Website
+        </h1>
+        <p class="mt-6 text-lg leading-relaxed text-forest/75">
+          Accept peer-to-peer payments directly into your bank account with zero commission, zero onboarding fees, and no middleman. Generate interactive client-side embed widgets, payment buttons, and direct redirection deep-links instantly.
+        </p>
+      </div>
+
+      {/* Main interactive Sandbox Console */}
+      <div class="mt-12">
+        <DeveloperConsole client:load />
+      </div>
+
+      {/* API Documentation Section */}
+      <section class="mt-20 border-t border-forest/10 pt-16">
+        <h2 class="text-3xl font-black text-forest tracking-tight">Redirection API & Query Parameters</h2>
+        <p class="mt-4 text-base text-forest/70 max-w-3xl">
+          If you want to generate payment QR codes dynamically inside your custom CRM, billing software, or ecommerce site, you can directly invoke our rendering endpoints by passing standard URL query parameters.
+        </p>
+
+        <div class="mt-10 overflow-x-auto rounded-3xl border border-forest/10 bg-white shadow-sm">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-forest/10 bg-cream/30 text-forest font-bold">
+                <th class="p-4 sm:p-5">Parameter</th>
+                <th class="p-4 sm:p-5">Type</th>
+                <th class="p-4 sm:p-5">Description</th>
+                <th class="p-4 sm:p-5">Example</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-forest/5 text-forest/80">
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">pa</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">String (Required)</td>
+                <td class="p-4 sm:p-5">Your registered merchant/personal UPI Virtual Payment Address (VPA)</td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">payee@bank</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">pn</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">String (Required)</td>
+                <td class="p-4 sm:p-5">The display name of the payee/business</td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">John Store</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">am</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">Number (Optional)</td>
+                <td class="p-4 sm:p-5">Requested transaction amount. (Locks the amount field on scanning apps)</td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">250.50</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">tn</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">String (Optional)</td>
+                <td class="p-4 sm:p-5">Transaction note or reference ID (shows up on the customer's payment statement)</td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">Order-8390</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">theme</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">String (Optional)</td>
+                <td class="p-4 sm:p-5">Custom hex color (without # prefix) to theme the payment widget button</td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">ef4444</td>
+              </tr>
+              <tr>
+                <td class="p-4 sm:p-5 font-mono font-bold text-leaf">logo</td>
+                <td class="p-4 sm:p-5 font-semibold text-neutral-500">String (Optional)</td>
+                <td class="p-4 sm:p-5">Brand overlay logo. Options: <code>phonepe</code>, <code>gpay</code>, <code>paytm</code>, <code>bhim</code></td>
+                <td class="p-4 sm:p-5 font-mono text-neutral-500">phonepe</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Integration Guides and Code Snippets */}
+      <section class="mt-20 border-t border-forest/10 pt-16 grid gap-8 md:grid-cols-2">
+        <div class="rounded-3xl bg-mint/30 p-6 md:p-8 border border-leaf/10">
+          <h3 class="text-lg font-black text-forest">Redirection API Endpoint</h3>
+          <p class="mt-3 text-xs leading-relaxed text-forest/70">
+            Redirecting customers directly to their default payment app is ideal for mobile checkout screens. Use the base URL structure below:
+          </p>
+          <div class="mt-4 rounded-xl bg-forest p-3 font-mono text-[11px] text-[#fff] overflow-x-auto shadow-inner">
+            <code>https://www.proupiqr.in/r/?url=upi%3A%2F%2Fpay%3Fpa%3Dmerchant%40upi%26pn%3DKunal%2520Siyag%26am%3D250</code>
+          </div>
+          <p class="mt-3 text-[10px] text-forest/50 leading-relaxed">
+            Note: All spaces and special characters must be properly URL-encoded.
+          </p>
+        </div>
+
+        <div class="rounded-3xl bg-[#fcf9f2] p-6 md:p-8 border border-yellow-700/10">
+          <h3 class="text-lg font-black text-forest">Zero commission explained</h3>
+          <p class="mt-3 text-xs leading-relaxed text-forest/70">
+            Unlike payment gateways that charge 2% to 3% transaction fees, our widget uses native UPI link protocols. Payments flow directly from the customer's bank app to your bank account over the NPCI network, entirely bypassing any third-party gateway processor.
+          </p>
+          <div class="mt-4 flex items-center gap-2">
+            <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
+              ✓ No API Keys Required
+            </span>
+            <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
+              ✓ No SDKs to Install
+            </span>
+          </div>
+        </div>
+      </section>
+    </div>
+  </main>
+</BaseLayout>

@@ -2,9 +2,25 @@ export type GeneratorSlug =
   | "phonepe-qr-generator"
   | "google-pay-qr-generator"
   | "paytm-qr-generator"
-  | "donation-qr-generator";
+  | "donation-qr-generator"
+  | "bhim-qr-generator"
+  | "whatsapp-pay-qr-generator"
+  | "amazon-pay-qr-generator"
+  | "sbi-qr-generator"
+  | "hdfc-qr-generator"
+  | "icici-qr-generator";
 
-export type PresetType = "phonepe" | "gpay" | "paytm" | "donation";
+export type PresetType =
+  | "phonepe"
+  | "gpay"
+  | "paytm"
+  | "donation"
+  | "bhim"
+  | "whatsapp"
+  | "amazon"
+  | "sbi"
+  | "hdfc"
+  | "icici";
 
 export interface GeneratorLink {
   slug: GeneratorSlug;
@@ -56,6 +72,54 @@ export const generators: GeneratorLink[] = [
     shortLabel: "Donation QR",
     description: "Set up a commission-free donation poster for temples, NGOs, and causes.",
     accent: "#287a57",
+  },
+  {
+    slug: "bhim-qr-generator",
+    presetType: "bhim",
+    label: "BHIM UPI QR Generator",
+    shortLabel: "BHIM QR",
+    description: "Generate standard BHIM UPI QR codes for instant direct bank payments.",
+    accent: "#e55523",
+  },
+  {
+    slug: "whatsapp-pay-qr-generator",
+    presetType: "whatsapp",
+    label: "WhatsApp Pay QR Generator",
+    shortLabel: "WhatsApp Pay QR",
+    description: "Create a WhatsApp Pay compatible UPI QR code for direct chat-to-bank payments.",
+    accent: "#25d366",
+  },
+  {
+    slug: "amazon-pay-qr-generator",
+    presetType: "amazon",
+    label: "Amazon Pay QR Generator",
+    shortLabel: "Amazon Pay QR",
+    description: "Build Amazon Pay compatible UPI QR code standees and bill posters.",
+    accent: "#ff9900",
+  },
+  {
+    slug: "sbi-qr-generator",
+    presetType: "sbi",
+    label: "SBI UPI QR Generator",
+    shortLabel: "SBI QR",
+    description: "Generate State Bank of India (SBI) UPI QR codes for retail checkouts.",
+    accent: "#00a2e8",
+  },
+  {
+    slug: "hdfc-qr-generator",
+    presetType: "hdfc",
+    label: "HDFC Bank UPI QR Generator",
+    shortLabel: "HDFC QR",
+    description: "Create HDFC Bank compatible UPI payment posters for invoicing.",
+    accent: "#1c3f94",
+  },
+  {
+    slug: "icici-qr-generator",
+    presetType: "icici",
+    label: "ICICI Bank UPI QR Generator",
+    shortLabel: "ICICI QR",
+    description: "Generate ICICI Bank compatible UPI billing QR codes.",
+    accent: "#f27220",
   },
 ];
 
@@ -233,6 +297,12 @@ const tagToPreset: Record<string, PresetType> = {
   Paytm: "paytm",
   Donations: "donation",
   NGOs: "donation",
+  BHIM: "bhim",
+  WhatsApp: "whatsapp",
+  "Amazon Pay": "amazon",
+  SBI: "sbi",
+  HDFC: "hdfc",
+  ICICI: "icici",
 };
 
 export function generatorPath(slug: GeneratorSlug, isHindi = false): string {

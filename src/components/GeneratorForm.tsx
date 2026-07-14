@@ -7,7 +7,12 @@ const presetLogos = {
   phonepe: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#5f259f" /><path d="M50 18 C32.3 18 18 32.3 18 50 C18 67.7 32.3 82 50 82 C67.7 82 82 67.7 82 50 C82 32.3 67.7 18 50 18 Z" fill="#ffffff" opacity="0.1" /><path d="M36 32 C36 30 38 28 40 28 H56 C64.8 28 72 35.2 72 44 C72 52.8 64.8 60 56 60 H48 V72 C48 74.2 46.2 76 44 76 H40 C38 76 36 74 36 72 V32 Z M48 40 V48 H56 C58.2 48 60 46.2 60 44 C60 41.8 58.2 40 56 40 H48 Z" fill="#ffffff" /></svg>`)}`,
   paytm: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="30" fill="#ffffff" stroke="#00baf2" stroke-width="4" /><text x="50%" y="54%" font-family="sans-serif" font-weight="900" font-size="40" fill="#002e6e" text-anchor="middle">pay</text><text x="50%" y="84%" font-family="sans-serif" font-weight="900" font-size="36" fill="#00baf2" text-anchor="middle">tm</text></svg>`)}`,
   gpay: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#ffffff" stroke="#f3f4f6" stroke-width="4" /><path d="M50 45 V55 H68 C67 61 62 67 50 67 C39 67 31 59 31 49 C31 39 39 31 50 31 C56 31 60 33 63 36 L70 29 C65 24 58 21 50 21 C33 21 20 34 20 50 C20 66 33 79 50 79 C67 79 79 67 79 50 C79 48 78 46 78 45 H50 Z" fill="#4285f4" /><path d="M31 49 C31 44 32 40 35 36 L27 30 C22 36 20 42 20 50 C20 58 22 64 27 70 L35 64 C32 60 31 56 31 49 Z" fill="#fbcb05" /><path d="M50 21 C58 21 65 24 70 29 L77 22 C69 15 60 11 50 11 C38 11 28 17 22 26 L30 32 C34 26 41 21 50 21 Z" fill="#ea4335" /><path d="M50 79 C41 79 34 74 30 68 L22 74 C28 83 38 89 50 89 C60 89 69 85 75 78 L68 72 C64 76 58 79 50 79 Z" fill="#34a853" /></svg>`)}`,
-  bhim: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="30" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" /><path d="M25 25 L60 85 L25 85 Z" fill="#f05a28" /><path d="M95 95 L60 35 L95 35 Z" fill="#00a651" /><text x="60" y="112" font-family="sans-serif" font-weight="900" font-size="22" fill="#002e6e" text-anchor="middle">BHIM</text></svg>`)}`
+  bhim: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><rect width="120" height="120" rx="30" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" /><path d="M25 25 L60 85 L25 85 Z" fill="#f05a28" /><path d="M95 95 L60 35 L95 35 Z" fill="#00a651" /><text x="60" y="112" font-family="sans-serif" font-weight="900" font-size="22" fill="#002e6e" text-anchor="middle">BHIM</text></svg>`)}`,
+  whatsapp: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#25D366" /><path d="M50.4 22c-14.8 0-26.8 12-26.8 26.8 0 5.1 1.4 9.8 3.8 13.9L24 75.8l13.5-3.5c3.9 2.1 8.3 3.3 12.9 3.3 14.8 0 26.8-12 26.8-26.8C77.2 34 65.2 22 50.4 22zm11.7 38.6c-.5 1.4-2.8 2.6-3.8 2.8-.9.2-2.1.3-6 .9-5.1-.8-9.1-3.6-12.1-7.7-1.4-2-2.3-4.3-2.7-6.8-.7-4.2.9-6 1.9-7 .6-.6 1.3-.8 1.9-.8h1.2c.4 0 .9.1 1.2 1 .5 1.2 1.6 3.9 1.7 4.2.1.3.1.6-.1.9-.2.3-.4.6-.7.9-.3.3-.6.7-.9.9-.3.3-.1.6.1.9.9 1.5 2.1 2.9 3.7 4.1 1.5 1.1 3.2 1.9 5.1 2.3.4.1.7 0 .9-.2.6-.7 1.4-1.8 1.9-2.5.3-.4.7-.3 1.1-.1.4.1 2.7 1.3 3.2 1.5.5.2.8.4.9.5.1.2.1.9-.2 1.7z" fill="white"/></svg>`)}`,
+  amazon: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#ff9900" /><path d="M25 45 C25 35 32 30 50 30 C68 30 75 35 75 45 C75 55 68 60 50 60 C32 60 25 55 25 45 Z" fill="#ffffff" opacity="0.15" /><text x="50%" y="62%" font-family="sans-serif" font-weight="900" font-size="36" fill="#ffffff" text-anchor="middle">a</text><path d="M30 68 Q50 78 70 68" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" /></svg>`)}`,
+  sbi: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#00a2e8" /><circle cx="50" cy="50" r="28" fill="none" stroke="#ffffff" stroke-width="12" /><rect x="44" y="65" width="12" height="20" fill="#ffffff" /></svg>`)}`,
+  hdfc: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#1c3f94" /><rect x="25" y="25" width="50" height="50" fill="none" stroke="#ffffff" stroke-width="8" /><rect x="40" y="40" width="20" height="20" fill="#e41a22" /></svg>`)}`,
+  icici: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#f27220" /><circle cx="50" cy="50" r="26" fill="none" stroke="#ffffff" stroke-width="7" /><path d="M50 24 C36 24 24 36 24 50" fill="none" stroke="#1c3f94" stroke-width="7" stroke-linecap="round" /><text x="50" y="58" font-family="sans-serif" font-weight="900" font-size="24" fill="#ffffff" text-anchor="middle">i</text></svg>`)}`
 };
 
 const presetCovers = {
@@ -44,7 +49,18 @@ type FormState = {
   amount: string;
   note: string;
   customField: string;
-  logoType: "none" | "custom" | "phonepe" | "paytm" | "gpay" | "bhim";
+  logoType:
+    | "none"
+    | "custom"
+    | "phonepe"
+    | "paytm"
+    | "gpay"
+    | "bhim"
+    | "whatsapp"
+    | "amazon"
+    | "sbi"
+    | "hdfc"
+    | "icici";
   logoUrl: string;
   logoSize: string;
   logoPosition: "qr-center" | "header";
@@ -335,7 +351,17 @@ const translations = {
 };
 
 export interface GeneratorFormProps {
-  presetType?: "phonepe" | "gpay" | "paytm" | "donation";
+  presetType?:
+    | "phonepe"
+    | "gpay"
+    | "paytm"
+    | "donation"
+    | "bhim"
+    | "whatsapp"
+    | "amazon"
+    | "sbi"
+    | "hdfc"
+    | "icici";
   lang?: "en" | "hi";
   fullScreen?: boolean;
 }
@@ -430,20 +456,12 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     // 2. If presetType is defined, override specific preset settings
     if (presetType) {
       initialMode = "advanced";
-      if (presetType === "phonepe") {
-        initialForm.logoType = "phonepe";
-        initialForm.logoPosition = "qr-center";
-        initialShowBranding = true;
-      } else if (presetType === "gpay") {
-        initialForm.logoType = "gpay";
-        initialForm.logoPosition = "qr-center";
-        initialShowBranding = true;
-      } else if (presetType === "paytm") {
-        initialForm.logoType = "paytm";
-        initialForm.logoPosition = "qr-center";
-        initialShowBranding = true;
-      } else if (presetType === "donation") {
+      if (presetType === "donation") {
         initialTemplate = "temple-donation";
+      } else {
+        initialForm.logoType = presetType;
+        initialForm.logoPosition = "qr-center";
+        initialShowBranding = true;
       }
     }
 
@@ -1620,8 +1638,8 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
 
             <div className="grid gap-2">
               <span className="text-sm font-semibold text-forest">{t.qrLogoBadge}</span>
-              <div className="grid grid-cols-3 gap-2 sm:grid-cols-6">
-                {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
+              <div className="flex flex-wrap gap-1.5">
+                {(["none", "phonepe", "paytm", "gpay", "bhim", "whatsapp", "amazon", "sbi", "hdfc", "icici", "custom"] as const).map((type) => (
                   <button
                     key={type}
                     type="button"
@@ -1631,7 +1649,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                         updateField("logoPosition", "qr-center");
                       }
                     }}
-                    className={`px-2 py-2 text-xs font-bold rounded-xl border text-center transition capitalize ${
+                    className={`px-3 py-1.5 text-xs font-bold rounded-full border text-center transition capitalize ${
                       form.logoType === type
                         ? "border-forest bg-forest text-white"
                         : "border-forest/10 bg-cream text-forest hover:border-leaf"
@@ -1647,7 +1665,17 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                             ? t.bhim
                             : type === "paytm"
                               ? t.paytm
-                              : t.custom}
+                              : type === "whatsapp"
+                                ? "WhatsApp"
+                                : type === "amazon"
+                                  ? "Amazon Pay"
+                                  : type === "sbi"
+                                    ? "SBI"
+                                    : type === "hdfc"
+                                      ? "HDFC"
+                                      : type === "icici"
+                                        ? "ICICI"
+                                        : t.custom}
                   </button>
                 ))}
               </div>
@@ -1933,7 +1961,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
               <div>
                 <p className="mb-2 font-bold text-forest">Logo badge</p>
                 <div className="flex flex-wrap gap-1.5">
-                  {(["none", "phonepe", "paytm", "gpay", "bhim", "custom"] as const).map((type) => (
+                  {(["none", "phonepe", "paytm", "gpay", "bhim", "whatsapp", "amazon", "sbi", "hdfc", "icici", "custom"] as const).map((type) => (
                     <button
                       key={type}
                       type="button"
@@ -1941,9 +1969,29 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                         updateField("logoType", type);
                         if (type !== "none") updateField("logoPosition", "qr-center");
                       }}
-                      className={`rounded-full px-3 py-1 text-[11px] font-bold capitalize ${form.logoType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
+                      className={`rounded-full px-3 py-1 text-[11px] font-bold ${form.logoType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
                     >
-                      {type}
+                      {type === "none"
+                        ? "none"
+                        : type === "gpay"
+                          ? "GPay"
+                          : type === "phonepe"
+                            ? "PhonePe"
+                            : type === "paytm"
+                              ? "Paytm"
+                              : type === "bhim"
+                                ? "BHIM"
+                                : type === "whatsapp"
+                                  ? "WhatsApp"
+                                  : type === "amazon"
+                                    ? "Amazon Pay"
+                                    : type === "sbi"
+                                      ? "SBI"
+                                      : type === "hdfc"
+                                        ? "HDFC"
+                                        : type === "icici"
+                                          ? "ICICI"
+                                          : type}
                     </button>
                   ))}
                 </div>

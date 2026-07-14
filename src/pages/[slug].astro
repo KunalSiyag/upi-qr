@@ -46,6 +46,60 @@ export async function getStaticPaths() {
         intro:
           "Set up a free donation QR for events, religious institutions, and community fundraising campaigns."
       }
+    },
+    {
+      params: { slug: "bhim-qr-generator" },
+      props: {
+        title: "BHIM UPI QR Generator",
+        headline: "Create a free BHIM UPI compatible QR code",
+        presetType: "bhim",
+        intro: "Build a BHIM UPI compliant payment QR code for secure direct bank transfers."
+      }
+    },
+    {
+      params: { slug: "whatsapp-pay-qr-generator" },
+      props: {
+        title: "WhatsApp Pay QR Generator",
+        headline: "Create a WhatsApp Pay compatible UPI QR code",
+        presetType: "whatsapp",
+        intro: "Build a payment QR code for WhatsApp Business accounts, chats, and status updates."
+      }
+    },
+    {
+      params: { slug: "amazon-pay-qr-generator" },
+      props: {
+        title: "Amazon Pay QR Generator",
+        headline: "Create an Amazon Pay compatible UPI QR code",
+        presetType: "amazon",
+        intro: "Generate a custom Amazon Pay compatible UPI QR poster or standee for billing."
+      }
+    },
+    {
+      params: { slug: "sbi-qr-generator" },
+      props: {
+        title: "SBI UPI QR Generator",
+        headline: "Create an SBI UPI compatible QR code",
+        presetType: "sbi",
+        intro: "Generate State Bank of India (SBI) UPI QR codes for merchant checkouts."
+      }
+    },
+    {
+      params: { slug: "hdfc-qr-generator" },
+      props: {
+        title: "HDFC UPI QR Generator",
+        headline: "Create an HDFC Bank compatible UPI QR code",
+        presetType: "hdfc",
+        intro: "Create HDFC Bank compatible payment QR codes for invoices and checkout display."
+      }
+    },
+    {
+      params: { slug: "icici-qr-generator" },
+      props: {
+        title: "ICICI UPI QR Generator",
+        headline: "Create an ICICI Bank compatible UPI QR code",
+        presetType: "icici",
+        intro: "Generate ICICI Bank compatible UPI billing and collection QR codes."
+      }
     }
   ];
 }
