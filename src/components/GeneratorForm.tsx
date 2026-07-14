@@ -1,4 +1,5 @@
 import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
@@ -366,6 +367,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
   const [generated, setGenerated] = useState(false);
   const [copyState, setCopyState] = useState<"idle" | "copied" | "error">("idle");
   const [downloadState, setDownloadState] = useState<"idle" | "busy" | "error">("idle");
+  const [pdfDownloadState, setPdfDownloadState] = useState<"idle" | "busy" | "error">("idle");
   const [posterState, setPosterState] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("shop-standee");
@@ -727,6 +729,85 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     } catch (err) {
       console.error("Download failed:", err);
       setDownloadState("error");
+    }
+  }
+
+  async function downloadInvoicePdf() {
+    if (!posterRef.current || !generated) {
+      return;
+    }
+
+    try {
+      setPdfDownloadState("busy");
+      const el = posterRef.current;
+
+      // Clone & render off-screen at fixed desktop width
+      const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = 'fixed';
+      clone.style.left = '0';
+      clone.style.top = '0';
+      clone.style.zIndex = '-9999';
+      clone.style.opacity = '0';
+      clone.style.pointerEvents = 'none';
+      clone.style.width = '360px';
+      clone.style.minWidth = '360px';
+      clone.style.maxWidth = '360px';
+      clone.style.padding = '16px';
+      clone.style.boxSizing = 'border-box';
+      clone.style.height = 'auto';
+
+      document.body.appendChild(clone);
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const measuredHeight = clone.offsetHeight;
+      const targetHeight = measuredHeight || 520;
+
+      const dataUrl = await toPng(clone, {
+        cacheBust: true,
+        pixelRatio: 3,
+        width: 360,
+        height: targetHeight,
+        style: {
+          opacity: '1',
+          transform: 'none',
+          transformOrigin: 'top left',
+          width: '360px',
+          height: `${targetHeight}px`,
+          maxWidth: '360px',
+          maxHeight: `${targetHeight}px`,
+          minWidth: '360px',
+          minHeight: `${targetHeight}px`,
+          margin: '0',
+          padding: '16px',
+          boxSizing: 'border-box'
+        }
+      });
+
+      document.body.removeChild(clone);
+
+      // Convert px to mm (96 dpi → 1px = 0.2646 mm)
+      const pxToMm = 0.2646;
+      const pdfWidthMm = 360 * pxToMm;   // ≈ 95.3 mm
+      const pdfHeightMm = targetHeight * pxToMm;
+
+      const pdf = new jsPDF({
+        orientation: pdfWidthMm < pdfHeightMm ? 'portrait' : 'landscape',
+        unit: 'mm',
+        format: [pdfWidthMm, pdfHeightMm]
+      });
+
+      pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidthMm, pdfHeightMm);
+
+      const safeName = (form.payee || activeTemplate.name)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-|-$/g, '');
+
+      pdf.save(`${safeName || 'upi-invoice'}-${activeTemplate.id}.pdf`);
+      setPdfDownloadState("idle");
+    } catch (err) {
+      console.error("PDF download failed:", err);
+      setPdfDownloadState("error");
     }
   }
 
@@ -1819,6 +1900,14 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                 className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white transition hover:bg-leaf disabled:opacity-50"
               >
                 {downloadState === "busy" ? t.preparingPoster : t.downloadPoster}
+              </button>
+              <button
+                type="button"
+                onClick={() => void downloadInvoicePdf()}
+                disabled={!generated || pdfDownloadState === "busy"}
+                className="rounded-full bg-[#4f46e5] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#4338ca] disabled:opacity-50"
+              >
+                {pdfDownloadState === "busy" ? "Preparing PDF…" : "⬇ Download PDF"}
               </button>
               <button
                 type="button"
