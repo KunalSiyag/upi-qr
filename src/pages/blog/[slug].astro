@@ -50,13 +50,25 @@ if (post.body) {
   }
 }
 
+const postUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
 const graph: any[] = [
   {
+    "@type": "BreadcrumbList",
+    "@id": postUrl + "#breadcrumb",
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://www.proupiqr.in/" },
+      { "@type": "ListItem", "position": 2, "name": "Blog Guides", "item": "https://www.proupiqr.in/blog/" },
+      { "@type": "ListItem", "position": 3, "name": post.data.title, "item": postUrl }
+    ]
+  },
+  {
     "@type": "BlogPosting",
-    "@id": new URL(Astro.url.pathname, Astro.site).toString() + "#blogposting",
+    "@id": postUrl + "#blogposting",
     "headline": post.data.title,
     "description": post.data.description,
     "datePublished": post.data.pubDate.toISOString(),
+    "dateModified": post.data.pubDate.toISOString(),
     "image": postImageUrl,
     "author": {
       "@type": "Person",
@@ -73,7 +85,7 @@ const graph: any[] = [
     },
     "mainEntityOfPage": {
       "@type": "WebPage",
-      "@id": new URL(Astro.url.pathname, Astro.site).toString()
+      "@id": postUrl
     }
   }
 ];
@@ -81,7 +93,7 @@ const graph: any[] = [
 if (faqs.length > 0) {
   graph.push({
     "@type": "FAQPage",
-    "@id": new URL(Astro.url.pathname, Astro.site).toString() + "#faq",
+    "@id": postUrl + "#faq",
     "mainEntity": faqs.map((faq) => ({
       "@type": "Question",
       "name": faq.question,
@@ -103,9 +115,13 @@ const schema = {
   <main class="mx-auto max-w-4xl px-4 py-16 md:px-6 lg:px-8">
     <article class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-12">
       
-      {/* Back to Blog */}
-      <div class="mb-8">
-        <a href="/blog/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Blog Guides</a>
+      {/* Breadcrumb nav + Back link */}
+      <div class="mb-8 flex items-center gap-2 text-xs font-semibold text-forest/50">
+        <a href="/" class="hover:text-leaf transition-colors">Home</a>
+        <span>/</span>
+        <a href="/blog/" class="hover:text-leaf transition-colors">Blog Guides</a>
+        <span>/</span>
+        <span class="text-forest/70 truncate max-w-[200px]">{post.data.title}</span>
       </div>
 
       {/* Frontmatter Metadata */}

@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
@@ -82,6 +84,10 @@ export function InvoiceGenerator() {
     localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
   }, [merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
 
+  const invoiceRef = useRef<HTMLDivElement | null>(null);
+  const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
+  const [downloadPngState, setDownloadPngState] = useState<"idle" | "busy" | "error">("idle");
+
   const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
   };
@@ -90,15 +96,189 @@ export function InvoiceGenerator() {
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
   const printInvoice = () => window.print();
 
+  async function downloadInvoicePdf() {
+    if (!invoiceRef.current) return;
+    try {
+      setDownloadPdfState("busy");
+      const el = invoiceRef.current;
+      
+      const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = "fixed";
+      clone.style.left = "0";
+      clone.style.top = "0";
+      clone.style.zIndex = "-9999";
+      clone.style.opacity = "0";
+      clone.style.pointerEvents = "none";
+      clone.style.width = "800px";
+      clone.style.minWidth = "800px";
+      clone.style.maxWidth = "800px";
+      clone.style.padding = "36px";
+      clone.style.boxSizing = "border-box";
+      clone.style.height = "auto";
+      clone.style.boxShadow = "none";
+      clone.style.border = "none";
+      clone.style.borderRadius = "0";
+      
+      document.body.appendChild(clone);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      const measuredHeight = clone.offsetHeight;
+      const targetHeight = measuredHeight || 1100;
+
+      const dataUrl = await toPng(clone, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 800,
+        height: targetHeight,
+        style: {
+          opacity: "1",
+          transform: "none",
+          transformOrigin: "top left",
+          width: "800px",
+          height: `${targetHeight}px`,
+          maxWidth: "800px",
+          maxHeight: `${targetHeight}px`,
+          minWidth: "800px",
+          minHeight: `${targetHeight}px`,
+          margin: "0",
+          padding: "36px",
+          boxSizing: "border-box",
+          backgroundColor: "#ffffff",
+          boxShadow: "none",
+          border: "none",
+          borderRadius: "0"
+        }
+      });
+
+      document.body.removeChild(clone);
+
+      const pxToMm = 0.2646;
+      const widthMm = 800 * pxToMm;
+      const heightMm = targetHeight * pxToMm;
+
+      const pdf = new jsPDF({
+        orientation: widthMm < heightMm ? "portrait" : "landscape",
+        unit: "mm",
+        format: [widthMm, heightMm]
+      });
+
+      pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
+      
+      const safeInvoiceNo = (invoiceNo || "invoice")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      pdf.save(`${safeInvoiceNo}.pdf`);
+      setDownloadPdfState("idle");
+    } catch (err) {
+      console.error("PDF download failed:", err);
+      setDownloadPdfState("error");
+    }
+  }
+
+  async function downloadInvoicePng() {
+    if (!invoiceRef.current) return;
+    try {
+      setDownloadPngState("busy");
+      const el = invoiceRef.current;
+      
+      const clone = el.cloneNode(true) as HTMLDivElement;
+      clone.style.position = "fixed";
+      clone.style.left = "0";
+      clone.style.top = "0";
+      clone.style.zIndex = "-9999";
+      clone.style.opacity = "0";
+      clone.style.pointerEvents = "none";
+      clone.style.width = "800px";
+      clone.style.minWidth = "800px";
+      clone.style.maxWidth = "800px";
+      clone.style.padding = "36px";
+      clone.style.boxSizing = "border-box";
+      clone.style.height = "auto";
+      clone.style.boxShadow = "none";
+      clone.style.border = "none";
+      clone.style.borderRadius = "0";
+      
+      document.body.appendChild(clone);
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      const measuredHeight = clone.offsetHeight;
+      const targetHeight = measuredHeight || 1100;
+
+      const dataUrl = await toPng(clone, {
+        cacheBust: true,
+        pixelRatio: 2,
+        width: 800,
+        height: targetHeight,
+        style: {
+          opacity: "1",
+          transform: "none",
+          transformOrigin: "top left",
+          width: "800px",
+          height: `${targetHeight}px`,
+          maxWidth: "800px",
+          maxHeight: `${targetHeight}px`,
+          minWidth: "800px",
+          minHeight: `${targetHeight}px`,
+          margin: "0",
+          padding: "36px",
+          boxSizing: "border-box",
+          backgroundColor: "#ffffff",
+          boxShadow: "none",
+          border: "none",
+          borderRadius: "0"
+        }
+      });
+
+      document.body.removeChild(clone);
+
+      const safeInvoiceNo = (invoiceNo || "invoice")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-|-$/g, "");
+
+      const link = document.createElement("a");
+      link.href = dataUrl;
+      link.download = `${safeInvoiceNo}.png`;
+      link.click();
+      setDownloadPngState("idle");
+    } catch (err) {
+      console.error("PNG download failed:", err);
+      setDownloadPngState("error");
+    }
+  }
+
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Invoice builder</p>
-            <h2 className="mt-2 text-2xl font-black text-forest">Create invoice + embedded UPI QR</h2>
+            <h2 className="mt-1 text-2xl font-black text-forest">Create Invoice</h2>
           </div>
-          <button onClick={printInvoice} className="rounded-full bg-forest px-4 py-2 text-sm font-bold text-white hover:bg-leaf">Download PDF</button>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={downloadInvoicePdf}
+              disabled={downloadPdfState === "busy"}
+              className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
+            >
+              {downloadPdfState === "busy" ? "Generating..." : "Download PDF"}
+            </button>
+            <button
+              onClick={downloadInvoicePng}
+              disabled={downloadPngState === "busy"}
+              className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
+            >
+              {downloadPngState === "busy" ? "Generating..." : "Download PNG"}
+            </button>
+            <button
+              onClick={printInvoice}
+              className="rounded-full border border-forest/10 bg-cream px-4 py-2 text-xs font-bold text-forest hover:bg-white transition"
+            >
+              Print
+            </button>
+          </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
@@ -128,7 +308,7 @@ export function InvoiceGenerator() {
         {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
       </div>
 
-      <article className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Tax invoice</p>
