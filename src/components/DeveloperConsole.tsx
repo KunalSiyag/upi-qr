@@ -33,7 +33,7 @@ export function DeveloperConsole() {
     iframe: `<iframe 
   src="${embedUrl}" 
   width="340" 
-  height="460" 
+  height="480" 
   style="border:none; background:transparent; overflow:hidden;" 
   title="UPI Payment QR Widget"
 ></iframe>`,
@@ -195,11 +195,11 @@ export function UpiPayButton() {
       {/* Live Preview Container */}
       <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-6 md:p-8 shadow-sm">
         <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-forest/50">Live Sandbox Preview</h4>
-        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-[340px] h-[460px]">
+        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-[340px] h-[480px]">
           <iframe
             src={embedUrl}
             width="340"
-            height="460"
+            height="480"
             style={{ border: "none", background: "transparent", overflow: "hidden" }}
             title="UPI Payment Embed Widget Preview"
           />

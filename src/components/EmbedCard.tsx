@@ -51,10 +51,10 @@ export function EmbedCard() {
   const upiLink = `upi://pay?pa=${encodeURIComponent(params.pa)}&pn=${encodeURIComponent(params.pn)}${params.am ? `&am=${encodeURIComponent(params.am)}` : ""}${params.tn ? `&tn=${encodeURIComponent(params.tn)}` : ""}&cu=INR`;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-transparent p-4 font-sans select-none">
-      <div className="w-full max-w-[340px] rounded-3xl border border-black/5 bg-white p-5 text-center shadow-xl transition-all duration-300">
+    <div className="flex min-h-screen items-center justify-center bg-transparent p-2 font-sans select-none">
+      <div className="w-full max-w-[340px] rounded-3xl border border-black/5 bg-white p-4 text-center shadow-xl transition-all duration-300">
         {/* Header */}
-        <div className="mb-4">
+        <div className="mb-2">
           <h2 className="text-xs font-black uppercase tracking-widest text-neutral-400">Scan to Pay</h2>
           <p className="mt-1 text-base font-black text-neutral-800 truncate" title={params.pn}>
             {params.pn}
@@ -63,7 +63,7 @@ export function EmbedCard() {
         </div>
 
         {/* QR Code Container */}
-        <div className="relative mx-auto my-4 flex h-[210px] w-[210px] items-center justify-center rounded-2xl border border-neutral-100 bg-white p-2.5 shadow-inner">
+        <div className="relative mx-auto my-3 flex h-[190px] w-[190px] items-center justify-center rounded-2xl border border-neutral-100 bg-white p-2.5 shadow-inner">
           {qrUrl ? (
             <img src={qrUrl} alt="UPI Payment QR Code" className="h-full w-full object-contain" />
           ) : (
@@ -93,7 +93,7 @@ export function EmbedCard() {
 
         {/* Optional Amount Badge */}
         {params.am && (
-          <div className="my-3 inline-flex items-center gap-1 rounded-full bg-neutral-50 px-4 py-1.5 border border-neutral-100">
+          <div className="my-2 inline-flex items-center gap-1 rounded-full bg-neutral-50 px-4 py-1.5 border border-neutral-100">
             <span className="text-xs font-bold text-neutral-400">Amount:</span>
             <span className="text-sm font-black text-neutral-800">₹{params.am}</span>
           </div>
@@ -107,13 +107,13 @@ export function EmbedCard() {
         )}
 
         {/* Pay Button for Mobile Scan Redirect */}
-        <div className="mt-5">
+        <div className="mt-4">
           <a
             href={upiLink}
             style={{ backgroundColor: params.theme }}
             className="flex w-full items-center justify-center gap-2 rounded-2xl py-3 text-xs font-bold text-white shadow-md transition-all hover:brightness-95 active:scale-95"
           >
-            <svg className="h-4.5 w-4.5 fill-current" viewBox="0 0 24 24">
+            <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 17h-2v-2h2v2zm2.07-7.75l-.9.92C13.45 12.9 13 13.5 13 15h-2v-.5c0-1.1.45-2.1 1.17-2.83l1.24-1.26c.37-.36.59-.86.59-1.41 0-1.1-.9-2-2-2s-2 .9-2 2H7c0-2.76 2.24-5 5-5s5 2.24 5 5c0 1.04-.42 1.99-1.07 2.75z" />
             </svg>
             Pay Instantly with UPI App
@@ -121,9 +121,9 @@ export function EmbedCard() {
         </div>
 
         {/* Footer info */}
-        <div className="mt-4 flex items-center justify-center gap-1 text-[9px] font-bold text-neutral-300">
+        <div className="mt-3 flex items-center justify-center gap-1 text-[9px] font-bold text-neutral-400">
           <span>Powered by</span>
-          <a href="https://proupiqr.in" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-neutral-400">
+          <a href="https://proupiqr.in" target="_blank" rel="noopener noreferrer" className="hover:underline hover:text-neutral-600">
             proupiqr.in
           </a>
         </div>
