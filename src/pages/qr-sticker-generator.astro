@@ -1,0 +1,234 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { StickerSheetGenerator } from "../components/StickerSheetGenerator";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Free Printable UPI QR Code Sticker Sheet Generator (A4 4x/6x/12x) | Pro UPI QR";
+const description =
+  "Generate free printable UPI QR code sticker sheets on A4 paper. Print 4, 6, or 12 high-resolution QR stickers for shop counters, billing machines, and boxes.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Free UPI QR Sticker Sheet Generator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/qr-sticker-generator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "@id": "https://www.proupiqr.in/qr-sticker-generator/#howto",
+  "name": "How to Print UPI QR Code Sticker Sheets on A4 Paper",
+  "description": "Create and print multiple UPI QR payment stickers on standard A4 paper in three easy steps.",
+  "totalTime": "PT2M",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Enter Merchant VPA & Store Name",
+      "text": "Type your registered UPI Virtual Payment Address (e.g. store@oksbi) and store display name."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Select Sticker Grid Layout (4, 6, or 12)",
+      "text": "Choose your preferred layout: 6 stickers per A4 page for standard shop counters, 4 for standees, or 12 for small product labels."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Print or Download A4 PDF",
+      "text": "Click Print A4 Sheet or Download PDF to save high-resolution sticker grids ready for cutting."
+    }
+  ]
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How many UPI QR stickers fit on one A4 sheet?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "You can generate 4 large standee stickers (2x2 grid), 6 standard counter stickers (2x3 grid), or 12 compact product labels (3x4 grid) per standard A4 sheet."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What type of paper should I use to print QR stickers?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For long-lasting, waterproof stickers, use Self-Adhesive Vinyl or Glossy Photo Sticker Paper (120-180 GSM). For temporary usage, standard A4 paper with clear tape works well."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Are these UPI QR stickers compatible with Google Pay, PhonePe, and Paytm?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Our generator creates NPCI-compliant universal upi://pay QR codes that scan seamlessly across PhonePe, Google Pay, Paytm, BHIM, and all Indian banking apps."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can I lock a specific amount on the sticker sheets?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. You can enter an optional fixed amount (e.g., ₹150 for event tickets or fixed menu items) so customer scanning apps lock the payment amount automatically."
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={[schema, howToSchema, faqSchema]}>
+  <main class="px-3 sm:px-4 py-8 sm:py-12 md:py-16 w-full min-w-0">
+    <div class="mx-auto max-w-6xl rounded-[2rem] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
+      {/* Breadcrumb Nav */}
+      <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <span class="text-forest">A4 Sticker Sheet Generator</span>
+      </nav>
+
+      {/* Hero Header */}
+      <div class="max-w-3xl">
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-3.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.26em] text-leaf">
+          Printable Multi-Sticker Generator
+        </p>
+        <h1 class="mt-4 sm:mt-5 text-3xl font-black leading-[1.08] tracking-tight text-forest sm:text-5xl md:text-6xl">
+          Free Printable UPI QR Code Sticker Sheets (A4)
+        </h1>
+        <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-forest/75">
+          Print multiple counter-ready UPI payment stickers on a single A4 page. Perfect for kirana stores, billing machines, packaging boxes, and restaurant tables. 100% free with instant PDF export.
+        </p>
+      </div>
+
+      {/* Interactive Sticker Sheet Generator Console */}
+      <div class="mt-8 sm:mt-12 w-full min-w-0">
+        <StickerSheetGenerator client:load />
+      </div>
+
+      {/* Content & SEO Guide */}
+      <section class="mt-16 sm:mt-24 border-t border-forest/10 pt-12 sm:pt-16 max-w-4xl">
+        <h2 class="text-2xl sm:text-3xl font-black text-forest tracking-tight">
+          Why Print Multi-Sticker Sheets for Your Business?
+        </h2>
+        <p class="mt-4 text-sm sm:text-base leading-relaxed text-forest/80">
+          Displaying a single payment QR code at the main checkout counter often creates bottlenecks during rush hours. By printing a multi-sticker sheet, shopkeepers can paste UPI QR codes at multiple touchpoints:
+        </p>
+        
+        <div class="mt-8 grid gap-6 sm:grid-cols-3">
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">🏪 Shop Counters & Registers</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Paste stickers directly onto POS machines, counter edges, and cash drawers for instant customer scanning.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">📦 Delivery & Packaging Boxes</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Attach small QR stickers to takeaway bags and parcel boxes to collect Pay-on-Delivery (COD) payments seamlessly.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">🪑 Restaurant & Cafe Tables</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Affix durable table stickers so diners can scan and clear their food bill right from their table.
+            </p>
+          </div>
+        </div>
+
+        {/* Paper & Printing Best Practices */}
+        <h2 class="mt-14 text-2xl sm:text-3xl font-black text-forest tracking-tight">
+          Printing Specifications & Paper Recommendations
+        </h2>
+        <div class="mt-6 overflow-x-auto rounded-2xl border border-forest/10 bg-white shadow-sm">
+          <table class="w-full text-left border-collapse text-xs min-w-[500px]">
+            <thead>
+              <tr class="border-b border-forest/10 bg-cream/30 text-forest font-bold">
+                <th class="p-4">Sticker Grid</th>
+                <th class="p-4">Sticker Dimensions</th>
+                <th class="p-4">Best Used For</th>
+                <th class="p-4">Recommended Paper</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-forest/5 text-forest/80">
+              <tr>
+                <td class="p-4 font-bold text-leaf">6 Stickers per A4</td>
+                <td class="p-4 font-mono">85mm x 85mm</td>
+                <td class="p-4">Kirana stores, bakery counters, billing desks</td>
+                <td class="p-4">Self-Adhesive Glossy Vinyl (135 GSM)</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-bold text-leaf">4 Stickers per A4</td>
+                <td class="p-4 font-mono">95mm x 95mm</td>
+                <td class="p-4">Acrylic standee inserts, outdoor signboards</td>
+                <td class="p-4">Heavy Matte Photo Sticker Paper (180 GSM)</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-bold text-leaf">12 Stickers per A4</td>
+                <td class="p-4 font-mono">60mm x 60mm</td>
+                <td class="p-4">Parcel boxes, receipt backs, product tags</td>
+                <td class="p-4">Standard Matte Label Sheet</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        {/* FAQ Accordion Section */}
+        <h2 class="mt-16 text-2xl sm:text-3xl font-black text-forest tracking-tight">
+          Frequently Asked Questions (FAQs)
+        </h2>
+        <div class="mt-6 space-y-4">
+          <details class="group rounded-2xl border border-forest/10 bg-white p-5 text-forest [&_summary::-webkit-details-marker]:hidden">
+            <summary class="flex cursor-pointer items-center justify-between font-bold text-sm sm:text-base">
+              <span>How do I print 6 UPI QR stickers on one A4 sheet?</span>
+              <span class="ml-1.5 shrink-0 rounded-full bg-mint p-1 text-leaf group-open:-rotate-180 transition duration-300">▼</span>
+            </summary>
+            <p class="mt-3 text-xs sm:text-sm leading-relaxed text-forest/75">
+              Select <strong>6 Stickers per A4</strong> in our configurator, enter your store name and UPI ID, then click <strong>Print A4 Sheet</strong> or <strong>Download A4 PDF</strong>. The tool automatically lays out 6 identical stickers with cut-lines ready for printing.
+            </p>
+          </details>
+
+          <details class="group rounded-2xl border border-forest/10 bg-white p-5 text-forest [&_summary::-webkit-details-marker]:hidden">
+            <summary class="flex cursor-pointer items-center justify-between font-bold text-sm sm:text-base">
+              <span>Are these stickers waterproof?</span>
+              <span class="ml-1.5 shrink-0 rounded-full bg-mint p-1 text-leaf group-open:-rotate-180 transition duration-300">▼</span>
+            </summary>
+            <p class="mt-3 text-xs sm:text-sm leading-relaxed text-forest/75">
+              Waterproofing depends on the paper you load in your printer. Using vinyl sticker sheets or covering printed paper stickers with clear transparent tape creates waterproof, durable counter stickers.
+            </p>
+          </details>
+
+          <details class="group rounded-2xl border border-forest/10 bg-white p-5 text-forest [&_summary::-webkit-details-marker]:hidden">
+            <summary class="flex cursor-pointer items-center justify-between font-bold text-sm sm:text-base">
+              <span>Do customers need specific apps to scan these stickers?</span>
+              <span class="ml-1.5 shrink-0 rounded-full bg-mint p-1 text-leaf group-open:-rotate-180 transition duration-300">▼</span>
+            </summary>
+            <p class="mt-3 text-xs sm:text-sm leading-relaxed text-forest/75">
+              No. Our generated QR stickers conform to official NPCI standards and can be scanned by any UPI payment app in India, including PhonePe, Google Pay, Paytm, BHIM, Cred, and mobile banking apps.
+            </p>
+          </details>
+        </div>
+      </section>
+
+      {/* Related Links Hub */}
+      <div class="mt-16">
+        <InternalLinkHub currentPath="/qr-sticker-generator/" />
+      </div>
+    </div>
+  </main>
+</BaseLayout>

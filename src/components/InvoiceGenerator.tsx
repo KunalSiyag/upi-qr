@@ -249,6 +249,19 @@ export function InvoiceGenerator() {
     }
   }
 
+  const shareOnWhatsapp = () => {
+    const message = `*Tax Invoice from ${merchant || "Merchant"}*\n` +
+      `----------------------------\n` +
+      `*Invoice No:* ${invoiceNo}\n` +
+      `*Customer:* ${customer}\n` +
+      `*Total Payable:* ${money(totals.total)}\n` +
+      `*Due Date:* ${dueDate}\n\n` +
+      `*Pay via UPI App:* ${upiUrl}\n\n` +
+      `Generated free via Pro UPI QR (https://www.proupiqr.in)`;
+    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
+    window.open(url, "_blank");
+  };
+
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
@@ -258,6 +271,12 @@ export function InvoiceGenerator() {
             <h2 className="mt-1 text-2xl font-black text-forest">Create Invoice</h2>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              onClick={shareOnWhatsapp}
+              className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm"
+            >
+              💬 WhatsApp Share
+            </button>
             <button
               onClick={downloadInvoicePdf}
               disabled={downloadPdfState === "busy"}

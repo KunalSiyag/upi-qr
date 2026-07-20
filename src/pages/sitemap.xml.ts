@@ -16,6 +16,8 @@ const staticPages = [
   "icici-qr-generator",
   "generator",
   "invoice-generator",
+  "qr-sticker-generator",
+  "bulk-qr",
   "dynamic-qr-generator",
   "developer",
   "privacy",

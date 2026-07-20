@@ -1,0 +1,149 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { BulkQrGenerator } from "../components/BulkQrGenerator";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Free Bulk UPI QR Code Generator from CSV / Excel | Pro UPI QR";
+const description =
+  "Generate hundreds of custom UPI QR codes from a CSV or Excel file in seconds. Download all QR images as a ZIP archive or print on A4. 100% free with zero registration.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Free Bulk UPI QR Code Generator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/bulk-qr/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+
+const howToSchema = {
+  "@context": "https://schema.org",
+  "@type": "HowTo",
+  "@id": "https://www.proupiqr.in/bulk-qr/#howto",
+  "name": "How to Generate Bulk UPI QR Codes from Excel CSV",
+  "description": "Create and download batch UPI payment QR codes in 3 steps.",
+  "totalTime": "PT2M",
+  "step": [
+    {
+      "@type": "HowToStep",
+      "position": 1,
+      "name": "Prepare CSV File with Merchant & Amount Data",
+      "text": "Format your spreadsheet with columns: Payee Name, UPI ID, Amount, and Reference Note."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 2,
+      "name": "Upload CSV or Paste Records",
+      "text": "Upload your .csv file or paste tabular data into the batch validator console."
+    },
+    {
+      "@type": "HowToStep",
+      "position": 3,
+      "name": "Download ZIP Archive or Print",
+      "text": "Click Download ZIP to save all high-resolution PNG QR images or click Print to generate batch payment sheets."
+    }
+  ]
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is there a limit on how many QR codes I can generate at once?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. Our browser-side engine processes hundreds of QR codes per batch directly on your device without server bottlenecks."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What CSV columns are supported?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The generator supports 4 columns: Payee Name, UPI ID (VPA), Amount (optional), and Reference Note (optional)."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Is my customer payment data private?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. 100% of data processing occurs client-side in your browser. No CSV records or payment details are sent to external servers."
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={[schema, howToSchema, faqSchema]}>
+  <main class="px-3 sm:px-4 py-8 sm:py-12 md:py-16 w-full min-w-0">
+    <div class="mx-auto max-w-6xl rounded-[2rem] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
+      {/* Breadcrumb Nav */}
+      <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <span class="text-forest">Bulk CSV QR Generator</span>
+      </nav>
+
+      {/* Hero Header */}
+      <div class="max-w-3xl">
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-3.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.26em] text-leaf">
+          Batch Payment Tools
+        </p>
+        <h1 class="mt-4 sm:mt-5 text-3xl font-black leading-[1.08] tracking-tight text-forest sm:text-5xl md:text-6xl">
+          Free Bulk UPI QR Code Generator (CSV / Excel)
+        </h1>
+        <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-forest/75">
+          Generate hundreds of custom-amount UPI QR codes from an Excel spreadsheet or CSV file in seconds. Download all QR images as a ZIP file or print batch cards. 100% client-side privacy.
+        </p>
+      </div>
+
+      {/* Interactive Bulk QR Console */}
+      <div class="mt-8 sm:mt-12 w-full min-w-0">
+        <BulkQrGenerator client:load />
+      </div>
+
+      {/* Content & Use Cases */}
+      <section class="mt-16 sm:mt-24 border-t border-forest/10 pt-12 sm:pt-16 max-w-4xl">
+        <h2 class="text-2xl sm:text-3xl font-black text-forest tracking-tight">
+          Who Needs Bulk UPI QR Code Generation?
+        </h2>
+        <div class="mt-8 grid gap-6 sm:grid-cols-3">
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">🏢 Housing Societies</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Generate personalized maintenance fee QR codes for 100+ apartments with pre-filled flat numbers and exact maintenance amounts.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">🎓 Schools & Coaching Classes</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Create monthly fee QR slips for students with roll numbers and class fee breakdowns.
+            </p>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
+            <h3 class="text-base font-black text-forest">🎟️ Event Registrations</h3>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">
+              Batch export payment QR codes for conference tickets, marathon registrations, and workshop passes.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      {/* Related Links Hub */}
+      <div class="mt-16">
+        <InternalLinkHub currentPath="/bulk-qr/" />
+      </div>
+    </div>
+  </main>
+</BaseLayout>

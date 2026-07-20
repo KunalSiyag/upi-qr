@@ -133,6 +133,22 @@ export const universalQrLink = {
 
 export const guides: GuideLink[] = [
   {
+    slug: "how-to-generate-bulk-upi-qr-codes-from-csv",
+    title: "How to Generate Bulk UPI QR Codes from Excel CSV",
+    description: "Learn how to batch generate hundreds of custom-amount UPI payment QR codes from an Excel spreadsheet.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Bulk QR", "CSV", "Excel", "Merchant"],
+    featured: true,
+  },
+  {
+    slug: "printable-upi-qr-sticker-sheet-guide",
+    title: "How to Print Free UPI QR Code Sticker Sheets on A4 Paper",
+    description: "Step-by-step tutorial to print 4, 6, or 12 high-resolution QR stickers for shop counters and packaging boxes.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Printing", "Stickers", "Merchant", "Standee"],
+    featured: true,
+  },
+  {
     slug: "universal-upi-qr-code-generator-guide",
     title: "Universal UPI QR Code Generator for Bank Account — Complete Guide",
     description: "Learn how universal UPI QR codes work, how to connect any bank account, and accept PhonePe, GPay & Paytm payments.",
