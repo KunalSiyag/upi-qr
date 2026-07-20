@@ -80,14 +80,21 @@ const hindiUrl = `${baseUrl}${hindiPath}`;
     <meta name="twitter:description" content={description} />
     <meta property="og:image" content={ogImageUrl} />
     <meta name="twitter:image" content={ogImageUrl} />
-    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="alternate" type="application/rss+xml" title="Pro UPI QR Blog & Guides RSS Feed" href="/rss.xml" />
 
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
+    <script type="application/ld+json" set:html={JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Organization",
+      "@id": "https://www.proupiqr.in/#organization",
+      "name": "Pro UPI QR",
+      "url": "https://www.proupiqr.in/",
+      "logo": "https://www.proupiqr.in/favicon.svg",
+      "description": "Free universal UPI QR code generator and payment poster builder for Indian bank accounts, shops, freelancers, and businesses.",
+      "sameAs": [
+        "https://x.com/kunal_twts",
+        "https://medium.com/@kunal_writes"
+      ]
+    })} />
 
     {schema && (
       <script type="application/ld+json" set:html={JSON.stringify(schema)} />

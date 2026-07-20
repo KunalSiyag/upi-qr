@@ -72,7 +72,7 @@ export const GET: APIRoute = async ({ site }) => {
   const urls = entries
     .map(
       (entry) =>
-        `<url><loc>${escapeXml(`${baseUrl}${entry.path}`)}</loc><lastmod>${entry.lastmod}</lastmod><changefreq>weekly</changefreq><priority>${entry.path.startsWith("/blog/") ? "0.7" : entry.path === "/" ? "1.0" : "0.8"}</priority></url>`
+        `<url><loc>${escapeXml(`${baseUrl}${entry.path}`)}</loc><lastmod>${entry.lastmod}</lastmod><changefreq>weekly</changefreq><priority>${entry.path === "/" ? "1.0" : entry.path === "/universal-qr-generator/" ? "0.9" : entry.path.startsWith("/blog/") ? "0.7" : "0.8"}</priority></url>`
     )
     .join("");
 

@@ -133,6 +133,38 @@ export const universalQrLink = {
 
 export const guides: GuideLink[] = [
   {
+    slug: "universal-upi-qr-code-generator-guide",
+    title: "Universal UPI QR Code Generator for Bank Account — Complete Guide",
+    description: "Learn how universal UPI QR codes work, how to connect any bank account, and accept PhonePe, GPay & Paytm payments.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim", "sbi", "hdfc", "icici"],
+    tags: ["Universal QR", "Bank Account", "Payments", "Tutorial"],
+    featured: true,
+  },
+  {
+    slug: "universal-upi-qr-code-generator-app-guide",
+    title: "Universal UPI QR Code Generator App — Mobile Web Guide",
+    description: "How to use Pro UPI QR as a mobile web app without app store downloads. Generate UPI QR posters right from your phone.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Mobile", "Universal QR", "App", "Tutorial"],
+    featured: true,
+  },
+  {
+    slug: "how-to-generate-universal-qr-code-free",
+    title: "How to Generate a Universal QR Code for Free (No Signup)",
+    description: "Step-by-step guide to generating free universal static QR codes for links, bank accounts, WiFi, and PDFs.",
+    presetTypes: ["phonepe", "gpay", "paytm", "donation"],
+    tags: ["Universal QR", "Tutorial", "Free QR"],
+    featured: true,
+  },
+  {
+    slug: "create-upi-qr-code-for-bank-account",
+    title: "Create a Universal UPI QR Code for Direct Bank Account Collection",
+    description: "Link your SBI, HDFC, ICICI or personal VPA to a universal payment QR code standee.",
+    presetTypes: ["sbi", "hdfc", "icici", "bhim"],
+    tags: ["Bank Account", "Banking", "Tutorial"],
+    featured: true,
+  },
+  {
     slug: "how-to-create-print-upi-qr-code-standee",
     title: "How to Create and Print a UPI QR Standee",
     description: "Step-by-step guide to design, generate, and print shop counter standees.",
