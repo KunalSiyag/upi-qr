@@ -1,22 +1,52 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const url = Astro.url.searchParams.get("u") || Astro.url.searchParams.get("url") || "/";
+const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.get("u") || "/";
 ---
 
-<BaseLayout title="Redirecting..." description="QR redirect">
-  <div class="min-h-[50vh] flex items-center justify-center p-8 text-center">
-    <div>
-      <p class="text-sm text-forest/60">Redirecting you...</p>
-      <a href={url} class="text-2xl font-bold text-forest underline">{url}</a>
-      <p class="text-xs mt-8 text-forest/50 max-w-xs mx-auto">This is a basic redirect layer. Full Dynamic QR with analytics and editable destinations is in development.</p>
+<BaseLayout title="Redirecting..." description="Dynamic QR Link Redirect">
+  <div class="min-h-[60vh] flex items-center justify-center p-6 text-center">
+    <div class="max-w-md w-full rounded-3xl border border-forest/10 bg-white p-8 shadow-xl space-y-4">
+      <div class="mx-auto w-12 h-12 rounded-full bg-mint flex items-center justify-center text-leaf font-bold text-lg animate-pulse">
+        ➔
+      </div>
+      <h1 class="text-xl font-black text-forest">Redirecting to Destination</h1>
+      <p id="target-display" class="text-xs font-mono text-forest/70 break-all bg-slate-50 p-3 rounded-xl border border-slate-200">
+        {initialUrl}
+      </p>
+      <a id="direct-link" href={initialUrl} class="inline-block rounded-xl bg-forest px-6 py-2.5 text-xs font-bold text-mint hover:bg-forest/90 transition-colors">
+        Click here if not redirected automatically
+      </a>
     </div>
   </div>
 
   <script is:inline>
-    const target = new URLSearchParams(location.search).get('u') || new URLSearchParams(location.search).get('url');
-    if (target) {
-      setTimeout(() => { window.location.href = target; }, 1200);
-    }
+    (function() {
+      const params = new URLSearchParams(window.location.search);
+      const id = params.get('id');
+      let target = params.get('url') || params.get('u');
+
+      if (id) {
+        try {
+          const saved = localStorage.getItem('pro_upi_dynamic_links');
+          if (saved) {
+            const links = JSON.parse(saved);
+            const found = links.find(l => l.id === id);
+            if (found && found.destinationUrl) {
+              target = found.destinationUrl;
+            }
+          }
+        } catch (e) {}
+      }
+
+      if (target) {
+        const displayEl = document.getElementById('target-display');
+        const linkEl = document.getElementById('direct-link');
+        if (displayEl) displayEl.textContent = target;
+        if (linkEl) linkEl.href = target;
+
+        window.location.href = target;
+      }
+    })();
   </script>
 </BaseLayout>
