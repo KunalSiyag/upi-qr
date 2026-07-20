@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
+import { jsPDF } from "jspdf";
 
 export function OfferPosterGenerator() {
   const [theme, setTheme] = useState<"festive" | "clearance" | "cashback" | "minimal">("festive");
@@ -11,7 +13,8 @@ export function OfferPosterGenerator() {
   const [payeeName, setPayeeName] = useState("Sharma General Store");
 
   const [qrUrl, setQrUrl] = useState("");
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isExporting, setIsExporting] = useState(false);
+  const posterRef = useRef<HTMLDivElement>(null);
 
   const shopNameId = useId();
   const taglineId = useId();
@@ -31,88 +34,37 @@ export function OfferPosterGenerator() {
     }).then(setQrUrl).catch(console.error);
   }, [vpa, payeeName, shopName]);
 
-  const printPoster = () => {
-    window.print();
-  };
-
-  const downloadPosterImage = () => {
-    if (!qrUrl) return;
-    const canvas = document.createElement("canvas");
-    canvas.width = 1200;
-    canvas.height = 1600;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    // Background color based on theme
-    const bgColors = {
-      festive: "#fff8eb",
-      clearance: "#fff0f0",
-      cashback: "#f0fff4",
-      minimal: "#ffffff"
-    };
-    const primaryColors = {
-      festive: "#9a3412",
-      clearance: "#991b1b",
-      cashback: "#166534",
-      minimal: "#113b2c"
-    };
-
-    ctx.fillStyle = bgColors[theme];
-    ctx.fillRect(0, 0, 1200, 1600);
-
-    // Border Frame
-    ctx.strokeStyle = primaryColors[theme];
-    ctx.lineWidth = 16;
-    ctx.strokeRect(40, 40, 1120, 1520);
-
-    // Shop Name
-    ctx.fillStyle = primaryColors[theme];
-    ctx.font = "bold 64px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(shopName.toUpperCase(), 600, 180);
-
-    // Tagline
-    ctx.font = "bold 32px sans-serif";
-    ctx.fillStyle = "#475569";
-    ctx.fillText(tagline, 600, 240);
-
-    // Offer Headline Banner
-    ctx.fillStyle = primaryColors[theme];
-    ctx.beginPath();
-    ctx.roundRect(100, 320, 1000, 240, 32);
-    ctx.fill();
-
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "900 96px sans-serif";
-    ctx.fillText(offerHeadline.toUpperCase(), 600, 470);
-
-    // Subtext
-    ctx.fillStyle = "#1e293b";
-    ctx.font = "600 36px sans-serif";
-    ctx.fillText(offerSubtext, 600, 640);
-
-    // Draw QR image
-    const img = new Image();
-    img.crossOrigin = "anonymous";
-    img.onload = () => {
-      ctx.drawImage(img, 400, 720, 400, 400);
-
-      // UPI Footer Text
-      ctx.font = "bold 32px sans-serif";
-      ctx.fillStyle = primaryColors[theme];
-      ctx.fillText("SCAN TO PAY WITH ANY UPI APP", 600, 1200);
-
-      ctx.font = "600 24px sans-serif";
-      ctx.fillStyle = "#64748b";
-      ctx.fillText(`Accepted: GPay, PhonePe, Paytm, BHIM | UPI ID: ${vpa}`, 600, 1260);
-
-      const dataUrl = canvas.toDataURL("image/png");
+  const downloadPosterPng = async () => {
+    if (!posterRef.current) return;
+    setIsExporting(true);
+    try {
+      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `${shopName.toLowerCase().replace(/\s+/g, "-")}-offer-poster.png`;
       a.click();
-    };
-    img.src = qrUrl;
+    } catch (e) {
+      console.error("Poster PNG export error:", e);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const downloadPosterPdf = async () => {
+    if (!posterRef.current) return;
+    setIsExporting(true);
+    try {
+      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
+      const pdf = new jsPDF("p", "mm", "a4");
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      pdf.addImage(dataUrl, "PNG", 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`${shopName.toLowerCase().replace(/\s+/g, "-")}-offer-poster.pdf`);
+    } catch (e) {
+      console.error("Poster PDF export error:", e);
+    } finally {
+      setIsExporting(false);
+    }
   };
 
   return (
@@ -127,10 +79,10 @@ export function OfferPosterGenerator() {
             <label className="block text-xs font-bold uppercase tracking-wider text-forest/75">Select Banner Theme</label>
             <div className="grid grid-cols-4 gap-2">
               {[
-                { id: "festive", label: "Festive" },
-                { id: "clearance", label: "Clearance" },
-                { id: "cashback", label: "Cashback" },
-                { id: "minimal", label: "Minimal" }
+                { id: "festive", label: "Festive Gold" },
+                { id: "clearance", label: "Clearance Red" },
+                { id: "cashback", label: "Cashback Green" },
+                { id: "minimal", label: "Minimal Dark" }
               ].map((t) => (
                 <button
                   key={t.id}
@@ -170,7 +122,7 @@ export function OfferPosterGenerator() {
             </div>
 
             <div>
-              <label htmlFor={offerHeadlineId} className="block text-xs font-bold text-forest/75 mb-1">Offer Headline (Big Text)</label>
+              <label htmlFor={offerHeadlineId} className="block text-xs font-bold text-forest/75 mb-1">Offer Headline (Big Banner Text)</label>
               <input
                 id={offerHeadlineId}
                 type="text"
@@ -181,7 +133,7 @@ export function OfferPosterGenerator() {
             </div>
 
             <div>
-              <label htmlFor={offerSubtextId} className="block text-xs font-bold text-forest/75 mb-1">Offer Details / Terms</label>
+              <label htmlFor={offerSubtextId} className="block text-xs font-bold text-forest/75 mb-1">Offer Terms / Subtext</label>
               <input
                 id={offerSubtextId}
                 type="text"
@@ -215,20 +167,23 @@ export function OfferPosterGenerator() {
             </div>
           </div>
 
+          {/* Action Buttons: PNG & PDF Exports ONLY */}
           <div className="flex gap-3 pt-2">
             <button
               type="button"
-              onClick={downloadPosterImage}
-              className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md"
+              onClick={downloadPosterPng}
+              disabled={isExporting}
+              className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md disabled:opacity-50"
             >
-              Download Poster PNG
+              🖼️ Download Poster PNG
             </button>
             <button
               type="button"
-              onClick={printPoster}
-              className="rounded-xl bg-mint border border-leaf/20 px-4 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors"
+              onClick={downloadPosterPdf}
+              disabled={isExporting}
+              className="flex-1 rounded-xl bg-mint border border-leaf/20 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors disabled:opacity-50"
             >
-              Print A4
+              📄 Download Poster PDF
             </button>
           </div>
         </div>
@@ -240,6 +195,7 @@ export function OfferPosterGenerator() {
           <div className="text-xs font-bold uppercase tracking-wider text-forest/75 text-center">Live Printable A4 Banner Preview</div>
           
           <div
+            ref={posterRef}
             className={`mx-auto max-w-sm rounded-3xl border-4 p-6 text-center space-y-5 shadow-2xl transition-all ${
               theme === "festive" ? "border-amber-700 bg-amber-50" :
               theme === "clearance" ? "border-red-700 bg-red-50" :

@@ -1,6 +1,7 @@
 import { useState, useMemo } from "react";
 import QRCode from "qrcode";
 import JSZip from "jszip";
+import { jsPDF } from "jspdf";
 
 interface QrItem {
   id: string;
@@ -132,8 +133,72 @@ export function BulkQrGenerator() {
     }
   };
 
-  const handlePrint = () => {
-    window.print();
+  const handleDownloadBatchPdf = async () => {
+    const validItems = parsedItems.filter((item) => item.status === "valid");
+    if (validItems.length === 0) return;
+
+    setIsGenerating(true);
+    setDownloadProgress("Creating Batch PDF...");
+
+    try {
+      const pdf = new jsPDF("p", "mm", "a4");
+      let pageIndex = 0;
+
+      for (let i = 0; i < validItems.length; i++) {
+        if (i > 0 && i % 6 === 0) {
+          pdf.addPage();
+          pageIndex++;
+        }
+
+        const item = validItems[i];
+        const params = new URLSearchParams({ pa: item.upiId, pn: item.payee });
+        if (item.amount) params.set("am", item.amount);
+        if (item.note) params.set("tn", item.note);
+        params.set("cu", "INR");
+        const upiUrl = `upi://pay?${params.toString()}`;
+
+        const qrDataUrl = await QRCode.toDataURL(upiUrl, {
+          width: 300,
+          margin: 1,
+          color: { dark: "#113b2c", light: "#ffffff" }
+        });
+
+        const slot = i % 6;
+        const col = slot % 2;
+        const row = Math.floor(slot / 2);
+
+        const x = 15 + col * 95;
+        const y = 20 + row * 85;
+
+        pdf.setDrawColor(200, 200, 200);
+        pdf.rect(x, y, 85, 75);
+        pdf.addImage(qrDataUrl, "PNG", x + 17.5, y + 5, 50, 50);
+
+        pdf.setFont("helvetica", "bold");
+        pdf.setFontSize(10);
+        pdf.setTextColor(17, 59, 44);
+        pdf.text(item.payee, x + 42.5, y + 60, { align: "center" });
+
+        pdf.setFont("helvetica", "normal");
+        pdf.setFontSize(8);
+        pdf.setTextColor(100, 100, 100);
+        pdf.text(item.upiId, x + 42.5, y + 66, { align: "center" });
+
+        if (item.amount) {
+          pdf.setFont("helvetica", "bold");
+          pdf.setTextColor(40, 122, 87);
+          pdf.text(`Pay INR ${item.amount}`, x + 42.5, y + 71, { align: "center" });
+        }
+      }
+
+      pdf.save(`bulk-upi-qr-batch.pdf`);
+    } catch (e) {
+      console.error(e);
+      alert("Failed to export PDF.");
+    } finally {
+      setIsGenerating(false);
+      setDownloadProgress("");
+    }
   };
 
   return (
@@ -173,6 +238,7 @@ export function BulkQrGenerator() {
           />
         </div>
 
+        {/* Action Buttons: ZIP & PDF Exports ONLY */}
         <div className="mt-6 flex flex-col sm:flex-row items-center gap-3 pt-4 border-t border-forest/10">
           <button
             type="button"
@@ -180,15 +246,15 @@ export function BulkQrGenerator() {
             disabled={isGenerating || parsedItems.length === 0}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf active:scale-95 disabled:opacity-50"
           >
-            {isGenerating ? downloadProgress : `📦 Download ZIP (${parsedItems.filter(i => i.status === "valid").length} QRs)`}
+            {isGenerating ? downloadProgress : `📦 Download ZIP (${parsedItems.filter(i => i.status === "valid").length} PNGs)`}
           </button>
           <button
             type="button"
-            onClick={handlePrint}
-            disabled={parsedItems.length === 0}
+            onClick={handleDownloadBatchPdf}
+            disabled={isGenerating || parsedItems.length === 0}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-forest/15 bg-mint/50 px-6 py-3.5 text-xs font-black text-forest transition hover:bg-mint active:scale-95 disabled:opacity-50"
           >
-            🖨️ Print All Cards
+            📄 Download Batch PDF
           </button>
         </div>
       </div>

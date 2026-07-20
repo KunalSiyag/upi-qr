@@ -94,7 +94,6 @@ export function InvoiceGenerator() {
 
   const addItem = () => setItems((current) => [...current, { id: Date.now(), name: "New item", qty: "1", price: "0" }]);
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
-  const printInvoice = () => window.print();
 
   async function downloadInvoicePdf() {
     if (!invoiceRef.current) return;
@@ -282,20 +281,14 @@ export function InvoiceGenerator() {
               disabled={downloadPdfState === "busy"}
               className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
             >
-              {downloadPdfState === "busy" ? "Generating..." : "Download PDF"}
+              {downloadPdfState === "busy" ? "Generating..." : "📄 Download PDF"}
             </button>
             <button
               onClick={downloadInvoicePng}
               disabled={downloadPngState === "busy"}
               className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
             >
-              {downloadPngState === "busy" ? "Generating..." : "Download PNG"}
-            </button>
-            <button
-              onClick={printInvoice}
-              className="rounded-full border border-forest/10 bg-cream px-4 py-2 text-xs font-bold text-forest hover:bg-white transition"
-            >
-              Print
+              {downloadPngState === "busy" ? "Generating..." : "🖼️ Download PNG"}
             </button>
           </div>
         </div>
