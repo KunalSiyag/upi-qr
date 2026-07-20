@@ -3,7 +3,7 @@ import { useState, useMemo } from "react";
 export function DeveloperConsole() {
   const [form, setForm] = useState({
     pa: "merchant@upi",
-    pn: "Kunal Siyag",
+    pn: "Merchant Store",
     am: "500",
     tn: "Invoice #1024",
     theme: "287a57",
@@ -72,65 +72,65 @@ export function UpiPayButton() {
   };
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[1.1fr_0.9fr]">
+    <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1.1fr_0.9fr] w-full min-w-0">
       {/* Configurator Card */}
-      <div className="rounded-3xl border border-forest/10 bg-white p-6 md:p-8 shadow-sm">
+      <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
         <h3 className="text-xl font-black text-forest">Widget Configurator</h3>
         <p className="mt-1 text-xs text-forest/60">Customize your payment widget parameters and get instant embed code below.</p>
 
-        <form className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="grid gap-1">
+        <form className="mt-6 grid gap-4 sm:grid-cols-2 w-full min-w-0">
+          <label className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Merchant UPI ID *</span>
             <input
               type="text"
               value={form.pa}
               onChange={(e) => setForm({ ...form, pa: e.target.value })}
               placeholder="e.g. business@okaxis"
-              className="rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
               required
             />
           </label>
 
-          <label className="grid gap-1">
+          <label className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Merchant / Business Name *</span>
             <input
               type="text"
               value={form.pn}
               onChange={(e) => setForm({ ...form, pn: e.target.value })}
-              placeholder="e.g. Kunal Stores"
-              className="rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+              placeholder="e.g. Merchant Store"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
               required
             />
           </label>
 
-          <label className="grid gap-1">
+          <label className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Requested Amount (₹) <span className="text-forest/40">(Optional)</span></span>
             <input
               type="number"
               value={form.am}
               onChange={(e) => setForm({ ...form, am: e.target.value })}
               placeholder="e.g. 500"
-              className="rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
             />
           </label>
 
-          <label className="grid gap-1">
+          <label className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Transaction Note / ID <span className="text-forest/40">(Optional)</span></span>
             <input
               type="text"
               value={form.tn}
               onChange={(e) => setForm({ ...form, tn: e.target.value })}
               placeholder="e.g. Inv-4028"
-              className="rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
             />
           </label>
 
-          <div className="grid gap-1">
+          <div className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Overlay Logo Badge</span>
             <select
               value={form.logo}
               onChange={(e) => setForm({ ...form, logo: e.target.value })}
-              className="rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
             >
               <option value="none">None (Default)</option>
               <option value="gpay">Google Pay</option>
@@ -140,14 +140,14 @@ export function UpiPayButton() {
             </select>
           </div>
 
-          <div className="grid gap-1">
+          <div className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Theme Accent Color</span>
             <div className="flex items-center gap-3">
               <input
                 type="color"
                 value={`#${form.theme.replace("#", "")}`}
                 onChange={(e) => setForm({ ...form, theme: e.target.value })}
-                className="h-9 w-12 cursor-pointer rounded-lg border border-forest/10 bg-transparent p-0.5"
+                className="h-9 w-12 cursor-pointer rounded-lg border border-forest/10 bg-transparent p-0.5 shrink-0"
               />
               <span className="text-xs font-bold font-mono text-forest/70 uppercase">#{form.theme.replace("#", "")}</span>
             </div>
@@ -155,13 +155,13 @@ export function UpiPayButton() {
         </form>
 
         {/* Code Snippets Section */}
-        <div className="mt-8 border-t border-forest/10 pt-6">
-          <div className="flex border-b border-forest/10 pb-2">
+        <div className="mt-8 border-t border-forest/10 pt-6 w-full min-w-0">
+          <div className="flex border-b border-forest/10 pb-2 overflow-x-auto scrollbar-none whitespace-nowrap gap-1">
             {(["iframe", "link", "js", "react"] as const).map((tab) => (
               <button
                 key={tab}
                 onClick={() => setActiveTab(tab)}
-                className={`border-b-2 px-4 py-2 text-xs font-bold uppercase tracking-wider transition ${
+                className={`border-b-2 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition shrink-0 ${
                   activeTab === tab
                     ? "border-forest text-forest"
                     : "border-transparent text-forest/50 hover:text-forest/70"
@@ -178,14 +178,16 @@ export function UpiPayButton() {
             ))}
           </div>
 
-          <div className="relative mt-4 rounded-2xl bg-forest p-4 text-left font-mono text-xs text-[#a6e22e] overflow-hidden shadow-inner">
-            <button
-              onClick={() => copyToClipboard(codeSnippets[activeTab])}
-              className="absolute right-3 top-3 rounded-lg bg-white/10 px-3 py-1.5 text-[10px] font-bold text-white transition hover:bg-white/20 active:scale-95"
-            >
-              {copied ? "Copied! ✓" : "Copy Code"}
-            </button>
-            <pre className="overflow-x-auto text-[#fff] pr-20 pt-2 leading-relaxed">
+          <div className="relative mt-4 rounded-2xl bg-forest p-4 text-left font-mono text-xs text-[#a6e22e] shadow-inner w-full min-w-0">
+            <div className="flex justify-end mb-2 sm:mb-0">
+              <button
+                onClick={() => copyToClipboard(codeSnippets[activeTab])}
+                className="rounded-lg bg-white/10 px-3 py-1.5 text-[10px] font-bold text-white transition hover:bg-white/20 active:scale-95 shrink-0 sm:absolute sm:right-3 sm:top-3"
+              >
+                {copied ? "Copied! ✓" : "Copy Code"}
+              </button>
+            </div>
+            <pre className="overflow-x-auto text-[#fff] pt-1 leading-relaxed w-full min-w-0">
               <code>{codeSnippets[activeTab]}</code>
             </pre>
           </div>
@@ -193,14 +195,12 @@ export function UpiPayButton() {
       </div>
 
       {/* Live Preview Container */}
-      <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-6 md:p-8 shadow-sm">
+      <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
         <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-forest/50">Live Sandbox Preview</h4>
-        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-[340px] h-[480px]">
+        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-full max-w-[340px] h-[480px]">
           <iframe
             src={embedUrl}
-            width="340"
-            height="480"
-            style={{ border: "none", background: "transparent", overflow: "hidden" }}
+            className="w-full h-full border-none bg-transparent overflow-hidden"
             title="UPI Payment Embed Widget Preview"
           />
         </div>

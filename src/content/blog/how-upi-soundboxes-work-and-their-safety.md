@@ -2,7 +2,7 @@
 title: "How UPI Soundboxes Work: Technology, Safety, and Build Costs"
 description: "A detailed breakdown of how merchant UPI soundboxes process transactions, announce payments, protect against spoofing, and what it costs to build one."
 pubDate: 2026-06-10
-author: "Kunal Siyag"
+author: "Pro UPI QR Team"
 tags: ["Soundbox", "Security", "Hardware"]
 ---
 

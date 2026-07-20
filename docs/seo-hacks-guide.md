@@ -82,11 +82,7 @@ Added globally in `src/layouts/BaseLayout.astro`:
   "name": "Pro UPI QR",
   "url": "https://www.proupiqr.in/",
   "logo": "https://www.proupiqr.in/favicon.svg",
-  "description": "Free universal UPI QR code generator and payment poster builder for Indian bank accounts.",
-  "sameAs": [
-    "https://x.com/kunal_twts",
-    "https://medium.com/@kunal_writes"
-  ]
+  "description": "Free universal UPI QR code generator and payment poster builder for Indian bank accounts."
 }
 ```
 

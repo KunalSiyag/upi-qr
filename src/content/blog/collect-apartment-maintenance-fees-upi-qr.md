@@ -16,7 +16,7 @@ Using a dedicated UPI QR code offers a free, instant, and clean solution for hou
 
 While net banking is popular, it creates massive bookkeeping headaches:
 * Residents often forget to share payment screenshots.
-* Identifying who sent ₹2,500 based on cryptic bank statement descriptions (e.g. `"IMPS/3120/KUNAL..."`) is extremely difficult.
+* Identifying who sent ₹2,500 based on cryptic bank statement descriptions (e.g. `"IMPS/3120/RESIDENT..."`) is extremely difficult.
 * It requires adding the society bank account as a beneficiary, which takes 30 minutes to activate on the resident's bank app.
 
 ---
