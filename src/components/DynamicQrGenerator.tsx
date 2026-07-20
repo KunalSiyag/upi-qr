@@ -1,46 +1,57 @@
 import React, { useState, useEffect, useId } from "react";
 import QRCode from "qrcode";
-
-interface DynamicLink {
-  id: string;
-  title: string;
-  destinationUrl: string;
-  createdAt: string;
-  scans: number;
-  lastScanned?: string;
-}
+import { getGlobalScanCount, syncLinkToCloud } from "../lib/dynamicQrCloud";
+import type { CloudLinkData } from "../lib/dynamicQrCloud";
 
 export function DynamicQrGenerator() {
-  const [links, setLinks] = useState<DynamicLink[]>([]);
-  const [title, setTitle] = useState("Store Offer / Payment Link");
+  const [links, setLinks] = useState<CloudLinkData[]>([]);
+  const [title, setTitle] = useState("Store Front QR / Table #1");
   const [destination, setDestination] = useState("https://www.proupiqr.in/");
-  const [activeLink, setActiveLink] = useState<DynamicLink | null>(null);
+  const [activeLink, setActiveLink] = useState<CloudLinkData | null>(null);
   const [qrUrl, setQrUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
   const titleId = useId();
   const destinationId = useId();
 
-  // Load links from localStorage on mount & listen for updates
-  const loadStorage = () => {
+  // Load saved links from localStorage on mount & fetch global cloud metrics
+  const loadLinksAndSync = async () => {
     try {
       const saved = localStorage.getItem("pro_upi_dynamic_links");
       if (saved) {
-        setLinks(JSON.parse(saved));
+        const parsed: CloudLinkData[] = JSON.parse(saved);
+        setLinks(parsed);
+        if (parsed.length > 0 && !activeLink) {
+          selectLink(parsed[0]);
+        }
+
+        // Refresh global scan counts from cloud for all links
+        setIsRefreshing(true);
+        const updated = await Promise.all(
+          parsed.map(async (link) => {
+            const cloudScans = await getGlobalScanCount(link.id);
+            return {
+              ...link,
+              scans: Math.max(link.scans || 0, cloudScans)
+            };
+          })
+        );
+        setLinks(updated);
+        localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
+        setIsRefreshing(false);
       }
     } catch (e) {
       console.error("Failed to load dynamic links", e);
+      setIsRefreshing(false);
     }
   };
 
   useEffect(() => {
-    loadStorage();
-    window.addEventListener("storage", loadStorage);
-    return () => window.removeEventListener("storage", loadStorage);
+    loadLinksAndSync();
   }, []);
 
-  // Save links to localStorage on change
-  const saveLinksToStorage = (updated: DynamicLink[]) => {
+  const saveLinksToStorage = (updated: CloudLinkData[]) => {
     setLinks(updated);
     try {
       localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
@@ -52,19 +63,21 @@ export function DynamicQrGenerator() {
   const createDynamicLink = () => {
     if (!destination.trim()) return;
     const id = Math.random().toString(36).substring(2, 8);
-    const newLink: DynamicLink = {
+    const newLink: CloudLinkData = {
       id,
       title: title.trim() || "Untitled Dynamic QR",
       destinationUrl: destination.trim(),
       createdAt: new Date().toLocaleDateString(),
-      scans: 0
+      scans: 0,
+      scansByDevice: { mobile: 0, desktop: 0 }
     };
     const updated = [newLink, ...links];
     saveLinksToStorage(updated);
+    syncLinkToCloud(newLink);
     selectLink(newLink);
   };
 
-  const selectLink = async (link: DynamicLink) => {
+  const selectLink = async (link: CloudLinkData) => {
     setActiveLink(link);
     const shortUrl = `${window.location.origin}/r/?id=${link.id}&url=${encodeURIComponent(link.destinationUrl)}`;
     try {
@@ -82,6 +95,8 @@ export function DynamicQrGenerator() {
   const updateDestination = (id: string, newDest: string) => {
     const updated = links.map((l) => (l.id === id ? { ...l, destinationUrl: newDest } : l));
     saveLinksToStorage(updated);
+    const target = updated.find((l) => l.id === id);
+    if (target) syncLinkToCloud(target);
     if (activeLink?.id === id) {
       const updatedActive = { ...activeLink, destinationUrl: newDest };
       setActiveLink(updatedActive);
@@ -98,18 +113,6 @@ export function DynamicQrGenerator() {
     }
   };
 
-  const simulateScan = (id: string) => {
-    const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    const updated = links.map((l) =>
-      l.id === id ? { ...l, scans: l.scans + 1, lastScanned: `Today at ${now}` } : l
-    );
-    saveLinksToStorage(updated);
-    const target = links.find((l) => l.id === id);
-    if (target) {
-      window.open(target.destinationUrl, "_blank");
-    }
-  };
-
   const copyShortUrl = () => {
     if (!activeLink) return;
     const shortUrl = `${window.location.origin}/r/?id=${activeLink.id}&url=${encodeURIComponent(activeLink.destinationUrl)}`;
@@ -123,25 +126,30 @@ export function DynamicQrGenerator() {
       {/* Create & Manage Panel */}
       <div className="lg:col-span-7 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-black text-forest">Create Dynamic Redirect QR</h2>
-          <p className="text-xs text-forest/70">
-            Dynamic QRs encode a short redirect link. You can change the target destination URL or UPI ID at any time without reprinting the QR code!
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-black text-forest">Create Dynamic QR Code</h2>
+            <span className="text-[10px] font-bold uppercase tracking-wider text-leaf bg-mint px-2.5 py-1 rounded-full border border-leaf/10">
+              Global Cloud Metrics Enabled
+            </span>
+          </div>
+          <p className="text-xs text-forest/70 leading-relaxed">
+            Create dynamic QR codes for your shop, invoices, or social media. Change the target destination URL or UPI ID at any time without reprinting physical QR stickers!
           </p>
 
           <div className="space-y-3">
             <div>
-              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">QR Label / Campaign Title</label>
+              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">QR Label / Campaign Name</label>
               <input
                 id={titleId}
                 type="text"
                 value={title}
                 onChange={(e) => setTitle(e.target.value)}
-                placeholder="e.g. Summer Promo Poster, Shop Table #4"
+                placeholder="e.g. Counter Standee, Table #2 Menu"
                 className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
               />
             </div>
             <div>
-              <label htmlFor={destinationId} className="block text-xs font-bold text-forest/75 mb-1">Target Destination URL or UPI Pay Link</label>
+              <label htmlFor={destinationId} className="block text-xs font-bold text-forest/75 mb-1">Target Destination URL or UPI Payment Link</label>
               <input
                 id={destinationId}
                 type="text"
@@ -162,15 +170,27 @@ export function DynamicQrGenerator() {
           </button>
         </div>
 
-        {/* Saved Links List with Live Scan Analytics */}
+        {/* Saved Links List & Real-time Global Metrics */}
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
-          <div className="flex items-center justify-between">
-            <h3 className="text-sm font-black text-forest uppercase tracking-wider">Your Dynamic QR Codes ({links.length})</h3>
-            <span className="text-[10px] font-bold text-leaf bg-mint px-2.5 py-1 rounded-full border border-leaf/10">Live Scan Analytics Active</span>
+          <div className="flex items-center justify-between border-b border-forest/10 pb-3">
+            <div>
+              <h3 className="text-sm font-black text-forest uppercase tracking-wider">Your Dynamic QR Campaigns ({links.length})</h3>
+              <p className="text-[11px] text-forest/60">Manage multiple QR codes with independent metrics tracking</p>
+            </div>
+            <button
+              type="button"
+              onClick={loadLinksAndSync}
+              disabled={isRefreshing}
+              className="text-xs font-bold text-leaf hover:underline flex items-center gap-1"
+            >
+              {isRefreshing ? "Syncing..." : "🔄 Refresh Cloud Metrics"}
+            </button>
           </div>
 
           {links.length === 0 ? (
-            <p className="text-xs text-forest/60 italic">No dynamic links created yet. Create one above to manage editable destinations.</p>
+            <div className="p-6 text-center text-xs text-forest/60 italic">
+              No dynamic QR codes generated yet. Create your first campaign above!
+            </div>
           ) : (
             <div className="space-y-3">
               {links.map((link) => (
@@ -181,13 +201,13 @@ export function DynamicQrGenerator() {
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <span className="font-bold text-xs text-forest">{link.title}</span>
-                      <span className="ml-2 font-mono text-[10px] bg-forest/10 text-forest px-2 py-0.5 rounded-full">ID: {link.id}</span>
-                    </div>
                     <div className="flex items-center gap-2">
+                      <span className="font-bold text-xs text-forest">{link.title}</span>
+                      <span className="font-mono text-[10px] bg-forest/10 text-forest px-2 py-0.5 rounded-full">ID: {link.id}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
                       <button type="button" onClick={() => selectLink(link)} className="text-xs font-bold text-leaf hover:underline">
-                        View QR
+                        View Stats & QR
                       </button>
                       <button type="button" onClick={() => deleteLink(link.id)} className="text-xs font-bold text-red-500 hover:underline">
                         Delete
@@ -195,23 +215,19 @@ export function DynamicQrGenerator() {
                     </div>
                   </div>
 
-                  {/* Scan Stats Banner */}
-                  <div className="flex items-center justify-between bg-white/80 p-2.5 rounded-xl border border-forest/10 text-xs">
-                    <div className="flex items-center gap-3">
-                      <span className="font-black text-leaf text-sm">📊 {link.scans} Scans</span>
-                      <span className="text-[11px] text-forest/60">{link.lastScanned ? `Last scan: ${link.lastScanned}` : "No scans recorded yet"}</span>
+                  {/* Real-time Metric Pill */}
+                  <div className="flex items-center justify-between bg-white/90 p-2.5 rounded-xl border border-forest/10 text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="inline-flex h-2 w-2 rounded-full bg-emerald-500 animate-ping" />
+                      <span className="font-black text-leaf text-sm">📊 {link.scans || 0} Global Scans</span>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => simulateScan(link.id)}
-                      className="px-2.5 py-1 rounded-lg bg-forest text-[11px] font-bold text-mint hover:bg-forest/90"
-                    >
-                      Test Scan ➔
-                    </button>
+                    <span className="text-[10px] font-semibold text-forest/60">
+                      {link.lastScanned ? link.lastScanned : `Created: ${link.createdAt}`}
+                    </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-forest/60 mb-0.5">Editable Destination URL</label>
+                    <label className="block text-[10px] font-bold text-forest/60 mb-0.5">Editable Target URL (Update Anytime)</label>
                     <input
                       type="text"
                       value={link.destinationUrl}
@@ -226,10 +242,10 @@ export function DynamicQrGenerator() {
         </div>
       </div>
 
-      {/* QR Output Panel & Detailed Analytics */}
+      {/* QR Output Panel & Deep Global Analytics */}
       <div className="lg:col-span-5 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg text-center space-y-4">
-          <h3 className="text-lg font-black text-forest">Dynamic QR & Analytics</h3>
+          <h3 className="text-lg font-black text-forest">Campaign Metrics & Preview</h3>
 
           {activeLink && qrUrl ? (
             <div className="space-y-4">
@@ -237,15 +253,23 @@ export function DynamicQrGenerator() {
                 <img src={qrUrl} alt="Dynamic QR" className="w-full h-full object-contain" />
               </div>
 
-              {/* Stats Card */}
-              <div className="rounded-2xl bg-mint/40 p-4 border border-leaf/10 grid grid-cols-2 gap-2 text-center">
-                <div>
-                  <div className="text-[10px] font-bold text-forest/60 uppercase">Total Scans</div>
-                  <div className="text-2xl font-black text-leaf">{activeLink.scans}</div>
+              {/* Detailed Metrics Grid */}
+              <div className="rounded-2xl bg-mint/40 p-4 border border-leaf/10 space-y-3">
+                <div className="text-xs font-bold uppercase tracking-wider text-forest/80">Real-time Global Analytics</div>
+                
+                <div className="grid grid-cols-2 gap-2 text-center">
+                  <div className="bg-white p-2.5 rounded-xl border border-forest/10">
+                    <div className="text-[10px] font-bold text-forest/60 uppercase">Total Scans</div>
+                    <div className="text-2xl font-black text-leaf">{activeLink.scans || 0}</div>
+                  </div>
+                  <div className="bg-white p-2.5 rounded-xl border border-forest/10">
+                    <div className="text-[10px] font-bold text-forest/60 uppercase">Created Date</div>
+                    <div className="text-xs font-bold text-forest mt-1">{activeLink.createdAt}</div>
+                  </div>
                 </div>
-                <div>
-                  <div className="text-[10px] font-bold text-forest/60 uppercase">Created On</div>
-                  <div className="text-xs font-bold text-forest mt-1.5">{activeLink.createdAt}</div>
+
+                <div className="text-[10px] text-forest/70 bg-white/70 p-2 rounded-xl border border-forest/10">
+                  🌐 Tracked globally across all mobile phones & QR scanners scanning <code className="font-mono text-leaf">/r/?id={activeLink.id}</code>
                 </div>
               </div>
 
@@ -275,7 +299,7 @@ export function DynamicQrGenerator() {
             </div>
           ) : (
             <div className="p-8 text-xs text-forest/60 italic">
-              Select or create a dynamic link to view analytics and download its QR code.
+              Select or create a dynamic QR code to view live metrics and download PNG.
             </div>
           )}
         </div>
