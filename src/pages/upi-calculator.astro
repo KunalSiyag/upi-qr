@@ -1,0 +1,140 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { UpiCalculator } from "../components/UpiCalculator";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Free UPI Transaction Fee & MDR Savings Calculator | Pro UPI QR";
+const description =
+  "Calculate how much money your shop or business saves by switching from 2% payment gateways to free UPI QR codes. Compare RuPay MDR, POS machine charges, and soundbox fees.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Free UPI MDR & Transaction Fee Savings Calculator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/upi-calculator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is UPI transaction MDR fee zero for merchants in India?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. Under Ministry of Finance and RBI mandates, standard P2M (Person-to-Merchant) UPI payments initiated via bank account transfers incur 0% Merchant Discount Rate (MDR) for small and large merchants."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the MDR fee for RuPay Credit Cards on UPI?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Transactions below ₹2,000 made via RuPay credit cards on UPI are completely fee-free (0% MDR). For transactions exceeding ₹2,000, standard MDR is capped at 0.90% to 1.50% depending on merchant turnover."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much money do payment gateways charge compared to UPI QR?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Standard payment gateways (Razorpay, Cashfree, Paytm PG) charge 2.0% + 18% GST (total 2.36%) on credit card and net banking transactions. Switching to direct UPI QR eliminates these fees."
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={[schema, faqSchema]}>
+  <main class="px-3 sm:px-4 py-8 sm:py-12 md:py-16 w-full min-w-0">
+    <div class="mx-auto max-w-6xl rounded-[2rem] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
+      {/* Breadcrumb Nav */}
+      <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
+        <a href="/" class="hover:underline">Home</a>
+        <span>/</span>
+        <span class="text-forest">UPI MDR Calculator</span>
+      </nav>
+
+      {/* Hero Header */}
+      <div class="max-w-3xl">
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-3.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.26em] text-leaf">
+          Merchant Savings Toolkit
+        </p>
+        <h1 class="mt-4 sm:mt-5 text-3xl font-black leading-[1.08] tracking-tight text-forest sm:text-5xl md:text-6xl">
+          UPI Transaction Fee & MDR Savings Calculator
+        </h1>
+        <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-forest/75">
+          See exactly how much revenue your store, Kirana shop, or freelancing business saves by offering zero-MDR UPI payment QR codes instead of paying 2.36% card gateway fees.
+        </p>
+      </div>
+
+      {/* Interactive Calculator Console */}
+      <div class="mt-8 sm:mt-12 w-full min-w-0">
+        <UpiCalculator client:load />
+      </div>
+
+      {/* Educational Guide */}
+      <section class="mt-16 sm:mt-24 border-t border-forest/10 pt-12 sm:pt-16 max-w-4xl">
+        <h2 class="text-2xl sm:text-3xl font-black text-forest tracking-tight">
+          Understanding UPI MDR Regulations in India
+        </h2>
+        <p class="mt-4 text-sm sm:text-base leading-relaxed text-forest/80">
+          The Merchant Discount Rate (MDR) is the fee charged by banks and payment processors to merchants for accepting digital payments. Here is how UPI compares against traditional card networks:
+        </p>
+
+        <div class="mt-8 overflow-x-auto rounded-2xl border border-forest/10 bg-white shadow-sm">
+          <table class="w-full text-left border-collapse text-xs min-w-[500px]">
+            <thead>
+              <tr class="border-b border-forest/10 bg-cream/30 text-forest font-bold">
+                <th class="p-4">Payment Method</th>
+                <th class="p-4">MDR Rate</th>
+                <th class="p-4">GST (18%)</th>
+                <th class="p-4">Fee on ₹10,000 Sale</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-forest/5 text-forest/80">
+              <tr class="bg-mint/10">
+                <td class="p-4 font-bold text-leaf">Direct UPI QR (Bank Account)</td>
+                <td class="p-4 font-bold text-leaf">0.00%</td>
+                <td class="p-4">₹0</td>
+                <td class="p-4 font-black text-leaf">₹0 (100% Free)</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-bold text-forest">RuPay Credit Card on UPI (&lt; ₹2,000)</td>
+                <td class="p-4">0.00%</td>
+                <td class="p-4">₹0</td>
+                <td class="p-4 font-bold">₹0</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-bold text-forest">Visa / MasterCard Credit Cards</td>
+                <td class="p-4">2.00%</td>
+                <td class="p-4">0.36%</td>
+                <td class="p-4 text-red-600 font-bold">₹236</td>
+              </tr>
+              <tr>
+                <td class="p-4 font-bold text-forest">Payment Gateway (Razorpay/Paytm)</td>
+                <td class="p-4">2.00%</td>
+                <td class="p-4">0.36%</td>
+                <td class="p-4 text-red-600 font-bold">₹236</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      {/* Related Links Hub */}
+      <div class="mt-16">
+        <InternalLinkHub currentPath="/upi-calculator/" />
+      </div>
+    </div>
+  </main>
+</BaseLayout>

@@ -18,6 +18,7 @@ const staticPages = [
   "invoice-generator",
   "qr-sticker-generator",
   "bulk-qr",
+  "upi-calculator",
   "dynamic-qr-generator",
   "developer",
   "privacy",
