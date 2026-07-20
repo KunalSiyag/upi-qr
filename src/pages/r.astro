@@ -31,10 +31,15 @@ const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.g
           const saved = localStorage.getItem('pro_upi_dynamic_links');
           if (saved) {
             const links = JSON.parse(saved);
-            const found = links.find(l => l.id === id);
-            if (found && found.destinationUrl) {
-              target = found.destinationUrl;
-            }
+            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const updated = links.map(l => {
+              if (l.id === id) {
+                if (l.destinationUrl) target = l.destinationUrl;
+                return { ...l, scans: (l.scans || 0) + 1, lastScanned: `Today at ${now}` };
+              }
+              return l;
+            });
+            localStorage.setItem('pro_upi_dynamic_links', JSON.stringify(updated));
           }
         } catch (e) {}
       }
@@ -45,7 +50,7 @@ const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.g
         if (displayEl) displayEl.textContent = target;
         if (linkEl) linkEl.href = target;
 
-        window.location.href = target;
+        setTimeout(() => { window.location.href = target; }, 600);
       }
     })();
   </script>
