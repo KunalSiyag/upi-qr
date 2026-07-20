@@ -1,23 +1,25 @@
 # Product Roadmap
 
-## V1
+## V1 (Core Platform)
 
-- Intent-first homepage around `UPI QR Generator`
-- Browser-side QR generation with download
-- App-specific landing pages
-- FAQ schema and sitemap
+- [x] Intent-first homepage around `UPI QR Generator`
+- [x] Browser-side QR generation with PNG/SVG download
+- [x] App-specific & Bank-specific landing pages (20+ banks and apps)
+- [x] FAQ JSON-LD schema, Breadcrumbs schema, and automated sitemap
 
-## V2
+## V2 (Customization & Poster Studio)
 
-- Poster templates for shops, restaurants, teachers, and temples
-- QR customization: colors, frames, labels, and logo support
-- Saved local drafts in browser storage
-- Shareable poster links
+- [x] Poster templates for shops, restaurants, teachers, and temples
+- [x] QR customization: colors, frames, labels, and logo support
+- [x] Saved local drafts in browser storage & history
+- [x] Shareable poster links & instant WhatsApp link creator
 
-## V3
+## V3 (Merchant Suite & Developer Ecosystem)
 
 - [x] Developer Embed Widget & Redirect API (Playground live at `/developer`)
-- Visual editor for multi-format payment materials
-- Language packs and regional SEO
-- Conversion-optimized donation and collection kits
-- Premium brand kits and print exports
+- [x] Visual editor for multi-format payment materials (A4 Posters, Offer Banners, Menu Cards)
+- [x] Language packs and regional SEO (English & Hindi pSEO hubs)
+- [x] Conversion-optimized donation and collection kits (`/donation-qr-generator`, `/temple-qr-generator`)
+- [x] Premium brand kits and print exports (A4 QR Sticker Sheets, Invoices, Visiting Cards)
+- [x] Comprehensive Merchant Utilities (GST Calculator, Margin Calculator, NPCI Error Codes, Bank UPI Limits)
+

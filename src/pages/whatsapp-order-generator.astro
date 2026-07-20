@@ -1,0 +1,48 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { WhatsappOrderGenerator } from "../components/WhatsappOrderGenerator";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "WhatsApp Business Order & Payment Link Creator | Pro UPI QR";
+const description = "Create pre-formatted WhatsApp Business order confirmation links with direct scan-to-pay UPI QR codes for e-commerce, Instagram shops, and local sellers.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "WhatsApp Order & Payment Link Creator",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/whatsapp-order-generator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          WhatsApp Business Utility
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">WhatsApp Order & Payment Link Creator</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Generate custom WhatsApp order confirmation messages with pre-calculated totals and zero-commission scan-to-pay UPI payment links.
+        </p>
+      </div>
+
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <WhatsappOrderGenerator client:load />
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

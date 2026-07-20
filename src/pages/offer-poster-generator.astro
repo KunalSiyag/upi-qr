@@ -1,0 +1,48 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { OfferPosterGenerator } from "../components/OfferPosterGenerator";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Shop Sale & Offer Poster Maker with UPI QR | Pro UPI QR";
+const description = "Create customized, printable shop sale banners, festival discount flyers, and offer posters with integrated payment UPI QR codes.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Shop Offer Poster Maker",
+  "applicationCategory": "BusinessApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/offer-poster-generator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          Printable Shop Banners & Posters
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">Shop Sale & Offer Poster Builder</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Design counter-ready promotional posters for store discounts, clearance sales, and festival offers with integrated UPI payment QR codes.
+        </p>
+      </div>
+
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <OfferPosterGenerator client:load />
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

@@ -1,0 +1,48 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { MarginCalculator } from "../components/MarginCalculator";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Retail Profit Margin & Markup Calculator | Pro UPI QR";
+const description = "Calculate profit margins, markup percentages, net profit post-GST, and generate scan-to-pay selling price UPI QR codes for retail and e-commerce stores.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Retail Profit Margin & Markup Calculator",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/margin-calculator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          Retail & E-Commerce Financial Tool
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">Retail Sales Profit Margin & Markup Calculator</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Analyze gross profit margins, markup percentages, and post-tax net profit. Instantly generate a scan-to-pay QR code for your selling price.
+        </p>
+      </div>
+
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <MarginCalculator client:load />
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

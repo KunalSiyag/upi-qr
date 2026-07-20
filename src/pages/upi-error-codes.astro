@@ -1,0 +1,56 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { UpiErrorCodeResolver } from "../components/UpiErrorCodeResolver";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "NPCI UPI Error Code Resolver & Refund Timelines | Pro UPI QR";
+const description = "Search and troubleshoot NPCI UPI error codes (U16, U30, U28, Z5, U14). Understand why transactions fail, check auto-refund timelines, and get instant resolution steps.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "What does UPI error code U16 mean?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Error U16 means your issuing or beneficiary bank server is temporarily down or undergoing scheduled maintenance. If money was deducted, it will be automatically refunded within 24 hours."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does UPI error code U30 mean?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Error U30 indicates you have exceeded your bank's daily transfer cap (usually ₹1,00,000) or maximum daily transaction limit (10-20 transactions per day)."
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          NPCI & Bank Protocol Reference
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">NPCI UPI Error Code Resolver</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Troubleshoot failed transactions, understand NPCI response codes, and verify RBI-mandated auto-refund timelines.
+        </p>
+      </div>
+
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <UpiErrorCodeResolver client:load />
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

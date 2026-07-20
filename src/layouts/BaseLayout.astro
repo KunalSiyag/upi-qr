@@ -133,6 +133,14 @@ if (normalizedPath !== "/") {
     {schema && (
       <script type="application/ld+json" set:html={JSON.stringify(schema)} />
     )}
+    <!-- Service Worker Registration for PWA Offline mode -->
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js').catch(() => {});
+        });
+      }
+    </script>
   </head>
   <body class="font-sans text-ink antialiased bg-[#fffdf6] min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
     <div class="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 pb-2 md:px-6 lg:px-8 pointer-events-none">

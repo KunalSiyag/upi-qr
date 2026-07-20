@@ -19,7 +19,16 @@ export type GeneratorSlug =
   | "kirana-qr-generator"
   | "cab-driver-qr-generator"
   | "freelance-qr-generator"
-  | "restaurant-qr-generator";
+  | "restaurant-qr-generator"
+  | "idfc-qr-generator"
+  | "idbi-qr-generator"
+  | "yes-bank-qr-generator"
+  | "rbl-qr-generator"
+  | "central-bank-qr-generator"
+  | "gym-qr-generator"
+  | "salon-qr-generator"
+  | "parking-qr-generator"
+  | "temple-qr-generator";
 
 export type PresetType =
   | "phonepe"
@@ -42,7 +51,16 @@ export type PresetType =
   | "kirana"
   | "cab"
   | "freelance"
-  | "restaurant";
+  | "restaurant"
+  | "idfc"
+  | "idbi"
+  | "yes"
+  | "rbl"
+  | "central"
+  | "gym"
+  | "salon"
+  | "parking"
+  | "temple";
 
 export interface GeneratorLink {
   slug: GeneratorSlug;
@@ -230,6 +248,78 @@ export const generators: GeneratorLink[] = [
     shortLabel: "Restaurant QR",
     description: "Build table tent payment QRs for cafes, restaurants, and cloud kitchens.",
     accent: "#f8b84e",
+  },
+  {
+    slug: "idfc-qr-generator",
+    presetType: "idfc",
+    label: "IDFC FIRST Bank QR Generator",
+    shortLabel: "IDFC FIRST QR",
+    description: "Create IDFC FIRST Bank compatible UPI payment posters and QR cards.",
+    accent: "#9c27b0",
+  },
+  {
+    slug: "idbi-qr-generator",
+    presetType: "idbi",
+    label: "IDBI Bank UPI QR Generator",
+    shortLabel: "IDBI QR",
+    description: "Generate IDBI Bank compatible UPI payment collection QRs.",
+    accent: "#00695c",
+  },
+  {
+    slug: "yes-bank-qr-generator",
+    presetType: "yes",
+    label: "Yes Bank UPI QR Generator",
+    shortLabel: "Yes Bank QR",
+    description: "Create Yes Bank compatible payment QR posters for merchants.",
+    accent: "#002b66",
+  },
+  {
+    slug: "rbl-qr-generator",
+    presetType: "rbl",
+    label: "RBL Bank UPI QR Generator",
+    shortLabel: "RBL QR",
+    description: "Generate RBL Bank compatible payment QR codes for checkout counters.",
+    accent: "#c62828",
+  },
+  {
+    slug: "central-bank-qr-generator",
+    presetType: "central",
+    label: "Central Bank UPI QR Generator",
+    shortLabel: "Central Bank QR",
+    description: "Build Central Bank of India compatible UPI payment posters.",
+    accent: "#1565c0",
+  },
+  {
+    slug: "gym-qr-generator",
+    presetType: "gym",
+    label: "Gym & Fitness UPI QR Generator",
+    shortLabel: "Gym QR",
+    description: "Create membership fee & trainer payment QRs for fitness studios.",
+    accent: "#e65100",
+  },
+  {
+    slug: "salon-qr-generator",
+    presetType: "salon",
+    label: "Salon & Spa UPI QR Generator",
+    shortLabel: "Salon QR",
+    description: "Generate beauty salon and spa billing payment QRs for front desks.",
+    accent: "#ad1457",
+  },
+  {
+    slug: "parking-qr-generator",
+    presetType: "parking",
+    label: "Parking Lot UPI QR Generator",
+    shortLabel: "Parking QR",
+    description: "Build rapid scan-to-pay parking fee posters for valet & vehicle lots.",
+    accent: "#2e7d32",
+  },
+  {
+    slug: "temple-qr-generator",
+    presetType: "temple",
+    label: "Temple & NGO Donation QR Generator",
+    shortLabel: "Temple QR",
+    description: "Generate zero-commission donation QRs for temples, trusts, and NGOs.",
+    accent: "#f57f17",
   },
 ];
 

@@ -199,6 +199,87 @@ export async function getStaticPaths() {
         presetType: "restaurant",
         intro: "Generate customized payment QR codes for restaurant tables, food stalls, and cloud kitchens."
       }
+    },
+    {
+      params: { slug: "idfc-qr-generator" },
+      props: {
+        title: "IDFC FIRST Bank UPI QR Generator",
+        headline: "Create an IDFC FIRST Bank compatible UPI QR code",
+        presetType: "idfc",
+        intro: "Generate IDFC FIRST Bank compatible payment QR cards and posters."
+      }
+    },
+    {
+      params: { slug: "idbi-qr-generator" },
+      props: {
+        title: "IDBI Bank UPI QR Generator",
+        headline: "Create an IDBI Bank compatible UPI QR code",
+        presetType: "idbi",
+        intro: "Build IDBI Bank compatible UPI collection QRs for merchants."
+      }
+    },
+    {
+      params: { slug: "yes-bank-qr-generator" },
+      props: {
+        title: "Yes Bank UPI QR Generator",
+        headline: "Create a Yes Bank compatible UPI QR code",
+        presetType: "yes",
+        intro: "Generate Yes Bank compatible UPI billing and payment QR codes."
+      }
+    },
+    {
+      params: { slug: "rbl-qr-generator" },
+      props: {
+        title: "RBL Bank UPI QR Generator",
+        headline: "Create an RBL Bank compatible UPI QR code",
+        presetType: "rbl",
+        intro: "Build RBL Bank compatible payment posters for retail checkouts."
+      }
+    },
+    {
+      params: { slug: "central-bank-qr-generator" },
+      props: {
+        title: "Central Bank UPI QR Generator",
+        headline: "Create a Central Bank of India compatible UPI QR code",
+        presetType: "central",
+        intro: "Generate Central Bank of India compatible collection QR codes."
+      }
+    },
+    {
+      params: { slug: "gym-qr-generator" },
+      props: {
+        title: "Gym & Fitness Studio UPI QR Generator",
+        headline: "Create a Payment QR Poster for Gyms & Fitness Trainers",
+        presetType: "gym",
+        intro: "Generate direct scan-to-pay membership fee QRs for fitness studios."
+      }
+    },
+    {
+      params: { slug: "salon-qr-generator" },
+      props: {
+        title: "Salon & Spa UPI QR Generator",
+        headline: "Create a Payment QR Poster for Salons & Beauty Parlors",
+        presetType: "salon",
+        intro: "Build front-desk payment QR posters for beauty parlors, spas, and salons."
+      }
+    },
+    {
+      params: { slug: "parking-qr-generator" },
+      props: {
+        title: "Parking Lot UPI QR Generator",
+        headline: "Create a Scan-to-Pay Parking Fee Poster",
+        presetType: "parking",
+        intro: "Generate rapid scan-to-pay fee posters for parking lots, valets, and vehicle stands."
+      }
+    },
+    {
+      params: { slug: "temple-qr-generator" },
+      props: {
+        title: "Temple & Trust Donation UPI QR Generator",
+        headline: "Create a Zero-Fee Donation QR Poster for Temples & NGOs",
+        presetType: "temple",
+        intro: "Set up commission-free donation posters for temples, religious trusts, and NGOs."
+      }
     }
   ];
 }
