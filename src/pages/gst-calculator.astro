@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GstCalculator } from "../components/GstCalculator";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "GST Calculator & Instant Payment QR Code Generator | Pro UPI QR";
+const description = "Free online GST calculator for India. Calculate 5%, 12%, 18%, 28% forward and reverse GST tax breakdowns and instantly generate a UPI payment QR code for the post-tax total.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "GST Calculator & Payment QR Generator",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/gst-calculator/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <!-- Header banner -->
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          GST Tax & Billing Tool
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">GST Calculator & Instant UPI Payment QR</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Calculate GST tax breakdowns for 5%, 12%, 18%, and 28% tax slabs. Easily add or remove GST from prices and generate a custom scan-to-pay QR code for your customers in seconds.
+        </p>
+      </div>
+
+      <!-- Calculator Component -->
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <GstCalculator client:load />
+      </div>
+
+      <!-- Informational FAQ Grid -->
+      <div class="grid gap-6 md:grid-cols-3">
+        <div class="rounded-3xl bg-mint/40 p-6 border border-leaf/10 space-y-2">
+          <h3 class="text-base font-black text-forest">Add GST (Exclusive)</h3>
+          <p class="text-xs text-forest/75 leading-relaxed">
+            Calculates tax added to your net cost price. Formula: Tax = Net Amount &times; (GST % / 100).
+          </p>
+        </div>
+        <div class="rounded-3xl bg-cream/60 p-6 border border-forest/10 space-y-2">
+          <h3 class="text-base font-black text-forest">Remove GST (Inclusive)</h3>
+          <p class="text-xs text-forest/75 leading-relaxed">
+            Extracts the pre-tax base price from a total selling price. Formula: Base = Total / (1 + GST % / 100).
+          </p>
+        </div>
+        <div class="rounded-3xl bg-[#f2e5cd]/60 p-6 border border-forest/10 space-y-2">
+          <h3 class="text-base font-black text-forest">CGST & SGST Split</h3>
+          <p class="text-xs text-forest/75 leading-relaxed">
+            For intra-state transactions within the same state, tax is split 50-50 into Central GST (CGST) and State GST (SGST).
+          </p>
+        </div>
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

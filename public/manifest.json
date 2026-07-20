@@ -1,0 +1,19 @@
+{
+  "name": "Pro UPI QR - Free Universal Payment QR & Merchant Suite",
+  "short_name": "Pro UPI QR",
+  "description": "Generate privacy-first UPI payment QR codes, GST invoices, bulk QR sheets, and merchant financial tools completely client-side in your browser.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fffdf6",
+  "theme_color": "#113b2c",
+  "orientation": "portrait-primary",
+  "categories": ["business", "finance", "utilities"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}

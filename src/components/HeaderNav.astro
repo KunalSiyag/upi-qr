@@ -1,0 +1,187 @@
+---
+interface Props {
+  isHindi?: boolean;
+  langLink: string;
+  langLabel: string;
+}
+
+const { isHindi = false, langLink, langLabel } = Astro.props;
+---
+
+<header class="relative flex items-center justify-between gap-4 rounded-full border border-white/80 bg-white/85 px-4 py-3 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.06)] pointer-events-auto transition-all">
+  <a href={isHindi ? "/hi/" : "/"} class="flex items-center gap-2 text-sm sm:text-lg font-black tracking-tight text-forest shrink-0 hover:opacity-90">
+    <span class="flex h-7 w-7 items-center justify-center rounded-lg bg-forest text-mint text-xs font-bold">QR</span>
+    <span>Pro UPI QR</span>
+  </a>
+
+  <!-- Desktop Navigation -->
+  <nav class="hidden md:flex items-center gap-1 text-xs md:text-sm font-semibold text-forest/80">
+    <!-- QR Generators Dropdown -->
+    <div class="relative group px-2 py-1">
+      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
+        <span>{isHindi ? "QR जनरेटर्स" : "QR Generators"}</span>
+        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-64">
+        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-1">
+          <a href={isHindi ? "/hi/" : "/"} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">{isHindi ? "UPI QR जनरेटर" : "UPI QR Generator"}</div>
+              <div class="text-[10px] text-forest/60">{isHindi ? "UPI ऐप्स के लिए स्टैंडर्ड QR" : "Standard QR for all UPI apps"}</div>
+            </div>
+          </a>
+          <a href="/universal-qr-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Universal QR Generator</div>
+              <div class="text-[10px] text-forest/60">URL, Text, WiFi, vCard & Contact</div>
+            </div>
+          </a>
+          <a href="/qr-sticker-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">A4 QR Sticker Sheets</div>
+              <div class="text-[10px] text-forest/60">Print 4, 6, or 12 counter stickers</div>
+            </div>
+          </a>
+          <a href="/bulk-qr/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Bulk CSV QR Generator</div>
+              <div class="text-[10px] text-forest/60">Batch generate QRs from Excel</div>
+            </div>
+          </a>
+          <a href="/dynamic-qr-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Dynamic QR & Link Shortener</div>
+              <div class="text-[10px] text-forest/60">Editable redirect QR links</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Merchant Tools Dropdown -->
+    <div class="relative group px-2 py-1">
+      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
+        <span>{isHindi ? "मर्चेंट टूल्स" : "Merchant Tools"}</span>
+        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-64">
+        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-1">
+          <a href="/gst-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">GST Tax Calculator</div>
+              <div class="text-[10px] text-forest/60">Tax breakdown + Instant Payment QR</div>
+            </div>
+          </a>
+          <a href="/upi-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">UPI Fee & MDR Savings</div>
+              <div class="text-[10px] text-forest/60">Calculate savings vs payment gateways</div>
+            </div>
+          </a>
+          <a href="/invoice-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">GST Invoice Builder</div>
+              <div class="text-[10px] text-forest/60">Create PDF invoices with payment QR</div>
+            </div>
+          </a>
+          <a href="/upi-limits/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Indian Bank UPI Limits</div>
+              <div class="text-[10px] text-forest/60">Daily transfer caps for 30+ banks</div>
+            </div>
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Guides & Blog -->
+    <a href="/blog/" class="px-2 py-1 hover:text-leaf transition-colors">{isHindi ? "गाइड" : "Guides"}</a>
+
+    <!-- Developers -->
+    <a href="/developer/" class="px-2 py-1 hover:text-leaf transition-colors">{isHindi ? "डेवलपर्स" : "Developers"}</a>
+  </nav>
+
+  <div class="flex items-center gap-2 sm:gap-3">
+    <!-- Language Switcher -->
+    <a href={langLink} class="rounded-full bg-forest/5 border border-forest/10 px-2.5 py-1 text-[11px] font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200 shrink-0">
+      {langLabel}
+    </a>
+
+    <!-- Mobile Menu Button -->
+    <button type="button" id="mobile-menu-btn" aria-label="Toggle navigation menu" class="md:hidden flex h-8 w-8 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+      </svg>
+    </button>
+  </div>
+
+  <!-- Mobile Dropdown Menu -->
+  <div id="mobile-menu" class="hidden absolute top-full left-0 right-0 mt-3 p-4 rounded-3xl border border-forest/10 bg-white/95 shadow-2xl backdrop-blur-xl md:hidden z-50 space-y-3">
+    <div>
+      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "QR जनरेटर्स" : "QR Code Generators"}</div>
+      <div class="grid grid-cols-2 gap-1 text-xs">
+        <a href={isHindi ? "/hi/" : "/"} class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">UPI QR</a>
+        <a href="/universal-qr-generator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">Universal QR</a>
+        <a href="/qr-sticker-generator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">A4 Stickers</a>
+        <a href="/bulk-qr/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">Bulk CSV QR</a>
+        <a href="/dynamic-qr-generator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">Dynamic QR</a>
+      </div>
+    </div>
+
+    <div class="border-t border-forest/10 pt-2">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "मर्चेंट टूल्स" : "Merchant Tools & Calculators"}</div>
+      <div class="grid grid-cols-2 gap-1 text-xs">
+        <a href="/gst-calculator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">GST Calculator</a>
+        <a href="/upi-calculator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">UPI MDR Fee</a>
+        <a href="/invoice-generator/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">GST Invoices</a>
+        <a href="/upi-limits/" class="p-2 rounded-lg hover:bg-mint text-forest font-semibold">Bank UPI Limits</a>
+      </div>
+    </div>
+
+    <div class="border-t border-forest/10 pt-2 flex justify-around text-xs font-bold text-forest">
+      <a href="/blog/" class="p-2 hover:text-leaf">Guides</a>
+      <a href="/developer/" class="p-2 hover:text-leaf">Developers</a>
+    </div>
+  </div>
+</header>
+
+<script>
+  const btn = document.getElementById('mobile-menu-btn');
+  const menu = document.getElementById('mobile-menu');
+  if (btn && menu) {
+    btn.addEventListener('click', () => {
+      menu.classList.toggle('hidden');
+    });
+  }
+</script>

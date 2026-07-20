@@ -1,0 +1,72 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { UpiLimitsChecker } from "../components/UpiLimitsChecker";
+import AffiliateProducts from "../components/AffiliateProducts.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "Indian Bank & App Daily UPI Limits Directory (2026) | Pro UPI QR";
+const description = "Complete list of daily transaction limits, single transfer caps, and maximum daily transaction limits across SBI, HDFC, ICICI, Axis, PNB, GPay, PhonePe, Paytm, BHIM and major Indian banks.";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Indian Bank UPI Daily Limits Checker",
+  "applicationCategory": "FinanceApplication",
+  "operatingSystem": "Any",
+  "url": "https://www.proupiqr.in/upi-limits/",
+  "description": description,
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "INR"
+  }
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-6xl space-y-8">
+      <!-- Header banner -->
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
+        <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+          NPCI & Bank Guidelines Reference
+        </div>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">Indian Bank & App UPI Daily Transfer Limits</h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
+          Per NPCI guidelines, standard UPI P2P transfer limits are capped at ₹1,00,000 per 24 hours. Specific banks and applications enforce additional hourly, per-transaction, or initial login limits.
+        </p>
+      </div>
+
+      <!-- Limits Checker Component -->
+      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <UpiLimitsChecker client:load />
+      </div>
+
+      <!-- Special Category Limits Info -->
+      <div class="rounded-[2rem] bg-cream/70 p-6 md:p-8 border border-forest/10 space-y-4">
+        <h3 class="text-xl font-black text-forest">NPCI Higher Limit Categories (up to ₹5,00,000 / day)</h3>
+        <p class="text-xs sm:text-sm text-forest/80 leading-relaxed">
+          NPCI permits increased daily transaction limits up to <strong>₹5,00,000</strong> for specific merchant VPAs in approved categories:
+        </p>
+        <div class="grid gap-4 sm:grid-cols-3 text-xs font-semibold text-forest">
+          <div class="p-4 rounded-2xl bg-white/80 border border-forest/10">
+            <span class="block font-black text-leaf text-base">Hospitals & Healthcare</span>
+            Medical billing, surgeries, and clinic payments.
+          </div>
+          <div class="p-4 rounded-2xl bg-white/80 border border-forest/10">
+            <span class="block font-black text-leaf text-base">Educational Institutions</span>
+            School, college, and university tuition fees.
+          </div>
+          <div class="p-4 rounded-2xl bg-white/80 border border-forest/10">
+            <span class="block font-black text-leaf text-base">Capital Markets & IPOs</span>
+            Stock broker funds and IPO subscriptions.
+          </div>
+        </div>
+      </div>
+
+      <AffiliateProducts />
+      <InternalLinkHub />
+    </div>
+  </main>
+</BaseLayout>

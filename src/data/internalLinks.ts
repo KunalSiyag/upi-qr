@@ -8,7 +8,18 @@ export type GeneratorSlug =
   | "amazon-pay-qr-generator"
   | "sbi-qr-generator"
   | "hdfc-qr-generator"
-  | "icici-qr-generator";
+  | "icici-qr-generator"
+  | "axis-qr-generator"
+  | "kotak-qr-generator"
+  | "pnb-qr-generator"
+  | "canara-qr-generator"
+  | "bob-qr-generator"
+  | "indusind-qr-generator"
+  | "union-qr-generator"
+  | "kirana-qr-generator"
+  | "cab-driver-qr-generator"
+  | "freelance-qr-generator"
+  | "restaurant-qr-generator";
 
 export type PresetType =
   | "phonepe"
@@ -20,7 +31,18 @@ export type PresetType =
   | "amazon"
   | "sbi"
   | "hdfc"
-  | "icici";
+  | "icici"
+  | "axis"
+  | "kotak"
+  | "pnb"
+  | "canara"
+  | "bob"
+  | "indusind"
+  | "union"
+  | "kirana"
+  | "cab"
+  | "freelance"
+  | "restaurant";
 
 export interface GeneratorLink {
   slug: GeneratorSlug;
@@ -120,6 +142,94 @@ export const generators: GeneratorLink[] = [
     shortLabel: "ICICI QR",
     description: "Generate ICICI Bank compatible UPI billing QR codes.",
     accent: "#f27220",
+  },
+  {
+    slug: "axis-qr-generator",
+    presetType: "axis",
+    label: "Axis Bank UPI QR Generator",
+    shortLabel: "Axis QR",
+    description: "Create Axis Bank compatible UPI payment posters and counter standees.",
+    accent: "#97144d",
+  },
+  {
+    slug: "kotak-qr-generator",
+    presetType: "kotak",
+    label: "Kotak Bank UPI QR Generator",
+    shortLabel: "Kotak QR",
+    description: "Generate Kotak Mahindra Bank compatible UPI payment QR codes.",
+    accent: "#ed1c24",
+  },
+  {
+    slug: "pnb-qr-generator",
+    presetType: "pnb",
+    label: "PNB UPI QR Generator",
+    shortLabel: "PNB QR",
+    description: "Create Punjab National Bank compatible UPI collection QRs for business.",
+    accent: "#a21d21",
+  },
+  {
+    slug: "canara-qr-generator",
+    presetType: "canara",
+    label: "Canara Bank UPI QR Generator",
+    shortLabel: "Canara QR",
+    description: "Generate Canara Bank compatible payment QR codes for local stores.",
+    accent: "#0073cb",
+  },
+  {
+    slug: "bob-qr-generator",
+    presetType: "bob",
+    label: "Bank of Baroda QR Generator",
+    shortLabel: "BOB QR",
+    description: "Build Bank of Baroda UPI payment posters and standee cards.",
+    accent: "#f26522",
+  },
+  {
+    slug: "indusind-qr-generator",
+    presetType: "indusind",
+    label: "IndusInd Bank QR Generator",
+    shortLabel: "IndusInd QR",
+    description: "Create IndusInd Bank compatible UPI payment QR codes.",
+    accent: "#8b181b",
+  },
+  {
+    slug: "union-qr-generator",
+    presetType: "union",
+    label: "Union Bank UPI QR Generator",
+    shortLabel: "Union Bank QR",
+    description: "Generate Union Bank of India UPI billing and collection QR codes.",
+    accent: "#004a8f",
+  },
+  {
+    slug: "kirana-qr-generator",
+    presetType: "kirana",
+    label: "Kirana Shop UPI QR Generator",
+    shortLabel: "Kirana QR",
+    description: "Generate counter-ready UPI QR posters for grocery stores and local shops.",
+    accent: "#287a57",
+  },
+  {
+    slug: "cab-driver-qr-generator",
+    presetType: "cab",
+    label: "Taxi & Auto UPI QR Generator",
+    shortLabel: "Taxi / Auto QR",
+    description: "Create scan-to-pay payment posters for cab drivers, auto rickshaws & transit.",
+    accent: "#113b2c",
+  },
+  {
+    slug: "freelance-qr-generator",
+    presetType: "freelance",
+    label: "Freelance Payment QR Generator",
+    shortLabel: "Freelance QR",
+    description: "Generate zero-fee payment QRs for client invoices and remote work billing.",
+    accent: "#4285f4",
+  },
+  {
+    slug: "restaurant-qr-generator",
+    presetType: "restaurant",
+    label: "Restaurant & Cafe QR Generator",
+    shortLabel: "Restaurant QR",
+    description: "Build table tent payment QRs for cafes, restaurants, and cloud kitchens.",
+    accent: "#f8b84e",
   },
 ];
 
