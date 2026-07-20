@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 
 export function OfferPosterGenerator() {
   const [theme, setTheme] = useState<"festive" | "clearance" | "cashback" | "minimal">("festive");
@@ -38,6 +36,7 @@ export function OfferPosterGenerator() {
     if (!posterRef.current) return;
     setIsExporting(true);
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -54,6 +53,8 @@ export function OfferPosterGenerator() {
     if (!posterRef.current) return;
     setIsExporting(true);
     try {
+      const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
       const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();

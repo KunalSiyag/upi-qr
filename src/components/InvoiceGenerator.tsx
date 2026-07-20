@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
@@ -99,6 +97,8 @@ export function InvoiceGenerator() {
     if (!invoiceRef.current) return;
     try {
       setDownloadPdfState("busy");
+      const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
       const el = invoiceRef.current;
       
       const clone = el.cloneNode(true) as HTMLDivElement;
@@ -180,6 +180,7 @@ export function InvoiceGenerator() {
     if (!invoiceRef.current) return;
     try {
       setDownloadPngState("busy");
+      const { toPng } = await import("html-to-image");
       const el = invoiceRef.current;
       
       const clone = el.cloneNode(true) as HTMLDivElement;

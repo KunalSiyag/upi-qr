@@ -1,7 +1,5 @@
 import { useState, useMemo } from "react";
 import QRCode from "qrcode";
-import JSZip from "jszip";
-import { jsPDF } from "jspdf";
 
 interface QrItem {
   id: string;
@@ -89,6 +87,8 @@ export function BulkQrGenerator() {
     setDownloadProgress("Generating QR images...");
 
     try {
+      const JSZipModule = await import("jszip");
+      const JSZip = JSZipModule.default;
       const zip = new JSZip();
 
       for (let i = 0; i < validItems.length; i++) {
@@ -141,6 +141,7 @@ export function BulkQrGenerator() {
     setDownloadProgress("Creating Batch PDF...");
 
     try {
+      const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF("p", "mm", "a4");
       let pageIndex = 0;
 

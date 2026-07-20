@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 
 interface MenuItem {
   name: string;
@@ -22,6 +20,17 @@ export function MenuQrGenerator() {
     { name: "Blueberry Muffin", price: "150", category: "Bites" }
   ]);
 
+  // Groq AI State
+  const [groqApiKey, setGroqApiKey] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("groq_api_key") || "";
+    }
+    return "";
+  });
+  const [rawMenuPrompt, setRawMenuPrompt] = useState("");
+  const [isAiGenerating, setIsAiGenerating] = useState(false);
+  const [aiError, setAiError] = useState("");
+
   const [qrUrl, setQrUrl] = useState("");
   const [isExporting, setIsExporting] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -30,6 +39,13 @@ export function MenuQrGenerator() {
   const taglineId = useId();
   const vpaId = useId();
   const footerNoteId = useId();
+  const groqKeyId = useId();
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("groq_api_key", groqApiKey);
+    }
+  }, [groqApiKey]);
 
   useEffect(() => {
     if (!vpa.trim()) return;
@@ -55,10 +71,85 @@ export function MenuQrGenerator() {
     setItems(copy);
   };
 
+  // Groq AI Parser Handler
+  const generateMenuWithGroq = async () => {
+    if (!rawMenuPrompt.trim()) {
+      setAiError("Please paste menu text or describe your restaurant/cafe items.");
+      return;
+    }
+
+    setIsAiGenerating(true);
+    setAiError("");
+
+    try {
+      const key = groqApiKey.trim();
+      if (!key) {
+        throw new Error("Please enter your Groq API Key to auto-extract menu items using Groq AI.");
+      }
+
+      const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${key}`
+        },
+        body: JSON.stringify({
+          model: "llama-3.3-70b-versatile",
+          messages: [
+            {
+              role: "system",
+              content: `You are an AI restaurant menu parser. Given unstructured menu text, raw OCR text, or a restaurant prompt, extract or create a clean menu structure in valid JSON only.
+Return ONLY a JSON object matching this schema:
+{
+  "storeName": "Store or Cafe Name",
+  "tagline": "Short tagline or cuisine description",
+  "items": [
+    { "name": "Item Name", "price": "Price in digits", "category": "Category name" }
+  ]
+}
+Do NOT wrap output in markdown codeblocks or extra text.`
+            },
+            {
+              role: "user",
+              content: rawMenuPrompt
+            }
+          ],
+          temperature: 0.2
+        })
+      });
+
+      if (!response.ok) {
+        const errJson = await response.json().catch(() => ({}));
+        throw new Error(errJson.error?.message || `Groq API request failed with status ${response.status}`);
+      }
+
+      const data = await response.json();
+      const contentStr = data.choices?.[0]?.message?.content || "";
+      const cleanedJsonStr = contentStr.replace(/```json/g, "").replace(/```/g, "").trim();
+
+      const parsed = JSON.parse(cleanedJsonStr);
+      if (parsed.storeName) setStoreName(parsed.storeName);
+      if (parsed.tagline) setTagline(parsed.tagline);
+      if (Array.isArray(parsed.items) && parsed.items.length > 0) {
+        setItems(parsed.items.map((it: any) => ({
+          name: String(it.name || "Item"),
+          price: String(it.price || "0"),
+          category: String(it.category || "General")
+        })));
+      }
+    } catch (err: any) {
+      console.error("Groq Menu Generation error:", err);
+      setAiError(err.message || "Failed to parse menu with Groq AI.");
+    } finally {
+      setIsAiGenerating(false);
+    }
+  };
+
   const downloadMenuPng = async () => {
     if (!menuRef.current) return;
     setIsExporting(true);
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
       const a = document.createElement("a");
       a.href = dataUrl;
@@ -75,6 +166,8 @@ export function MenuQrGenerator() {
     if (!menuRef.current) return;
     setIsExporting(true);
     try {
+      const { toPng } = await import("html-to-image");
+      const { jsPDF } = await import("jspdf");
       const dataUrl = await toPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
@@ -97,10 +190,70 @@ export function MenuQrGenerator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      {/* Input Controls */}
+      {/* Input Controls & AI Menu Builder */}
       <div className="lg:col-span-6 space-y-6">
+        {/* Groq AI Auto Menu Generator Box */}
+        <div className="rounded-3xl border border-leaf/30 bg-mint/30 p-6 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-black text-forest flex items-center gap-2">
+              ✨ Groq AI Auto-Menu Generator
+            </h3>
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-leaf/10 text-leaf px-2.5 py-0.5 rounded-full">
+              Llama 3.3 70B
+            </span>
+          </div>
+          <p className="text-xs text-forest/70">
+            Paste raw unformatted text, photo OCR output, or describe your menu (e.g. <i>"South Indian breakfast menu for Annapoorna Cafe"</i>) and let Groq AI build your structured catalog instantly!
+          </p>
+
+          <div className="space-y-3">
+            <div>
+              <label htmlFor={groqKeyId} className="block text-[11px] font-bold text-forest mb-1">
+                Groq API Key (saved locally in browser)
+              </label>
+              <input
+                id={groqKeyId}
+                type="password"
+                value={groqApiKey}
+                onChange={(e) => setGroqApiKey(e.target.value)}
+                placeholder="gsk_..."
+                className="w-full rounded-xl border border-forest/15 bg-white p-2.5 text-xs font-mono outline-none focus:border-leaf"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-bold text-forest mb-1">
+                Paste Menu Text or Describe Menu
+              </label>
+              <textarea
+                value={rawMenuPrompt}
+                onChange={(e) => setRawMenuPrompt(e.target.value)}
+                rows={3}
+                placeholder="e.g. Cold Coffee 150, Iced Latte 180, Cheese Garlic Bread 210, Margherita Pizza 340..."
+                className="w-full rounded-xl border border-forest/15 bg-white p-2.5 text-xs font-semibold outline-none focus:border-leaf"
+              />
+            </div>
+
+            {aiError && (
+              <p className="text-xs font-bold text-red-600 bg-red-50 p-2.5 rounded-xl border border-red-200">
+                ⚠️ {aiError}
+              </p>
+            )}
+
+            <button
+              type="button"
+              onClick={generateMenuWithGroq}
+              disabled={isAiGenerating}
+              className="w-full rounded-xl bg-forest py-2.5 text-xs font-black text-white hover:bg-leaf transition-all shadow-sm disabled:opacity-50"
+            >
+              {isAiGenerating ? "⚡ Parsing Menu with Groq AI..." : "✨ Auto-Generate Menu with Groq AI"}
+            </button>
+          </div>
+        </div>
+
+        {/* Manual Customizer Form */}
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-black text-forest">Customize Menu Catalog</h2>
+          <h2 className="text-xl font-black text-forest">Menu Customizer</h2>
 
           {/* Theme Selector */}
           <div className="space-y-1.5">

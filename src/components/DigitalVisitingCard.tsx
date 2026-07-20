@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 
 export function DigitalVisitingCard() {
   const [name, setName] = useState("Vikram Sharma");
@@ -53,11 +51,44 @@ END:VCARD`;
     a.click();
   };
 
+  const createClonedCardForExport = async () => {
+    if (!cardRef.current) return null;
+    const { toPng } = await import("html-to-image");
+
+    const clone = cardRef.current.cloneNode(true) as HTMLDivElement;
+    clone.style.position = "fixed";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    clone.style.zIndex = "-9999";
+    clone.style.opacity = "0";
+    clone.style.pointerEvents = "none";
+    clone.style.width = "700px";
+    clone.style.height = "400px";
+    clone.style.maxWidth = "700px";
+    clone.style.maxHeight = "400px";
+    clone.style.borderRadius = "0";
+    clone.style.boxShadow = "none";
+    clone.style.margin = "0";
+
+    document.body.appendChild(clone);
+    await new Promise((res) => setTimeout(res, 200));
+
+    const dataUrl = await toPng(clone, {
+      pixelRatio: 3,
+      cacheBust: true,
+      width: 700,
+      height: 400
+    });
+
+    document.body.removeChild(clone);
+    return dataUrl;
+  };
+
   const downloadCardPng = async () => {
-    if (!cardRef.current) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
+      const dataUrl = await createClonedCardForExport();
+      if (!dataUrl) return;
       const a = document.createElement("a");
       a.href = dataUrl;
       a.download = `${name.toLowerCase().replace(/\s+/g, "-")}-business-card.png`;
@@ -70,11 +101,12 @@ END:VCARD`;
   };
 
   const downloadCardPdf = async () => {
-    if (!cardRef.current) return;
     setIsExporting(true);
     try {
-      const dataUrl = await toPng(cardRef.current, { pixelRatio: 3, cacheBust: true });
-      const pdf = new jsPDF("l", "mm", [89, 51]); // Standard 3.5" x 2" business card dimensions
+      const dataUrl = await createClonedCardForExport();
+      if (!dataUrl) return;
+      const { jsPDF } = await import("jspdf");
+      const pdf = new jsPDF({ orientation: "l", unit: "mm", format: [89, 51] });
       pdf.addImage(dataUrl, "PNG", 0, 0, 89, 51);
       pdf.save(`${name.toLowerCase().replace(/\s+/g, "-")}-business-card.pdf`);
     } catch (e) {
@@ -99,16 +131,16 @@ END:VCARD`;
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
           <h2 className="text-xl font-black text-forest">Customize Business Card</h2>
 
-          {/* Theme Picker */}
-          <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-forest/75">Select Card Theme</label>
+          {/* Theme Selector */}
+          <div className="space-y-2">
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest/75">Select Card Theme</label>
             <div className="grid grid-cols-5 gap-2">
               {[
                 { id: "forest", label: "Forest" },
                 { id: "gold", label: "Gold" },
                 { id: "navy", label: "Navy" },
                 { id: "crimson", label: "Crimson" },
-                { id: "minimal", label: "Light" }
+                { id: "minimal", label: "Minimal" }
               ].map((t) => (
                 <button
                   key={t.id}
@@ -124,93 +156,154 @@ END:VCARD`;
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label htmlFor={nameId} className="block text-xs font-bold text-forest/75 mb-1">Full Name</label>
-              <input id={nameId} type="text" value={name} onChange={(e) => setName(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-bold text-forest outline-none" />
+              <input
+                id={nameId}
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-bold text-forest outline-none focus:border-leaf"
+              />
             </div>
             <div>
-              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">Job Title / Designation</label>
-              <input id={titleId} type="text" value={title} onChange={(e) => setTitle(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-semibold text-forest outline-none" />
+              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">Job Title</label>
+              <input
+                id={titleId}
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={companyId} className="block text-xs font-bold text-forest/75 mb-1">Company / Business Name</label>
-              <input id={companyId} type="text" value={company} onChange={(e) => setCompany(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-semibold text-forest outline-none" />
+              <label htmlFor={companyId} className="block text-xs font-bold text-forest/75 mb-1">Company / Studio</label>
+              <input
+                id={companyId}
+                type="text"
+                value={company}
+                onChange={(e) => setCompany(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
             </div>
             <div>
-              <label htmlFor={taglineId} className="block text-xs font-bold text-forest/75 mb-1">Business Tagline / Subtitle</label>
-              <input id={taglineId} type="text" value={tagline} onChange={(e) => setTagline(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-semibold text-forest outline-none" />
+              <label htmlFor={taglineId} className="block text-xs font-bold text-forest/75 mb-1">Tagline</label>
+              <input
+                id={taglineId}
+                type="text"
+                value={tagline}
+                onChange={(e) => setTagline(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
             </div>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid grid-cols-3 gap-3">
             <div>
-              <label htmlFor={phoneId} className="block text-xs font-bold text-forest/75 mb-1">Phone Number</label>
-              <input id={phoneId} type="text" value={phone} onChange={(e) => setPhone(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-semibold text-forest outline-none" />
+              <label htmlFor={phoneId} className="block text-xs font-bold text-forest/75 mb-1">Phone</label>
+              <input
+                id={phoneId}
+                type="text"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
             </div>
             <div>
-              <label htmlFor={emailId} className="block text-xs font-bold text-forest/75 mb-1">Email Address</label>
-              <input id={emailId} type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-semibold text-forest outline-none" />
+              <label htmlFor={emailId} className="block text-xs font-bold text-forest/75 mb-1">Email</label>
+              <input
+                id={emailId}
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
+            </div>
+            <div>
+              <label htmlFor={vpaId} className="block text-xs font-bold text-forest/75 mb-1">UPI VPA</label>
+              <input
+                id={vpaId}
+                type="text"
+                value={vpa}
+                onChange={(e) => setVpa(e.target.value)}
+                className="w-full rounded-xl border border-forest/15 p-2.5 text-xs font-semibold text-forest outline-none focus:border-leaf"
+              />
             </div>
           </div>
 
-          <div>
-            <label htmlFor={vpaId} className="block text-xs font-bold text-forest/75 mb-1">UPI ID (VPA) for Direct Payments</label>
-            <input id={vpaId} type="text" value={vpa} onChange={(e) => setVpa(e.target.value)} className="w-full rounded-xl border border-forest/15 p-2 text-xs font-bold text-forest outline-none" />
-          </div>
-
-          {/* Action Buttons: PNG, PDF & VCF Downloads */}
-          <div className="grid grid-cols-3 gap-2 pt-3 border-t border-forest/10">
-            <button type="button" onClick={downloadCardPng} disabled={isExporting} className="rounded-xl bg-forest py-2.5 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-sm">
-              🖼️ Card PNG
+          {/* Action Export Triggers */}
+          <div className="flex flex-wrap gap-2 pt-2">
+            <button
+              type="button"
+              onClick={downloadCardPng}
+              disabled={isExporting}
+              className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md disabled:opacity-50"
+            >
+              🖼️ Download Card PNG
             </button>
-            <button type="button" onClick={downloadCardPdf} disabled={isExporting} className="rounded-xl bg-mint border border-leaf/20 py-2.5 text-xs font-bold text-forest hover:bg-mint/80 transition-colors">
-              📄 Card PDF
+            <button
+              type="button"
+              onClick={downloadCardPdf}
+              disabled={isExporting}
+              className="flex-1 rounded-xl bg-mint border border-leaf/20 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors disabled:opacity-50"
+            >
+              📄 Download Card PDF
             </button>
-            <button type="button" onClick={downloadVcf} className="rounded-xl bg-slate-100 border border-slate-200 py-2.5 text-xs font-bold text-slate-800 hover:bg-slate-200 transition-colors">
-              📇 .VCF Contact
+            <button
+              type="button"
+              onClick={downloadVcf}
+              className="rounded-xl border border-forest/20 bg-cream py-3 px-4 text-xs font-bold text-forest hover:bg-white transition-colors"
+            >
+              📇 Export .VCF
             </button>
           </div>
         </div>
       </div>
 
-      {/* Live Business Card Preview */}
+      {/* Card Live Preview */}
       <div className="lg:col-span-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg space-y-4">
-          <div className="text-xs font-bold uppercase tracking-wider text-forest/75 text-center">Live 3.5" x 2" Card Preview</div>
+          <div className="text-xs font-bold uppercase tracking-wider text-forest/75 text-center">Standard 3.5" x 2" Live Preview</div>
 
           <div
             ref={cardRef}
-            className={`mx-auto max-w-sm rounded-3xl p-6 space-y-4 shadow-2xl relative overflow-hidden border ${themeStyles[theme]}`}
+            className={`mx-auto w-full max-w-md aspect-[1.75/1] rounded-3xl p-6 flex flex-col justify-between shadow-2xl border ${themeStyles[theme]} transition-all relative overflow-hidden`}
           >
-            <div className="flex justify-between items-start">
-              <div>
-                <h3 className="text-xl font-black">{name}</h3>
-                <p className="text-xs font-semibold opacity-90">{title}</p>
-                <p className="text-[11px] font-bold uppercase tracking-wider mt-1 opacity-80">{company}</p>
-                <p className="text-[10px] italic opacity-70">{tagline}</p>
+            {/* Header Content */}
+            <div className="flex justify-between items-start gap-4">
+              <div className="space-y-1 min-w-0">
+                <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 block truncate">{company}</span>
+                <h3 className="text-xl font-black tracking-tight truncate">{name}</h3>
+                <p className="text-xs font-medium opacity-80 truncate">{title}</p>
+                <p className="text-[10px] opacity-60 truncate">{tagline}</p>
               </div>
-              {upiQrUrl && (
-                <div className="p-1.5 bg-white rounded-xl shadow-md w-20 h-20 flex flex-col items-center justify-center">
-                  <img src={upiQrUrl} alt="UPI QR" className="w-full h-full object-contain" />
-                  <span className="text-[7px] font-black text-slate-900 uppercase tracking-tighter">Scan & Pay</span>
+
+              {/* vCard Save QR */}
+              {vcardQrUrl && (
+                <div className="bg-white p-1.5 rounded-xl shadow-md shrink-0 text-center">
+                  <img src={vcardQrUrl} alt="Save Contact QR" className="w-16 h-16 object-contain" />
+                  <span className="text-[8px] font-black text-slate-800 uppercase block tracking-tighter mt-0.5">Save Contact</span>
                 </div>
               )}
             </div>
 
-            <div className="border-t border-current/20 pt-3 flex justify-between items-end text-[10px] font-mono opacity-90">
-              <div className="space-y-0.5">
-                <div>📞 {phone}</div>
-                <div>✉️ {email}</div>
-                <div>💳 {vpa}</div>
+            {/* Footer Contact + UPI Pay QR */}
+            <div className="flex justify-between items-end border-t border-current/15 pt-3 gap-4">
+              <div className="space-y-0.5 text-xs font-medium opacity-90 truncate">
+                <p className="truncate">📞 {phone}</p>
+                <p className="truncate">✉️ {email}</p>
+                <p className="truncate font-mono text-[10px]">💳 {vpa}</p>
               </div>
-              {vcardQrUrl && (
-                <div className="p-1 bg-white rounded-lg w-12 h-12 flex flex-col items-center justify-center">
-                  <img src={vcardQrUrl} alt="vCard QR" className="w-full h-full object-contain" />
-                  <span className="text-[6px] font-bold text-slate-900 uppercase">Save Contact</span>
+
+              {/* UPI Pay QR */}
+              {upiQrUrl && (
+                <div className="bg-white p-1.5 rounded-xl shadow-md shrink-0 text-center">
+                  <img src={upiQrUrl} alt="UPI Pay QR" className="w-14 h-14 object-contain" />
+                  <span className="text-[8px] font-black text-forest uppercase block tracking-tighter mt-0.5">Scan to Pay</span>
                 </div>
               )}
             </div>
