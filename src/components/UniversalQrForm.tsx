@@ -518,9 +518,10 @@ export function UniversalQrForm() {
           </div>
 
           {/* Actions */}
-          <div className="mt-5 flex flex-wrap gap-3">
-            <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white disabled:opacity-50">Download PNG</button>
-            <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold">Download Card</button>
+          <div className="mt-5 flex flex-wrap gap-3 items-center">
+            <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-leaf transition disabled:opacity-50">Download PNG</button>
+            <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
+            <a href="/qr-sticker-generator/" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">🖨️ A4 Sticker Sheet</a>
             <button onClick={copyPayload} disabled={!isValid} className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-bold">Copy content</button>
             <button onClick={reset} className="ml-auto text-sm text-forest/70 hover:text-forest">Reset</button>
           </div>

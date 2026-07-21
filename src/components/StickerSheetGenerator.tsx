@@ -10,16 +10,21 @@ const presetLogos: Record<string, string> = {
   bhim: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#ffffff" stroke="#e5e7eb" stroke-width="2" /><path d="M25 25 L60 85 L25 85 Z" fill="#f05a28" /><path d="M95 95 L60 35 L95 35 Z" fill="#00a651" /></svg>`)}`,
   whatsapp: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#25D366" /><path d="M50.4 22c-14.8 0-26.8 12-26.8 26.8 0 5.1 1.4 9.8 3.8 13.9L24 75.8l13.5-3.5c3.9 2.1 8.3 3.3 12.9 3.3 14.8 0 26.8-12 26.8-26.8C77.2 34 65.2 22 50.4 22zm11.7 38.6c-.5 1.4-2.8 2.6-3.8 2.8-.9.2-2.1.3-6 .9-5.1-.8-9.1-3.6-12.1-7.7-1.4-2-2.3-4.3-2.7-6.8-.7-4.2.9-6 1.9-7 .6-.6 1.3-.8 1.9-.8h1.2c.4 0 .9.1 1.2 1 .5 1.2 1.6 3.9 1.7 4.2.1.3.1.6-.1.9-.2.3-.4.6-.7.9-.3.3-.6.7-.9.9-.3.3-.1.6.1.9.9 1.5 2.1 2.9 3.7 4.1 1.5 1.1 3.2 1.9 5.1 2.3.4.1.7 0 .9-.2.6-.7 1.4-1.8 1.9-2.5.3-.4.7-.3 1.1-.1.4.1 2.7 1.3 3.2 1.5.5.2.8.4.9.5.1.2.1.9-.2 1.7z" fill="white"/></svg>`)}`,
   amazon: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#ff9900" /><text x="50%" y="62%" font-family="sans-serif" font-weight="900" font-size="36" fill="#ffffff" text-anchor="middle">a</text><path d="M30 68 Q50 78 70 68" fill="none" stroke="#ffffff" stroke-width="6" stroke-linecap="round" /></svg>`)}`,
-  sbi: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#00a2e8" /><circle cx="50" cy="50" r="28" fill="none" stroke="#ffffff" stroke-width="12" /><rect x="44" y="65" width="12" height="20" fill="#ffffff" /></svg>`)}`,
-  hdfc: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#1c3f94" /><rect x="24" y="24" width="52" height="52" fill="none" stroke="#ffffff" stroke-width="10" /><rect x="42" y="42" width="16" height="16" fill="#e41a22" /></svg>`)}`,
-  icici: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#f27220" /><circle cx="50" cy="50" r="26" fill="none" stroke="#ffffff" stroke-width="8" /><path d="M50 24 C36 24 24 36 24 50" fill="none" stroke="#1c3f94" stroke-width="8" stroke-linecap="round" /><text x="50" y="58" font-family="sans-serif" font-weight="900" font-size="24" fill="#ffffff" text-anchor="middle">i</text></svg>`)}`,
-  axis: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#97144d" /><path d="M50 22 L78 78 H22 Z" fill="#ffffff" /><path d="M50 42 L65 78 H35 Z" fill="#97144d" /></svg>`)}`
+  sbi: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#0072bb" /><circle cx="50" cy="44" r="26" fill="#ffffff" /><circle cx="50" cy="44" r="10" fill="#0072bb" /><rect x="46" y="44" width="8" height="26" fill="#0072bb" /><text x="50" y="90" font-family="sans-serif" font-weight="900" font-size="16" fill="#ffffff" text-anchor="middle">SBI</text></svg>`)}`,
+  hdfc: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#003366" /><rect x="18" y="16" width="64" height="64" fill="#ffffff" rx="4" /><rect x="35" y="16" width="30" height="64" fill="#003366" /><rect x="18" y="33" width="64" height="30" fill="#003366" /><rect x="36" y="34" width="28" height="28" fill="#e41a22" /><text x="50" y="92" font-family="sans-serif" font-weight="900" font-size="12" fill="#ffffff" text-anchor="middle">HDFC BANK</text></svg>`)}`,
+  icici: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#f37021" /><rect x="12" y="24" width="76" height="52" rx="10" fill="#ffffff" /><path d="M24 64 L32 36 H40 L32 64 Z" fill="#f37021" /><circle cx="39" cy="40" r="4.5" fill="#002e6e" /><path d="M33 64 L40 47 H47 L40 64 Z" fill="#002e6e" /><text x="64" y="58" font-family="sans-serif" font-weight="900" font-size="18" fill="#002e6e" text-anchor="middle">iCICI</text></svg>`)}`,
+  axis: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#97144d" /><path d="M50 20 L78 74 H22 Z" fill="#ffffff" /><path d="M50 40 L65 74 H35 Z" fill="#97144d" /><text x="50" y="92" font-family="sans-serif" font-weight="900" font-size="13" fill="#ffffff" text-anchor="middle">AXIS BANK</text></svg>`)}`
 };
 
 export function StickerSheetGenerator() {
+  const [qrContentType, setQrContentType] = useState<"upi" | "url" | "text" | "wifi">("upi");
   const [payee, setPayee] = useState("Sharma General Store");
   const [upiId, setUpiId] = useState("sharmastore@upi");
   const [amount, setAmount] = useState("");
+  const [urlValue, setUrlValue] = useState("https://www.proupiqr.in");
+  const [textValue, setTextValue] = useState("Scan for store info");
+  const [wifiSsid, setWifiSsid] = useState("Store_Guest_WiFi");
+  const [wifiPass, setWifiPass] = useState("welcome123");
   const [layout, setLayout] = useState<LayoutGrid>("6-grid");
   const [logo, setLogo] = useState<keyof typeof presetLogos | "none">("phonepe");
   const [accentColor, setAccentColor] = useState("#113b2c");
@@ -32,15 +37,30 @@ export function StickerSheetGenerator() {
   const upiIdId = useId();
   const amountId = useId();
 
-  const rawUpiLink = `upi://pay?pa=${encodeURIComponent(upiId.trim() || "payee@upi")}&pn=${encodeURIComponent(payee.trim() || "Merchant")}${
-    amount ? `&am=${encodeURIComponent(amount)}` : ""
-  }&cu=INR`;
+  const rawQrPayload = useMemo(() => {
+    if (qrContentType === "url") {
+      let u = urlValue.trim();
+      if (u && !u.startsWith("http://") && !u.startsWith("https://")) {
+        u = "https://" + u;
+      }
+      return u || "https://www.proupiqr.in";
+    }
+    if (qrContentType === "text") {
+      return textValue.trim() || "Pro UPI QR";
+    }
+    if (qrContentType === "wifi") {
+      return `WIFI:S:${wifiSsid.trim() || "GuestWiFi"};T:WPA;P:${wifiPass.trim()};;`;
+    }
+    return `upi://pay?pa=${encodeURIComponent(upiId.trim() || "payee@upi")}&pn=${encodeURIComponent(payee.trim() || "Merchant")}${
+      amount ? `&am=${encodeURIComponent(amount)}` : ""
+    }&cu=INR`;
+  }, [qrContentType, urlValue, textValue, wifiSsid, wifiPass, upiId, payee, amount]);
 
   useEffect(() => {
     async function buildQr() {
       try {
         const canvas = document.createElement("canvas");
-        await QRCode.toCanvas(canvas, rawUpiLink, {
+        await QRCode.toCanvas(canvas, rawQrPayload, {
           width: 400,
           margin: 1,
           errorCorrectionLevel: "H",
@@ -80,7 +100,7 @@ export function StickerSheetGenerator() {
       }
     }
     void buildQr();
-  }, [rawUpiLink, payee, upiId, logo, accentColor]);
+  }, [rawQrPayload, logo, accentColor]);
 
   const countMap = {
     "4-grid": 4,
@@ -143,7 +163,21 @@ export function StickerSheetGenerator() {
 
         <form className="mt-6 space-y-4">
           <div className="grid gap-1 min-w-0">
-            <label htmlFor={payeeId} className="text-xs font-bold text-forest">Merchant / Shop Name</label>
+            <span className="text-xs font-bold text-forest">QR Data Type</span>
+            <select
+              value={qrContentType}
+              onChange={(e) => setQrContentType(e.target.value as any)}
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf"
+            >
+              <option value="upi">💳 UPI Payment QR</option>
+              <option value="url">🔗 Website / Link QR</option>
+              <option value="text">📝 Plain Text / Note QR</option>
+              <option value="wifi">📶 WiFi Network QR</option>
+            </select>
+          </div>
+
+          <div className="grid gap-1 min-w-0">
+            <label htmlFor={payeeId} className="text-xs font-bold text-forest">Sticker Title / Shop Name</label>
             <input
               id={payeeId}
               type="text"
@@ -154,40 +188,93 @@ export function StickerSheetGenerator() {
             />
           </div>
 
-          <div className="grid gap-1 min-w-0">
-            <label htmlFor={upiIdId} className="text-xs font-bold text-forest">UPI VPA ID</label>
-            <input
-              id={upiIdId}
-              type="text"
-              value={upiId}
-              onChange={(e) => setUpiId(e.target.value)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
-              placeholder="e.g. sharmastore@upi"
-            />
-          </div>
+          {qrContentType === "upi" && (
+            <>
+              <div className="grid gap-1 min-w-0">
+                <label htmlFor={upiIdId} className="text-xs font-bold text-forest">UPI VPA ID</label>
+                <input
+                  id={upiIdId}
+                  type="text"
+                  value={upiId}
+                  onChange={(e) => setUpiId(e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
+                  placeholder="e.g. sharmastore@upi"
+                />
+              </div>
 
-          <div className="grid gap-3 grid-cols-2 min-w-0">
+              <div className="grid gap-3 grid-cols-2 min-w-0">
+                <div className="grid gap-1 min-w-0">
+                  <label htmlFor={amountId} className="text-xs font-bold text-forest">Fixed Amount (Optional ₹)</label>
+                  <input
+                    id={amountId}
+                    type="number"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                    placeholder="Open amount"
+                  />
+                </div>
+                <div className="grid gap-1 min-w-0">
+                  <label className="text-xs font-bold text-forest">QR Dark Color</label>
+                  <input
+                    type="color"
+                    value={accentColor}
+                    onChange={(e) => setAccentColor(e.target.value)}
+                    className="w-full h-[38px] rounded-xl border border-forest/10 bg-cream/30 p-1 cursor-pointer"
+                  />
+                </div>
+              </div>
+            </>
+          )}
+
+          {qrContentType === "url" && (
             <div className="grid gap-1 min-w-0">
-              <label htmlFor={amountId} className="text-xs font-bold text-forest">Fixed Amount (Optional ₹)</label>
+              <label className="text-xs font-bold text-forest">Target Website URL</label>
               <input
-                id={amountId}
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                type="text"
+                value={urlValue}
+                onChange={(e) => setUrlValue(e.target.value)}
+                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
+                placeholder="https://example.com"
+              />
+            </div>
+          )}
+
+          {qrContentType === "text" && (
+            <div className="grid gap-1 min-w-0">
+              <label className="text-xs font-bold text-forest">QR Text Content</label>
+              <textarea
+                value={textValue}
+                onChange={(e) => setTextValue(e.target.value)}
+                rows={2}
                 className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
-                placeholder="Open amount"
+                placeholder="Enter text..."
               />
             </div>
-            <div className="grid gap-1 min-w-0">
-              <label className="text-xs font-bold text-forest">QR Dark Color</label>
-              <input
-                type="color"
-                value={accentColor}
-                onChange={(e) => setAccentColor(e.target.value)}
-                className="w-full h-[38px] rounded-xl border border-forest/10 bg-cream/30 p-1 cursor-pointer"
-              />
+          )}
+
+          {qrContentType === "wifi" && (
+            <div className="grid gap-2 min-w-0 sm:grid-cols-2">
+              <div className="grid gap-1 min-w-0">
+                <label className="text-xs font-bold text-forest">WiFi Network Name (SSID)</label>
+                <input
+                  type="text"
+                  value={wifiSsid}
+                  onChange={(e) => setWifiSsid(e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                />
+              </div>
+              <div className="grid gap-1 min-w-0">
+                <label className="text-xs font-bold text-forest">WiFi Password</label>
+                <input
+                  type="password"
+                  value={wifiPass}
+                  onChange={(e) => setWifiPass(e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                />
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="grid gap-1 min-w-0">
             <span className="text-xs font-bold text-forest">Sticker Grid Layout</span>

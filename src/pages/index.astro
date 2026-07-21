@@ -203,12 +203,14 @@ const featuredGuides = getFeaturedGuides(6);
             <div class="mt-8 flex flex-wrap gap-3">
               <a
                 href="#generator"
+                id="btn-create-qr"
                 class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
               >
                 Create your QR now
               </a>
               <a
                 href="#templates"
+                id="btn-see-poster"
                 class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white"
               >
                 See poster ideas
@@ -751,6 +753,35 @@ const featuredGuides = getFeaturedGuides(6);
     window.addEventListener('resize', updateCardPositions);
   }
 
+  function setupSmoothScroll() {
+    const btnCreate = document.getElementById('btn-create-qr');
+    const btnSeePoster = document.getElementById('btn-see-poster');
+    
+    if (btnCreate) {
+      btnCreate.addEventListener('click', (e) => {
+        const target = document.getElementById('generator');
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+
+    if (btnSeePoster) {
+      btnSeePoster.addEventListener('click', (e) => {
+        const target = document.getElementById('templates');
+        if (target) {
+          e.preventDefault();
+          target.scrollIntoView({ behavior: 'smooth' });
+        }
+      });
+    }
+  }
+
   setupDeck();
-  document.addEventListener('astro:page-load', setupDeck);
+  setupSmoothScroll();
+  document.addEventListener('astro:page-load', () => {
+    setupDeck();
+    setupSmoothScroll();
+  });
 </script>

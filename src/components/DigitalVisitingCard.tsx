@@ -77,7 +77,11 @@ END:VCARD`;
       pixelRatio: 3,
       cacheBust: true,
       width: 700,
-      height: 400
+      height: 400,
+      style: {
+        opacity: "1",
+        transform: "none"
+      }
     });
 
     document.body.removeChild(clone);

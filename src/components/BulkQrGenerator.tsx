@@ -21,6 +21,7 @@ export function BulkQrGenerator() {
   const [rawText, setRawText] = useState(sampleCsvText);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState("");
+  const [qrMap, setQrMap] = useState<Record<string, string>>({});
 
   const parsedItems = useMemo<QrItem[]>(() => {
     const lines = rawText.split("\n").map((line) => line.trim()).filter(Boolean);
@@ -52,6 +53,41 @@ export function BulkQrGenerator() {
 
     return items;
   }, [rawText]);
+
+  // Asynchronously generate preview QR data URLs for all items
+  useEffect(() => {
+    let canceled = false;
+    async function generatePreviewQrs() {
+      const newMap: Record<string, string> = {};
+      for (const item of parsedItems) {
+        if (item.status === "valid") {
+          try {
+            const params = new URLSearchParams({ pa: item.upiId, pn: item.payee });
+            if (item.amount) params.set("am", item.amount);
+            if (item.note) params.set("tn", item.note);
+            params.set("cu", "INR");
+            const upiUrl = `upi://pay?${params.toString()}`;
+
+            const dataUrl = await QRCode.toDataURL(upiUrl, {
+              width: 120,
+              margin: 1,
+              color: { dark: "#113b2c", light: "#ffffff" },
+            });
+            newMap[item.id] = dataUrl;
+          } catch (e) {
+            console.error("Preview QR generation error:", e);
+          }
+        }
+      }
+      if (!canceled) {
+        setQrMap(newMap);
+      }
+    }
+    void generatePreviewQrs();
+    return () => {
+      canceled = true;
+    };
+  }, [parsedItems]);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -275,15 +311,28 @@ export function BulkQrGenerator() {
           {parsedItems.map((item, index) => (
             <div
               key={item.id}
-              className={`rounded-2xl border p-4 flex items-center justify-between gap-4 transition bg-white ${
+              className={`rounded-2xl border p-3.5 flex items-center justify-between gap-4 transition bg-white ${
                 item.status === "valid" ? "border-forest/10" : "border-red-200 bg-red-50/50"
               }`}
             >
-              <div className="min-w-0">
-                <span className="text-[10px] font-bold text-forest/40 uppercase">#{index + 1}</span>
-                <h5 className="font-black text-forest text-sm truncate">{item.payee}</h5>
-                <p className="text-xs font-mono text-neutral-500 truncate">{item.upiId}</p>
-                {item.note && <p className="text-[10px] text-forest/60 italic truncate">Note: {item.note}</p>}
+              <div className="flex items-center gap-3 min-w-0">
+                {qrMap[item.id] ? (
+                  <img
+                    src={qrMap[item.id]}
+                    alt={`QR for ${item.payee}`}
+                    className="w-14 h-14 object-contain rounded-xl border border-forest/10 bg-white shrink-0 p-1 shadow-sm"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-xl border border-neutral-200 bg-neutral-100 flex items-center justify-center text-[9px] font-bold text-neutral-400 shrink-0">
+                    {item.status === "valid" ? "Generating..." : "No QR"}
+                  </div>
+                )}
+                <div className="min-w-0">
+                  <span className="text-[10px] font-bold text-forest/40 uppercase">#{index + 1}</span>
+                  <h5 className="font-black text-forest text-sm truncate">{item.payee}</h5>
+                  <p className="text-xs font-mono text-neutral-500 truncate">{item.upiId}</p>
+                  {item.note && <p className="text-[10px] text-forest/60 italic truncate">Note: {item.note}</p>}
+                </div>
               </div>
 
               <div className="text-right shrink-0">

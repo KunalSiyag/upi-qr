@@ -5,6 +5,7 @@ interface MenuItem {
   name: string;
   price: string;
   category: string;
+  imageUrl?: string;
 }
 
 export function MenuQrGenerator() {
@@ -332,26 +333,59 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               <button type="button" onClick={addItem} className="text-xs font-bold text-leaf hover:underline">+ Add Item</button>
             </div>
 
-            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
+            <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
               {items.map((item, i) => (
-                <div key={i} className="flex items-center gap-2 p-2 bg-slate-50 rounded-xl border border-slate-200">
-                  <input
-                    type="text"
-                    value={item.name}
-                    onChange={(e) => updateItem(i, "name", e.target.value)}
-                    placeholder="Item Name"
-                    className="flex-1 bg-white border border-slate-300 rounded-lg p-1 text-xs font-semibold"
-                  />
-                  <input
-                    type="text"
-                    value={item.price}
-                    onChange={(e) => updateItem(i, "price", e.target.value)}
-                    placeholder="₹ Price"
-                    className="w-16 bg-white border border-slate-300 rounded-lg p-1 text-xs font-bold text-center"
-                  />
-                  <button type="button" onClick={() => removeItem(i)} className="text-xs font-bold text-red-500 hover:text-red-700 px-1">
-                    ×
-                  </button>
+                <div key={i} className="flex flex-col gap-2 p-2.5 bg-slate-50 rounded-xl border border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      value={item.name}
+                      onChange={(e) => updateItem(i, "name", e.target.value)}
+                      placeholder="Item Name"
+                      className="flex-1 bg-white border border-slate-300 rounded-lg p-1.5 text-xs font-semibold"
+                    />
+                    <input
+                      type="text"
+                      value={item.price}
+                      onChange={(e) => updateItem(i, "price", e.target.value)}
+                      placeholder="₹ Price"
+                      className="w-16 bg-white border border-slate-300 rounded-lg p-1.5 text-xs font-bold text-center"
+                    />
+                    <button type="button" onClick={() => removeItem(i)} className="text-xs font-bold text-red-500 hover:text-red-700 px-1">
+                      ×
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    {item.imageUrl ? (
+                      <div className="flex items-center gap-2">
+                        <img src={item.imageUrl} alt={item.name} className="w-8 h-8 rounded object-cover border border-slate-300" />
+                        <button
+                          type="button"
+                          onClick={() => updateItem(i, "imageUrl", "")}
+                          className="text-[10px] font-bold text-red-600 hover:underline"
+                        >
+                          Remove Photo
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer text-[10px] font-bold text-leaf hover:underline flex items-center gap-1">
+                        📷 Upload Product Photo
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              const r = new FileReader();
+                              r.onload = () => updateItem(i, "imageUrl", r.result as string);
+                              r.readAsDataURL(file);
+                            }
+                          }}
+                        />
+                      </label>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
@@ -393,11 +427,20 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               <p className="text-xs font-semibold opacity-75">{tagline}</p>
             </div>
 
-            <div className="border-t border-b border-current/20 py-3 space-y-2">
+            <div className="border-t border-b border-current/20 py-3 space-y-3">
               {items.map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center text-xs font-bold">
-                  <span>{item.name}</span>
-                  <span className="font-mono">₹{item.price}</span>
+                <div key={idx} className="flex justify-between items-center text-xs font-bold gap-3">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {item.imageUrl && (
+                      <img
+                        src={item.imageUrl}
+                        alt={item.name}
+                        className="w-10 h-10 rounded-lg object-cover border border-current/20 shrink-0 shadow-sm"
+                      />
+                    )}
+                    <span className="truncate">{item.name}</span>
+                  </div>
+                  <span className="font-mono shrink-0">₹{item.price}</span>
                 </div>
               ))}
             </div>
