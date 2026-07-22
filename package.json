@@ -17,7 +17,7 @@
   "dependencies": {
     "@astrojs/react": "^5.0.7",
     "@astrojs/tailwind": "^6.0.2",
-    "astro": "^6.4.6",
+    "astro": "^7.1.0",
     "html-to-image": "^1.11.11",
     "jspdf": "^4.2.1",
     "jszip": "^3.10.1",
