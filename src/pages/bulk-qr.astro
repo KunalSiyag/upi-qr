@@ -107,8 +107,8 @@ const faqSchema = {
       </div>
 
       {/* Interactive Bulk QR Console */}
-      <div class="mt-8 sm:mt-12 w-full min-w-0">
-        <BulkQrGenerator client:only="react" />
+      <div id="tool" class="mt-8 sm:mt-10 w-full min-w-0">
+        <BulkQrGenerator client:load />
       </div>
 
       {/* Content & Use Cases */}

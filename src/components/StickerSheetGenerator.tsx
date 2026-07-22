@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useId } from "react";
+import { useState, useEffect, useRef, useId, useMemo } from "react";
 import QRCode from "qrcode";
 
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
