@@ -86,15 +86,24 @@ const featuredGuides = getFeaturedGuides(4);
       {/* Support & Contact */}
       <div class="space-y-4">
         <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "संपर्क" : "Contact"}</h4>
-        <p class="text-xs text-forest/70 leading-relaxed">
-          {isHindi 
-            ? "व्यावसायिक पूछताछ, सहायता अनुरोध या प्रतिक्रिया के लिए, हमें ईमेल करें:"
-            : "For business inquiries, support request, or feedback, email us at:"
-          }
-        </p>
-        <p class="text-xs font-bold text-forest">
-          <a href="mailto:support@proupiqr.in" class="hover:underline">support@proupiqr.in</a>
-        </p>
+        <ul class="space-y-2 text-xs font-medium text-forest/75">
+          <li>
+            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "सहायता और पूछताछ" : "Support & Inquiries"}</span>
+            <a href="mailto:support@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">support@proupiqr.in</a>
+          </li>
+          <li>
+            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "प्रतिक्रिया और सुझाव" : "Feedback & Ideas"}</span>
+            <a href="mailto:feedback@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">feedback@proupiqr.in</a>
+          </li>
+          <li>
+            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "गोपनीयता और कानूनी" : "Privacy & Legal"}</span>
+            <a href="mailto:privacy@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">privacy@proupiqr.in</a>
+          </li>
+          <li>
+            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "डीएमसीए / कॉपीराइट" : "DMCA & Copyright"}</span>
+            <a href="mailto:dmca@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">dmca@proupiqr.in</a>
+          </li>
+        </ul>
       </div>
     </div>
 
