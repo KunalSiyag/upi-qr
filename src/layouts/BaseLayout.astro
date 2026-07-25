@@ -9,9 +9,10 @@ interface Props {
   canonical?: string;
   schema?: Record<string, unknown>;
   image?: string;
+  noindex?: boolean;
 }
 
-const { title, description, canonical, schema, image } = Astro.props;
+const { title, description, canonical, schema, image, noindex = false } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
 const ogImageUrl = image 
@@ -23,6 +24,20 @@ const isHindi = Astro.url.pathname.startsWith("/hi");
 const isBlogIndex = normalizedPath === "/blog/";
 const isBlogPost = normalizedPath.startsWith("/blog/") && !isBlogIndex;
 
+const validHindiSlugs = new Set([
+  "", "phonepe-qr-generator", "google-pay-qr-generator", "paytm-qr-generator",
+  "donation-qr-generator", "bhim-qr-generator", "whatsapp-pay-qr-generator",
+  "amazon-pay-qr-generator", "sbi-qr-generator", "hdfc-qr-generator",
+  "icici-qr-generator", "axis-qr-generator", "kotak-qr-generator",
+  "pnb-qr-generator", "canara-qr-generator", "bob-qr-generator",
+  "indusind-qr-generator", "union-qr-generator", "kirana-qr-generator",
+  "cab-driver-qr-generator", "freelance-qr-generator", "restaurant-qr-generator",
+  "idfc-qr-generator", "idbi-qr-generator", "yes-bank-qr-generator",
+  "rbl-qr-generator", "central-bank-qr-generator", "gym-qr-generator",
+  "salon-qr-generator", "parking-qr-generator", "temple-qr-generator",
+  "privacy", "terms", "disclaimer"
+]);
+
 // Blog is English-only; Hindi switcher goes to translated generator hub
 let langLink = `/hi${normalizedPath}`;
 if (isHindi) {
@@ -33,7 +48,6 @@ if (isHindi) {
 }
 const langLabel = isHindi ? "English" : "हिन्दी";
 
-const hasAlternate = !isBlogIndex && !isBlogPost;
 const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
 let englishPath = normalizedPath;
 if (isHindi) {
@@ -41,13 +55,20 @@ if (isHindi) {
   if (englishPath === "") englishPath = "/";
 }
 const englishUrl = `${baseUrl}${englishPath}`;
-let hindiPath = normalizedPath;
+
+const currentSlug = englishPath.replace(/^\/|\/$/g, "");
+const hasHindiTranslation = validHindiSlugs.has(currentSlug);
+
+let hindiUrl: string | null = null;
 if (isBlogIndex || isBlogPost) {
-  hindiPath = "/hi/";
-} else if (!isHindi) {
-  hindiPath = `/hi${normalizedPath}`;
+  hindiUrl = `${baseUrl}/hi/`;
+} else if (isHindi) {
+  hindiUrl = `${baseUrl}${normalizedPath}`;
+} else if (hasHindiTranslation) {
+  hindiUrl = `${baseUrl}/hi${normalizedPath}`;
 }
-const hindiUrl = `${baseUrl}${hindiPath}`;
+
+const hasAlternate = hindiUrl !== null;
 
 // Breadcrumb Schema
 const breadcrumbItems = [
@@ -76,6 +97,7 @@ if (normalizedPath !== "/") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>{title}</title>
     <meta name="description" content={description} />
+    <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
@@ -94,11 +116,14 @@ if (normalizedPath !== "/") {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="Pro UPI QR" />
+    <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
 
     <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:site" content="@proupiqr" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
-    <meta property="og:image" content={ogImageUrl} />
     <meta name="twitter:image" content={ogImageUrl} />
     <link rel="alternate" type="application/rss+xml" title="Pro UPI QR Blog & Guides RSS Feed" href="/rss.xml" />
 

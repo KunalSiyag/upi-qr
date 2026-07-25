@@ -280,6 +280,51 @@ export async function getStaticPaths() {
         presetType: "temple",
         intro: "Set up commission-free donation posters for temples, religious trusts, and NGOs."
       }
+    },
+    {
+      params: { slug: "sbi-business-qr-code-generator" },
+      props: {
+        title: "SBI Business QR Code Generator",
+        headline: "Create a free SBI Business UPI Payment QR Code",
+        presetType: "sbi",
+        intro: "Generate State Bank of India (SBI) business and merchant UPI QR code posters and counter standees for shop checkouts."
+      }
+    },
+    {
+      params: { slug: "universal-upi-qr-code-generator-for-bank-account" },
+      props: {
+        title: "Universal UPI QR Code Generator for Bank Account",
+        headline: "Create a Universal UPI QR Code linked directly to your Bank Account",
+        presetType: "phonepe",
+        intro: "Generate a universal UPI payment QR code for any bank account (SBI, HDFC, ICICI, etc.) working on PhonePe, GPay, Paytm, and BHIM."
+      }
+    },
+    {
+      params: { slug: "hdfc-business-qr-code-generator" },
+      props: {
+        title: "HDFC Business QR Code Generator",
+        headline: "Create an HDFC Merchant Business UPI QR Code",
+        presetType: "hdfc",
+        intro: "Build HDFC Bank business payment QR standees and counter posters for client billing and store checkout."
+      }
+    },
+    {
+      params: { slug: "icici-business-qr-code-generator" },
+      props: {
+        title: "ICICI Business UPI QR Generator",
+        headline: "Create an ICICI Bank Merchant Business UPI QR Code",
+        presetType: "icici",
+        intro: "Generate ICICI Bank business collection QR code standees and posters without merchant processing fees."
+      }
+    },
+    {
+      params: { slug: "doctor-clinic-upi-qr-generator" },
+      props: {
+        title: "Doctor & Clinic UPI Payment QR Generator",
+        headline: "Create a Scan-to-Pay UPI Poster for Medical Clinics & Hospitals",
+        presetType: "freelance",
+        intro: "Print a clean payment QR poster for doctor consultation desks, pathology labs, and pharmacy billing counters."
+      }
     }
   ];
 }
@@ -289,29 +334,150 @@ const description = `${headline}. ${intro}`;
 const generatorSlug = Astro.params.slug as GeneratorSlug;
 const resolvedPreset = getPresetFromSlug(generatorSlug);
 
+const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
+// Preset-specific metadata & VPA guidelines for content enrichment
+const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: string; tip: string }> = {
+  phonepe: {
+    vpaFormats: ["mobile@ybl", "mobile@ibl", "mobile@axl", "customname@ybl"],
+    targetAudience: "PhonePe users, retail checkouts, and daily UPI collections.",
+    tip: "PhonePe supports YBL (YES Bank), IBL (IndusInd), and AXL (Axis Bank) handles natively."
+  },
+  gpay: {
+    vpaFormats: ["name@oksbi", "name@okhdfcbank", "name@okicici", "name@okaxis"],
+    targetAudience: "Google Pay (GPay) app users, small businesses, and invoice payments.",
+    tip: "Google Pay automatically formats VPAs based on the user's linked bank account (e.g. @oksbi, @okhdfcbank)."
+  },
+  paytm: {
+    vpaFormats: ["mobile@paytm", "username@paytm"],
+    targetAudience: "Paytm Wallet & UPI users, kirana stores, and billing desks.",
+    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for 0% MDR direct bank credit."
+  },
+  sbi: {
+    vpaFormats: ["mobile@sbi", "username@sbi", "username@yono"],
+    targetAudience: "State Bank of India (SBI) savings & merchant current account holders.",
+    tip: "SBI UPI IDs work across all Indian UPI apps with instant settlement into your SBI bank account."
+  },
+  hdfc: {
+    vpaFormats: ["mobile@hdfcbank", "username@payzapp", "username@hdfcbank"],
+    targetAudience: "HDFC Bank merchant accounts, corporate checkouts, and billing counters.",
+    tip: "HDFC Bank supports both standard consumer VPAs (@hdfcbank) and PayZapp handles (@payzapp)."
+  },
+  icici: {
+    vpaFormats: ["mobile@icici", "username@pockets", "username@icici"],
+    targetAudience: "ICICI Bank business and savings account holders.",
+    tip: "ICICI UPI QRs offer 0% MDR charges for standard P2P and P2PM merchant transfers."
+  },
+  kirana: {
+    vpaFormats: ["storename@upi", "mobile@bankhandle"],
+    targetAudience: "Grocery, Kirana, General Stores, and local retail counters.",
+    tip: "Place your printed UPI QR poster at eye-level near the billing register for fastest customer checkout."
+  },
+  restaurant: {
+    vpaFormats: ["cafename@upi", "tablename@bankhandle"],
+    targetAudience: "Restaurants, Cafes, Food Trucks, and Dining Counters.",
+    tip: "Print 5x7 inch acrylic table-tent cards so patrons can scan and pay directly from their dining table."
+  },
+  cab: {
+    vpaFormats: ["drivername@upi", "cabno@bankhandle"],
+    targetAudience: "Auto Rickshaws, Taxis, Cabs, and Local Transport Drivers.",
+    tip: "Laminate an A5 poster and hang it behind the front seats or attach it to the dashboard."
+  },
+  freelance: {
+    vpaFormats: ["freelancer@upi", "name@bankhandle"],
+    targetAudience: "Freelancers, Consultants, Designers, and Remote Professionals.",
+    tip: "Include a fixed-amount UPI QR code directly on your PDF invoices to eliminate payment gateway fees."
+  },
+  donation: {
+    vpaFormats: ["trustname@upi", "ngo@bankhandle"],
+    targetAudience: "Temples, Non-Profit Organizations, NGOs, and Charitable Drives.",
+    tip: "NPCI levies 0% MDR on charitable donations, ensuring 100% of collected funds reach your organization."
+  }
+};
+
+const currentDetail = presetDetails[presetType] || {
+  vpaFormats: ["yourname@upi", "mobile@bankhandle"],
+  targetAudience: "Merchants, freelancers, and personal bank account holders.",
+  tip: "Works universally across PhonePe, Google Pay, Paytm, BHIM, and all Indian banking apps."
+};
+
+const presetFaqs = [
+  {
+    question: `Is this ${title} free to generate and print?`,
+    answer: `Yes, Pro UPI QR is 100% free with zero platform fees, monthly rentals, or transaction commissions. You can generate, download, and print high-resolution posters instantly.`
+  },
+  {
+    question: `Does this QR code work across all Indian UPI apps?`,
+    answer: `Yes, all QR codes generated on Pro UPI QR follow the official NPCI upi://pay specifications and work seamlessly across PhonePe, Google Pay (GPay), Paytm, BHIM, CRED, and all major bank apps.`
+  },
+  {
+    question: `Are there any MDR (Merchant Discount Rate) charges?`,
+    answer: `No, standard P2P and P2PM UPI transactions directly into your bank account carry 0% MDR commission under NPCI guidelines.`
+  },
+  {
+    question: `How do I print a durable standee for my checkout counter?`,
+    answer: `Download the high-resolution PNG or PDF image, print it on 300 GSM photo paper or A4 sticker sheet, and insert it into a standard 5x7 inch or A5 acrylic T-standee.`
+  }
+];
+
 const schema = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": `${title} | Pro UPI QR`,
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Any",
-  "url": new URL(Astro.url.pathname, Astro.site).toString(),
-  "description": description,
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "INR"
-  }
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": pageUrl + "#webapp",
+      "name": `${title} | Pro UPI QR`,
+      "applicationCategory": "BusinessApplication",
+      "applicationSubCategory": "Payment Utility",
+      "operatingSystem": "Any",
+      "url": pageUrl,
+      "description": description,
+      "featureList": [
+        "100% Browser Local Rendering",
+        "NPCI upi://pay Protocol Compliance",
+        "0% MDR Commission",
+        "High-Resolution PNG Poster Download"
+      ],
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      }
+    },
+    {
+      "@type": "FAQPage",
+      "@id": pageUrl + "#faq",
+      "mainEntity": presetFaqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": {
+          "@type": "Answer",
+          "text": faq.answer
+        }
+      }))
+    }
+  ]
 };
 ---
 
 <BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-      <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Pro UPI QR Generator</a>
-      <p class="mt-6 text-sm font-black uppercase tracking-[0.2em] text-leaf font-bold">Payment Quick-Links</p>
-      <h1 class="mt-3 text-4xl font-black tracking-tight text-forest md:text-6xl">{headline}</h1>
-      <p class="mt-4 max-w-3xl text-base leading-relaxed text-forest/72">{intro}</p>
+      
+      {/* Visual Breadcrumbs */}
+      <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+        <a href="/" class="hover:text-leaf transition-colors">Home</a>
+        <span>/</span>
+        <a href="/#generators" class="hover:text-leaf transition-colors">UPI Generators</a>
+        <span>/</span>
+        <span class="text-forest font-bold truncate max-w-[240px]" aria-current="page">{title}</span>
+      </nav>
+
+      <a href="/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; Back to Main Generator Hub</a>
+      
+      <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Payment Quick-Links</p>
+      <h1 class="mt-2 text-3xl font-black tracking-tight text-forest md:text-5xl">{headline}</h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72 md:text-base">{intro}</p>
       
       <div class="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
         <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">
@@ -326,24 +492,71 @@ const schema = {
         <GeneratorForm client:load presetType={presetType as any} />
       </div>
 
-      <div class="mt-12 grid gap-4 md:grid-cols-3 border-t border-forest/10 pt-8">
+      {/* Preset-Specific VPA Reference & Usage Specs */}
+      <div class="mt-12 rounded-2xl bg-mint/30 p-6 border border-leaf/10 space-y-4">
+        <div class="flex items-center gap-2">
+          <span class="rounded-lg bg-forest p-1.5 text-white">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+          </span>
+          <h2 class="text-lg font-black text-forest">{title} Technical & VPA Specifications</h2>
+        </div>
+        <div class="grid gap-4 md:grid-cols-2 text-xs">
+          <div class="space-y-1">
+            <span class="font-bold text-forest/90 uppercase tracking-wider text-[10px]">Supported VPA Handles:</span>
+            <div class="flex flex-wrap gap-1.5 pt-1">
+              {currentDetail.vpaFormats.map((fmt) => (
+                <code class="rounded bg-white px-2 py-1 text-leaf font-mono border border-forest/10 font-bold">{fmt}</code>
+              ))}
+            </div>
+          </div>
+          <div class="space-y-1">
+            <span class="font-bold text-forest/90 uppercase tracking-wider text-[10px]">Recommended Use Case:</span>
+            <p class="text-forest/80 leading-relaxed font-medium">{currentDetail.targetAudience}</p>
+          </div>
+        </div>
+        <div class="rounded-xl bg-white p-3.5 border border-forest/10 text-xs text-forest/80 flex items-start gap-2.5">
+          <span class="text-leaf font-black shrink-0">💡 Pro Tip:</span>
+          <span>{currentDetail.tip}</span>
+        </div>
+      </div>
+
+      {/* Benefit Cards */}
+      <div class="mt-8 grid gap-4 md:grid-cols-3 border-t border-forest/10 pt-8">
         <div class="rounded-[1.5rem] bg-mint p-5">
-          <h2 class="text-lg font-black text-forest">100% Secure Transfers</h2>
-          <p class="mt-3 text-sm leading-relaxed text-forest/72">
-            All payments are processed peer-to-peer over the NPCI network directly from customer bank to your bank.
+          <h3 class="text-base font-black text-forest">100% Direct Settlement</h3>
+          <p class="mt-2 text-xs leading-relaxed text-forest/72">
+            All payments go directly peer-to-peer over the NPCI network from your customer's bank account to yours.
           </p>
         </div>
         <div class="rounded-[1.5rem] bg-cream p-5">
-          <h2 class="text-lg font-black text-forest">No Commissions</h2>
-          <p class="mt-3 text-sm leading-relaxed text-forest/72">
-            Pro UPI QR is a completely free utility. We do not intermediate payment services or levy any platform fees.
+          <h3 class="text-base font-black text-forest">Zero MDR Commission</h3>
+          <p class="mt-2 text-xs leading-relaxed text-forest/72">
+            Pro UPI QR is a free utility. No payment gateway cut, monthly rentals, or hidden commission fees.
           </p>
         </div>
         <div class="rounded-[1.5rem] bg-[#f2e5cd] p-5">
-          <h2 class="text-lg font-black text-forest">High-Quality Output</h2>
-          <p class="mt-3 text-sm leading-relaxed text-forest/72">
-            Download clean, high-resolution poster images ready to print or share instantly via email, messaging, or chat.
+          <h3 class="text-base font-black text-forest">High-Resolution Printing</h3>
+          <p class="mt-2 text-xs leading-relaxed text-forest/72">
+            Download crisp, high-DPI poster images suitable for printing on acrylic standees, stickers, and table tents.
           </p>
+        </div>
+      </div>
+
+      {/* Frequently Asked Questions */}
+      <div class="mt-12 border-t border-forest/10 pt-10">
+        <h2 class="text-2xl font-black text-forest">Frequently Asked Questions</h2>
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          {presetFaqs.map((faq) => (
+            <div class="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-2">
+              <h3 class="text-sm font-black text-forest flex items-start gap-2">
+                <span class="text-leaf shrink-0">Q.</span>
+                <span>{faq.question}</span>
+              </h3>
+              <p class="text-xs text-forest/75 leading-relaxed pl-5">
+                {faq.answer}
+              </p>
+            </div>
+          ))}
         </div>
       </div>
 

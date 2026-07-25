@@ -28,7 +28,12 @@ export type GeneratorSlug =
   | "gym-qr-generator"
   | "salon-qr-generator"
   | "parking-qr-generator"
-  | "temple-qr-generator";
+  | "temple-qr-generator"
+  | "sbi-business-qr-code-generator"
+  | "universal-upi-qr-code-generator-for-bank-account"
+  | "hdfc-business-qr-code-generator"
+  | "icici-business-qr-code-generator"
+  | "doctor-clinic-upi-qr-generator";
 
 export type PresetType =
   | "phonepe"
@@ -320,6 +325,46 @@ export const generators: GeneratorLink[] = [
     shortLabel: "Temple QR",
     description: "Generate zero-commission donation QRs for temples, trusts, and NGOs.",
     accent: "#f57f17",
+  },
+  {
+    slug: "sbi-business-qr-code-generator",
+    presetType: "sbi",
+    label: "SBI Business QR Code Generator",
+    shortLabel: "SBI Business QR",
+    description: "Create a free State Bank of India (SBI) business & merchant payment QR standee.",
+    accent: "#00a2e8",
+  },
+  {
+    slug: "universal-upi-qr-code-generator-for-bank-account",
+    presetType: "phonepe",
+    label: "Universal UPI QR Code Generator for Bank Account",
+    shortLabel: "Bank UPI QR",
+    description: "Link any Indian bank account to a free universal payment QR code.",
+    accent: "#10b981",
+  },
+  {
+    slug: "hdfc-business-qr-code-generator",
+    presetType: "hdfc",
+    label: "HDFC Business QR Code Generator",
+    shortLabel: "HDFC Business QR",
+    description: "Generate HDFC Bank merchant payment QRs for counter standees & billing.",
+    accent: "#1c3f94",
+  },
+  {
+    slug: "icici-business-qr-code-generator",
+    presetType: "icici",
+    label: "ICICI Business UPI QR Generator",
+    shortLabel: "ICICI Business QR",
+    description: "Create ICICI Bank business collection QRs with zero commission.",
+    accent: "#f27220",
+  },
+  {
+    slug: "doctor-clinic-upi-qr-generator",
+    presetType: "freelance",
+    label: "Doctor & Clinic UPI QR Generator",
+    shortLabel: "Doctor QR",
+    description: "Generate payment QR codes for clinics, hospitals, and consultation desks.",
+    accent: "#0284c7",
   },
 ];
 

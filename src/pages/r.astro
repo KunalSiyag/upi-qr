@@ -2,20 +2,26 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.get("u") || "/";
+const qrId = Astro.url.searchParams.get("id") || "";
 ---
 
-<BaseLayout title="Redirecting..." description="Dynamic QR Link Redirect">
-  <div class="min-h-[60vh] flex items-center justify-center p-6 text-center">
-    <div class="max-w-md w-full rounded-3xl border border-forest/10 bg-white p-8 shadow-xl space-y-4">
-      <div class="mx-auto w-12 h-12 rounded-full bg-mint flex items-center justify-center text-leaf font-bold text-lg animate-pulse">
+<BaseLayout title="Redirecting..." description="Dynamic QR Link Redirect Manager" noindex={true}>
+  <div class="min-h-[65vh] flex items-center justify-center p-6 text-center">
+    <div class="max-w-md w-full rounded-3xl border border-forest/10 bg-white p-8 shadow-xl space-y-5">
+      <div class="mx-auto w-16 h-16 rounded-2xl bg-mint border border-leaf/20 flex items-center justify-center text-leaf font-black text-2xl animate-pulse shadow-sm">
         ➔
       </div>
-      <h1 class="text-xl font-black text-forest">Redirecting to Destination</h1>
-      <p id="target-display" class="text-xs font-mono text-forest/70 break-all bg-slate-50 p-3 rounded-xl border border-slate-200">
+      <div>
+        <h1 class="text-xl font-black text-forest">Connecting to Destination</h1>
+        <p className="text-xs text-forest/60 mt-1">Dynamic QR Router • Secure Cloud Sync</p>
+      </div>
+
+      <div id="target-display" class="text-xs font-mono text-forest/80 break-all bg-cream p-3.5 rounded-2xl border border-forest/10 shadow-inner">
         {initialUrl}
-      </p>
-      <a id="direct-link" href={initialUrl} class="inline-block rounded-xl bg-forest px-6 py-2.5 text-xs font-bold text-mint hover:bg-forest/90 transition-colors">
-        Click here if not redirected automatically
+      </div>
+
+      <a id="direct-link" href={initialUrl} class="inline-flex items-center justify-center w-full rounded-2xl bg-forest px-6 py-3 text-xs font-black text-mint hover:bg-leaf transition-all shadow-md">
+        Click here if not redirected automatically →
       </a>
     </div>
   </div>
@@ -24,40 +30,77 @@ const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.g
     (function() {
       const params = new URLSearchParams(window.location.search);
       const id = params.get('id');
-      let target = params.get('url') || params.get('u');
+      let target = params.get('url') || params.get('u') || '/';
 
-      if (id) {
-        // Record global cloud scan metric across any device scanning this QR
-        try {
-          fetch(`https://api.counterapi.dev/v1/proupiqr_${id}/up`, { method: 'GET' }).catch(() => {});
-        } catch (e) {}
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const deviceType = isMobile ? 'mobile' : 'desktop';
 
-        // Local storage scan sync
-        try {
-          const saved = localStorage.getItem('pro_upi_dynamic_links');
-          if (saved) {
-            const links = JSON.parse(saved);
-            const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const updated = links.map(l => {
-              if (l.id === id) {
-                if (l.destinationUrl) target = l.destinationUrl;
-                return { ...l, scans: (l.scans || 0) + 1, lastScanned: `Today at ${now}` };
+      async function processRedirect() {
+        if (id) {
+          // 1. Record global scan metrics on cloud
+          try {
+            fetch(`https://api.counterapi.dev/v1/proupiqr_${id}/up`, { method: 'GET' }).catch(() => {});
+            fetch(`https://api.counterapi.dev/v1/proupiqr_${id}_${deviceType}/up`, { method: 'GET' }).catch(() => {});
+          } catch (e) {}
+
+          // 2. Fetch latest destination URL from Cloud KV store (Cross-device dynamic update)
+          try {
+            const cloudRes = await fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, { method: 'GET' });
+            if (cloudRes.ok) {
+              const cloudUrl = await cloudRes.text();
+              if (cloudUrl && (cloudUrl.startsWith('http') || cloudUrl.startsWith('upi://'))) {
+                target = cloudUrl.trim();
               }
-              return l;
-            });
-            localStorage.setItem('pro_upi_dynamic_links', JSON.stringify(updated));
+            }
+          } catch (e) {
+            console.warn("Cloud destination fetch failed, using fallback URL:", e);
           }
-        } catch (e) {}
+
+          // 3. Sync to local storage if user is on their main dashboard browser
+          try {
+            const saved = localStorage.getItem('pro_upi_dynamic_links');
+            if (saved) {
+              const links = JSON.parse(saved);
+              const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              const dateStr = new Date().toLocaleDateString();
+              const updated = links.map(l => {
+                if (l.id === id) {
+                  const currentScans = (l.scans || 0) + 1;
+                  const deviceStats = l.scansByDevice || { mobile: 0, desktop: 0 };
+                  if (isMobile) deviceStats.mobile = (deviceStats.mobile || 0) + 1;
+                  else deviceStats.desktop = (deviceStats.desktop || 0) + 1;
+
+                  const recentScans = l.recentScans || [];
+                  recentScans.unshift({ timestamp: `${dateStr} at ${now}`, device: deviceType });
+                  if (recentScans.length > 20) recentScans.pop();
+
+                  return {
+                    ...l,
+                    scans: currentScans,
+                    lastScanned: `${dateStr} at ${now}`,
+                    scansByDevice: deviceStats,
+                    recentScans: recentScans
+                  };
+                }
+                return l;
+              });
+              localStorage.setItem('pro_upi_dynamic_links', JSON.stringify(updated));
+            }
+          } catch (e) {}
+        }
+
+        // Perform instant redirection
+        if (target) {
+          const displayEl = document.getElementById('target-display');
+          const linkEl = document.getElementById('direct-link');
+          if (displayEl) displayEl.textContent = target;
+          if (linkEl) linkEl.href = target;
+
+          window.location.replace(target);
+        }
       }
 
-      if (target) {
-        const displayEl = document.getElementById('target-display');
-        const linkEl = document.getElementById('direct-link');
-        if (displayEl) displayEl.textContent = target;
-        if (linkEl) linkEl.href = target;
-
-        setTimeout(() => { window.location.href = target; }, 400);
-      }
+      processRedirect();
     })();
   </script>
 </BaseLayout>
