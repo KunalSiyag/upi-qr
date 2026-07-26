@@ -1,0 +1,238 @@
+---
+interface Props {
+  isHindi?: boolean;
+}
+
+const { isHindi = false } = Astro.props;
+
+// Define which slugs have valid Hindi translations
+const validHindiSlugs = new Set([
+  "", "phonepe-qr-generator", "google-pay-qr-generator", "paytm-qr-generator",
+  "donation-qr-generator", "bhim-qr-generator", "whatsapp-pay-qr-generator",
+  "amazon-pay-qr-generator", "sbi-qr-generator", "hdfc-qr-generator",
+  "icici-qr-generator", "axis-qr-generator", "kotak-qr-generator",
+  "pnb-qr-generator", "canara-qr-generator", "bob-qr-generator",
+  "indusind-qr-generator", "union-qr-generator", "kirana-qr-generator",
+  "cab-driver-qr-generator", "freelance-qr-generator", "restaurant-qr-generator",
+  "idfc-qr-generator", "idbi-qr-generator", "yes-bank-qr-generator",
+  "rbl-qr-generator", "central-bank-qr-generator", "gym-qr-generator",
+  "salon-qr-generator", "parking-qr-generator", "temple-qr-generator"
+]);
+
+// Helper to construct path depending on locale
+function getPath(slug: string): string {
+  // If slug starts with / or is an absolute URL, return as is
+  if (slug.startsWith("/") || slug.startsWith("http")) {
+    return slug;
+  }
+  
+  const cleanSlug = slug.replace(/\/$/, "");
+  
+  if (isHindi && validHindiSlugs.has(cleanSlug)) {
+    return `/hi/${cleanSlug}/`;
+  }
+  return `/${cleanSlug}/`;
+}
+
+// English and Hindi localized data
+const content = isHindi ? {
+  title: "UPI QR सर्च इंजन कीवर्ड मैट्रिक्स",
+  subtitle: "अपने व्यवसाय, बैंक खाते या विशेष भुगतान प्रारूप के लिए सर्वोत्तम UPI QR कोड जेनरेशन टूल्स और गाइड।",
+  categories: {
+    device: "डिवाइस और मोबाइल (Device & Mobile)",
+    format: "प्रारूप और गुणवत्ता (Format & Quality)",
+    batch: "थोक और संग्रह (Batch & Archive)",
+    creator: "क्रिएटर और विकास (Creator Growth)"
+  }
+} : {
+  title: "UPI QR Search Intent & Keyword Matrix",
+  subtitle: "Find the exact UPI QR generation tools and guides optimized for your specific payment format, bank account, or business niche.",
+  categories: {
+    device: "Device & Mobile",
+    format: "Format & Quality",
+    batch: "Batch & Archive",
+    creator: "Creator Growth"
+  }
+};
+
+const deviceLinks = [
+  { slug: "phonepe-qr-generator", en: "PhonePe QR Code Generator", hi: "PhonePe QR कोड जनरेटर" },
+  { slug: "google-pay-qr-generator", en: "Google Pay QR Code Generator", hi: "Google Pay QR कोड जनरेटर" },
+  { slug: "paytm-qr-generator", en: "Paytm QR Code Generator", hi: "Paytm QR कोड जनरेटर" },
+  { slug: "bhim-qr-generator", en: "BHIM UPI QR Code Generator", hi: "BHIM UPI QR कोड जनरेटर" },
+  { slug: "whatsapp-pay-qr-generator", en: "WhatsApp Pay QR Code Generator", hi: "WhatsApp Pay QR कोड जनरेटर" },
+  { slug: "amazon-pay-qr-generator", en: "Amazon Pay QR Code Generator", hi: "Amazon Pay QR कोड जनरेटर" },
+  { slug: "sbi-qr-generator", en: "SBI UPI QR Code Generator", hi: "SBI UPI QR कोड जनरेटर" },
+  { slug: "hdfc-qr-generator", en: "HDFC Bank UPI QR Generator", hi: "HDFC Bank UPI QR जनरेटर" },
+  { slug: "icici-qr-generator", en: "ICICI Bank UPI QR Generator", hi: "ICICI Bank UPI QR जनरेटर" },
+  { slug: "axis-qr-generator", en: "Axis Bank UPI QR Generator", hi: "Axis Bank UPI QR जनरेटर" },
+  { slug: "kotak-qr-generator", en: "Kotak Bank UPI QR Generator", hi: "Kotak Bank UPI QR जनरेटर" },
+  { slug: "pnb-qr-generator", en: "PNB UPI QR Code Generator", hi: "PNB UPI QR कोड जनरेटर" },
+  { slug: "canara-qr-generator", en: "Canara Bank UPI QR Generator", hi: "Canara Bank UPI QR जनरेटर" },
+  { slug: "bob-qr-generator", en: "Bank of Baroda QR Generator", hi: "Bank of Baroda QR जनरेटर" },
+  { slug: "indusind-qr-generator", en: "IndusInd Bank QR Generator", hi: "IndusInd Bank QR जनरेटर" },
+  { slug: "union-qr-generator", en: "Union Bank UPI QR Generator", hi: "Union Bank UPI QR जनरेटर" },
+  { slug: "idfc-qr-generator", en: "IDFC FIRST Bank QR Generator", hi: "IDFC FIRST Bank QR जनरेटर" },
+  { slug: "idbi-qr-generator", en: "IDBI Bank UPI QR Generator", hi: "IDBI Bank UPI QR जनरेटर" },
+  { slug: "yes-bank-qr-generator", en: "Yes Bank UPI QR Generator", hi: "Yes Bank UPI QR जनरेटर" },
+  { slug: "rbl-qr-generator", en: "RBL Bank UPI QR Generator", hi: "RBL Bank UPI QR जनरेटर" },
+  { slug: "central-bank-qr-generator", en: "Central Bank UPI QR Generator", hi: "Central Bank UPI QR जनरेटर" },
+  { slug: "sbi-business-qr-code-generator", en: "SBI Business QR Code Generator", hi: "SBI बिजनेस QR कोड जनरेटर" },
+  { slug: "hdfc-business-qr-code-generator", en: "HDFC Business QR Code Generator", hi: "HDFC बिजनेस QR कोड जनरेटर" },
+  { slug: "icici-business-qr-code-generator", en: "ICICI Business UPI QR Generator", hi: "ICICI बिजनेस UPI QR जनरेटर" },
+  { slug: "whatsapp-order-generator", en: "WhatsApp Order Creator & QR", hi: "WhatsApp ऑर्डर क्रिएटर और QR" },
+  { slug: "/blog/google-pay-business-qr-code-activation/", en: "GPay Merchant QR Activation Guide", hi: "GPay मर्चेंट QR एक्टिवेशन गाइड" },
+  { slug: "/blog/phonepe-business-qr-code-activation/", en: "PhonePe Business QR Setup Guide", hi: "PhonePe बिजनेस QR सेटअप गाइड" },
+  { slug: "/blog/universal-upi-qr-code-generator-app-guide/", en: "Universal UPI QR Code App Guide", hi: "यूनिवर्सल UPI QR कोड ऐप गाइड" },
+  { slug: "/blog/how-to-add-upi-qr-to-instagram-whatsapp-status/", en: "Add UPI QR to Instagram & WhatsApp", hi: "इंस्टाग्राम और व्हाट्सएप पर UPI QR जोड़ें" }
+];
+
+const formatLinks = [
+  { slug: "upi-qr-decoder", en: "Scan & Decode UPI QR Code", hi: "UPI QR कोड स्कैन और डिकोड करें" },
+  { slug: "upi-link-generator", en: "Create UPI Payment Links", hi: "UPI भुगतान लिंक बनाएं" },
+  { slug: "survey-qr-generator", en: "Feedback Survey QR Code", hi: "फीडबैक सर्वे QR कोड" },
+  { slug: "generator", en: "Custom QR Code Generator", hi: "कस्टम QR कोड जनरेटर" },
+  { slug: "qr-sticker-generator", en: "Print A4 QR Code Sticker Sheet", hi: "A4 QR कोड स्टीकर शीट प्रिंट करें" },
+  { slug: "gst-calculator", en: "GST Calculator with Payment QR", hi: "पेमेंट QR के साथ GST कैलकुलेटर" },
+  { slug: "offer-poster-generator", en: "Shop Sale Discount Poster Builder", hi: "दुकान सेल डिस्काउंट पोस्टर बिल्डर" },
+  { slug: "menu-qr-generator", en: "Digital Menu QR Code Generator", hi: "डिजिटल मेनू QR कोड जनरेटर" },
+  { slug: "upi-error-codes", en: "UPI Error Code Resolver Tool", hi: "UPI एरर कोड रिज़ॉल्वर टूल" },
+  { slug: "digital-visiting-card", en: "NFC Digital Visiting Card Builder", hi: "NFC डिजिटल विजिटिंग कार्ड बिल्डर" },
+  { slug: "dynamic-qr-generator", en: "Generate Dynamic UPI QR Code", hi: "डायनेमिक UPI QR कोड जेनरेट करें" },
+  { slug: "/blog/printable-upi-qr-sticker-sheet-guide/", en: "Print QR Sticker Sheets Guide", hi: "QR स्टीकर शीट प्रिंटिंग गाइड" },
+  { slug: "/blog/custom-design-templates-gpay-phonepe-qr/", en: "GPay & PhonePe Custom Templates", hi: "GPay और PhonePe कस्टम टेम्पलेट्स" },
+  { slug: "/blog/upi-qr-code-size-dimensions-printing-guide/", en: "UPI QR Print Size & Dimensions", hi: "UPI QR प्रिंट आकार और आयाम" },
+  { slug: "/blog/how-to-create-print-upi-qr-code-standee/", en: "Design & Print UPI QR Standee", hi: "UPI QR स्टैंडी डिजाइन और प्रिंट करें" },
+  { slug: "/blog/how-to-print-durable-waterproof-qr-stickers/", en: "Print Waterproof Outdoor QR Stickers", hi: "वाटरप्रूफ आउटडोर QR स्टीकर प्रिंट करें" }
+];
+
+const batchLinks = [
+  { slug: "bulk-qr", en: "Bulk UPI QR Code Generator CSV", hi: "थोक UPI QR कोड जनरेटर CSV" },
+  { slug: "universal-upi-qr-code-generator-for-bank-account", en: "Universal UPI QR Code for Bank Account", hi: "बैंक खाते के लिए यूनिवर्सल UPI QR" },
+  { slug: "universal-qr-generator", en: "Free Universal QR Code Generator", hi: "मुफ्त यूनिवर्सल QR कोड जनरेटर" },
+  { slug: "invoice-generator", en: "Invoice PDF Generator with QR", hi: "QR के साथ चालान PDF जनरेटर" },
+  { slug: "upi-limits", en: "Check Indian Bank UPI Daily Limits", hi: "भारतीय बैंक UPI दैनिक सीमा जांचें" },
+  { slug: "upi-calculator", en: "MDR Savings & UPI Calculator", hi: "MDR बचत और UPI कैलकुलेटर" },
+  { slug: "margin-calculator", en: "Profit Margin & Markup Calculator", hi: "लाभ मार्जिन और मार्कअप कैलकुलेटर" },
+  { slug: "developer", en: "Developer API & UPI Widgets", hi: "डेवलपर API और UPI विजेट" },
+  { slug: "/blog/how-to-generate-bulk-upi-qr-codes-from-csv/", en: "Generate Bulk QR Codes from CSV", hi: "CSV से थोक QR कोड जेनरेट करें" },
+  { slug: "/blog/create-upi-qr-code-for-bank-account/", en: "Link VPA to Direct Bank QR Code", hi: "VPA को सीधे बैंक QR कोड से लिंक करें" },
+  { slug: "/blog/universal-upi-qr-code-generator-guide/", en: "Universal UPI QR Code Complete Guide", hi: "यूनिवर्सल UPI QR कोड संपूर्ण गाइड" },
+  { slug: "/blog/how-to-generate-universal-qr-code-free/", en: "Create Universal QR Codes for Free", hi: "मुफ्त में यूनिवर्सल QR कोड बनाएं" },
+  { slug: "/blog/static-vs-dynamic-upi-qr-code-difference/", en: "Static vs Dynamic UPI QR Difference", hi: "स्टैटिक बनाम डायनेमिक UPI QR अंतर" }
+];
+
+const creatorLinks = [
+  { slug: "donation-qr-generator", en: "Donation UPI QR Code Generator", hi: "दान UPI QR कोड जनरेटर" },
+  { slug: "temple-qr-generator", en: "Temple & NGO Donation QR Builder", hi: "मंदिर और NGO दान QR बिल्डर" },
+  { slug: "kirana-qr-generator", en: "Kirana Shop UPI QR Generator", hi: "किराना दुकान UPI QR जनरेटर" },
+  { slug: "cab-driver-qr-generator", en: "Taxi & Auto Rickshaw UPI QR", hi: "टैक्सी और ऑटो रिक्शा UPI QR" },
+  { slug: "freelance-qr-generator", en: "Freelance Payment QR Code Generator", hi: "फ्रीलांस पेमेंट QR कोड जनरेटर" },
+  { slug: "restaurant-qr-generator", en: "Cafe & Restaurant QR Code Builder", hi: "कैफे और रेस्तरां QR कोड बिल्डर" },
+  { slug: "gym-qr-generator", en: "Gym & Fitness Membership QR", hi: "जिम और फिटनेस सदस्यता QR" },
+  { slug: "salon-qr-generator", en: "Salon & Spa Front Desk QR", hi: "सैलून और स्पा फ्रंट डेस्क QR" },
+  { slug: "parking-qr-generator", en: "Parking Lot Scan to Pay QR", hi: "पार्किंग स्थल स्कैन टू पे QR" },
+  { slug: "doctor-clinic-upi-qr-generator", en: "Doctor Clinic & Hospital UPI QR", hi: "डॉक्टर क्लिनिक और अस्पताल UPI QR" },
+  { slug: "/blog/how-to-collect-donations-temples-ngos-upi/", en: "Collect Temple & NGO Donations via UPI", hi: "UPI द्वारा मंदिर और NGO दान एकत्र करें" },
+  { slug: "/blog/upi-qr-for-freelancers-invoice-payments/", en: "Accept Freelancer Payments without Fees", hi: "बिना किसी शुल्क के फ्रीलांस भुगतान स्वीकार करें" },
+  { slug: "/blog/upi-qr-code-for-restaurant-cloud-kitchen/", en: "UPI QR for Table & Cloud Kitchens", hi: "टेबल और क्लाउड किचन के लिए UPI QR" },
+  { slug: "/blog/how-to-verify-upi-qr-code-before-displaying/", en: "Verify UPI QR Code before Counter Display", hi: "काउंटर पर प्रदर्शित करने से पहले UPI QR सत्यापित करें" },
+  { slug: "/blog/prevent-upi-qr-code-tampering-frauds/", en: "Prevent UPI QR Sticker Tampering Frauds", hi: "UPI QR स्टीकर हेरफेर धोखाधड़ी को रोकें" },
+  { slug: "/blog/how-to-create-upi-qr-without-business-account/", en: "UPI QR without Merchant Account", hi: "मर्चेंट खाते के बिना UPI QR" },
+  { slug: "/blog/how-to-accept-upi-payments-without-pos-machine/", en: "Accept UPI Payments without Card Machine", hi: "कार्ड मशीन के बिना UPI भुगतान स्वीकार करें" }
+];
+---
+
+<section class="no-print border-t border-forest/10 bg-forest/[0.02] py-12 px-4 md:px-6 lg:px-8">
+  <div class="mx-auto max-w-7xl">
+    <div class="mb-8">
+      <h2 class="text-sm font-black uppercase tracking-[0.2em] text-leaf flex items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M13.19 8.688a4.5 4.5 0 0 1 1.242 7.244l-4.5 4.5a4.5 4.5 0 0 1-6.364-6.364l1.757-1.757m13.35-.622 1.757-1.757a4.5 4.5 0 0 0-6.364-6.364l-4.5 4.5a4.5 4.5 0 0 0 1.242 7.244" />
+        </svg>
+        {content.title}
+      </h2>
+      <p class="mt-2 text-xs leading-relaxed text-forest/70 max-w-2xl">
+        {content.subtitle}
+      </p>
+    </div>
+
+    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      {/* Device & Mobile Column */}
+      <div class="space-y-3">
+        <h3 class="text-[11px] font-bold uppercase tracking-wider text-forest/90 border-b border-forest/5 pb-2">
+          {content.categories.device}
+        </h3>
+        <ul class="space-y-1.5">
+          {deviceLinks.map((item) => (
+            <li>
+              <a
+                href={getPath(item.slug)}
+                class="block text-[11px] text-forest/80 hover:text-leaf hover:underline leading-relaxed transition-colors font-medium"
+              >
+                {isHindi ? item.hi : item.en}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Format & Quality Column */}
+      <div class="space-y-3">
+        <h3 class="text-[11px] font-bold uppercase tracking-wider text-forest/90 border-b border-forest/5 pb-2">
+          {content.categories.format}
+        </h3>
+        <ul class="space-y-1.5">
+          {formatLinks.map((item) => (
+            <li>
+              <a
+                href={getPath(item.slug)}
+                class="block text-[11px] text-forest/80 hover:text-leaf hover:underline leading-relaxed transition-colors font-medium"
+              >
+                {isHindi ? item.hi : item.en}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Batch & Archive Column */}
+      <div class="space-y-3">
+        <h3 class="text-[11px] font-bold uppercase tracking-wider text-forest/90 border-b border-forest/5 pb-2">
+          {content.categories.batch}
+        </h3>
+        <ul class="space-y-1.5">
+          {batchLinks.map((item) => (
+            <li>
+              <a
+                href={getPath(item.slug)}
+                class="block text-[11px] text-forest/80 hover:text-leaf hover:underline leading-relaxed transition-colors font-medium"
+              >
+                {isHindi ? item.hi : item.en}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      {/* Creator Growth Column */}
+      <div class="space-y-3">
+        <h3 class="text-[11px] font-bold uppercase tracking-wider text-forest/90 border-b border-forest/5 pb-2">
+          {content.categories.creator}
+        </h3>
+        <ul class="space-y-1.5">
+          {creatorLinks.map((item) => (
+            <li>
+              <a
+                href={getPath(item.slug)}
+                class="block text-[11px] text-forest/80 hover:text-leaf hover:underline leading-relaxed transition-colors font-medium"
+              >
+                {isHindi ? item.hi : item.en}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>

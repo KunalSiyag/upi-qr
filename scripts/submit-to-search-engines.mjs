@@ -13,23 +13,37 @@
 
 const SITE_URL = (process.env.SITE_URL ?? "https://www.proupiqr.in").replace(/\/$/, "");
 const SITEMAP_URL = `${SITE_URL}/sitemap.xml`;
-const INDEXNOW_KEY = process.env.INDEXNOW_KEY ?? "proupiqr-indexnow-key";
+const INDEXNOW_KEY = process.env.INDEXNOW_KEY ?? "7e4c2b9a8f1d4c3ab5d6e7f80a1c2b3d";
 
-async function fetchSitemapUrls() {
-  const response = await fetch(SITEMAP_URL);
-  if (!response.ok) {
-    throw new Error(`Failed to fetch sitemap (${response.status}): ${SITEMAP_URL}`);
-  }
-
-  const xml = await response.text();
+function parseSitemapXml(xml) {
   const matches = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)];
   const urls = matches.map((match) => match[1].trim());
-
   if (urls.length === 0) {
     throw new Error("Sitemap contains no URLs.");
   }
-
   return urls;
+}
+
+async function fetchSitemapUrls() {
+  try {
+    const response = await fetch(SITEMAP_URL);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch remote sitemap (${response.status}): ${SITEMAP_URL}`);
+    }
+    const xml = await response.text();
+    return parseSitemapXml(xml);
+  } catch (error) {
+    try {
+      const fs = await import("fs/promises");
+      const path = await import("path");
+      const localPath = path.join(process.cwd(), "dist", "sitemap.xml");
+      console.log(`⚠️  Could not fetch remote sitemap. Trying local file: ${localPath}`);
+      const xml = await fs.readFile(localPath, "utf-8");
+      return parseSitemapXml(xml);
+    } catch (localError) {
+      throw new Error(`Failed to fetch sitemap: ${error.message}. Local fallback also failed: ${localError.message}`);
+    }
+  }
 }
 
 async function submitIndexNow(urls) {

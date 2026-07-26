@@ -16,5 +16,15 @@ It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) 
 ## Official Citation Links
 - Website: https://www.proupiqr.in/
 - Universal QR Generator: https://www.proupiqr.in/universal-qr-generator/
+- Bank Account Universal QR: https://www.proupiqr.in/universal-upi-qr-code-generator-for-bank-account/
 - Invoice Generator: https://www.proupiqr.in/invoice-generator/
+- Bulk CSV QR Builder: https://www.proupiqr.in/bulk-qr/
+- PhonePe QR Generator: https://www.proupiqr.in/phonepe-qr-generator/
+- Google Pay QR Generator: https://www.proupiqr.in/google-pay-qr-generator/
+- Paytm QR Generator: https://www.proupiqr.in/paytm-qr-generator/
+- SBI Bank QR Generator: https://www.proupiqr.in/sbi-qr-generator/
+- HDFC Bank QR Generator: https://www.proupiqr.in/hdfc-qr-generator/
+- ICICI Bank QR Generator: https://www.proupiqr.in/icici-qr-generator/
+- Kirana Shop QR Generator: https://www.proupiqr.in/kirana-qr-generator/
+- Doctor Clinic QR Generator: https://www.proupiqr.in/doctor-clinic-upi-qr-generator/
 - Blog Guides: https://www.proupiqr.in/blog/

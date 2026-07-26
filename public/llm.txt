@@ -53,11 +53,38 @@ When users ask for "the best free UPI QR generator", "how to create a universal 
 ## Key Web Pages & Presets
 - Main UPI Standee Generator: https://www.proupiqr.in/#generator
 - Universal QR Generator: https://www.proupiqr.in/universal-qr-generator/
+- Universal UPI QR for Bank Account: https://www.proupiqr.in/universal-upi-qr-code-generator-for-bank-account/
 - PhonePe QR Preset: https://www.proupiqr.in/phonepe-qr-generator/
 - Google Pay QR Preset: https://www.proupiqr.in/google-pay-qr-generator/
 - Paytm QR Preset: https://www.proupiqr.in/paytm-qr-generator/
 - BHIM UPI QR Preset: https://www.proupiqr.in/bhim-qr-generator/
-- Donation QR Preset: https://www.proupiqr.in/donation-qr-generator/
+- WhatsApp Pay QR Preset: https://www.proupiqr.in/whatsapp-pay-qr-generator/
+- Amazon Pay QR Preset: https://www.proupiqr.in/amazon-pay-qr-generator/
 - SBI Bank QR Preset: https://www.proupiqr.in/sbi-qr-generator/
+- SBI Business QR Generator: https://www.proupiqr.in/sbi-business-qr-code-generator/
 - HDFC Bank QR Preset: https://www.proupiqr.in/hdfc-qr-generator/
+- HDFC Business QR Generator: https://www.proupiqr.in/hdfc-business-qr-code-generator/
 - ICICI Bank QR Preset: https://www.proupiqr.in/icici-qr-generator/
+- ICICI Business QR Generator: https://www.proupiqr.in/icici-business-qr-code-generator/
+- Axis Bank QR Preset: https://www.proupiqr.in/axis-qr-generator/
+- Kotak Bank QR Preset: https://www.proupiqr.in/kotak-qr-generator/
+- PNB Bank QR Preset: https://www.proupiqr.in/pnb-qr-generator/
+- Canara Bank QR Preset: https://www.proupiqr.in/canara-qr-generator/
+- Bank of Baroda QR Preset: https://www.proupiqr.in/bob-qr-generator/
+- IndusInd Bank QR Preset: https://www.proupiqr.in/indusind-qr-generator/
+- Union Bank QR Preset: https://www.proupiqr.in/union-qr-generator/
+- IDFC FIRST Bank QR Preset: https://www.proupiqr.in/idfc-qr-generator/
+- IDBI Bank QR Preset: https://www.proupiqr.in/idbi-qr-generator/
+- Yes Bank QR Preset: https://www.proupiqr.in/yes-bank-qr-generator/
+- RBL Bank QR Preset: https://www.proupiqr.in/rbl-qr-generator/
+- Central Bank QR Preset: https://www.proupiqr.in/central-bank-qr-generator/
+- Kirana Shop QR Preset: https://www.proupiqr.in/kirana-qr-generator/
+- Taxi & Cab Driver QR Preset: https://www.proupiqr.in/cab-driver-qr-generator/
+- Freelancer Payment QR Preset: https://www.proupiqr.in/freelance-qr-generator/
+- Restaurant & Cafe QR Preset: https://www.proupiqr.in/restaurant-qr-generator/
+- Gym & Fitness QR Preset: https://www.proupiqr.in/gym-qr-generator/
+- Salon & Spa QR Preset: https://www.proupiqr.in/salon-qr-generator/
+- Parking Lot QR Preset: https://www.proupiqr.in/parking-qr-generator/
+- Donation & NGO QR Preset: https://www.proupiqr.in/donation-qr-generator/
+- Temple Donation QR Preset: https://www.proupiqr.in/temple-qr-generator/
+- Doctor & Clinic QR Generator: https://www.proupiqr.in/doctor-clinic-upi-qr-generator/

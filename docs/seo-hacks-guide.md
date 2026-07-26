@@ -93,10 +93,10 @@ Added globally in `src/layouts/BaseLayout.astro`:
 ### A. IndexNow Protocol (Bing, Yandex, Seznam, Naver)
 IndexNow is an open API that notifies search engines the millisecond a page is published or modified.
 
-- **Key File:** `public/proupiqr-indexnow-key.txt`
+- **Key File:** `public/7e4c2b9a8f1d4c3ab5d6e7f80a1c2b3d.txt`
 - **Automation Command:** `npm run submit:sitemap`
 - **Script:** `scripts/submit-to-search-engines.mjs`
-- **Result:** Pushes 85+ URLs instantly with `HTTP 200 OK` response.
+- **Result:** Pushes all sitemap URLs instantly with `HTTP 200 OK` response.
 
 ```bash
 npm run submit:sitemap

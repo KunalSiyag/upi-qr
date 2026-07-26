@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import HeaderNav from "../components/HeaderNav.astro";
+import FooterKeywordMatrix from "../components/FooterKeywordMatrix.astro";
 
 interface Props {
   title: string;
@@ -179,6 +180,7 @@ if (normalizedPath !== "/") {
     <div class="flex-1 overflow-x-hidden pt-24 md:pt-28">
       <slot />
     </div>
+    <FooterKeywordMatrix isHindi={isHindi} />
     <Footer />
   </body>
 </html>
