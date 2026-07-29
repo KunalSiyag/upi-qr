@@ -37,36 +37,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
       async function processRedirect() {
         if (id) {
-          // 1. Primary KVDB Cloud Scan Increment
-          try {
-            fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`)
-              .then(res => res.ok ? res.text() : "0")
-              .then(text => {
-                const current = parseInt(text) || 0;
-                fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`, {
-                  method: 'POST',
-                  body: (current + 1).toString()
-                }).catch(() => {});
-              }).catch(() => {});
-
-            fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`)
-              .then(res => res.ok ? res.text() : "0")
-              .then(text => {
-                const currentDev = parseInt(text) || 0;
-                fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`, {
-                  method: 'POST',
-                  body: (currentDev + 1).toString()
-                }).catch(() => {});
-              }).catch(() => {});
-          } catch (e) {}
-
-          // 2. Backup Counter API
-          try {
-            fetch(`https://api.counterapi.dev/v1/proupiqr_${id}/up`, { method: 'GET' }).catch(() => {});
-            fetch(`https://api.counterapi.dev/v1/proupiqr_${id}_${deviceType}/up`, { method: 'GET' }).catch(() => {});
-          } catch (e) {}
-
-          // 3. Fetch latest destination URL and metadata from Cloud KV store
+          // Fetch cloud record & increment scan counts on primary key
           try {
             const cloudRes = await fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, { method: 'GET' });
             if (cloudRes.ok) {
@@ -77,7 +48,25 @@ const qrId = Astro.url.searchParams.get("id") || "";
                   const meta = JSON.parse(trimmed);
                   if (meta.destinationUrl) target = meta.destinationUrl;
 
-                  // 4. Trigger Free WhatsApp Alert Webhook if configured
+                  // Update scan counts in background
+                  const currentScans = (meta.scans || 0) + 1;
+                  const mobileScans = (meta.mobileScans || 0) + (isMobile ? 1 : 0);
+                  const desktopScans = (meta.desktopScans || 0) + (isMobile ? 0 : 1);
+
+                  const updatedPayload = JSON.stringify({
+                    ...meta,
+                    scans: currentScans,
+                    mobileScans: mobileScans,
+                    desktopScans: desktopScans,
+                    lastScanned: new Date().toISOString()
+                  });
+
+                  fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, {
+                    method: 'POST',
+                    body: updatedPayload
+                  }).catch(() => {});
+
+                  // Trigger Free WhatsApp Alert Webhook if configured
                   if (meta.whatsappPhone && meta.whatsappApiKey) {
                     const alertMsg = encodeURIComponent(`⚡ Pro UPI QR Alert: Your QR Code "${meta.title || id}" was just scanned via ${deviceType.toUpperCase()}!`);
                     fetch(`https://api.callmebot.com/whatsapp.php?phone=${meta.whatsappPhone}&text=${alertMsg}&apikey=${meta.whatsappApiKey}`, { mode: 'no-cors' }).catch(() => {});
@@ -91,7 +80,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
             console.warn("Cloud destination fetch fallback:", e);
           }
 
-          // 5. Update local storage if scanned on dashboard browser
+          // Update local storage if scanned on dashboard browser
           try {
             const saved = localStorage.getItem('pro_upi_dynamic_links');
             if (saved) {
