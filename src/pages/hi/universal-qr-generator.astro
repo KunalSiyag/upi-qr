@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { UniversalQrForm } from "../../components/UniversalQrForm";
+import AffiliateProducts from "../../components/AffiliateProducts.astro";
+
+const title = "यूनिवर्सल QR कोड जनरेटर (हिंदी) - URL, टेक्स्ट, वॉयस, वाई-फाई और संपर्क | Pro UPI QR";
+const description =
+  "निःशुल्क यूनिवर्सल QR कोड जनरेटर। वेबसाइट लिंक, वाई-फाई पासवर्ड, वीकार्ड संपर्क विवरण और कस्टम टेक्स्ट के लिए उच्च-गुणवत्ता वाले QR कोड बनाएं।";
+---
+
+<BaseLayout title={title} description={description}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div class="text-center">
+        <span class="inline-block rounded-full bg-leaf/10 px-4 py-1.5 text-xs font-black uppercase tracking-wider text-forest">
+          यूनिवर्सल QR टूल
+        </span>
+        <h1 class="mt-4 text-3xl font-black tracking-tight text-forest md:text-5xl">
+          निःशुल्क यूनिवर्सल QR कोड जनरेटर
+        </h1>
+        <p class="mt-3 text-sm text-forest/75 md:text-base max-w-2xl mx-auto">
+          वेबसाइट लिंक, व्हाट्सएप चैट, वाई-फाई पासवर्ड और बिजनेस वीकार्ड के लिए QR कोड बनाएं।
+        </p>
+      </div>
+
+      <div class="mt-8">
+        <UniversalQrForm client:load />
+      </div>
+
+      <AffiliateProducts />
+    </div>
+  </main>
+</BaseLayout>

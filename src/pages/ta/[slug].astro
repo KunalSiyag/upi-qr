@@ -3,7 +3,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
-import EmbedWidgetModal from "../../components/EmbedWidgetModal.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
 
 export async function getStaticPaths() {
@@ -11,81 +10,64 @@ export async function getStaticPaths() {
     {
       params: { slug: "phonepe-qr-generator" },
       props: {
-        title: "PhonePe QR ஜெனரேட்டர் (PhonePe QR Generator Tamil)",
-        headline: "இலவச PhonePe UPI QR குறியீட்டை உருவாக்கவும்",
+        title: "PhonePe QR ஜெனரேட்டர்",
+        headline: "PhonePe ஆதரவுடைய இலவச UPI QR குறியீடு உருவாக்குங்கள்",
         presetType: "phonepe",
-        intro: "கடைகள் மற்றும் சிறு தொழில்களுக்கு PhonePe மற்றும் பிற UPI செயலிகளில் ஸ்கேன் செய்யக்கூடிய இலவச QR குறியீட்டை உருவாக்கவும்."
+        intro: "பதிவு இல்லாமல் PhonePe மற்றும் பிற UPI செயலிகளுடன் வேலை செய்யும் QR குறியீட்டை உருவாக்குங்கள்."
       }
     },
     {
       params: { slug: "google-pay-qr-generator" },
       props: {
-        title: "Google Pay QR ஜெனரேட்டர் (GPay QR Generator Tamil)",
-        headline: "இலவச Google Pay UPI QR குறியீட்டை உருவாக்கவும்",
+        title: "Google Pay QR ஜெனரேட்டர்",
+        headline: "Google Pay ஆதரவுடைய இலவச UPI QR குறியீடு உருவாக்குங்கள்",
         presetType: "gpay",
-        intro: "Google Pay மூலம் எளிதாக பணம் பெற உங்கள் UPI VPA குறியீட்டை உடனடியாக உருவாக்கவும்."
+        intro: "Google Pay பயன்பாட்டிற்கான உடனடி கட்டண UPI QR குறியீட்டை உருவாக்குங்கள்."
       }
     },
     {
       params: { slug: "paytm-qr-generator" },
       props: {
-        title: "Paytm QR ஜெனரேட்டர் (Paytm QR Code Generator Tamil)",
-        headline: "இலவச Paytm UPI QR குறியீட்டை உருவாக்கவும்",
+        title: "Paytm QR ஜெனரேட்டர்",
+        headline: "Paytm ஆதரவுடைய இலவச UPI QR குறியீடு உருவாக்குங்கள்",
         presetType: "paytm",
-        intro: "வியாபாரிகள் மற்றும் கடைகளுக்கு Paytm இணக்கமான இலவச UPI QR போஸ்டரை உருவாக்கவும்."
+        intro: "கடைகள் மற்றும் சிறு வணிகங்களுக்கான Paytm ஆதரவுடைய UPI QR குறியீட்டை உருவாக்குங்கள்."
       }
     },
     {
       params: { slug: "sbi-qr-generator" },
       props: {
-        title: "SBI UPI QR ஜெனரேட்டர் (SBI QR Generator Tamil)",
-        headline: "இலவச எஸ்பிஐ (SBI) வங்கி UPI QR போஸ்டர்",
+        title: "SBI UPI QR ஜெனரேட்டர்",
+        headline: "SBI வங்கி கணக்கிற்கான UPI QR உருவாக்குங்கள்",
         presetType: "sbi",
-        intro: "எஸ்பிஐ வங்கி கணக்குகளுக்கு 0% கமிஷனில் நேரடி கட்டண வசூல் QR குறியீட்டை உருவாக்கவும்."
+        intro: "State Bank of India கணக்குகளுக்கான UPI QR குறியீட்டை உடனடியாக பெறுங்கள்."
       }
     }
   ];
 }
 
-const { title, headline, intro, presetType } = Astro.props;
-const description = `${headline}. ${intro}`;
-const generatorSlug = Astro.params.slug as GeneratorSlug;
-const resolvedPreset = getPresetFromSlug(generatorSlug);
-const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const { slug } = Astro.params;
+const { title, headline, presetType, intro } = Astro.props;
 
-const schema = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "@id": pageUrl + "#webapp",
-      "name": title,
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Any",
-      "url": pageUrl,
-      "description": description,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
-    }
-  ]
-};
+const generatorSlug = slug as GeneratorSlug;
+const resolvedPreset = presetType ?? getPresetFromSlug(generatorSlug);
+
+const description = `${intro} 100% இலவசம் மற்றும் உடனடி பதிவிறக்கம்.`;
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
+<BaseLayout title={`${title} | Pro UPI QR (Tamil)`} description={description}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
-    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-sm">
-      <nav aria-label="Breadcrumb" class="mb-4 text-xs font-bold text-leaf">
-        <a href="/" class="hover:underline">Home</a> / <span class="text-forest">Tamil (தமிழ்)</span> / <span>{title}</span>
-      </nav>
-
-      <span class="text-xs font-black uppercase text-leaf">Tamil (தமிழ்) UPI Generator</span>
-      <h1 class="mt-2 text-3xl font-black text-forest md:text-5xl">{headline}</h1>
-      <p class="mt-3 text-sm text-forest/75 md:text-base">{intro}</p>
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <a href="/ta/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; முதன்மை பக்கத்திற்கு திரும்பு</a>
+      
+      <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">உடனடி கட்டண QR</p>
+      <h1 class="mt-2 text-3xl font-black tracking-tight text-forest md:text-5xl">{headline}</h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72 md:text-base">{intro}</p>
 
       <div class="mt-8">
-        <GeneratorForm client:load presetType={presetType as any} />
+        <GeneratorForm client:load presetType={resolvedPreset} />
       </div>
 
-      <EmbedWidgetModal generatorTitle={title} />
       <AffiliateProducts />
       <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
     </div>

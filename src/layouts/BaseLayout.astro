@@ -21,79 +21,39 @@ const ogImageUrl = image
   ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
   : new URL(defaultOgSvg, Astro.site).toString();
 
-const isHindi = Astro.url.pathname.startsWith("/hi");
-
-const isBlogIndex = normalizedPath === "/blog/";
-const isBlogPost = normalizedPath.startsWith("/blog/") && !isBlogIndex;
-
-const validHindiSlugs = new Set([
-  "", "phonepe-qr-generator", "google-pay-qr-generator", "paytm-qr-generator",
-  "donation-qr-generator", "bhim-qr-generator", "whatsapp-pay-qr-generator",
-  "amazon-pay-qr-generator", "sbi-qr-generator", "hdfc-qr-generator",
-  "icici-qr-generator", "axis-qr-generator", "kotak-qr-generator",
-  "pnb-qr-generator", "canara-qr-generator", "bob-qr-generator",
-  "indusind-qr-generator", "union-qr-generator", "kirana-qr-generator",
-  "cab-driver-qr-generator", "freelance-qr-generator", "restaurant-qr-generator",
-  "idfc-qr-generator", "idbi-qr-generator", "yes-bank-qr-generator",
-  "rbl-qr-generator", "central-bank-qr-generator", "gym-qr-generator",
-  "salon-qr-generator", "parking-qr-generator", "temple-qr-generator",
-  "privacy", "terms", "disclaimer"
-]);
-
-// Blog is English-only; Hindi switcher goes to translated generator hub
-let langLink = `/hi${normalizedPath}`;
-if (isHindi) {
-  langLink = normalizedPath.replace(/^\/hi\//, "/");
-  if (langLink === "") langLink = "/";
-} else if (isBlogIndex || isBlogPost) {
-  langLink = "/hi/";
-}
-const langLabel = isHindi ? "English" : "हिन्दी";
-
 const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
-let englishPath = normalizedPath;
-if (isHindi) {
-  englishPath = normalizedPath.replace(/^\/hi\//, "/");
-  if (englishPath === "") englishPath = "/";
-}
-const englishUrl = `${baseUrl}${englishPath}`;
+const rawPath = Astro.url.pathname;
+const cleanPath = rawPath.replace(/^\/(hi|ta|te|mr)(\/|$)/, "/");
+const currentSlug = cleanPath.replace(/^\/|\/$/g, "");
 
-const currentSlug = englishPath.replace(/^\/|\/$/g, "");
-const hasHindiTranslation = validHindiSlugs.has(currentSlug);
+const englishUrl = `${baseUrl}/${currentSlug ? currentSlug + "/" : ""}`;
+const hindiUrl = `${baseUrl}/hi/${currentSlug ? currentSlug + "/" : ""}`;
+const tamilUrl = `${baseUrl}/ta/${currentSlug ? currentSlug + "/" : ""}`;
+const teluguUrl = `${baseUrl}/te/${currentSlug ? currentSlug + "/" : ""}`;
+const marathiUrl = `${baseUrl}/mr/${currentSlug ? currentSlug + "/" : ""}`;
+const isHindi = rawPath.startsWith("/hi");
 
-let hindiUrl: string | null = null;
-if (isBlogIndex || isBlogPost) {
-  hindiUrl = `${baseUrl}/hi/`;
-} else if (isHindi) {
-  hindiUrl = `${baseUrl}${normalizedPath}`;
-} else if (hasHindiTranslation) {
-  hindiUrl = `${baseUrl}/hi${normalizedPath}`;
-}
-
-const hasAlternate = hindiUrl !== null;
-
-// Breadcrumb Schema
 const breadcrumbItems = [
   { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl }
 ];
-if (normalizedPath !== "/") {
-  const parts = normalizedPath.split("/").filter(Boolean);
-  let currentPath = baseUrl;
+if (cleanPath !== "/") {
+  const parts = cleanPath.split("/").filter(Boolean);
+  let curPath = baseUrl;
   parts.forEach((part, index) => {
-    currentPath += `/${part}`;
+    curPath += `/${part}`;
     const name = part.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
     breadcrumbItems.push({
       "@type": "ListItem",
       "position": index + 2,
       "name": name,
-      "item": currentPath
+      "item": curPath
     });
   });
 }
 ---
 
 <!doctype html>
-<html lang={isHindi ? "hi" : "en"} class="w-full max-w-[100vw] overflow-x-hidden">
+<html lang="en" class="w-full max-w-[100vw] overflow-x-hidden">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -107,11 +67,12 @@ if (normalizedPath !== "/") {
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    {hasAlternate && (
-      <link rel="alternate" hreflang="en" href={englishUrl} />
-      <link rel="alternate" hreflang="hi" href={hindiUrl} />
-      <link rel="alternate" hreflang="x-default" href={englishUrl} />
-    )}
+    <link rel="alternate" hreflang="en" href={englishUrl} />
+    <link rel="alternate" hreflang="hi" href={hindiUrl} />
+    <link rel="alternate" hreflang="ta" href={tamilUrl} />
+    <link rel="alternate" hreflang="te" href={teluguUrl} />
+    <link rel="alternate" hreflang="mr" href={marathiUrl} />
+    <link rel="alternate" hreflang="x-default" href={englishUrl} />
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#113b2c" />
 
@@ -188,7 +149,7 @@ if (normalizedPath !== "/") {
   <body class="font-sans text-ink antialiased bg-[#fffdf6] min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
     <div class="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 pb-2 md:px-6 lg:px-8 pointer-events-none">
       <div class="mx-auto max-w-7xl">
-        <HeaderNav isHindi={isHindi} currentPath={normalizedPath} langLink={langLink} langLabel={langLabel} />
+        <HeaderNav isHindi={isHindi} currentPath={rawPath} />
       </div>
     </div>
     <div class="flex-1 overflow-x-hidden pt-24 md:pt-28">

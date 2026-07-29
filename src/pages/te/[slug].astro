@@ -3,7 +3,6 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
-import EmbedWidgetModal from "../../components/EmbedWidgetModal.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
 
 export async function getStaticPaths() {
@@ -11,81 +10,64 @@ export async function getStaticPaths() {
     {
       params: { slug: "phonepe-qr-generator" },
       props: {
-        title: "PhonePe QR జనరేటర్ (PhonePe QR Generator Telugu)",
-        headline: "ఉచిత PhonePe UPI QR కోడ్‌ను సృష్టించండి",
+        title: "PhonePe QR జనరేటర్",
+        headline: "PhonePe అనుకూల ఉచిత UPI QR కోడ్ సృష్టించండి",
         presetType: "phonepe",
-        intro: "వ్యాపారులు మరియు దుకాణాల కోసం PhonePe మరియు ఇతర UPI యాప్‌ల ద్వారా స్కాన్ చేయగల ఉచిత QR కోడ్‌ను రూపొందించండి."
+        intro: "ఎలాంటి సైన్అప్ లేకుండా PhonePe మరియు ఇతర UPI యాప్‌లతో పనిచేసే QR కోడ్‌ను సృష్టించండి."
       }
     },
     {
       params: { slug: "google-pay-qr-generator" },
       props: {
-        title: "Google Pay QR జనరేటర్ (GPay QR Generator Telugu)",
-        headline: "ఉచిత Google Pay UPI QR కోడ్‌ను సృష్టించండి",
+        title: "Google Pay QR జనరేటర్",
+        headline: "Google Pay అనుకూల ఉచిత UPI QR కోడ్ సృష్టించండి",
         presetType: "gpay",
-        intro: "Google Pay ద్వారా మీ బ్యాంక్ ఖాతాకు నేరుగా పేమెంట్లు స్వీకరించడానికి ఉచిత QR కోడ్ రూపొందించండి."
+        intro: "Google Pay యాప్ కోసం తక్షణ చెల్లింపు UPI QR కోడ్‌ను సృష్టించండి."
       }
     },
     {
       params: { slug: "paytm-qr-generator" },
       props: {
-        title: "Paytm QR జనరేటర్ (Paytm QR Code Generator Telugu)",
-        headline: "ఉచిత Paytm UPI QR కోడ్‌ను సృష్టించండి",
+        title: "Paytm QR జనరేటర్",
+        headline: "Paytm అనుకూల ఉచిత UPI QR కోడ్ సృష్టించండి",
         presetType: "paytm",
-        intro: "మీ షాప్ కౌంటర్ కోసం Paytm కాంపాటిబుల్ UPI QR కోడ్‌ను క్షణాల్లో రూపొందించండి."
+        intro: "షాపులు మరియు వ్యాపారాల కోసం Paytm అనుకూల UPI QR కోడ్‌ను రూపొందించండి."
       }
     },
     {
       params: { slug: "sbi-qr-generator" },
       props: {
-        title: "SBI UPI QR జనరేటర్ (SBI QR Generator Telugu)",
-        headline: "ఉచిత స్టేట్ బ్యాంక్ ఆఫ్ ఇండియా (SBI) UPI QR కోడ్",
+        title: "SBI UPI QR జనరేటర్",
+        headline: "SBI బ్యాంక్ ఖాతా కోసం UPI QR సృష్టించండి",
         presetType: "sbi",
-        intro: "SBI బ్యాంక్ ఖాతాదారుల కోసం 0% కమీషన్‌తో డైరెక్ట్ పేమెంట్ QR పోస్టర్ ప్రింట్ చేయండి."
+        intro: "State Bank of India ఖాతాల కోసం తక్షణమే UPI QR కోడ్‌ను పొందండి."
       }
     }
   ];
 }
 
-const { title, headline, intro, presetType } = Astro.props;
-const description = `${headline}. ${intro}`;
-const generatorSlug = Astro.params.slug as GeneratorSlug;
-const resolvedPreset = getPresetFromSlug(generatorSlug);
-const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const { slug } = Astro.params;
+const { title, headline, presetType, intro } = Astro.props;
 
-const schema = {
-  "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": "WebApplication",
-      "@id": pageUrl + "#webapp",
-      "name": title,
-      "applicationCategory": "BusinessApplication",
-      "operatingSystem": "Any",
-      "url": pageUrl,
-      "description": description,
-      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
-    }
-  ]
-};
+const generatorSlug = slug as GeneratorSlug;
+const resolvedPreset = presetType ?? getPresetFromSlug(generatorSlug);
+
+const description = `${intro} 100% ఉచితం మరియు తక్షణ డౌన్‌లోడ్.`;
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
+<BaseLayout title={`${title} | Pro UPI QR (Telugu)`} description={description}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
-    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-sm">
-      <nav aria-label="Breadcrumb" class="mb-4 text-xs font-bold text-leaf">
-        <a href="/" class="hover:underline">Home</a> / <span class="text-forest">Telugu (తెలుగు)</span> / <span>{title}</span>
-      </nav>
-
-      <span class="text-xs font-black uppercase text-leaf">Telugu (తెలుగు) UPI Generator</span>
-      <h1 class="mt-2 text-3xl font-black text-forest md:text-5xl">{headline}</h1>
-      <p class="mt-3 text-sm text-forest/75 md:text-base">{intro}</p>
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <a href="/te/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; ప్రధాన పేజీకి తిరిగి వెళ్లండి</a>
+      
+      <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">తక్షణ చెల్లింపు QR</p>
+      <h1 class="mt-2 text-3xl font-black tracking-tight text-forest md:text-5xl">{headline}</h1>
+      <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72 md:text-base">{intro}</p>
 
       <div class="mt-8">
-        <GeneratorForm client:load presetType={presetType as any} />
+        <GeneratorForm client:load presetType={resolvedPreset} />
       </div>
 
-      <EmbedWidgetModal generatorTitle={title} />
       <AffiliateProducts />
       <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
     </div>

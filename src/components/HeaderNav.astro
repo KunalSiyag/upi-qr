@@ -8,12 +8,15 @@ interface Props {
 
 const { isHindi = false, currentPath = "/" } = Astro.props;
 
+const cleanPath = currentPath.replace(/^\/(hi|ta|te|mr)(\/|$)/, "/");
+const formattedCleanPath = cleanPath.startsWith("/") ? cleanPath : `/${cleanPath}`;
+
 const languages = [
-  { code: "en", label: "English", path: "/" },
-  { code: "hi", label: "हिन्दी", path: "/hi/" },
-  { code: "ta", label: "தமிழ்", path: "/ta/" },
-  { code: "te", label: "తెలుగు", path: "/te/" },
-  { code: "mr", label: "मराठी", path: "/mr/" }
+  { code: "en", label: "English", path: formattedCleanPath },
+  { code: "hi", label: "हिन्दी", path: `/hi${formattedCleanPath === "/" ? "/" : formattedCleanPath}` },
+  { code: "ta", label: "தமிழ்", path: `/ta${formattedCleanPath === "/" ? "/" : formattedCleanPath}` },
+  { code: "te", label: "తెలుగు", path: `/te${formattedCleanPath === "/" ? "/" : formattedCleanPath}` },
+  { code: "mr", label: "मराठी", path: `/mr${formattedCleanPath === "/" ? "/" : formattedCleanPath}` }
 ];
 
 let activeLang = languages[0];
