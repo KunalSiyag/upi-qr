@@ -419,25 +419,54 @@ export function DynamicQrGenerator() {
               <summary className="cursor-pointer font-bold text-leaf hover:underline py-1 flex items-center gap-1">
                 <span>+ Setup Free Instant WhatsApp Scan Alerts</span>
               </summary>
-              <div className="mt-3 space-y-2 pt-2 border-t border-forest/10 bg-mint/20 p-3 rounded-xl">
-                <p className="text-[11px] text-forest/80 leading-relaxed">
-                  Receive a WhatsApp message on your phone whenever someone scans your QR code (Powered by CallMeBot free API).
-                </p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    type="text"
-                    placeholder="WhatsApp Phone (e.g. 919876543210)"
-                    value={whatsappPhone}
-                    onChange={(e) => setWhatsappPhone(e.target.value)}
-                    className="rounded-lg border border-forest/20 p-2 text-[11px]"
-                  />
-                  <input
-                    type="text"
-                    placeholder="CallMeBot API Key"
-                    value={whatsappApiKey}
-                    onChange={(e) => setWhatsappApiKey(e.target.value)}
-                    className="rounded-lg border border-forest/20 p-2 text-[11px]"
-                  />
+              <div className="mt-3 space-y-3 pt-2 border-t border-forest/10 bg-mint/30 p-3.5 rounded-xl border border-leaf/15">
+                <div>
+                  <h4 className="font-bold text-forest text-xs flex items-center gap-1">
+                    <span>How to get your Free WhatsApp API Key (10-Second Setup):</span>
+                  </h4>
+                  <ol className="mt-1.5 space-y-1 text-[11px] text-forest/80 list-decimal pl-4 leading-relaxed">
+                    <li>
+                      Read the official guide:{" "}
+                      <a
+                        href="https://www.callmebot.com/blog/free-api-whatsapp-messages/"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-bold text-leaf underline hover:text-forest"
+                      >
+                        CallMeBot Free WhatsApp API Documentation &rarr;
+                      </a>
+                    </li>
+                    <li>
+                      Save CallMeBot number to contacts or open WhatsApp, then send message:{" "}
+                      <code className="bg-white px-1.5 py-0.5 rounded font-mono text-[10px] border border-forest/15 font-bold">
+                        I allow callmebot to send me messages
+                      </code>
+                    </li>
+                    <li>You will receive a free 6-digit API key instantly in WhatsApp. Copy and paste it below!</li>
+                  </ol>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  <div>
+                    <label className="block text-[10px] font-bold text-forest mb-0.5">WhatsApp Phone (with Country Code)</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 919876543210"
+                      value={whatsappPhone}
+                      onChange={(e) => setWhatsappPhone(e.target.value)}
+                      className="w-full rounded-lg border border-forest/20 p-2 text-[11px] bg-white"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-forest mb-0.5">CallMeBot API Key</label>
+                    <input
+                      type="text"
+                      placeholder="e.g. 123456"
+                      value={whatsappApiKey}
+                      onChange={(e) => setWhatsappApiKey(e.target.value)}
+                      className="w-full rounded-lg border border-forest/20 p-2 text-[11px] bg-white font-mono"
+                    />
+                  </div>
                 </div>
               </div>
             </details>
