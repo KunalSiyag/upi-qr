@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
+import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../data/internalLinks";
 
 export async function getStaticPaths() {
@@ -464,6 +465,33 @@ const schema = {
           "text": faq.answer
         }
       }))
+    },
+    {
+      "@type": "HowTo",
+      "@id": pageUrl + "#howto",
+      "name": `How to Create a ${title}`,
+      "description": `Step-by-step instructions to generate a free high-resolution ${title} for instant scanning.`,
+      "totalTime": "PT1M",
+      "step": [
+        {
+          "@type": "HowToStep",
+          "position": 1,
+          "name": "Enter Payee Details",
+          "text": "Enter your registered UPI ID (VPA) and Business/Payee name into the generator form."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 2,
+          "name": "Set Amount & Notes (Optional)",
+          "text": "Specify a fixed transaction amount or bill note, or leave blank for dynamic customer input."
+        },
+        {
+          "@type": "HowToStep",
+          "position": 3,
+          "name": "Customize & Export",
+          "text": "Customize background branding colors, add custom logos, and download print-ready vector SVG or PNG posters."
+        }
+      ]
     }
   ]
 };
@@ -568,6 +596,8 @@ const schema = {
           ))}
         </div>
       </div>
+
+      <EmbedWidgetModal generatorTitle={title} />
 
       <AffiliateProducts />
 

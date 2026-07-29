@@ -1,11 +1,12 @@
-name: Automated SEO & Crawler Warmup
+name: Automated SEO, Indexing & Web 2.0 Syndication Suite
 
 on:
   push:
     branches:
       - main
+      - master
   schedule:
-    # Run daily at 00:00 UTC
+    # Run daily at 00:00 UTC (05:30 IST)
     - cron: '0 0 * * *'
   workflow_dispatch:
 
@@ -22,13 +23,52 @@ jobs:
           node-version: 20
           cache: 'npm'
 
-      - name: Install dependencies
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install requests google-api-python-client google-auth-httplib2 google-auth-oauthlib || true
+
+      - name: Install Node dependencies
         run: npm ci
 
-      - name: Build site
+      - name: Build site (Triggers Postbuild IndexNow Ping)
         run: npm run build
 
-      - name: Execute Automated SEO Suite (IndexNow, RSS Pings, Crawler Warmup)
+      - name: Run Google Indexing API Script
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -f "service_account.json" ] || [ -n "$SERVICE_ACCOUNT_JSON" ]; then
+            if [ -n "$SERVICE_ACCOUNT_JSON" ]; then
+              echo "$SERVICE_ACCOUNT_JSON" > service_account.json
+            fi
+            python3 index_pages.py || true
+          else
+            echo "Google Indexing Service Account JSON not configured, skipping..."
+          fi
+
+      - name: Execute Full SEO & Satellite Backlink Syndication Suite
         env:
           SITE_URL: https://www.proupiqr.in
+          WP_ENABLED: ${{ secrets.WP_ENABLED || 'false' }}
+          WP_SITE_URL: ${{ secrets.WP_SITE_URL }}
+          WP_USERNAME: ${{ secrets.WP_USERNAME }}
+          WP_APP_PASSWORD: ${{ secrets.WP_APP_PASSWORD }}
+          BLOGGER_ENABLED: ${{ secrets.BLOGGER_ENABLED || 'false' }}
+          BLOGGER_BLOG_ID: ${{ secrets.BLOGGER_BLOG_ID }}
+          BLOGGER_API_KEY: ${{ secrets.BLOGGER_API_KEY }}
+          BLOGGER_ACCESS_TOKEN: ${{ secrets.BLOGGER_ACCESS_TOKEN }}
         run: npm run seo:all
+
+      - name: Generate Workflow Summary
+        run: |
+          echo "### 🚀 Automated SEO & Backlink Syndication Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "- **Site**: https://www.proupiqr.in" >> $GITHUB_STEP_SUMMARY
+          echo "- **IndexNow Submission**: Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "- **RSS Pings & Crawler Warmup**: Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **WordPress & Blogger Satellite Syndication**: Executed" >> $GITHUB_STEP_SUMMARY

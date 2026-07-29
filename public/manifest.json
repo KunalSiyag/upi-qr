@@ -15,5 +15,35 @@
       "type": "image/svg+xml",
       "purpose": "any maskable"
     }
+  ],
+  "shortcuts": [
+    {
+      "name": "PhonePe QR Generator",
+      "short_name": "PhonePe QR",
+      "description": "Generate PhonePe compatible payment QR code",
+      "url": "/phonepe-qr-generator/",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Google Pay QR Generator",
+      "short_name": "Google Pay QR",
+      "description": "Generate GPay compatible payment QR code",
+      "url": "/google-pay-qr-generator/",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "Bulk QR Sheet Generator",
+      "short_name": "Bulk QR",
+      "description": "Generate printable A4 QR sticker sheets",
+      "url": "/bulk-qr/",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    },
+    {
+      "name": "GST Invoice QR Calculator",
+      "short_name": "GST Calculator",
+      "description": "Calculate GST and generate payment QR",
+      "url": "/gst-calculator/",
+      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+    }
   ]
 }

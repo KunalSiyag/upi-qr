@@ -1,0 +1,102 @@
+---
+interface Props {
+  generatorTitle?: string;
+}
+
+const { generatorTitle = "Pro UPI QR Generator" } = Astro.props;
+---
+
+<div class="mt-8 rounded-2xl bg-forest/5 p-6 border border-forest/15 shadow-sm">
+  <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+    <div>
+      <div class="flex items-center gap-2">
+        <span class="rounded-md bg-leaf/20 px-2 py-0.5 text-[11px] font-black text-forest uppercase tracking-wider">Free Webmaster Tool</span>
+        <h3 class="text-base font-black text-forest">Embed This {generatorTitle} On Your Website</h3>
+      </div>
+      <p class="mt-1 text-xs text-forest/75 leading-relaxed">
+        Allow your store customers, blog readers, or invoice clients to generate instant UPI QR codes directly inside your website.
+      </p>
+    </div>
+    
+    <button
+      id="openEmbedModalBtn"
+      type="button"
+      class="shrink-0 rounded-xl bg-forest px-4 py-2.5 text-xs font-black text-white hover:bg-leaf transition-all shadow-md flex items-center justify-center gap-2"
+    >
+      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+      </svg>
+      Get Copy-Paste Embed Code
+    </button>
+  </div>
+
+  <!-- Embed Modal Dialog -->
+  <dialog id="embedModal" class="rounded-3xl border border-forest/20 p-6 md:p-8 max-w-xl w-[92vw] backdrop:bg-black/60 shadow-2xl bg-[#fffdf6]">
+    <div class="flex items-center justify-between border-b border-forest/10 pb-4">
+      <h3 class="text-lg font-black text-forest flex items-center gap-2">
+        <span>⚡</span> Copy Embed Snippet
+      </h3>
+      <button id="closeEmbedModalBtn" type="button" class="rounded-lg p-1 text-forest/60 hover:bg-forest/10 text-xl font-bold">&times;</button>
+    </div>
+
+    <div class="mt-4 space-y-4">
+      <p class="text-xs text-forest/80">
+        Copy and paste the HTML snippet below into your website HTML, WordPress post, Blogger widget, or Webflow page.
+      </p>
+
+      <div class="relative">
+        <textarea
+          id="embedSnippetText"
+          readonly
+          rows="4"
+          class="w-full rounded-xl border border-forest/20 bg-white p-3 font-mono text-xs text-forest select-all focus:outline-none focus:ring-2 focus:ring-leaf"
+        >&lt;iframe src="https://www.proupiqr.in/embed" width="100%" height="480" frameborder="0" style="border:0; border-radius:16px; overflow:hidden;"&gt;&lt;/iframe&gt;
+&lt;p style="font-size:12px; font-family:sans-serif; text-align:center; margin-top:8px; color:#113b2c;"&gt;&lt;a href="https://www.proupiqr.in/" target="_blank" rel="noopener" style="color:#2d7a58; font-weight:bold; text-decoration:underline;"&gt;Powered by Pro UPI QR Code Generator&lt;/a&gt;&lt;/p&gt;</textarea>
+      </div>
+
+      <div class="flex items-center justify-between gap-3 pt-2">
+        <span id="copyFeedback" class="text-xs font-bold text-leaf opacity-0 transition-opacity">✓ Copied to Clipboard!</span>
+        <button
+          id="copyEmbedCodeBtn"
+          type="button"
+          class="rounded-xl bg-leaf px-5 py-2.5 text-xs font-black text-white hover:bg-forest transition-all shadow-md flex items-center gap-2"
+        >
+          <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/></svg>
+          Copy HTML Code
+        </button>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<script>
+  const openBtn = document.getElementById("openEmbedModalBtn");
+  const closeBtn = document.getElementById("closeEmbedModalBtn");
+  const modal = document.getElementById("embedModal") as HTMLDialogElement | null;
+  const copyBtn = document.getElementById("copyEmbedCodeBtn");
+  const textarea = document.getElementById("embedSnippetText") as HTMLTextAreaElement | null;
+  const feedback = document.getElementById("copyFeedback");
+
+  if (openBtn && modal) {
+    openBtn.addEventListener("click", () => modal.showModal());
+  }
+
+  if (closeBtn && modal) {
+    closeBtn.addEventListener("click", () => modal.close());
+  }
+
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) modal.close();
+    });
+  }
+
+  if (copyBtn && textarea && feedback) {
+    copyBtn.addEventListener("click", () => {
+      textarea.select();
+      navigator.clipboard.writeText(textarea.value);
+      feedback.classList.remove("opacity-0");
+      setTimeout(() => feedback.classList.add("opacity-0"), 2500);
+    });
+  }
+</script>
