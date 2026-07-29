@@ -80,6 +80,11 @@ export function DynamicQrGenerator() {
         selectLink(initialTarget);
       }
 
+      // Ensure all local campaigns are registered in cloud KVDB store
+      for (const link of parsed) {
+        syncDestinationToCloud(link.id, link.destinationUrl, link);
+      }
+
       // Fetch global cloud metrics for all links
       setIsRefreshing(true);
       const updated = await Promise.all(
