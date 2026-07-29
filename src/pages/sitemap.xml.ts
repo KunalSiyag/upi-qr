@@ -57,6 +57,8 @@ const staticPages = [
   "upi-limits",
   "dynamic-qr-generator",
   "developer",
+  "free-qr-generator-without-watermark",
+  "upi-qr-code-generator-no-signup",
   "privacy",
   "terms",
   "disclaimer",
@@ -95,7 +97,17 @@ const staticPages = [
   "hi/temple-qr-generator",
   "hi/privacy",
   "hi/terms",
-  "hi/disclaimer"
+  "hi/disclaimer",
+  // Tamil regional routes
+  "ta/phonepe-qr-generator",
+  "ta/google-pay-qr-generator",
+  "ta/paytm-qr-generator",
+  "ta/sbi-qr-generator",
+  // Telugu regional routes
+  "te/phonepe-qr-generator",
+  "te/google-pay-qr-generator",
+  "te/paytm-qr-generator",
+  "te/sbi-qr-generator"
 ];
 
 function formatLastmod(date: Date): string {

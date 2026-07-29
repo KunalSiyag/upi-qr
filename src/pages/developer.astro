@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { DeveloperConsole } from "../components/DeveloperConsole";
+import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
 
 const title = "Free UPI QR Embed & Developer API Portal | Pro UPI QR";
 const description =
@@ -8,17 +9,31 @@ const description =
 
 const schema = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": "Pro UPI QR Developer Tools",
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Any",
-  "url": "https://www.proupiqr.in/developer/",
-  "description": description,
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "INR"
-  }
+  "@graph": [
+    {
+      "@type": "DeveloperApplication",
+      "@id": "https://www.proupiqr.in/developer/#developer-app",
+      "name": "Pro UPI QR Developer API & Embed Portal",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/developer/",
+      "description": description,
+      "softwareVersion": "2.0.0",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "INR"
+      }
+    },
+    {
+      "@type": "TechArticle",
+      "@id": "https://www.proupiqr.in/developer/#article",
+      "headline": "Integrating NPCI Native upi://pay URI Protocol in Client-Side Web Apps",
+      "description": "Technical specification for constructing zero-fee NPCI compliant UPI links and QR widgets using URL parameters.",
+      "url": "https://www.proupiqr.in/developer/",
+      "proficientLevel": "Beginner"
+    }
+  ]
 };
 ---
 

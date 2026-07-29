@@ -501,13 +501,28 @@ const schema = {
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       
-      {/* Visual Breadcrumbs */}
-      <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
-        <a href="/" class="hover:text-leaf transition-colors">Home</a>
-        <span>/</span>
-        <a href="/#generators" class="hover:text-leaf transition-colors">UPI Generators</a>
-        <span>/</span>
-        <span class="text-forest font-bold truncate max-w-[240px]" aria-current="page">{title}</span>
+      {/* Visual Microdata Breadcrumbs */}
+      <nav aria-label="Breadcrumb" class="mb-4">
+        <ol itemscope itemtype="https://schema.org/BreadcrumbList" class="flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-2">
+            <a itemprop="item" href="/" class="hover:text-leaf transition-colors">
+              <span itemprop="name">Home</span>
+            </a>
+            <meta itemprop="position" content="1" />
+            <span>/</span>
+          </li>
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-2">
+            <a itemprop="item" href="/#generators" class="hover:text-leaf transition-colors">
+              <span itemprop="name">UPI Generators</span>
+            </a>
+            <meta itemprop="position" content="2" />
+            <span>/</span>
+          </li>
+          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="text-forest font-bold truncate max-w-[240px]">
+            <span itemprop="name" aria-current="page">{title}</span>
+            <meta itemprop="position" content="3" />
+          </li>
+        </ol>
       </nav>
 
       <a href="/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; Back to Main Generator Hub</a>

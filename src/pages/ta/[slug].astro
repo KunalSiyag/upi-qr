@@ -1,0 +1,93 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../../components/GeneratorForm";
+import AffiliateProducts from "../../components/AffiliateProducts.astro";
+import InternalLinkHub from "../../components/InternalLinkHub.astro";
+import EmbedWidgetModal from "../../components/EmbedWidgetModal.astro";
+import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
+
+export async function getStaticPaths() {
+  return [
+    {
+      params: { slug: "phonepe-qr-generator" },
+      props: {
+        title: "PhonePe QR ஜெனரேட்டர் (PhonePe QR Generator Tamil)",
+        headline: "இலவச PhonePe UPI QR குறியீட்டை உருவாக்கவும்",
+        presetType: "phonepe",
+        intro: "கடைகள் மற்றும் சிறு தொழில்களுக்கு PhonePe மற்றும் பிற UPI செயலிகளில் ஸ்கேன் செய்யக்கூடிய இலவச QR குறியீட்டை உருவாக்கவும்."
+      }
+    },
+    {
+      params: { slug: "google-pay-qr-generator" },
+      props: {
+        title: "Google Pay QR ஜெனரேட்டர் (GPay QR Generator Tamil)",
+        headline: "இலவச Google Pay UPI QR குறியீட்டை உருவாக்கவும்",
+        presetType: "gpay",
+        intro: "Google Pay மூலம் எளிதாக பணம் பெற உங்கள் UPI VPA குறியீட்டை உடனடியாக உருவாக்கவும்."
+      }
+    },
+    {
+      params: { slug: "paytm-qr-generator" },
+      props: {
+        title: "Paytm QR ஜெனரேட்டர் (Paytm QR Code Generator Tamil)",
+        headline: "இலவச Paytm UPI QR குறியீட்டை உருவாக்கவும்",
+        presetType: "paytm",
+        intro: "வியாபாரிகள் மற்றும் கடைகளுக்கு Paytm இணக்கமான இலவச UPI QR போஸ்டரை உருவாக்கவும்."
+      }
+    },
+    {
+      params: { slug: "sbi-qr-generator" },
+      props: {
+        title: "SBI UPI QR ஜெனரேட்டர் (SBI QR Generator Tamil)",
+        headline: "இலவச எஸ்பிஐ (SBI) வங்கி UPI QR போஸ்டர்",
+        presetType: "sbi",
+        intro: "எஸ்பிஐ வங்கி கணக்குகளுக்கு 0% கமிஷனில் நேரடி கட்டண வசூல் QR குறியீட்டை உருவாக்கவும்."
+      }
+    }
+  ];
+}
+
+const { title, headline, intro, presetType } = Astro.props;
+const description = `${headline}. ${intro}`;
+const generatorSlug = Astro.params.slug as GeneratorSlug;
+const resolvedPreset = getPresetFromSlug(generatorSlug);
+const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": pageUrl + "#webapp",
+      "name": title,
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "url": pageUrl,
+      "description": description,
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    }
+  ]
+};
+---
+
+<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
+  <main class="px-4 py-8 md:px-6 lg:px-8">
+    <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-sm">
+      <nav aria-label="Breadcrumb" class="mb-4 text-xs font-bold text-leaf">
+        <a href="/" class="hover:underline">Home</a> / <span class="text-forest">Tamil (தமிழ்)</span> / <span>{title}</span>
+      </nav>
+
+      <span class="text-xs font-black uppercase text-leaf">Tamil (தமிழ்) UPI Generator</span>
+      <h1 class="mt-2 text-3xl font-black text-forest md:text-5xl">{headline}</h1>
+      <p class="mt-3 text-sm text-forest/75 md:text-base">{intro}</p>
+
+      <div class="mt-8">
+        <GeneratorForm client:load presetType={presetType as any} />
+      </div>
+
+      <EmbedWidgetModal generatorTitle={title} />
+      <AffiliateProducts />
+      <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
+    </div>
+  </main>
+</BaseLayout>
