@@ -6,13 +6,14 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "postbuild": "python3 index_now.py || true",
+    "postbuild": "python3 scripts/seo_health_check.py && python3 index_now.py || true",
     "preview": "astro preview",
+    "seo:check": "python3 scripts/seo_health_check.py",
     "submit:sitemap": "node scripts/submit-to-search-engines.mjs",
     "submit:rss": "node scripts/ping-aggregators.mjs",
     "warmup:crawlers": "node scripts/warmup-crawlers.mjs",
     "syndicate:satellites": "node scripts/syndicate-satellites.mjs",
-    "seo:all": "npm run submit:sitemap && npm run submit:rss && npm run warmup:crawlers && npm run syndicate:satellites"
+    "seo:all": "npm run seo:check && npm run submit:sitemap && npm run submit:rss && npm run warmup:crawlers && npm run syndicate:satellites"
   },
   "overrides": {
     "@astrojs/tailwind": {

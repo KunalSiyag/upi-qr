@@ -16,9 +16,10 @@ interface Props {
 const { title, description, canonical, schema, image, noindex = false } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
+const defaultOgSvg = `/api/og.svg`;
 const ogImageUrl = image 
   ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
-  : new URL("/images/og-image.png", Astro.site).toString();
+  : new URL(defaultOgSvg, Astro.site).toString();
 
 const isHindi = Astro.url.pathname.startsWith("/hi");
 
