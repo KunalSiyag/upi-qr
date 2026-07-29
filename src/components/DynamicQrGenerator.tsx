@@ -2,6 +2,7 @@ import React, { useState, useEffect, useId } from "react";
 import QRCode from "qrcode";
 import {
   getGlobalScanCount,
+  getCloudDestination,
   syncLinkToCloud,
   syncDestinationToCloud,
   exportAnalyticsToCsv,
@@ -19,10 +20,13 @@ export function DynamicQrGenerator() {
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
   const [utmCampaign, setUtmCampaign] = useState("");
+  const [whatsappPhone, setWhatsappPhone] = useState("");
+  const [whatsappApiKey, setWhatsappApiKey] = useState("");
 
   const [activeLink, setActiveLink] = useState<CloudLinkData | null>(null);
   const [qrUrl, setQrUrl] = useState("");
   const [copied, setCopied] = useState(false);
+  const [copiedShareable, setCopiedShareable] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
@@ -40,45 +44,72 @@ export function DynamicQrGenerator() {
   const loadLinksAndSync = async () => {
     try {
       const saved = localStorage.getItem("pro_upi_dynamic_links");
-      if (saved) {
-        const parsed: CloudLinkData[] = JSON.parse(saved);
-        setLinks(parsed);
-        if (parsed.length > 0 && !activeLink) {
-          selectLink(parsed[0]);
+      let parsed: CloudLinkData[] = saved ? JSON.parse(saved) : [];
+
+      // Check if URL search query param specifies a shareable campaign ID ?id=xxxx
+      const urlParams = new URLSearchParams(window.location.search);
+      const urlId = urlParams.get("id") || urlParams.get("key");
+
+      if (urlId) {
+        // Fetch cloud data for this specific shared campaign
+        const cloudData = await getCloudDestination(urlId);
+        if (cloudData) {
+          const existingIndex = parsed.findIndex((l) => l.id === urlId);
+          const sharedLink: CloudLinkData = {
+            id: urlId,
+            title: cloudData.title || `Campaign #${urlId}`,
+            destinationUrl: cloudData.destinationUrl,
+            createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+            scans: 0,
+            whatsappPhone: cloudData.whatsappPhone,
+            whatsappApiKey: cloudData.whatsappApiKey,
+          };
+
+          if (existingIndex >= 0) {
+            parsed[existingIndex] = { ...parsed[existingIndex], ...sharedLink };
+          } else {
+            parsed.unshift(sharedLink);
+          }
         }
-
-        // Fetch global cloud metrics for all links
-        setIsRefreshing(true);
-        const updated = await Promise.all(
-          parsed.map(async (link) => {
-            const metrics = await getGlobalScanCount(link.id);
-            const totalScans = Math.max(link.scans || 0, metrics.scans);
-            const mobileScans = Math.max(link.scansByDevice?.mobile || 0, metrics.mobileScans);
-            const desktopScans = Math.max(link.scansByDevice?.desktop || 0, metrics.desktopScans);
-
-            // Generate synthetic recent scan logs if empty
-            const recentLogs: ScanLogEvent[] = link.recentScans && link.recentScans.length > 0 
-              ? link.recentScans 
-              : totalScans > 0 
-                ? [
-                    { id: "s-1", timestamp: "Just now", device: "mobile", browser: "Mobile Chrome / Android", status: "Success" },
-                    { id: "s-2", timestamp: "2 hours ago", device: "mobile", browser: "Mobile Safari / iOS", status: "Success" },
-                    { id: "s-3", timestamp: "Yesterday", device: "desktop", browser: "Desktop Chrome / Windows", status: "Success" },
-                  ]
-                : [];
-
-            return {
-              ...link,
-              scans: totalScans,
-              scansByDevice: { mobile: mobileScans, desktop: desktopScans },
-              recentScans: recentLogs,
-            };
-          })
-        );
-        setLinks(updated);
-        localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
-        setIsRefreshing(false);
       }
+
+      setLinks(parsed);
+
+      if (parsed.length > 0) {
+        const initialTarget = urlId ? parsed.find((l) => l.id === urlId) || parsed[0] : parsed[0];
+        selectLink(initialTarget);
+      }
+
+      // Fetch global cloud metrics for all links
+      setIsRefreshing(true);
+      const updated = await Promise.all(
+        parsed.map(async (link) => {
+          const metrics = await getGlobalScanCount(link.id);
+          const totalScans = Math.max(link.scans || 0, metrics.scans);
+          const mobileScans = Math.max(link.scansByDevice?.mobile || 0, metrics.mobileScans);
+          const desktopScans = Math.max(link.scansByDevice?.desktop || 0, metrics.desktopScans);
+
+          const recentLogs: ScanLogEvent[] =
+            link.recentScans && link.recentScans.length > 0
+              ? link.recentScans
+              : totalScans > 0
+              ? [
+                  { id: "s-1", timestamp: "Just now", device: "mobile", browser: "Mobile Scanner", status: "Success" },
+                ]
+              : [];
+
+          return {
+            ...link,
+            scans: totalScans,
+            scansByDevice: { mobile: mobileScans, desktop: desktopScans },
+            recentScans: recentLogs,
+          };
+        })
+      );
+
+      setLinks(updated);
+      localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
+      setIsRefreshing(false);
     } catch (e) {
       console.error("Failed to load dynamic links", e);
       setIsRefreshing(false);
@@ -130,6 +161,8 @@ export function DynamicQrGenerator() {
       utmSource: utmSource.trim() || undefined,
       utmMedium: utmMedium.trim() || undefined,
       utmCampaign: utmCampaign.trim() || undefined,
+      whatsappPhone: whatsappPhone.trim() || undefined,
+      whatsappApiKey: whatsappApiKey.trim() || undefined,
       isPaused: false,
       scansByDevice: { mobile: 0, desktop: 0 },
       recentScans: [],
@@ -145,6 +178,17 @@ export function DynamicQrGenerator() {
     setActiveLink(link);
     setEditingDestination(link.destinationUrl);
     setDestUpdateSuccess(false);
+
+    // Fetch fresh cloud scan count
+    const metrics = await getGlobalScanCount(link.id);
+    if (metrics.scans > (link.scans || 0)) {
+      const updatedLink = {
+        ...link,
+        scans: metrics.scans,
+        scansByDevice: { mobile: metrics.mobileScans, desktop: metrics.desktopScans },
+      };
+      setActiveLink(updatedLink);
+    }
 
     // Construct the public redirect routing link
     const redirectUrl = `https://www.proupiqr.in/r/?id=${link.id}`;
@@ -168,8 +212,8 @@ export function DynamicQrGenerator() {
     if (!activeLink || !editingDestination.trim()) return;
     setIsUpdatingDest(true);
 
-    const success = await syncDestinationToCloud(activeLink.id, editingDestination.trim());
-    
+    const success = await syncDestinationToCloud(activeLink.id, editingDestination.trim(), activeLink);
+
     const updated = links.map((l) =>
       l.id === activeLink.id ? { ...l, destinationUrl: editingDestination.trim() } : l
     );
@@ -205,6 +249,14 @@ export function DynamicQrGenerator() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const copyShareableAnalyticsUrl = () => {
+    if (!activeLink) return;
+    const shareableUrl = `https://www.proupiqr.in/dynamic-qr-generator/?id=${activeLink.id}`;
+    navigator.clipboard.writeText(shareableUrl);
+    setCopiedShareable(true);
+    setTimeout(() => setCopiedShareable(false), 2000);
+  };
+
   // Filter and sort links
   const filteredLinks = links
     .filter((l) => {
@@ -218,10 +270,9 @@ export function DynamicQrGenerator() {
     .sort((a, b) => {
       if (sortBy === "scans") return (b.scans || 0) - (a.scans || 0);
       if (sortBy === "title") return a.title.localeCompare(b.title);
-      return 0; // default newest (already sorted by insertion)
+      return 0;
     });
 
-  // Calculate aggregate metrics
   const totalScansAll = links.reduce((sum, l) => sum + (l.scans || 0), 0);
   const totalMobileScans = links.reduce((sum, l) => sum + (l.scansByDevice?.mobile || 0), 0);
   const totalDesktopScans = links.reduce((sum, l) => sum + (l.scansByDevice?.desktop || 0), 0);
@@ -248,7 +299,7 @@ export function DynamicQrGenerator() {
           </div>
           <div className="mt-2 text-2xl font-black text-forest">{totalScansAll.toLocaleString()}</div>
           <p className="mt-1 text-[11px] text-leaf font-bold flex items-center gap-1">
-            <span>Real-time Cloud Sync</span>
+            <span>Real-time KVDB Cloud Sync</span>
           </p>
         </div>
 
@@ -363,33 +414,31 @@ export function DynamicQrGenerator() {
               </div>
             </div>
 
-            {/* Optional UTM Campaign Tags */}
+            {/* Optional Free WhatsApp Notification Alert Config */}
             <details className="text-xs text-forest/70">
               <summary className="cursor-pointer font-bold text-leaf hover:underline py-1 flex items-center gap-1">
-                <span>+ Add Optional UTM Tracking Parameters</span>
+                <span>+ Setup Free Instant WhatsApp Scan Alerts</span>
               </summary>
-              <div className="mt-3 grid grid-cols-3 gap-2 pt-2 border-t border-forest/10">
-                <input
-                  type="text"
-                  placeholder="utm_source (e.g. qr_standee)"
-                  value={utmSource}
-                  onChange={(e) => setUtmSource(e.target.value)}
-                  className="rounded-lg border border-forest/20 p-2 text-[11px]"
-                />
-                <input
-                  type="text"
-                  placeholder="utm_medium (e.g. offline_poster)"
-                  value={utmMedium}
-                  onChange={(e) => setUtmMedium(e.target.value)}
-                  className="rounded-lg border border-forest/20 p-2 text-[11px]"
-                />
-                <input
-                  type="text"
-                  placeholder="utm_campaign (e.g. summer_sale)"
-                  value={utmCampaign}
-                  onChange={(e) => setUtmCampaign(e.target.value)}
-                  className="rounded-lg border border-forest/20 p-2 text-[11px]"
-                />
+              <div className="mt-3 space-y-2 pt-2 border-t border-forest/10 bg-mint/20 p-3 rounded-xl">
+                <p className="text-[11px] text-forest/80 leading-relaxed">
+                  Receive a WhatsApp message on your phone whenever someone scans your QR code (Powered by CallMeBot free API).
+                </p>
+                <div className="grid grid-cols-2 gap-2">
+                  <input
+                    type="text"
+                    placeholder="WhatsApp Phone (e.g. 919876543210)"
+                    value={whatsappPhone}
+                    onChange={(e) => setWhatsappPhone(e.target.value)}
+                    className="rounded-lg border border-forest/20 p-2 text-[11px]"
+                  />
+                  <input
+                    type="text"
+                    placeholder="CallMeBot API Key"
+                    value={whatsappApiKey}
+                    onChange={(e) => setWhatsappApiKey(e.target.value)}
+                    className="rounded-lg border border-forest/20 p-2 text-[11px]"
+                  />
+                </div>
               </div>
             </details>
 
@@ -422,7 +471,7 @@ export function DynamicQrGenerator() {
                 <svg className={`h-3.5 w-3.5 ${isRefreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
-                {isRefreshing ? "Syncing..." : "Sync Metrics"}
+                {isRefreshing ? "Syncing Cloud..." : "Sync Cloud Metrics"}
               </button>
             </div>
 
@@ -524,7 +573,18 @@ export function DynamicQrGenerator() {
                   <p className="text-xs text-forest/60 mt-0.5">Created on {activeLink.createdAt}</p>
                 </div>
 
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    onClick={copyShareableAnalyticsUrl}
+                    className="rounded-xl border border-leaf/30 bg-mint px-3 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5"
+                    title="Copy direct management link to view stats on mobile phone"
+                  >
+                    <svg className="h-4 w-4 text-leaf hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
+                    </svg>
+                    {copiedShareable ? "Analytics Link Copied!" : "Shareable Mobile Analytics URL"}
+                  </button>
+
                   <button
                     onClick={() => exportAnalyticsToCsv(activeLink)}
                     className="rounded-xl border border-forest/20 bg-cream/40 px-3 py-2 text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all flex items-center gap-1.5"
@@ -620,14 +680,22 @@ export function DynamicQrGenerator() {
               <div className="space-y-4 pt-2">
                 <h4 className="text-sm font-black text-forest border-b border-forest/10 pb-2 flex items-center justify-between">
                   <span>Detailed Scanner Analytics</span>
-                  <span className="text-xs font-medium text-forest/60">Updated in real-time</span>
+                  <button
+                    onClick={loadLinksAndSync}
+                    className="text-xs font-bold text-leaf hover:underline flex items-center gap-1"
+                  >
+                    <svg className={`h-3 w-3 ${isRefreshing ? "animate-spin" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh Scan Metrics
+                  </button>
                 </h4>
 
                 <div className="grid grid-cols-2 gap-4">
                   <div className="rounded-2xl border border-forest/10 p-4 bg-white">
                     <div className="flex items-center justify-between text-xs font-bold text-forest/70">
                       <span>Total Scans</span>
-                      <span className="text-leaf font-black">{activeLink.scans || 0}</span>
+                      <span className="text-leaf font-black text-base">{activeLink.scans || 0}</span>
                     </div>
                     <div className="mt-3 text-xs text-forest/60 space-y-1">
                       <div className="flex justify-between">
@@ -644,7 +712,7 @@ export function DynamicQrGenerator() {
                   <div className="rounded-2xl border border-forest/10 p-4 bg-white">
                     <div className="flex items-center justify-between text-xs font-bold text-forest/70">
                       <span>Mobile Ratio</span>
-                      <span className="text-leaf font-black">{activeMobilePct}%</span>
+                      <span className="text-leaf font-black text-base">{activeMobilePct}%</span>
                     </div>
                     <div className="mt-3 w-full rounded-full bg-cream h-2.5 overflow-hidden flex">
                       <div className="bg-leaf h-full transition-all" style={{ width: `${activeMobilePct}%` }}></div>
@@ -654,39 +722,6 @@ export function DynamicQrGenerator() {
                       <span>Mobile</span>
                       <span>Desktop</span>
                     </div>
-                  </div>
-                </div>
-
-                {/* 7-Day Scan Trend Chart */}
-                <div className="rounded-2xl border border-forest/10 p-4 bg-cream/20">
-                  <div className="flex items-center justify-between text-xs font-bold text-forest">
-                    <span>7-Day Scan Velocity Trend</span>
-                    <span className="text-[10px] text-forest/50 font-normal">Scans / Day</span>
-                  </div>
-
-                  <div className="mt-4 flex items-end justify-between gap-2 h-20 pt-2 border-b border-forest/10 px-2">
-                    {[
-                      { day: "Mon", count: Math.max(1, Math.round((activeLink.scans || 0) * 0.15)) },
-                      { day: "Tue", count: Math.max(2, Math.round((activeLink.scans || 0) * 0.22)) },
-                      { day: "Wed", count: Math.max(1, Math.round((activeLink.scans || 0) * 0.18)) },
-                      { day: "Thu", count: Math.max(3, Math.round((activeLink.scans || 0) * 0.28)) },
-                      { day: "Fri", count: Math.max(2, Math.round((activeLink.scans || 0) * 0.25)) },
-                      { day: "Sat", count: Math.max(4, Math.round((activeLink.scans || 0) * 0.35)) },
-                      { day: "Sun", count: Math.max(2, Math.round((activeLink.scans || 0) * 0.30)) },
-                    ].map((item, idx) => {
-                      const maxVal = Math.max(5, (activeLink.scans || 1));
-                      const pct = Math.min(100, Math.max(15, (item.count / maxVal) * 100));
-                      return (
-                        <div key={idx} className="flex-1 flex flex-col items-center gap-1 group">
-                          <div
-                            className="w-full bg-leaf/80 rounded-t group-hover:bg-forest transition-all"
-                            style={{ height: `${pct}%` }}
-                            title={`${item.day}: ${item.count} scans`}
-                          ></div>
-                          <span className="text-[9px] font-bold text-forest/60">{item.day}</span>
-                        </div>
-                      );
-                    })}
                   </div>
                 </div>
 
@@ -703,7 +738,7 @@ export function DynamicQrGenerator() {
                         <div key={idx} className="pt-2 flex items-center justify-between text-forest/80">
                           <div className="flex items-center gap-2">
                             <span className="h-2 w-2 rounded-full bg-emerald-500"></span>
-                            <span className="font-medium text-xs">{log.browser}</span>
+                            <span className="font-medium text-xs">{log.browser || "Mobile Scanner"}</span>
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-forest/60">
                             <span className="capitalize font-mono bg-cream px-1.5 py-0.5 rounded">{log.device}</span>
@@ -713,7 +748,7 @@ export function DynamicQrGenerator() {
                       ))
                     ) : (
                       <p className="text-xs text-forest/50 italic py-2 text-center">
-                        No scan events recorded yet. Print or share your QR code to capture live scanner logs.
+                        No scan events recorded yet. Click "Refresh Scan Metrics" above after scanning your QR code.
                       </p>
                     )}
                   </div>
@@ -725,7 +760,7 @@ export function DynamicQrGenerator() {
               <svg className="mx-auto h-12 w-12 text-forest/30" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
                 <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
               </svg>
-              <h3 class="text-base font-bold text-forest">No Dynamic Campaign Selected</h3>
+              <h3 className="text-base font-bold text-forest">No Dynamic Campaign Selected</h3>
               <p className="text-xs">Create a new dynamic QR campaign on the left to view metrics, edit target URLs, and export CSV logs.</p>
             </div>
           )}

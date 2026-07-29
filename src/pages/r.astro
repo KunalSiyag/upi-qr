@@ -13,7 +13,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
       </div>
       <div>
         <h1 class="text-xl font-black text-forest">Connecting to Destination</h1>
-        <p className="text-xs text-forest/60 mt-1">Dynamic QR Router • Secure Cloud Sync</p>
+        <p class="text-xs text-forest/60 mt-1">Dynamic QR Router • Secure Cloud Sync</p>
       </div>
 
       <div id="target-display" class="text-xs font-mono text-forest/80 break-all bg-cream p-3.5 rounded-2xl border border-forest/10 shadow-inner">
@@ -37,26 +37,61 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
       async function processRedirect() {
         if (id) {
-          // 1. Record global scan metrics on cloud
+          // 1. Primary KVDB Cloud Scan Increment
+          try {
+            fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`)
+              .then(res => res.text())
+              .then(text => {
+                const current = parseInt(text) || 0;
+                fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`, {
+                  method: 'POST',
+                  body: (current + 1).toString()
+                }).catch(() => {});
+              }).catch(() => {});
+
+            fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`)
+              .then(res => res.text())
+              .then(text => {
+                const currentDev = parseInt(text) || 0;
+                fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`, {
+                  method: 'POST',
+                  body: (currentDev + 1).toString()
+                }).catch(() => {});
+              }).catch(() => {});
+          } catch (e) {}
+
+          // 2. Backup Counter API
           try {
             fetch(`https://api.counterapi.dev/v1/proupiqr_${id}/up`, { method: 'GET' }).catch(() => {});
             fetch(`https://api.counterapi.dev/v1/proupiqr_${id}_${deviceType}/up`, { method: 'GET' }).catch(() => {});
           } catch (e) {}
 
-          // 2. Fetch latest destination URL from Cloud KV store (Cross-device dynamic update)
+          // 3. Fetch latest destination URL and metadata from Cloud KV store
           try {
             const cloudRes = await fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, { method: 'GET' });
             if (cloudRes.ok) {
-              const cloudUrl = await cloudRes.text();
-              if (cloudUrl && (cloudUrl.startsWith('http') || cloudUrl.startsWith('upi://'))) {
-                target = cloudUrl.trim();
+              const text = await cloudRes.text();
+              if (text && text.trim()) {
+                const trimmed = text.trim();
+                if (trimmed.startsWith('{')) {
+                  const meta = JSON.parse(trimmed);
+                  if (meta.destinationUrl) target = meta.destinationUrl;
+
+                  // 4. Trigger Free WhatsApp Alert Webhook if configured
+                  if (meta.whatsappPhone && meta.whatsappApiKey) {
+                    const alertMsg = encodeURIComponent(`⚡ Pro UPI QR Alert: Your QR Code "${meta.title || id}" was just scanned via ${deviceType.toUpperCase()}!`);
+                    fetch(`https://api.callmebot.com/whatsapp.php?phone=${meta.whatsappPhone}&text=${alertMsg}&apikey=${meta.whatsappApiKey}`, { mode: 'no-cors' }).catch(() => {});
+                  }
+                } else if (trimmed.startsWith('http') || trimmed.startsWith('upi://')) {
+                  target = trimmed;
+                }
               }
             }
           } catch (e) {
-            console.warn("Cloud destination fetch failed, using fallback URL:", e);
+            console.warn("Cloud destination fetch fallback:", e);
           }
 
-          // 3. Sync to local storage if user is on their main dashboard browser
+          // 5. Update local storage if scanned on dashboard browser
           try {
             const saved = localStorage.getItem('pro_upi_dynamic_links');
             if (saved) {
@@ -71,7 +106,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
                   else deviceStats.desktop = (deviceStats.desktop || 0) + 1;
 
                   const recentScans = l.recentScans || [];
-                  recentScans.unshift({ timestamp: `${dateStr} at ${now}`, device: deviceType });
+                  recentScans.unshift({ id: 's-' + Date.now(), timestamp: `${dateStr} at ${now}`, device: deviceType, status: 'Success' });
                   if (recentScans.length > 20) recentScans.pop();
 
                   return {
