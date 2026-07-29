@@ -40,7 +40,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
           // 1. Primary KVDB Cloud Scan Increment
           try {
             fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`)
-              .then(res => res.text())
+              .then(res => res.ok ? res.text() : "0")
               .then(text => {
                 const current = parseInt(text) || 0;
                 fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}`, {
@@ -50,7 +50,7 @@ const qrId = Astro.url.searchParams.get("id") || "";
               }).catch(() => {});
 
             fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`)
-              .then(res => res.text())
+              .then(res => res.ok ? res.text() : "0")
               .then(text => {
                 const currentDev = parseInt(text) || 0;
                 fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/cnt_${id}_${deviceType}`, {

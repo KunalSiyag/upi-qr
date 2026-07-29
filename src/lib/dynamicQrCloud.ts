@@ -60,9 +60,7 @@ export async function recordGlobalScan(
       method: "POST",
       body: count.toString(),
     });
-  } catch (e) {
-    console.warn("KVDB scan increment fallback:", e);
-  }
+  } catch (e) {}
 
   // 2. Increment Device Specific KVDB Metric
   try {
@@ -94,10 +92,10 @@ export async function getGlobalScanCount(id: string): Promise<{ scans: number; m
   let mobileScans = 0;
   let desktopScans = 0;
 
-  // Fetch primary from KVDB
+  // Fetch primary from KVDB (Handle 404 gracefully)
   try {
     const res = await fetch(`${KVDB_BASE}/cnt_${id}`);
-    if (res.ok) {
+    if (res.status === 200) {
       const text = await res.text();
       scans = parseInt(text) || 0;
     }
@@ -105,7 +103,7 @@ export async function getGlobalScanCount(id: string): Promise<{ scans: number; m
 
   try {
     const resM = await fetch(`${KVDB_BASE}/cnt_${id}_mobile`);
-    if (resM.ok) {
+    if (resM.status === 200) {
       const textM = await resM.text();
       mobileScans = parseInt(textM) || 0;
     }
@@ -113,7 +111,7 @@ export async function getGlobalScanCount(id: string): Promise<{ scans: number; m
 
   try {
     const resD = await fetch(`${KVDB_BASE}/cnt_${id}_desktop`);
-    if (resD.ok) {
+    if (resD.status === 200) {
       const textD = await resD.text();
       desktopScans = parseInt(textD) || 0;
     }
@@ -123,7 +121,7 @@ export async function getGlobalScanCount(id: string): Promise<{ scans: number; m
   if (scans === 0) {
     try {
       const res = await fetch(`${CLOUD_COUNTER_BASE}_${id}`);
-      if (res.ok) {
+      if (res.status === 200) {
         const data = await res.json();
         scans = data.count || 0;
       }
@@ -164,7 +162,7 @@ export async function syncDestinationToCloud(id: string, destinationUrl: string,
 export async function getCloudDestination(id: string): Promise<{ destinationUrl: string; title?: string; whatsappPhone?: string; whatsappApiKey?: string } | null> {
   try {
     const res = await fetch(`${KVDB_BASE}/${id}`, { method: "GET" });
-    if (res.ok) {
+    if (res.status === 200) {
       const text = await res.text();
       if (text && text.trim()) {
         const trimmed = text.trim();
@@ -181,18 +179,24 @@ export async function getCloudDestination(id: string): Promise<{ destinationUrl:
         }
       }
     }
-  } catch (e) {
-    console.warn("KVDB Cloud fetch fallback:", e);
-  }
+  } catch (e) {}
   return null;
 }
 
 /**
- * Synchronize local storage campaigns with cloud state.
+ * Synchronize local storage campaigns with cloud state and initialize counters.
  */
 export async function syncLinkToCloud(link: CloudLinkData): Promise<void> {
   // Sync to Cloud KV store for global cross-device redirection
   await syncDestinationToCloud(link.id, link.destinationUrl, link);
+
+  // Initialize KVDB counters to "0" if they do not exist
+  try {
+    fetch(`${KVDB_BASE}/cnt_${link.id}`, { method: "POST", body: "0" }).catch(() => {});
+    fetch(`${KVDB_BASE}/cnt_${link.id}_mobile`, { method: "POST", body: "0" }).catch(() => {});
+    fetch(`${KVDB_BASE}/cnt_${link.id}_desktop`, { method: "POST", body: "0" }).catch(() => {});
+    fetch(`${CLOUD_COUNTER_BASE}_${link.id}/up`, { method: "GET" }).catch(() => {});
+  } catch (e) {}
 
   // Sync to local storage
   try {
