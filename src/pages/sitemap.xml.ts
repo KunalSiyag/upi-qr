@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 
-const staticPages = [
+const coreSlugs = [
   "",
   "phonepe-qr-generator",
   "google-pay-qr-generator",
@@ -63,56 +63,20 @@ const staticPages = [
   "terms",
   "disclaimer",
   "blog",
-  // Hindi versions
-  "hi",
-  "hi/phonepe-qr-generator",
-  "hi/google-pay-qr-generator",
-  "hi/paytm-qr-generator",
-  "hi/donation-qr-generator",
-  "hi/bhim-qr-generator",
-  "hi/whatsapp-pay-qr-generator",
-  "hi/amazon-pay-qr-generator",
-  "hi/sbi-qr-generator",
-  "hi/hdfc-qr-generator",
-  "hi/icici-qr-generator",
-  "hi/axis-qr-generator",
-  "hi/kotak-qr-generator",
-  "hi/pnb-qr-generator",
-  "hi/canara-qr-generator",
-  "hi/bob-qr-generator",
-  "hi/indusind-qr-generator",
-  "hi/union-qr-generator",
-  "hi/kirana-qr-generator",
-  "hi/cab-driver-qr-generator",
-  "hi/freelance-qr-generator",
-  "hi/restaurant-qr-generator",
-  "hi/idfc-qr-generator",
-  "hi/idbi-qr-generator",
-  "hi/yes-bank-qr-generator",
-  "hi/rbl-qr-generator",
-  "hi/central-bank-qr-generator",
-  "hi/gym-qr-generator",
-  "hi/salon-qr-generator",
-  "hi/parking-qr-generator",
-  "hi/temple-qr-generator",
-  "hi/privacy",
-  "hi/terms",
-  "hi/disclaimer",
-  // Regional roots
-  "ta",
-  "te",
-  "mr",
-  // Tamil regional routes
-  "ta/phonepe-qr-generator",
-  "ta/google-pay-qr-generator",
-  "ta/paytm-qr-generator",
-  "ta/sbi-qr-generator",
-  // Telugu regional routes
-  "te/phonepe-qr-generator",
-  "te/google-pay-qr-generator",
-  "te/paytm-qr-generator",
-  "te/sbi-qr-generator"
 ];
+
+const langPrefixes = ["hi", "ta", "te", "mr"];
+
+// Programmatically generate all language variations (en, hi, ta, te, mr)
+const allStaticPaths: string[] = [
+  ...coreSlugs.map((slug) => (slug ? `/${slug}/` : "/")),
+  ...langPrefixes.flatMap((lang) =>
+    coreSlugs.map((slug) => (slug ? `/${lang}/${slug}/` : `/${lang}/`))
+  ),
+];
+
+// Deduplicate paths
+const uniquePaths = Array.from(new Set(allStaticPaths));
 
 function formatLastmod(date: Date): string {
   return date.toISOString();
@@ -134,8 +98,8 @@ export const GET: APIRoute = async ({ site }) => {
   const blogPosts = await getCollection("blog");
 
   const entries = [
-    ...staticPages.map((page) => ({
-      path: page ? `/${page}/` : "/",
+    ...uniquePaths.map((path) => ({
+      path,
       lastmod: siteLastModified,
     })),
     ...blogPosts.map((post) => ({
@@ -153,7 +117,14 @@ export const GET: APIRoute = async ({ site }) => {
   const urls = entries
     .map((entry) => {
       const loc = escapeXml(`${baseUrl}${entry.path}`);
-      const priority = entry.path === "/" ? "1.0" : entry.path === "/universal-qr-generator/" ? "0.9" : entry.path.startsWith("/blog/") ? "0.7" : "0.8";
+      const priority =
+        entry.path === "/"
+          ? "1.0"
+          : entry.path === "/universal-qr-generator/"
+          ? "0.9"
+          : entry.path.startsWith("/blog/")
+          ? "0.7"
+          : "0.8";
       const imageXml = entry.image
         ? `<image:image><image:loc>${escapeXml(entry.image)}</image:loc><image:title>${escapeXml(entry.title || "Pro UPI QR")}</image:title></image:image>`
         : "";
@@ -165,7 +136,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   return new Response(body, {
     headers: {
-      "Content-Type": "application/xml"
-    }
+      "Content-Type": "application/xml",
+    },
   });
 };
