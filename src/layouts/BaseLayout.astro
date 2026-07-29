@@ -188,7 +188,7 @@ if (normalizedPath !== "/") {
   <body class="font-sans text-ink antialiased bg-[#fffdf6] min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
     <div class="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 pb-2 md:px-6 lg:px-8 pointer-events-none">
       <div class="mx-auto max-w-7xl">
-        <HeaderNav isHindi={isHindi} langLink={langLink} langLabel={langLabel} />
+        <HeaderNav isHindi={isHindi} currentPath={normalizedPath} langLink={langLink} langLabel={langLabel} />
       </div>
     </div>
     <div class="flex-1 overflow-x-hidden pt-24 md:pt-28">
