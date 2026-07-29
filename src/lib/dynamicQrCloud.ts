@@ -1,12 +1,16 @@
 /**
  * Global Dynamic QR Cloud & Analytics Engine
- * Provides cross-device cloud persistence, global scan metrics, and multi-QR analytics tracking.
+ * Provides cross-device cloud persistence, global scan metrics, device breakdowns,
+ * 7-day trend history, real-time activity logs, and CSV export.
  */
 
 export interface ScanLogEvent {
+  id: string;
   timestamp: string;
   device: "mobile" | "desktop";
-  userAgent?: string;
+  browser?: string;
+  os?: string;
+  status: "Success" | "Redirected" | "Fallback";
 }
 
 export interface CloudLinkData {
@@ -20,18 +24,25 @@ export interface CloudLinkData {
   expiryDate?: string;
   isPaused?: boolean;
   fallbackUrl?: string;
+  utmSource?: string;
+  utmMedium?: string;
+  utmCampaign?: string;
   scansByDevice?: { mobile: number; desktop: number };
   recentScans?: ScanLogEvent[];
+  dailyScanHistory?: { date: string; count: number }[];
 }
 
 const CLOUD_COUNTER_BASE = "https://api.counterapi.dev/v1/proupiqr";
-const KVDB_BUCKET = "proupiqr_v1_links";
 const KVDB_BASE = `https://kvdb.io/8xN4mK7pQ9zX2yW1`;
 
 /**
  * Record a scan event from any mobile scanner or web device globally.
  */
-export async function recordGlobalScan(id: string, device: "mobile" | "desktop" = "mobile"): Promise<number> {
+export async function recordGlobalScan(
+  id: string,
+  device: "mobile" | "desktop" = "mobile",
+  browser: string = "Mobile Browser"
+): Promise<number> {
   let count = 1;
   try {
     const res = await fetch(`${CLOUD_COUNTER_BASE}_${id}/up`, { method: "GET" });
@@ -43,7 +54,7 @@ export async function recordGlobalScan(id: string, device: "mobile" | "desktop" 
     console.warn("Cloud scan count update fallback:", e);
   }
 
-  // Also log device specific metric counter if supported
+  // Also log device specific metric counter
   try {
     fetch(`${CLOUD_COUNTER_BASE}_${id}_${device}/up`, { method: "GET" }).catch(() => {});
   } catch (e) {}
@@ -113,7 +124,7 @@ export async function getCloudDestination(id: string): Promise<string | null> {
     const res = await fetch(`${KVDB_BASE}/${id}`, { method: "GET" });
     if (res.ok) {
       const text = await res.text();
-      if (text && text.trim().startsWith("http") || text.trim().startsWith("upi://")) {
+      if (text && (text.trim().startsWith("http") || text.trim().startsWith("upi://"))) {
         return text.trim();
       }
     }
@@ -144,4 +155,32 @@ export async function syncLinkToCloud(link: CloudLinkData): Promise<void> {
   } catch (e) {
     console.error("Local storage sync error:", e);
   }
+}
+
+/**
+ * Export campaign analytics to a CSV file download.
+ */
+export function exportAnalyticsToCsv(link: CloudLinkData): void {
+  const headers = ["Scan ID", "Timestamp", "Device", "Browser", "Redirect Status"];
+  const rows = (link.recentScans || []).map((scan) => [
+    scan.id,
+    `"${scan.timestamp}"`,
+    scan.device,
+    `"${scan.browser || "Unknown"}"`,
+    scan.status,
+  ]);
+
+  // If no detailed scan events exist, output summary record
+  if (rows.length === 0) {
+    rows.push(["1", `"${link.createdAt}"`, "Total Scans", `"${link.scans} total"`, "Active"]);
+  }
+
+  const csvContent = "data:text/csv;charset=utf-8," + [headers.join(","), ...rows.map((r) => r.join(","))].join("\n");
+  const encodedUri = encodeURI(csvContent);
+  const downloadAnchor = document.createElement("a");
+  downloadAnchor.setAttribute("href", encodedUri);
+  downloadAnchor.setAttribute("download", `analytics_${link.id}_${link.title.replace(/\s+/g, "_")}.csv`);
+  document.body.appendChild(downloadAnchor);
+  downloadAnchor.click();
+  document.body.removeChild(downloadAnchor);
 }
