@@ -98,6 +98,10 @@ const staticPages = [
   "hi/privacy",
   "hi/terms",
   "hi/disclaimer",
+  // Regional roots
+  "ta",
+  "te",
+  "mr",
   // Tamil regional routes
   "ta/phonepe-qr-generator",
   "ta/google-pay-qr-generator",

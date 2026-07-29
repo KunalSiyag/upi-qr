@@ -132,7 +132,7 @@ if (normalizedPath !== "/") {
     <link rel="alternate" type="application/rss+xml" title="Pro UPI QR Blog & Guides RSS Feed" href="/rss.xml" />
     <link rel="alternate" type="text/plain" href="/llm.txt" title="LLM Context & API Specs" />
 
-    <!-- Organization Rich Snippet -->
+    <!-- Organization & Entity Rich Snippet -->
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "Organization",
@@ -140,7 +140,17 @@ if (normalizedPath !== "/") {
       "name": "Pro UPI QR",
       "url": "https://www.proupiqr.in/",
       "logo": "https://www.proupiqr.in/favicon.svg",
-      "description": "Free universal UPI QR code generator and payment poster builder for Indian bank accounts, shops, freelancers, and businesses."
+      "description": "Free universal UPI QR code generator and payment poster builder for Indian bank accounts, shops, freelancers, and businesses.",
+      "sameAs": [
+        "https://github.com/KunalSiyag/upi-qr",
+        "https://x.com/proupiqr",
+        "https://www.producthunt.com/products/pro-upi-qr"
+      ],
+      "founder": {
+        "@type": "Person",
+        "name": "Kunal Siyag",
+        "url": "https://github.com/KunalSiyag"
+      }
     })} />
 
     <!-- WebSite Sitelinks Searchbox Rich Snippet -->

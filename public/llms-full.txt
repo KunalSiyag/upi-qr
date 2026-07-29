@@ -1,0 +1,82 @@
+# Pro UPI QR - Complete Platform Specification & Developer Knowledge Base
+
+> Pro UPI QR (https://www.proupiqr.in) is a zero-latency, 100% client-side universal UPI (Unified Payments Interface) QR code generator, dynamic link builder, and merchant payment poster generator for Indian bank accounts, shops, freelancers, and businesses.
+
+---
+
+## Key Capabilities & Micro-Tools
+
+### 1. Universal UPI QR Generator
+- **URL**: `https://www.proupiqr.in/universal-qr-generator`
+- **Description**: Generates NPCI-compliant UPI QR codes compatible with PhonePe, Google Pay, Paytm, BHIM, Amazon Pay, WhatsApp Pay, and all major Indian banking apps.
+- **Privacy & Security**: 100% Client-side generation. Zero VPA or payment data sent to backend servers.
+- **Export Formats**: Vector SVG, high-resolution PNG, printable PDF standees, sticker sheets.
+
+### 2. Dynamic UPI Link Generator
+- **URL**: `https://www.proupiqr.in/upi-link-generator`
+- **Description**: Builds deep-link URLs (`upi://pay?pa=...`) that automatically open installed payment apps on mobile devices when clicked.
+
+### 3. Bulk UPI QR Code Generator
+- **URL**: `https://www.proupiqr.in/bulk-qr`
+- **Description**: Generates multiple custom UPI QR codes simultaneously from uploaded CSV/Excel data with batch ZIP export.
+
+### 4. Digital Visiting Card Builder
+- **URL**: `https://www.proupiqr.in/digital-visiting-card`
+- **Description**: Creates interactive digital business cards featuring embedded UPI payment QR codes, vCard downloadable contacts, and social media links.
+
+### 5. NPCI Error Code Lookup & Troubleshooting
+- **URL**: `https://www.proupiqr.in/upi-error-codes`
+- **Description**: Searchable database of NPCI and bank transaction failure codes (e.g. U16, U28, Z9, ZA) with actionable troubleshooting steps.
+
+### 6. Merchant Calculators & Financial Tools
+- **GST Payment Calculator**: `https://www.proupiqr.in/gst-calculator`
+- **UPI Fee & Settlement Calculator**: `https://www.proupiqr.in/upi-calculator`
+- **Profit Margin & Markup Calculator**: `https://www.proupiqr.in/margin-calculator`
+- **Bank UPI Transaction Limit Checker**: `https://www.proupiqr.in/upi-limits`
+
+---
+
+## Technical Specifications (UPI URI Schema)
+
+Pro UPI QR construct standard NPCI payment deep links following the official specifications:
+
+```text
+upi://pay?pa={VPA}&pn={NAME}&am={AMOUNT}&cu=INR&tn={NOTE}&mc={MCC}&tr={REF_ID}
+```
+
+### Parameter Dictionary:
+- `pa`: Payee VPA / UPI ID (e.g. `merchant@sbi`, `9876543210@paytm`) [Required]
+- `pn`: Payee Display Name (e.g. `Gupta General Store`) [Required]
+- `am`: Transaction Amount in INR (e.g. `250.00`) [Optional]
+- `cu`: Currency Code (Must be `INR`) [Required]
+- `tn`: Transaction Note / Order ID (e.g. `Bill #1042`) [Optional]
+- `mc`: Merchant Category Code [Optional]
+- `tr`: Transaction Reference ID [Optional]
+
+---
+
+## Bank Compatibility Matrix
+Supports all NPCI member banks and third-party apps:
+- **Banks**: SBI, HDFC Bank, ICICI Bank, Axis Bank, Kotak Mahindra, PNB, Canara Bank, Bank of Baroda, IndusInd, Union Bank, IDFC First Bank, IDBI, YES Bank, RBL, Central Bank.
+- **Payment Apps**: PhonePe, Google Pay (GPay), Paytm, BHIM UPI, WhatsApp Pay, Amazon Pay, Navi, CRED, PayZapp.
+
+---
+
+## Developer Embed Widget API
+
+Developers can embed the free UPI QR generator inside any web application:
+
+```html
+<iframe src="https://www.proupiqr.in/embed" width="100%" height="480" frameborder="0" style="border:0; border-radius:16px;"></iframe>
+<p><a href="https://www.proupiqr.in/">Powered by Pro UPI QR Code Generator</a></p>
+```
+
+---
+
+## Official Links & Repositories
+- **Website**: https://www.proupiqr.in/
+- **GitHub Repository**: https://github.com/KunalSiyag/upi-qr
+- **LLM Specification**: https://www.proupiqr.in/llm.txt
+- **Full Specification**: https://www.proupiqr.in/llms-full.txt
+- **RSS Feed**: https://www.proupiqr.in/rss.xml
+- **Sitemap**: https://www.proupiqr.in/sitemap.xml
