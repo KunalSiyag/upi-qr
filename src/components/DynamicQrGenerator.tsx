@@ -148,7 +148,16 @@ export function DynamicQrGenerator() {
     const finalDest = buildFinalDestination();
     if (!finalDest) return;
 
-    const id = Math.random().toString(36).substring(2, 8);
+    const getRandomId = () => {
+      if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
+        const arr = new Uint8Array(4);
+        window.crypto.getRandomValues(arr);
+        return Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").substring(0, 6);
+      }
+      return Math.random().toString(36).substring(2, 8);
+    };
+
+    const id = getRandomId();
     const newLink: CloudLinkData = {
       id,
       title: title.trim() || "Untitled Dynamic QR",

@@ -24,7 +24,13 @@ export function MenuQrGenerator() {
   // Groq AI State
   const [groqApiKey, setGroqApiKey] = useState(() => {
     if (typeof window !== "undefined") {
-      return localStorage.getItem("groq_api_key") || "";
+      const raw = localStorage.getItem("groq_api_key");
+      if (!raw) return "";
+      try {
+        return decodeURIComponent(atob(raw));
+      } catch (e) {
+        return raw;
+      }
     }
     return "";
   });
@@ -44,7 +50,15 @@ export function MenuQrGenerator() {
 
   useEffect(() => {
     if (typeof window !== "undefined") {
-      localStorage.setItem("groq_api_key", groqApiKey);
+      if (!groqApiKey) {
+        localStorage.removeItem("groq_api_key");
+      } else {
+        try {
+          localStorage.setItem("groq_api_key", btoa(encodeURIComponent(groqApiKey)));
+        } catch (e) {
+          localStorage.setItem("groq_api_key", groqApiKey);
+        }
+      }
     }
   }, [groqApiKey]);
 

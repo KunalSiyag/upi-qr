@@ -264,12 +264,16 @@ export function SurveyQrGenerator() {
               <span className="text-xs font-black text-emerald-900">Loved our service?</span>
               <p className="text-[11px] text-emerald-700">Tap below to share your 5-star review directly on Google Maps!</p>
               <a
-                href={googleReviewUrl}
+                href={
+                  googleReviewUrl && (googleReviewUrl.startsWith("http://") || googleReviewUrl.startsWith("https://"))
+                    ? googleReviewUrl
+                    : "#"
+                }
                 target="_blank"
                 rel="noopener noreferrer"
                 className="inline-block py-2 px-4 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-all shadow-sm"
               >
-                ⭐ Review Us on Google →
+                Review Us on Google &rarr;
               </a>
             </div>
           </div>
