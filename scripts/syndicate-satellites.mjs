@@ -8,7 +8,7 @@
  *   node scripts/syndicate-satellites.mjs
  */
 
-import fetch from "node-fetch";
+// Uses Node.js native global fetch (Node.js 18+)
 
 // ============================================================================
 // CONFIGURATION (Set via Environment Variables or direct values)
@@ -24,8 +24,39 @@ const BLOGGER_CONFIG = {
   enabled: process.env.BLOGGER_ENABLED === "true" || false,
   blogId: process.env.BLOGGER_BLOG_ID || "",
   apiKey: process.env.BLOGGER_API_KEY || "",
+  clientId: process.env.BLOGGER_CLIENT_ID || "",
+  clientSecret: process.env.BLOGGER_CLIENT_SECRET || "",
+  refreshToken: process.env.BLOGGER_REFRESH_TOKEN || "",
   accessToken: process.env.BLOGGER_ACCESS_TOKEN || ""
 };
+
+async function getBloggerAccessToken() {
+  if (BLOGGER_CONFIG.clientId && BLOGGER_CONFIG.clientSecret && BLOGGER_CONFIG.refreshToken) {
+    try {
+      const res = await fetch("https://oauth2.googleapis.com/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: BLOGGER_CONFIG.clientId,
+          client_secret: BLOGGER_CONFIG.clientSecret,
+          refresh_token: BLOGGER_CONFIG.refreshToken,
+          grant_type: "refresh_token"
+        })
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        return data.access_token;
+      } else {
+        const errText = await res.text();
+        console.error(`[Blogger] Dynamic token refresh failed: ${errText}`);
+      }
+    } catch (e) {
+      console.error("[Blogger] Dynamic token refresh error:", e);
+    }
+  }
+  return BLOGGER_CONFIG.accessToken;
+}
 
 // ============================================================================
 // HIGH-QUALITY RICH ARTICLES WITH EMBEDDED IMAGES & INTERACTIVE WIDGETS
@@ -179,11 +210,13 @@ async function publishToBlogger(article) {
     return;
   }
 
-  const endpoint = `https://www.googleapis.com/blogger/v3/blogs/${BLOGGER_CONFIG.blogId}/posts/?key=${BLOGGER_CONFIG.apiKey}`;
+  const accessToken = await getBloggerAccessToken();
+  const url = `https://www.googleapis.com/blogger/v3/blogs/${BLOGGER_CONFIG.blogId}/posts/`;
+  const endpoint = BLOGGER_CONFIG.apiKey ? `${url}?key=${BLOGGER_CONFIG.apiKey}` : url;
   const headers = { "Content-Type": "application/json" };
   
-  if (BLOGGER_CONFIG.accessToken) {
-    headers["Authorization"] = `Bearer ${BLOGGER_CONFIG.accessToken}`;
+  if (accessToken) {
+    headers["Authorization"] = `Bearer ${accessToken}`;
   }
 
   console.log(`[Blogger] Publishing post with images: "${article.title}" to Blog ID: ${BLOGGER_CONFIG.blogId}...`);

@@ -15,23 +15,8 @@ const SITE_TITLE = "Pro UPI QR — Guides & Tutorials";
 
 const targets = [
   {
-    name: "Ping-O-Matic",
+    name: "Ping-O-Matic (Central Aggregator)",
     endpoint: "http://rpc.pingomatic.com/",
-    method: "weblogUpdates.ping",
-  },
-  {
-    name: "Blo.gs",
-    endpoint: "http://ping.blo.gs/",
-    method: "weblogUpdates.ping",
-  },
-  {
-    name: "Weblogs",
-    endpoint: "http://rpc.weblogs.com/RPC2",
-    method: "weblogUpdates.ping",
-  },
-  {
-    name: "FeedBurner",
-    endpoint: "http://ping.feedburner.com/",
     method: "weblogUpdates.ping",
   }
 ];
