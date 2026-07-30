@@ -1,5 +1,5 @@
 ---
-title: "How to Generate Bulk UPI QR Codes from Excel CSV (Free Step-by-Step Guide)"
+title: "Generate Bulk UPI QR Codes from Excel CSV (Free)"
 description: "Learn how housing societies, coaching centers, vendors, and event organizers can generate hundreds of personalized UPI QR payment codes from a CSV spreadsheet."
 pubDate: 2026-07-20
 author: "Pro UPI QR Team"

@@ -16,7 +16,10 @@ const { post } = Astro.props;
 import { render } from "astro:content";
 const { Content } = await render(post);
 
-const title = `${post.data.title} | Pro UPI QR`;
+const rawTitle = post.data.title.trim();
+const title = rawTitle.includes("Pro UPI QR") 
+  ? rawTitle 
+  : (rawTitle.length > 52 ? rawTitle : `${rawTitle} | Pro UPI QR`);
 const description = post.data.description;
 
 const postSlug = post.id.replace(/\.mdx?$/, "");

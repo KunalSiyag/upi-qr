@@ -20,12 +20,15 @@ class HTMLPageParser(HTMLParser):
         self.json_ld_count = 0
         self.links = []
         self.images_without_alt = 0
+        self.h1_count = 0
         self.is_noindex = False
 
     def handle_starttag(self, tag, attrs):
         attr_dict = dict(attrs)
         if tag == "title":
             self.in_title = True
+        elif tag == "h1":
+            self.h1_count += 1
         elif tag == "meta":
             name = attr_dict.get("name", "").lower()
             prop = attr_dict.get("property", "").lower()
@@ -122,6 +125,16 @@ def run_seo_health_check():
         # 5. Schema Markup Audit
         if parser.json_ld_count == 0:
             page_warnings.append("No JSON-LD structured data schema found")
+
+        # 6. Heading H1 Audit
+        if parser.h1_count == 0:
+            page_warnings.append("Missing <h1> heading tag")
+        elif parser.h1_count > 1:
+            page_warnings.append(f"Multiple <h1> headings found ({parser.h1_count}) - optimal is exactly 1 per page")
+
+        # 7. Image Alt Audit
+        if parser.images_without_alt > 0:
+            page_warnings.append(f"Found {parser.images_without_alt} image(s) missing 'alt' attribute")
 
         # Report results per page
         if page_errors or page_warnings:

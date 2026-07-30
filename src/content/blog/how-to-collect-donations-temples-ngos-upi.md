@@ -1,5 +1,5 @@
 ---
-title: "How to Collect Donations Using a UPI QR Code for Temples, NGOs, and Causes"
+title: "Collect Donations via UPI QR for Temples & NGOs"
 description: "A comprehensive guide on setting up a secure, commission-free UPI QR code for religious institutions, charities, and community fundraising campaigns."
 pubDate: 2026-06-10
 author: "Pro UPI QR Team"

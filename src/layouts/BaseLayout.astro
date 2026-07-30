@@ -3,6 +3,7 @@ import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import HeaderNav from "../components/HeaderNav.astro";
 import FooterKeywordMatrix from "../components/FooterKeywordMatrix.astro";
+import { routeExistsInLang } from "../data/validRoutes";
 
 interface Props {
   title: string;
@@ -26,12 +27,28 @@ const rawPath = Astro.url.pathname;
 const cleanPath = rawPath.replace(/^\/(hi|ta|te|mr)(\/|$)/, "/");
 const currentSlug = cleanPath.replace(/^\/|\/$/g, "");
 
+const currentLang = rawPath.startsWith("/hi")
+  ? "hi"
+  : rawPath.startsWith("/ta")
+  ? "ta"
+  : rawPath.startsWith("/te")
+  ? "te"
+  : rawPath.startsWith("/mr")
+  ? "mr"
+  : "en";
+
 const englishUrl = `${baseUrl}/${currentSlug ? currentSlug + "/" : ""}`;
 const hindiUrl = `${baseUrl}/hi/${currentSlug ? currentSlug + "/" : ""}`;
 const tamilUrl = `${baseUrl}/ta/${currentSlug ? currentSlug + "/" : ""}`;
 const teluguUrl = `${baseUrl}/te/${currentSlug ? currentSlug + "/" : ""}`;
 const marathiUrl = `${baseUrl}/mr/${currentSlug ? currentSlug + "/" : ""}`;
-const isHindi = rawPath.startsWith("/hi");
+const isHindi = currentLang === "hi";
+
+const hasEnglish = routeExistsInLang(currentSlug, "en");
+const hasHindi = routeExistsInLang(currentSlug, "hi");
+const hasTamil = routeExistsInLang(currentSlug, "ta");
+const hasTelugu = routeExistsInLang(currentSlug, "te");
+const hasMarathi = routeExistsInLang(currentSlug, "mr");
 
 const breadcrumbItems = [
   { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl }
@@ -53,7 +70,7 @@ if (cleanPath !== "/") {
 ---
 
 <!doctype html>
-<html lang="en" class="w-full max-w-[100vw] overflow-x-hidden">
+<html lang={currentLang} class="w-full max-w-[100vw] overflow-x-hidden">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -67,12 +84,12 @@ if (cleanPath !== "/") {
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    <link rel="alternate" hreflang="en" href={englishUrl} />
-    <link rel="alternate" hreflang="hi" href={hindiUrl} />
-    <link rel="alternate" hreflang="ta" href={tamilUrl} />
-    <link rel="alternate" hreflang="te" href={teluguUrl} />
-    <link rel="alternate" hreflang="mr" href={marathiUrl} />
-    <link rel="alternate" hreflang="x-default" href={englishUrl} />
+    {hasEnglish && <link rel="alternate" hreflang="en" href={englishUrl} />}
+    {hasHindi && <link rel="alternate" hreflang="hi" href={hindiUrl} />}
+    {hasTamil && <link rel="alternate" hreflang="ta" href={tamilUrl} />}
+    {hasTelugu && <link rel="alternate" hreflang="te" href={teluguUrl} />}
+    {hasMarathi && <link rel="alternate" hreflang="mr" href={marathiUrl} />}
+    {hasEnglish && <link rel="alternate" hreflang="x-default" href={englishUrl} />}
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#113b2c" />
 
@@ -81,6 +98,7 @@ if (cleanPath !== "/") {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="Pro UPI QR" />
+    <meta property="og:locale" content={currentLang === "en" ? "en_IN" : `${currentLang}_IN`} />
     <meta property="og:image" content={ogImageUrl} />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />

@@ -1,5 +1,5 @@
 ---
-title: "Universal QR Code Generator for Bank Account Payments: Step-by-Step Guide"
+title: "UPI QR Code Generator for Bank Account Payments"
 description: "Learn how to use a universal QR code generator for your bank account. Connect SBI, HDFC, ICICI or personal VPA and receive PhonePe, GPay & Paytm payments directly."
 pubDate: 2026-07-20
 author: "Pro UPI QR Team"

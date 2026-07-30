@@ -1,6 +1,6 @@
 ---
-title: "How to Print Free UPI QR Code Sticker Sheets on A4 Paper (Step-by-Step Guide)"
-description: "Learn how to generate and print 4, 6, or 12 high-resolution UPI QR stickers on a single A4 page for shop counters, billing machines, packaging boxes, and restaurant tables."
+title: "Print Free UPI QR Code Sticker Sheets on A4 Paper"
+description: "Learn how to print 4, 6, or 12 high-resolution UPI QR stickers on a single A4 page for shop counters, billing machines, packaging boxes, and tables."
 pubDate: 2026-07-20
 author: "Pro UPI QR Team"
 tags: ["Printing", "Stickers", "Merchant", "Standee"]

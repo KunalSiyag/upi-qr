@@ -1,5 +1,5 @@
 ---
-title: "UPI QR Code for Freelancers: Invoice Payments Without Payment Gateway Fees"
+title: "UPI QR Code for Freelancers & Invoice Payments"
 description: "Consultants, designers, and freelancers can add UPI QR to invoices, proposals, and WhatsApp bills — no 2% gateway cut on bank UPI."
 pubDate: 2026-06-18
 author: "Pro UPI QR Team"

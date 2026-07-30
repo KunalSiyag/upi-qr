@@ -1,5 +1,5 @@
 ---
-title: "UPI QR Code Size and Dimensions for Printing (mm, Inches & Scan Distance)"
+title: "UPI QR Code Printing Size & Dimensions Guide"
 description: "Minimum QR print sizes, standee dimensions, and scan-distance rules so customers can pay from 3–6 feet at your shop counter."
 pubDate: 2026-06-14
 author: "Pro UPI QR Team"

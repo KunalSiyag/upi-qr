@@ -1,5 +1,5 @@
 ---
-title: "Universal UPI QR Code Generator for Bank Account — Complete Guide (2026)"
+title: "Universal UPI QR Generator for Bank Account Guide"
 description: "How to use a universal UPI QR code generator for any bank account. Create, customize & print multi-app payment QR codes for PhonePe, Google Pay, Paytm & BHIM."
 pubDate: 2026-07-20
 author: "Pro UPI QR Team"

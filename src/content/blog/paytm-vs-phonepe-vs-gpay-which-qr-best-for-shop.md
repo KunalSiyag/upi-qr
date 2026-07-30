@@ -1,6 +1,6 @@
 ---
-title: "Paytm vs PhonePe vs Google Pay: Which UPI QR Is Best for Your Shop?"
-description: "Compare Paytm, PhonePe, and Google Pay business QR codes on charges, limits, settlement times, and soundbox costs. Learn why a single universal QR might be your best choice."
+title: "Paytm vs PhonePe vs Google Pay: Best QR for Your Shop"
+description: "Compare Paytm, PhonePe, and Google Pay business QR codes on charges, limits, and soundbox costs. Learn why a universal QR might be your best choice."
 pubDate: 2026-06-23
 author: "Pro UPI QR Team"
 tags: ["Comparison", "Merchant Tips", "Reference"]

@@ -1,5 +1,5 @@
 ---
-title: "UPI QR Codes vs. Paid Payment Gateways: Which is Best for Your Business?"
+title: "UPI QR Code vs Payment Gateway for Business"
 description: "An in-depth comparison of free static UPI QR codes and paid payment gateways (like Razorpay, Cashfree, or Paytm Business) for small merchants and online creators."
 pubDate: 2026-06-10
 author: "Pro UPI QR Team"

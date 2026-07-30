@@ -1,5 +1,5 @@
 ---
-title: "How to Create and Print a Professional UPI QR Code Standee for Your Shop"
+title: "Create & Print UPI QR Code Standee for Your Shop"
 description: "A step-by-step guide for local business owners to design, generate, and print high-quality Scan & Pay UPI QR codes and table standees for their billing counters."
 pubDate: 2026-06-10
 author: "Pro UPI QR Team"

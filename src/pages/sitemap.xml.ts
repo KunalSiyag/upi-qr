@@ -1,78 +1,14 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
+import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS } from "../data/validRoutes";
 
-const coreSlugs = [
-  "",
-  "phonepe-qr-generator",
-  "google-pay-qr-generator",
-  "paytm-qr-generator",
-  "donation-qr-generator",
-  "universal-qr-generator",
-  "bhim-qr-generator",
-  "whatsapp-pay-qr-generator",
-  "amazon-pay-qr-generator",
-  "sbi-qr-generator",
-  "hdfc-qr-generator",
-  "icici-qr-generator",
-  "axis-qr-generator",
-  "kotak-qr-generator",
-  "pnb-qr-generator",
-  "canara-qr-generator",
-  "bob-qr-generator",
-  "indusind-qr-generator",
-  "union-qr-generator",
-  "kirana-qr-generator",
-  "cab-driver-qr-generator",
-  "freelance-qr-generator",
-  "restaurant-qr-generator",
-  "idfc-qr-generator",
-  "idbi-qr-generator",
-  "yes-bank-qr-generator",
-  "rbl-qr-generator",
-  "central-bank-qr-generator",
-  "gym-qr-generator",
-  "salon-qr-generator",
-  "parking-qr-generator",
-  "temple-qr-generator",
-  "sbi-business-qr-code-generator",
-  "universal-upi-qr-code-generator-for-bank-account",
-  "hdfc-business-qr-code-generator",
-  "icici-business-qr-code-generator",
-  "doctor-clinic-upi-qr-generator",
-  "upi-qr-decoder",
-  "upi-link-generator",
-  "survey-qr-generator",
-  "generator",
-  "invoice-generator",
-  "qr-sticker-generator",
-  "bulk-qr",
-  "upi-calculator",
-  "gst-calculator",
-  "offer-poster-generator",
-  "whatsapp-order-generator",
-  "menu-qr-generator",
-  "upi-error-codes",
-  "margin-calculator",
-  "digital-visiting-card",
-  "upi-limits",
-  "dynamic-qr-generator",
-  "developer",
-  "free-qr-generator-without-watermark",
-  "upi-qr-code-generator-no-signup",
-  "privacy",
-  "terms",
-  "disclaimer",
-  "blog",
-];
-
-const langPrefixes = ["hi", "ta", "te", "mr"];
-
-// Programmatically generate all language variations (en, hi, ta, te, mr)
+// Programmatically generate all valid static paths for each locale
 const allStaticPaths: string[] = [
-  ...coreSlugs.map((slug) => (slug ? `/${slug}/` : "/")),
-  ...langPrefixes.flatMap((lang) =>
-    coreSlugs.map((slug) => (slug ? `/${lang}/${slug}/` : `/${lang}/`))
-  ),
+  ...Array.from(ENGLISH_SLUGS).map((slug) => (slug ? `/${slug}/` : "/")),
+  ...Array.from(HINDI_SLUGS).map((slug) => (slug ? `/hi/${slug}/` : "/hi/")),
+  ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/ta/${slug}/` : "/ta/")),
+  ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/te/${slug}/` : "/te/")),
+  ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/mr/${slug}/` : "/mr/")),
 ];
 
 // Deduplicate paths

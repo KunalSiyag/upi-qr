@@ -1,5 +1,5 @@
 ---
-title: "Universal UPI QR Code Generator App: How to Generate QR Posters on Mobile"
+title: "Universal UPI QR Generator App: Mobile Poster Guide"
 description: "Looking for a universal UPI QR code generator app? Learn how to generate instant, secure multi-app payment QRs directly on your smartphone without downloading store apps."
 pubDate: 2026-07-20
 author: "Pro UPI QR Team"
