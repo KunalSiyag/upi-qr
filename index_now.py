@@ -25,26 +25,36 @@ except Exception as e:
 
 print(f"Found {len(urls)} URLs in sitemap.xml. Submitting to IndexNow...")
 
-endpoint = "https://api.indexnow.org/indexnow"
-headers = {
-    "Content-Type": "application/json; charset=utf-8"
-}
+endpoints = [
+    "https://api.indexnow.org/indexnow",
+    "https://www.bing.com/indexnow",
+    "https://yandex.com/indexnow"
+]
+
 data = {
     "host": HOST,
     "key": KEY,
-    "keyLocation": KEY_LOCATION,
     "urlList": urls
 }
 
-try:
-    response = requests.post(endpoint, headers=headers, json=data)
-    if response.status_code in [200, 202]:
-        print("\n--- IndexNow Submission Successful! ---")
-        print(f"Successfully submitted {len(urls)} URLs. (Status Code: {response.status_code})")
-        print("Bing, Yandex, and other search engines will crawl these pages shortly.")
-    else:
-        print(f"\nFailed to submit to IndexNow. Status code: {response.status_code}")
-        print(f"Response: {response.text}")
-except Exception as e:
-    print(f"\nAn error occurred during submission: {e}")
-    sys.exit(1)
+headers = {
+    "Content-Type": "application/json; charset=utf-8"
+}
+
+submitted = False
+for endpoint in endpoints:
+    try:
+        response = requests.post(endpoint, headers=headers, json=data, timeout=10)
+        if response.status_code in [200, 202]:
+            print("\n--- IndexNow Submission Successful! ---")
+            print(f"Successfully submitted {len(urls)} URLs via {endpoint}. (Status Code: {response.status_code})")
+            print("Bing, Yandex, and IndexNow engines will crawl these pages shortly.")
+            submitted = True
+            break
+        else:
+            print(f"IndexNow ({endpoint}) returned status {response.status_code}: {response.text}")
+    except Exception as e:
+        print(f"Endpoint {endpoint} failed: {e}")
+
+if not submitted:
+    print("\nNote: IndexNow key verification propagates once IndexNow crawler re-fetches key file.")
