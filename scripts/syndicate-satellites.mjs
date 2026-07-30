@@ -14,20 +14,20 @@
 // CONFIGURATION (Set via Environment Variables or direct values)
 // ============================================================================
 const WORDPRESS_CONFIG = {
-  enabled: process.env.WP_ENABLED === "true" || false,
-  siteUrl: process.env.WP_SITE_URL || "", // e.g. https://mytechblog.com
-  username: process.env.WP_USERNAME || "",
-  applicationPassword: process.env.WP_APP_PASSWORD || ""
+  enabled: String(process.env.WP_ENABLED || "").toLowerCase() === "true",
+  siteUrl: (process.env.WP_SITE_URL || "").trim(), // e.g. https://mytechblog.com
+  username: (process.env.WP_USERNAME || "").trim(),
+  applicationPassword: (process.env.WP_APP_PASSWORD || "").trim()
 };
 
 const BLOGGER_CONFIG = {
-  enabled: process.env.BLOGGER_ENABLED === "true" || false,
-  blogId: process.env.BLOGGER_BLOG_ID || "",
-  apiKey: process.env.BLOGGER_API_KEY || "",
-  clientId: process.env.BLOGGER_CLIENT_ID || "",
-  clientSecret: process.env.BLOGGER_CLIENT_SECRET || "",
-  refreshToken: process.env.BLOGGER_REFRESH_TOKEN || "",
-  accessToken: process.env.BLOGGER_ACCESS_TOKEN || ""
+  enabled: String(process.env.BLOGGER_ENABLED || "").toLowerCase() === "true",
+  blogId: (process.env.BLOGGER_BLOG_ID || "").trim(),
+  apiKey: (process.env.BLOGGER_API_KEY || "").trim(),
+  clientId: (process.env.BLOGGER_CLIENT_ID || "").trim(),
+  clientSecret: (process.env.BLOGGER_CLIENT_SECRET || "").trim(),
+  refreshToken: (process.env.BLOGGER_REFRESH_TOKEN || "").trim(),
+  accessToken: (process.env.BLOGGER_ACCESS_TOKEN || "").trim()
 };
 
 async function getBloggerAccessToken() {
@@ -63,97 +63,229 @@ async function getBloggerAccessToken() {
 // ============================================================================
 const SATELLITE_ARTICLES = [
   {
-    title: "Complete Guide to Free UPI QR Code Standee & Poster Generation for Indian Merchants",
-    summary: "Comprehensive manual on how small businesses, Kirana stores, doctors, and freelancers can generate zero-MDR vector UPI QR codes for PhonePe, GPay, Paytm, and SBI.",
+    title: "The Definitive 2026 Manual for Zero-MDR Merchant UPI QR Code Implementation in India",
+    summary: "An authoritative guide for merchants, retailers, clinics, and freelancers on deploying zero-commission UPI QR payment standees, understanding NPCI URI protocols, and eliminating 2% payment gateway MDR fees.",
     content: `
-      <article style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.7; color: #1e293b;">
-        <figure style="margin: 0 0 24px 0; text-align: center;">
+      <article style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; color: #0f172a; max-width: 860px; margin: 0 auto; padding: 12px;">
+        
+        <figure style="margin: 0 0 28px 0; text-align: center;">
           <img 
             src="https://www.proupiqr.in/images/og-image.png" 
-            alt="Pro UPI QR Code Generator - Free Universal Payment Standees" 
-            style="width: 100%; max-width: 780px; height: auto; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;"
+            alt="Universal Peer-to-Peer UPI Payment QR Poster Builder" 
+            style="width: 100%; max-width: 820px; height: auto; border-radius: 16px; box-shadow: 0 12px 32px rgba(15,23,42,0.12); border: 1px solid #e2e8f0;"
           />
-          <figcaption style="font-size: 13px; color: #64748b; margin-top: 8px;">Figure 1: High-Resolution Universal Peer-to-Peer UPI Payment QR Poster Builder</figcaption>
+          <figcaption style="font-size: 13px; color: #64748b; margin-top: 10px; font-weight: 500;">
+            Figure 1: High-Resolution Universal Peer-to-Peer UPI Payment QR Standee Builder
+          </figcaption>
         </figure>
 
-        <h2>1. Why Zero-MDR Peer-to-Peer Payments Matter</h2>
-        <p>In modern retail and service industries across India, digital payment collection is indispensable. Traditional point-of-sale (POS) machines and third-party payment gateways often levy a <strong>1.5% to 2.5% MDR (Merchant Discount Rate)</strong> fee on transactions, eating into small business profits.</p>
-        <p>By leveraging NPCI's official <code>upi://pay</code> protocol, merchants can receive direct bank-to-bank funds with <strong>0% transaction fees</strong>. Any scanned payment settles instantly into your registered bank account regardless of whether the customer uses Google Pay, PhonePe, Paytm, BHIM, or WhatsApp Pay.</p>
+        <h2>1. Executive Summary & Financial Analysis</h2>
+        <p>As digital payment penetration reaches record highs across tier-1, tier-2, and rural Indian markets, small businesses, medical clinics, restaurants, and freelance consultants face a critical operational decision: how to collect digital payments efficiently without surrendering margin to financial intermediaries.</p>
+        <p>Traditional Point-of-Sale (POS) card swipe terminals and commercial payment gateways typically charge a <strong>1.5% to 2.5% Merchant Discount Rate (MDR)</strong> per transaction, plus monthly device rental fees ranging from ₹300 to ₹1,000. For a business processing ₹3,000,000 annually, credit/debit MDR charges silently consume upwards of <strong>₹45,000 to ₹75,000 in gross margin</strong> every year.</p>
 
-        <blockquote style="background: #f8fafc; border-left: 4px solid #10b981; padding: 14px 20px; margin: 20px 0; border-radius: 0 12px 12px 0;">
-          <strong>Pro Tip:</strong> Universal QR codes do not tie you to a single vendor soundbox rental fee. You own the vector poster permanently.
+        <div style="overflow-x: auto; margin: 24px 0;">
+          <table style="width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; background: #ffffff; border-radius: 12px; overflow: hidden; border: 1px solid #e2e8f0;">
+            <thead>
+              <tr style="background: #0f172a; color: #ffffff;">
+                <th style="padding: 14px 18px;">Payment Channel</th>
+                <th style="padding: 14px 18px;">Transaction Fee (MDR)</th>
+                <th style="padding: 14px 18px;">Settlement Speed</th>
+                <th style="padding: 14px 18px;">Hardware & Rental Costs</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 14px 18px; font-weight: 600;">Credit Cards / POS Machines</td>
+                <td style="padding: 14px 18px; color: #dc2626; font-weight: 600;">1.8% – 2.5%</td>
+                <td style="padding: 14px 18px;">T+1 to T+2 Business Days</td>
+                <td style="padding: 14px 18px;">₹300 – ₹1,000 / month</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 14px 18px; font-weight: 600;">Payment Gateway Links</td>
+                <td style="padding: 14px 18px; color: #dc2626; font-weight: 600;">2.0% + GST</td>
+                <td style="padding: 14px 18px;">T+2 Business Days</td>
+                <td style="padding: 14px 18px;">Setup & Maintenance Cuts</td>
+              </tr>
+              <tr style="background: #f0fdf4;">
+                <td style="padding: 14px 18px; font-weight: 700; color: #166534;">Direct Universal UPI QR</td>
+                <td style="padding: 14px 18px; color: #166534; font-weight: 700;">0.0% (Zero MDR)</td>
+                <td style="padding: 14px 18px; color: #166534; font-weight: 700;">Instant Bank Credit</td>
+                <td style="padding: 14px 18px; color: #166534; font-weight: 700;">₹0 (Print Once, Own Forever)</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>2. Technical Architecture of the NPCI <code>upi://pay</code> Protocol</h2>
+        <p>National Payments Corporation of India (NPCI) defines an open standard protocol for initiating peer-to-peer and peer-to-merchant transfers. When a customer opens Google Pay, PhonePe, Paytm, BHIM, or any banking application and scans a QR code, the camera parses a standard URI string structured as follows:</p>
+
+        <pre style="background: #0f172a; color: #38bdf8; padding: 18px; border-radius: 12px; font-size: 13px; overflow-x: auto; line-height: 1.6;">upi://pay?pa=merchant@sbi&pn=Store%20Name&am=250.00&cu=INR&tn=Invoice%201042</pre>
+
+        <h3>Key Key-Value Parameters Explained:</h3>
+        <ul>
+          <li><code>pa</code> (Payee Address): Your registered Virtual Payment Address (VPA) linked directly to your bank account (e.g. <code>storename@sbi</code>, <code>9876543210@paytm</code>).</li>
+          <li><code>pn</code> (Payee Name): The verified legal or business name displayed on the customer's payment confirmation screen.</li>
+          <li><code>am</code> (Amount): Optional fixed transaction value in INR. If omitted, the customer manually inputs the billing total.</li>
+          <li><code>cu</code> (Currency): Always <code>INR</code> for domestic Indian UPI transactions.</li>
+          <li><code>tn</code> (Transaction Note): Optional bill reference, table number, or invoice ID.</li>
+        </ul>
+
+        <blockquote style="background: #f8fafc; border-left: 4px solid #10b981; padding: 16px 22px; margin: 24px 0; border-radius: 0 12px 12px 0; font-size: 15px;">
+          <strong>Technical Insight:</strong> Universal QR codes do not restrict payment acceptance to a single provider app. A single vector QR standee rendered with standard <code>upi://pay</code> parameters accepts incoming payments seamlessly from <strong>Google Pay, PhonePe, Paytm, BHIM, Mobikwik, WhatsApp Pay, and all major Indian banking apps</strong>.
         </blockquote>
 
-        <h2>2. Instant Embedded UPI QR Generator</h2>
-        <p>Try the live interactive generator below directly inside this post to build your branded payment poster:</p>
-        
-        <div style="margin: 24px 0;">
+        <h2>3. Try the Live Interactive Standee Builder</h2>
+        <p>Use the live embedded builder below to generate your customized high-resolution payment poster right inside this guide:</p>
+
+        <div style="margin: 28px 0;">
           <iframe 
             src="https://www.proupiqr.in/embed" 
             width="100%" 
-            height="520" 
+            height="540" 
             frameborder="0" 
-            style="border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 8px 30px rgba(0,0,0,0.06); overflow: hidden;"
+            style="border: 1px solid #cbd5e1; border-radius: 16px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); overflow: hidden;"
           ></iframe>
-          <p style="font-size: 13px; text-align: center; margin-top: 10px;">
-            Powered by <a href="https://www.proupiqr.in/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold; text-decoration: underline;">Pro UPI QR Code Generator Suite</a>
+          <p style="font-size: 13px; text-align: center; margin-top: 12px; color: #64748b;">
+            Powered by <a href="https://www.proupiqr.in/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold; text-decoration: underline;">Pro UPI QR Standee Generator Suite</a>
           </p>
         </div>
 
-        <h2>3. Specialized Payment Generator Tools</h2>
-        <p>Depending on your bank account handle or app preference, explore these dedicated micro-utilities:</p>
-        <ul>
-          <li><a href="https://www.proupiqr.in/phonepe-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">PhonePe Compatible UPI QR Generator</a> — Supports YBL, IBL, and AXL handles natively.</li>
-          <li><a href="https://www.proupiqr.in/google-pay-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">Google Pay (GPay) Friendly QR Builder</a> — Tailored for OKSBI, OKHDFC, OKICICI, and OKAxis VPAs.</li>
-          <li><a href="https://www.proupiqr.in/sbi-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">SBI Bank UPI QR Code Standee</a> — Direct State Bank of India merchant billing posters.</li>
-          <li><a href="https://www.proupiqr.in/bulk-qr/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">Printable A4 Bulk QR Sticker Sheet Builder</a> — Print 6 to 12 sticker tiles per A4 sheet for multi-counter shops.</li>
-          <li><a href="https://www.proupiqr.in/gst-calculator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">GST Invoice QR Code Calculator</a> — Compute 5%, 12%, 18%, 28% GST and generate instant scan-to-pay codes.</li>
-        </ul>
+        <h2>4. Major Bank VPA Handle Reference Matrix</h2>
+        <p>Whether you bank with State Bank of India, HDFC Bank, ICICI Bank, or Axis Bank, your account has an assigned VPA handle structure. Ensure your payee VPA matches one of the standard bank syntax handles:</p>
 
-        <h2>4. Step-by-Step Printing & Acrylic Setup</h2>
+        <div style="overflow-x: auto; margin: 20px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <thead>
+              <tr style="background: #f8fafc;">
+                <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0;">Bank / UPI Provider</th>
+                <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0;">Standard VPA Suffixes</th>
+                <th style="padding: 12px 16px; border-bottom: 2px solid #e2e8f0;">Dedicated Generator Tool</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: 600;">State Bank of India (SBI)</td>
+                <td style="padding: 12px 16px;"><code>@sbi</code>, <code>@oksbi</code></td>
+                <td style="padding: 12px 16px;"><a href="https://www.proupiqr.in/sbi-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">SBI QR Generator &rarr;</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: 600;">PhonePe Payments</td>
+                <td style="padding: 12px 16px;"><code>@ybl</code>, <code>@ibl</code>, <code>@axl</code></td>
+                <td style="padding: 12px 16px;"><a href="https://www.proupiqr.in/phonepe-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">PhonePe QR Generator &rarr;</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: 600;">Google Pay (GPay)</td>
+                <td style="padding: 12px 16px;"><code>@okhdfcbank</code>, <code>@okicici</code>, <code>@okaxis</code></td>
+                <td style="padding: 12px 16px;"><a href="https://www.proupiqr.in/google-pay-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">Google Pay Builder &rarr;</a></td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 12px 16px; font-weight: 600;">Paytm Payments Bank</td>
+                <td style="padding: 12px 16px;"><code>@paytm</code></td>
+                <td style="padding: 12px 16px;"><a href="https://www.proupiqr.in/paytm-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: 600;">Paytm QR Builder &rarr;</a></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>5. Print Production & Acrylic Counter Standee Specifications</h2>
+        <p>To guarantee frictionless scanning under varying store illumination and customer camera distances, follow these professional printing guidelines:</p>
+
         <ol>
-          <li>Enter your registered UPI Virtual Payment Address (e.g. <code>9876543210@paytm</code> or <code>store@sbi</code>).</li>
-          <li>Set optional fixed billing amounts or leave empty for dynamic customer entry.</li>
-          <li>Export in high-DPI PNG or lossless vector SVG format.</li>
-          <li>Print on glossy photo paper and slide into standard T-shape A5/A4 acrylic standees for your billing counter.</li>
+          <li><strong>Paper Weight & Finish:</strong> Print on <strong>220+ GSM heavy cardstock or photo paper</strong> with a matte or non-reflective gloss lamination. Heavy glossy lamination causes camera lens glare under ceiling spotlights, increasing scan failure rates.</li>
+          <li><strong>Dimensions & Scan Distance Ratio:</strong> Use an optimal 1:10 ratio between QR symbol size and scanning distance. For a billing counter where customers scan from 3 feet away, the printed QR code square must measure at least <strong>8 cm x 8 cm (3.15" x 3.15")</strong>.</li>
+          <li><strong>Display Hardware:</strong> Mount the printed QR poster inside a <strong>T-shape or L-shape vertical A5 acrylic display standee</strong>. Keep the display at chest level (approx. 4 feet from the floor) adjacent to the billing machine.</li>
         </ol>
+
+        <h2>6. Specialized Merchant Utility Hub</h2>
+        <p>Explore dedicated utilities for specific business workflows:</p>
+        <p>
+          🔹 <a href="https://www.proupiqr.in/bulk-qr/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Printable A4 Bulk QR Sticker Sheet Builder</a> — Generate 6 to 12 sticker tiles per page for multi-counter checkouts.<br/>
+          🔹 <a href="https://www.proupiqr.in/gst-calculator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Free GST Tax Calculator with QR Code Generator</a> — Calculate 5%, 12%, 18%, 28% tax and generate payment QRs instantly.<br/>
+          🔹 <a href="https://www.proupiqr.in/invoice-generator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Professional Client Invoice PDF Generator with Embedded UPI QR</a> — Ideal for freelancers, tuition teachers, and contractors.<br/>
+          🔹 <a href="https://www.proupiqr.in/upi-calculator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">MDR Fee Savings & Payment Gateway Calculator</a> — Calculate monthly savings by switching to direct bank UPI.
+        </p>
+
+        <h2>7. Merchant Security & Anti-Tampering Checklist</h2>
+        <p>Fraud prevention is vital for physical retail stores. Follow these security practices:</p>
+        <ul>
+          <li><strong>Daily Physical Audit:</strong> Inspect billing counter standees every morning to confirm no scammer has pasted a fake sticker QR over your authentic QR code.</li>
+          <li><strong>Test Scan Before Displaying:</strong> Always scan your printed standee using a personal smartphone prior to customer placement to verify payee name and VPA accuracy.</li>
+          <li><strong>SMS / Push Notifications:</strong> Enable instant bank SMS or bank app push notifications so staff verify receipt of funds before handing over goods.</li>
+        </ul>
       </article>
     `
   },
   {
-    title: "How to Print A4 Bulk UPI QR Code Sticker Sheets for Retail Counters & Restaurants",
-    summary: "Step-by-step workflow for printing multiple QR code stickers on a single A4 sheet for multi-counter billing, tables, and product packaging.",
+    title: "A4 Bulk UPI QR Code Sticker Sheet Printing Manual for Multi-Counter Retail & Restaurants",
+    summary: "A practical guide for supermarkets, cloud kitchens, tuition centers, and event organizers to print multiple customized QR stickers on a single A4 sheet with vector precision.",
     content: `
-      <article style="font-family: system-ui, -apple-system, sans-serif; line-height: 1.7; color: #1e293b;">
-        <figure style="margin: 0 0 24px 0; text-align: center;">
+      <article style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; color: #0f172a; max-width: 860px; margin: 0 auto; padding: 12px;">
+        
+        <figure style="margin: 0 0 28px 0; text-align: center;">
           <img 
             src="https://www.proupiqr.in/images/og-image.png" 
             alt="Printable Bulk A4 UPI QR Code Sticker Sheet Builder" 
-            style="width: 100%; max-width: 780px; height: auto; border-radius: 16px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); border: 1px solid #e2e8f0;"
+            style="width: 100%; max-width: 820px; height: auto; border-radius: 16px; box-shadow: 0 12px 32px rgba(15,23,42,0.12); border: 1px solid #e2e8f0;"
           />
-          <figcaption style="font-size: 13px; color: #64748b; margin-top: 8px;">Figure 2: A4 Printable Grid Layout for Store Counter QR Stickers</figcaption>
+          <figcaption style="font-size: 13px; color: #64748b; margin-top: 10px; font-weight: 500;">
+            Figure 2: A4 Printable Grid Layout for Store Counter & Table QR Stickers
+          </figcaption>
         </figure>
 
-        <h2>1. Simplifying Multi-Counter Payment Displays</h2>
-        <p>For supermarkets, restaurants, parking lots, and events, placing individual payment QR codes on every table or checkout lane can be time-consuming. Generating bulk sticker sheets allows businesses to print 6, 8, 12, or 24 standardized QR labels in a single PDF or high-res image export.</p>
+        <h2>1. Operational Efficiency in Multi-Checkout Environments</h2>
+        <p>Managing payment collection across multiple physical points of contact—such as dining tables in a restaurant, individual sales desks in a retail showroom, or delivery packages in a cloud kitchen—requires scalable printing solutions. Manually designing separate QR posters for every counter or table creates unnecessary administrative friction.</p>
+        <p>By leveraging an <strong>A4 Bulk UPI QR Sticker Sheet Generator</strong>, business managers can render grid layouts containing <strong>4, 6, 8, 12, or 24 standardized QR labels</strong> on a single printable page, reducing printing costs while maintaining visual branding consistency.</p>
 
-        <h2>2. Features of the Pro UPI QR Bulk Sheet Engine</h2>
-        <ul>
-          <li><strong>Zero Background Processing:</strong> All QR codes are rendered 100% locally inside your web browser.</li>
-          <li><strong>Vector Quality Output:</strong> Crisp edges ensure scanning reliability even under low shop lighting.</li>
-          <li><strong>Custom Branding:</strong> Embed your business logo, store name, and instructions directly above each sticker tile.</li>
-        </ul>
+        <h2>2. Choosing Between Fixed-Amount & Open-Amount QR Stickers</h2>
 
-        <h2>3. Explore Additional Creator & Business Tools</h2>
-        <p>Boost your business checkout workflow with these free utility builders:</p>
+        <div style="overflow-x: auto; margin: 24px 0;">
+          <table style="width: 100%; border-collapse: collapse; font-size: 14px; border: 1px solid #e2e8f0; border-radius: 10px;">
+            <thead>
+              <tr style="background: #0f172a; color: #ffffff;">
+                <th style="padding: 14px 18px;">Sticker Type</th>
+                <th style="padding: 14px 18px;">Ideal Use Case</th>
+                <th style="padding: 14px 18px;">Customer Experience</th>
+                <th style="padding: 14px 18px;">Key Advantage</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 14px 18px; font-weight: 600;">Open-Amount Standee Sticker</td>
+                <td style="padding: 14px 18px;">Kirana Counters, General Stores, Clinics</td>
+                <td style="padding: 14px 18px;">Customer enters variable bill total</td>
+                <td style="padding: 14px 18px; color: #166534; font-weight: 600;">Single sticker handles all customer amounts</td>
+              </tr>
+              <tr style="border-bottom: 1px solid #e2e8f0;">
+                <td style="padding: 14px 18px; font-weight: 600;">Fixed-Amount Product / Menu QR</td>
+                <td style="padding: 14px 18px;">Combo Menus, Parking Lots, Event Entry</td>
+                <td style="padding: 14px 18px;">Amount pre-filled automatically on phone</td>
+                <td style="padding: 14px 18px; color: #166534; font-weight: 600;">Eliminates customer entry errors & speeds queue</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <h2>3. Step-by-Step A4 Sheet Generation Workflow</h2>
+        <ol>
+          <li>Navigate to the <a href="https://www.proupiqr.in/bulk-qr/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Pro UPI QR Bulk Sticker Sheet Tool</a>.</li>
+          <li>Select your preferred grid tile arrangement: <strong>2x2 (4 stickers per A4 page)</strong> for large standees, or <strong>3x4 (12 stickers per A4 page)</strong> for packaging labels.</li>
+          <li>Input your merchant VPA details (e.g. <code>canteen@hdfcbank</code>) and store title.</li>
+          <li>Customize theme colors to match your brand palette (e.g. emerald green, deep navy, or classic black).</li>
+          <li>Download high-resolution print PDF or lossless vector SVG file.</li>
+          <li>Print on self-adhesive A4 sticker sheets using any standard inkjet or laser printer.</li>
+        </ol>
+
+        <h2>4. Digital Utilities & Micro-Tools Directory</h2>
+        <p>Empower your daily commercial operations with these specialized web tools:</p>
         <p>
-          👉 <a href="https://www.proupiqr.in/menu-qr-generator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Digital Restaurant Menu QR Code Generator</a><br/>
-          👉 <a href="https://www.proupiqr.in/invoice-generator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Free Client Invoice Builder with Embedded UPI QR</a><br/>
-          👉 <a href="https://www.proupiqr.in/upi-link-generator/" target="_blank" rel="noopener" style="color: #059669; font-weight: bold;">Create Click-to-Pay WhatsApp & SMS Payment Links</a>
+          👉 <a href="https://www.proupiqr.in/upi-link-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: bold;">Create Clickable WhatsApp & SMS Payment Links</a> — Generate direct payment links for remote billing.<br/>
+          👉 <a href="https://www.proupiqr.in/universal-qr-generator/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: bold;">Universal Wi-Fi, URL & Contact VCard QR Builder</a> — Generate multi-purpose promotional QR codes.<br/>
+          👉 <a href="https://www.proupiqr.in/upi-qr-decoder/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: bold;">Free Client-Side UPI QR Decoder & VPA Inspector</a> — Extract underlying payee VPA details from any QR image.<br/>
+          👉 <a href="https://www.proupiqr.in/upi-limits/" target="_blank" rel="noopener" style="color: #0284c7; font-weight: bold;">2026 Bank-Wise UPI Transaction Limits Directory</a> — Check daily limits for SBI, HDFC, ICICI, and Axis.
         </p>
 
-        <div style="margin: 24px 0; text-align: center;">
-          <a href="https://www.proupiqr.in/bulk-qr/" target="_blank" rel="noopener" style="display: inline-block; background: #10b981; color: white; padding: 14px 28px; border-radius: 12px; font-weight: bold; text-decoration: none; box-shadow: 0 4px 14px rgba(16,185,129,0.4);">Launch Free Bulk QR Generator &rarr;</a>
+        <div style="margin: 32px 0; text-align: center;">
+          <a href="https://www.proupiqr.in/bulk-qr/" target="_blank" rel="noopener" style="display: inline-block; background: #059669; color: white; padding: 16px 36px; border-radius: 12px; font-weight: 700; text-decoration: none; box-shadow: 0 6px 20px rgba(5,150,105,0.35);">Open Free A4 Bulk Sticker Sheet Tool &rarr;</a>
         </div>
       </article>
     `
@@ -164,8 +296,9 @@ const SATELLITE_ARTICLES = [
 // 🟢 WORDPRESS REST API PUBLISHING AUTOMATION
 // ============================================================================
 async function publishToWordPress(article) {
-  if (!WORDPRESS_CONFIG.enabled || !WORDPRESS_CONFIG.siteUrl) {
-    console.log("[WordPress] Syndication skipped (WP_ENABLED is false or not configured).");
+  const wpUrl = WORDPRESS_CONFIG.siteUrl;
+  if (!WORDPRESS_CONFIG.enabled || !wpUrl || !wpUrl.startsWith("http")) {
+    console.log("[WordPress] Syndication skipped (WP_ENABLED is false or WP_SITE_URL is not a valid HTTP URL).");
     return;
   }
 
