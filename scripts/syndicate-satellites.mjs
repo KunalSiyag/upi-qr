@@ -295,6 +295,57 @@ const SATELLITE_ARTICLES = [
 // ============================================================================
 // 🟢 WORDPRESS REST API PUBLISHING AUTOMATION
 // ============================================================================
+function escapeXml(str) {
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&apos;");
+}
+
+async function publishToWordPressXmlRpc(article) {
+  const baseUrl = WORDPRESS_CONFIG.siteUrl.replace(/\/$/, "");
+  const xmlrpcEndpoint = `${baseUrl}/xmlrpc.php`;
+
+  const xmlPayload = `<?xml version="1.0"?>
+<methodCall>
+  <methodName>wp.newPost</methodName>
+  <params>
+    <param><value><int>1</int></value></param>
+    <param><value><string>${escapeXml(WORDPRESS_CONFIG.username)}</string></value></param>
+    <param><value><string>${escapeXml(WORDPRESS_CONFIG.applicationPassword)}</string></value></param>
+    <param>
+      <value>
+        <struct>
+          <member><name>post_type</name><value><string>post</string></value></member>
+          <member><name>post_status</name><value><string>publish</string></value></member>
+          <member><name>post_title</name><value><string>${escapeXml(article.title)}</string></value></member>
+          <member><name>post_content</name><value><string>${escapeXml(article.content)}</string></value></member>
+          <member><name>post_excerpt</name><value><string>${escapeXml(article.summary)}</string></value></member>
+        </struct>
+      </value>
+    </param>
+  </params>
+</methodCall>`;
+
+  const res = await fetch(xmlrpcEndpoint, {
+    method: "POST",
+    headers: { "Content-Type": "text/xml" },
+    body: xmlPayload
+  });
+
+  if (res.ok) {
+    const text = await res.text();
+    if (text.includes("<fault>") || text.includes("<error>")) {
+      throw new Error(`XML-RPC fault: ${text.slice(0, 150)}`);
+    }
+    console.log(`[WordPress XML-RPC] ✅ Post Published Successfully!`);
+    return true;
+  }
+  throw new Error(`HTTP ${res.status}`);
+}
+
 async function publishToWordPress(article) {
   const wpUrl = WORDPRESS_CONFIG.siteUrl;
   if (!WORDPRESS_CONFIG.enabled || !wpUrl || !wpUrl.startsWith("http")) {
@@ -302,10 +353,19 @@ async function publishToWordPress(article) {
     return;
   }
 
+  console.log(`[WordPress] Publishing article with images: "${article.title}" to ${WORDPRESS_CONFIG.siteUrl}...`);
+
+  // Primary Method: XML-RPC (Works on free WordPress.com subdomains & shared hosting)
+  try {
+    const xmlrpcSuccess = await publishToWordPressXmlRpc(article);
+    if (xmlrpcSuccess) return;
+  } catch (xmlrpcErr) {
+    console.log(`[WordPress XML-RPC] XML-RPC skipped/failed (${xmlrpcErr.message}). Trying REST API fallback...`);
+  }
+
+  // Fallback Method: REST API (/wp-json/wp/v2/posts)
   const endpoint = `${WORDPRESS_CONFIG.siteUrl.replace(/\/$/, "")}/wp-json/wp/v2/posts`;
   const authHeader = "Basic " + Buffer.from(`${WORDPRESS_CONFIG.username}:${WORDPRESS_CONFIG.applicationPassword}`).toString("base64");
-
-  console.log(`[WordPress] Publishing article with images: "${article.title}" to ${WORDPRESS_CONFIG.siteUrl}...`);
 
   try {
     const res = await fetch(endpoint, {
@@ -324,13 +384,13 @@ async function publishToWordPress(article) {
 
     if (res.ok) {
       const data = await res.json();
-      console.log(`[WordPress] ✅ Post Published Successfully! URL: ${data.link}`);
+      console.log(`[WordPress REST API] ✅ Post Published Successfully! URL: ${data.link}`);
     } else {
       const err = await res.text();
-      console.error(`[WordPress] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
+      console.error(`[WordPress REST API] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
     }
   } catch (error) {
-    console.error(`[WordPress] ❌ Request error:`, error);
+    console.error(`[WordPress REST API] ❌ Request error:`, error);
   }
 }
 
