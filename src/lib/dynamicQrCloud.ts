@@ -44,7 +44,7 @@ export interface CloudLinkData {
   dailyScanHistory?: { date: string; count: number }[];
 }
 
-const KVDB_BUCKET = "7RffSJyhW4y6EVg5NUMw2G";
+const KVDB_BUCKET = "UTBhVqvgHGvEDSqYe3s8Th";
 const KVDB_BASE = `https://kvdb.io/${KVDB_BUCKET}`;
 const CLOUD_REGISTRY_KEY = "pro_upi_cloud_synced_ids";
 
