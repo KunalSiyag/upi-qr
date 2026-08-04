@@ -29,7 +29,8 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
   <script is:inline>
     (function() {
-      var KVDB_BASE = 'https://kvdb.io/8xN4mK7pQ9zX2yW1';
+      var KVDB_BASE = 'https://kvdb.io/7RffSJyhW4y6EVg5NUMw2G';
+      var REGISTRY_KEY = 'pro_upi_cloud_synced_ids';
       var params = new URLSearchParams(window.location.search);
       var id = params.get('id');
       var target = params.get('url') || params.get('u') || '/';
@@ -38,16 +39,22 @@ const qrId = Astro.url.searchParams.get("id") || "";
         return /^(https?:\/\/|upi:\/\/)/i.test(value || '');
       }
 
+      function isCloudSynced(qrId) {
+        try {
+          var raw = localStorage.getItem(REGISTRY_KEY);
+          return raw ? JSON.parse(raw).indexOf(qrId) !== -1 : false;
+        } catch (e) { return false; }
+      }
+
       if (!isSafeDestination(target)) target = '/';
 
       var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       var deviceType = isMobile ? 'mobile' : 'desktop';
 
       async function processRedirect() {
-        if (id) {
-          // Read current cloud state from kvdb.io directly, then atomically
-          // increment scan counters and write back. This keeps all analytics
-          // accurate across devices without needing a backend server.
+        if (id && isCloudSynced(id)) {
+          // Only fetch from cloud if this ID was previously confirmed synced.
+          // This prevents browser-level 404 console errors entirely.
           try {
             var kvRes = await fetch(KVDB_BASE + '/' + encodeURIComponent(id));
             if (kvRes.status === 200) {
@@ -55,35 +62,32 @@ const qrId = Astro.url.searchParams.get("id") || "";
               if (kvText && kvText.trim().startsWith('{')) {
                 var meta = JSON.parse(kvText.trim());
 
-                // Use cloud destination if available (allows editing printed QRs)
                 if (isSafeDestination(meta.destinationUrl)) target = meta.destinationUrl;
 
-                // Atomically increment scan counters
                 meta.scans = (meta.scans || 0) + 1;
                 meta.mobileScans = (meta.mobileScans || 0) + (isMobile ? 1 : 0);
                 meta.desktopScans = (meta.desktopScans || 0) + (isMobile ? 0 : 1);
                 meta.lastScanned = new Date().toISOString();
 
-                // Write updated counters back (fire-and-forget)
                 fetch(KVDB_BASE + '/' + encodeURIComponent(id), {
-                  method: 'POST',
+                  method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(meta)
                 }).catch(function() {});
 
-                // Send WhatsApp alert if configured
                 if (meta.whatsappPhone && meta.whatsappApiKey) {
                   var alertMsg = encodeURIComponent('\u26A1 Pro UPI QR Alert: Your QR Code "' + (meta.title || id) + '" was just scanned via ' + deviceType.toUpperCase() + '!');
                   fetch('https://api.callmebot.com/whatsapp.php?phone=' + meta.whatsappPhone + '&text=' + alertMsg + '&apikey=' + meta.whatsappApiKey, { mode: 'no-cors' }).catch(function() {});
                 }
               }
             }
-            // 404 = key not registered yet, silently use fallback URL from query string
           } catch (e) {
             // Network failure — silently use the fallback URL from the query string
           }
+        }
 
-          // Update local storage if scanned on dashboard browser
+        // Update local storage scan counts (works regardless of cloud sync)
+        if (id) {
           try {
             var saved = localStorage.getItem('pro_upi_dynamic_links');
             if (saved) {

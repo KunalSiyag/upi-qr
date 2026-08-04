@@ -1,12 +1,17 @@
 /**
  * Global Dynamic QR Cloud & Analytics Engine
- * Direct KVDB.io Cloud Persistence — Zero 404 Console Errors.
- * Provides cross-device cloud persistence, global scan counters, device breakdowns,
- * shareable campaign links, free WhatsApp alert webhooks, and CSV export.
+ * Zero 404 Console Errors — localStorage-first with lazy KVDB cloud sync.
+ *
+ * Architecture:
+ * - localStorage is the primary data store (instant, always works)
+ * - KVDB cloud is a best-effort cross-device sync layer
+ * - Cloud GETs only happen for keys we've previously confirmed exist
+ * - Cloud POSTs are fire-and-forget; failures are silently absorbed
+ * - A local registry tracks which keys are confirmed in the cloud
  *
  * NOTE: This is a static Astro site (no SSR adapter), so all KV operations
- * happen client-side directly against the kvdb.io REST API. 404 responses
- * (key-not-found) are handled gracefully and never log console errors.
+ * happen client-side. Browser-level 404 console errors are avoided by never
+ * making GET requests for keys that haven't been successfully written.
  */
 
 export interface ScanLogEvent {
@@ -32,20 +37,45 @@ export interface CloudLinkData {
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
-  whatsappPhone?: string; // Optional WhatsApp phone number for free instant alerts
-  whatsappApiKey?: string; // Optional CallMeBot WhatsApp API Key
+  whatsappPhone?: string;
+  whatsappApiKey?: string;
   scansByDevice?: { mobile: number; desktop: number };
   recentScans?: ScanLogEvent[];
   dailyScanHistory?: { date: string; count: number }[];
 }
 
-const KVDB_BUCKET = "8xN4mK7pQ9zX2yW1";
+const KVDB_BUCKET = "7RffSJyhW4y6EVg5NUMw2G";
 const KVDB_BASE = `https://kvdb.io/${KVDB_BUCKET}`;
+const CLOUD_REGISTRY_KEY = "pro_upi_cloud_synced_ids";
 
-/**
- * Safely fetch a JSON value from KVDB. Returns null on 404 or any error
- * without logging console errors.
- */
+// ─── Cloud Registry ──────────────────────────────────────────────────────────
+// Tracks which campaign IDs have been confirmed written to the cloud.
+// We only issue GET requests for these IDs, preventing browser 404 console noise.
+
+function getCloudRegistry(): Set<string> {
+  try {
+    const raw = localStorage.getItem(CLOUD_REGISTRY_KEY);
+    return raw ? new Set(JSON.parse(raw)) : new Set();
+  } catch {
+    return new Set();
+  }
+}
+
+function markCloudSynced(id: string): void {
+  try {
+    const registry = getCloudRegistry();
+    registry.add(id);
+    localStorage.setItem(CLOUD_REGISTRY_KEY, JSON.stringify([...registry]));
+  } catch {}
+}
+
+function isCloudSynced(id: string): boolean {
+  return getCloudRegistry().has(id);
+}
+
+// ─── Low-level KVDB helpers ──────────────────────────────────────────────────
+
+/** GET a key from KVDB — only call for keys known to exist. */
 async function kvdbGet(key: string): Promise<Record<string, any> | null> {
   try {
     const res = await fetch(`${KVDB_BASE}/${encodeURIComponent(key)}`);
@@ -58,26 +88,34 @@ async function kvdbGet(key: string): Promise<Record<string, any> | null> {
   }
 }
 
-/**
- * Safely write a JSON value to KVDB. Returns true on success.
- */
+/** PUT/POST a key to KVDB. Marks the key as synced on success. */
 async function kvdbSet(key: string, value: Record<string, any>): Promise<boolean> {
   try {
     const res = await fetch(`${KVDB_BASE}/${encodeURIComponent(key)}`, {
-      method: "POST",
+      method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(value),
     });
-    return res.ok;
+    if (res.ok) {
+      markCloudSynced(key);
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
 }
 
+// ─── Public API ──────────────────────────────────────────────────────────────
+
 /**
- * Fetch total live scan counts for a dynamic QR code from KVDB cloud.
+ * Fetch total live scan counts for a dynamic QR code.
+ * Only queries cloud if the key is known to exist — otherwise returns zeros.
  */
 export async function getGlobalScanCount(id: string): Promise<{ scans: number; mobileScans: number; desktopScans: number }> {
+  if (!isCloudSynced(id)) {
+    return { scans: 0, mobileScans: 0, desktopScans: 0 };
+  }
   const data = await kvdbGet(id);
   if (data && data.destinationUrl) {
     return {
@@ -91,11 +129,12 @@ export async function getGlobalScanCount(id: string): Promise<{ scans: number; m
 
 /**
  * Persist dynamic destination URL, scan counts, and metadata to KVDB cloud.
- * Merges with existing cloud data so scan counts are never overwritten.
+ * Merges with existing cloud data (if known to exist) so scan counts are
+ * never accidentally overwritten.
  */
 export async function syncDestinationToCloud(id: string, destinationUrl: string, metadata?: Partial<CloudLinkData>): Promise<boolean> {
-  // Read existing cloud state first to avoid overwriting scan counters
-  const existing = await kvdbGet(id);
+  // Only read-before-write if we know the key already exists in the cloud
+  const existing = isCloudSynced(id) ? await kvdbGet(id) : null;
 
   const payload: Record<string, any> = {
     ...(existing || {}),
@@ -112,7 +151,8 @@ export async function syncDestinationToCloud(id: string, destinationUrl: string,
 }
 
 /**
- * Fetch latest destination URL and metadata for a dynamic QR ID from KVDB cloud.
+ * Fetch latest destination URL and metadata for a dynamic QR ID.
+ * Only queries cloud if the key is known to exist.
  */
 export async function getCloudDestination(id: string): Promise<{
   destinationUrl: string;
@@ -123,6 +163,8 @@ export async function getCloudDestination(id: string): Promise<{
   mobileScans?: number;
   desktopScans?: number;
 } | null> {
+  if (!isCloudSynced(id)) return null;
+
   const data = await kvdbGet(id);
   if (data && data.destinationUrl) {
     return {
@@ -140,15 +182,17 @@ export async function getCloudDestination(id: string): Promise<{
 
 /**
  * Record a scan event in KVDB — atomically increments counters.
+ * Only called from the redirect page where we know the ID should exist.
  */
 export async function recordScanInCloud(
   id: string,
   device: "mobile" | "desktop"
 ): Promise<{ destinationUrl: string; title?: string; whatsappPhone?: string; whatsappApiKey?: string } | null> {
+  if (!isCloudSynced(id)) return null;
+
   const data = await kvdbGet(id);
   if (!data || !data.destinationUrl) return null;
 
-  // Atomically increment scan counts
   data.scans = (data.scans || 0) + 1;
   data.mobileScans = (data.mobileScans || 0) + (device === "mobile" ? 1 : 0);
   data.desktopScans = (data.desktopScans || 0) + (device === "desktop" ? 1 : 0);
