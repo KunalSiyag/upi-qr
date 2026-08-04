@@ -40,6 +40,12 @@ export function DynamicQrGenerator() {
   const titleId = useId();
   const destinationId = useId();
 
+  // The destination is retained in the public link as a resilient fallback.
+  // The cloud record can override it after an edit, but a QR must still work
+  // when a browser blocks the third-party KV request or the service is down.
+  const getRedirectUrl = (link: Pick<CloudLinkData, "id" | "destinationUrl">) =>
+    `https://www.proupiqr.in/r/?id=${encodeURIComponent(link.id)}&url=${encodeURIComponent(link.destinationUrl)}`;
+
   // Load saved links from localStorage on mount & sync cloud metrics
   const loadLinksAndSync = async () => {
     try {
@@ -155,9 +161,9 @@ export function DynamicQrGenerator() {
 
     const getRandomId = () => {
       if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
-        const arr = new Uint8Array(4);
+        const arr = new Uint8Array(8);
         window.crypto.getRandomValues(arr);
-        return Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").substring(0, 6);
+        return Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").substring(0, 12);
       }
       return Math.random().toString(36).substring(2, 8);
     };
@@ -205,7 +211,7 @@ export function DynamicQrGenerator() {
     }
 
     // Construct the public redirect routing link
-    const redirectUrl = `https://www.proupiqr.in/r/?id=${link.id}`;
+    const redirectUrl = getRedirectUrl(link);
 
     try {
       const url = await QRCode.toDataURL(redirectUrl, {
@@ -257,7 +263,7 @@ export function DynamicQrGenerator() {
 
   const copyRedirectUrl = () => {
     if (!activeLink) return;
-    const redirectUrl = `https://www.proupiqr.in/r/?id=${activeLink.id}`;
+    const redirectUrl = getRedirectUrl(activeLink);
     navigator.clipboard.writeText(redirectUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

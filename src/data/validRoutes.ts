@@ -62,6 +62,8 @@ export const ENGLISH_SLUGS = new Set([
   "blog",
 ]);
 
+import { localizedToolSlugs } from "./localizedTools";
+
 export const HINDI_SLUGS = new Set([
   "",
   "universal-qr-generator",
@@ -98,6 +100,7 @@ export const HINDI_SLUGS = new Set([
   "salon-qr-generator",
   "parking-qr-generator",
   "temple-qr-generator",
+  ...localizedToolSlugs,
 ]);
 
 export const REGIONAL_SLUGS = new Set([
@@ -107,6 +110,7 @@ export const REGIONAL_SLUGS = new Set([
   "google-pay-qr-generator",
   "paytm-qr-generator",
   "sbi-qr-generator",
+  ...localizedToolSlugs,
 ]);
 
 export function routeExistsInLang(slug: string, lang: string): boolean {

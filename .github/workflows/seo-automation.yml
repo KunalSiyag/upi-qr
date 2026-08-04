@@ -55,7 +55,7 @@ jobs:
             echo "Google Indexing Service Account JSON not configured, skipping..."
           fi
 
-      - name: Execute Full SEO & Satellite Backlink Syndication Suite
+      - name: Run SEO health, submission, and crawler checks
         env:
           SITE_URL: https://www.proupiqr.in
           WP_ENABLED: ${{ secrets.WP_ENABLED || 'false' }}
@@ -69,12 +69,14 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           BLOGGER_ACCESS_TOKEN: ${{ secrets.BLOGGER_ACCESS_TOKEN }}
+        # Satellite publishing is deliberately manual. Re-running fixed articles
+        # from a scheduled workflow creates duplicate posts on external blogs.
         run: npm run seo:all
 
       - name: Generate Workflow Summary
         run: |
-          echo "### 🚀 Automated SEO & Backlink Syndication Complete!" >> $GITHUB_STEP_SUMMARY
+          echo "### 🚀 Automated SEO & Indexing Checks Complete!" >> $GITHUB_STEP_SUMMARY
           echo "- **Site**: https://www.proupiqr.in" >> $GITHUB_STEP_SUMMARY
           echo "- **IndexNow Submission**: Triggered" >> $GITHUB_STEP_SUMMARY
           echo "- **RSS Pings & Crawler Warmup**: Executed" >> $GITHUB_STEP_SUMMARY
-          echo "- **WordPress & Blogger Satellite Syndication**: Executed" >> $GITHUB_STEP_SUMMARY
+          echo "- **WordPress & Blogger Satellite Syndication**: Not run automatically (manual, duplicate-protected command only)" >> $GITHUB_STEP_SUMMARY

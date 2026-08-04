@@ -4,6 +4,8 @@ import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
+import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
+import { LOCALIZED_TOOLS } from "../../data/localizedTools";
 
 export async function getStaticPaths() {
   return [
@@ -280,19 +282,21 @@ export async function getStaticPaths() {
         presetType: "temple",
         intro: "मंदिरों, धार्मिक ट्रस्टों और एनजीओ के लिए कमीशन-मुक्त दान पोस्टर सेट करें।"
       }
-    }
+    },
+    ...LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))
   ];
 }
 
-const { title, headline, intro, presetType } = Astro.props;
-const description = `${headline}. ${intro}`;
+const { title, headline, intro, presetType, tool } = Astro.props;
+const description = tool ? `${tool.name}: हिंदी में उपलब्ध मुफ्त, मोबाइल-अनुकूल व्यापार टूल। तेज़ परिणाम पाएँ और अपना भुगतान या व्यवसाय डेटा सुरक्षित रूप से अपने ब्राउज़र में रखें।` : `${headline}. ${intro}`;
+const pageTitle = tool ? `${tool.name} — हिंदी में उपयोग करें | Pro UPI QR` : `${title} | Pro UPI QR`;
 const generatorSlug = Astro.params.slug as GeneratorSlug;
-const resolvedPreset = getPresetFromSlug(generatorSlug);
+const resolvedPreset = tool ? undefined : getPresetFromSlug(generatorSlug);
 
 const schema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": `${title} | Pro UPI QR`,
+  "name": tool ? tool.name : `${title} | Pro UPI QR`,
   "applicationCategory": "BusinessApplication",
   "operatingSystem": "Any",
   "url": new URL(Astro.url.pathname, Astro.site).toString(),
@@ -305,7 +309,10 @@ const schema = {
 };
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
+<BaseLayout title={pageTitle} description={description} schema={schema}>
+  {tool ? (
+    <LocalizedToolPage lang="hi" tool={tool} />
+  ) : (
   <main class="px-4 py-16 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; मुख्य Pro UPI QR जनरेटर पर वापस जाएं</a>
@@ -357,4 +364,5 @@ const schema = {
       />
     </div>
   </main>
+  )}
 </BaseLayout>

@@ -292,6 +292,21 @@ const SATELLITE_ARTICLES = [
   }
 ];
 
+function buildPublishableContent(article) {
+  return `${article.content}
+    <section style="margin-top: 36px; padding: 24px; border: 1px solid #d1fae5; border-radius: 16px; background: #f0fdf4;">
+      <h2 style="margin-top: 0;">Practical checklist before you share or print a payment QR</h2>
+      <p>${article.summary}</p>
+      <ol>
+        <li><strong>Verify the beneficiary:</strong> scan the finished QR with a separate UPI app and confirm the displayed payee name and UPI ID before placing it in front of customers.</li>
+        <li><strong>Choose the right amount setting:</strong> use an open-amount QR for variable bills; use a fixed amount only for a genuinely fixed price such as an entry fee or a menu item.</li>
+        <li><strong>Design for the actual scan distance:</strong> retain a clear white border around the code, avoid placing it on reflective material, and test it under the lighting used at the counter.</li>
+        <li><strong>Keep a replacement process:</strong> staff should know where the source file is stored and who can verify a replacement QR, so a damaged or tampered sticker is not left in use.</li>
+      </ol>
+      <p>For the live browser-based tool and the latest printable templates, visit <a href="https://www.proupiqr.in/" rel="noopener">Pro UPI QR</a>. This guide is educational; banks and UPI apps remain responsible for payment authorization and transaction status.</p>
+    </section>`;
+}
+
 // ============================================================================
 // 🟢 WORDPRESS REST API PUBLISHING AUTOMATION
 // ============================================================================
@@ -321,7 +336,7 @@ async function publishToWordPressXmlRpc(article) {
           <member><name>post_type</name><value><string>post</string></value></member>
           <member><name>post_status</name><value><string>publish</string></value></member>
           <member><name>post_title</name><value><string>${escapeXml(article.title)}</string></value></member>
-          <member><name>post_content</name><value><string>${escapeXml(article.content)}</string></value></member>
+          <member><name>post_content</name><value><string>${escapeXml(buildPublishableContent(article))}</string></value></member>
           <member><name>post_excerpt</name><value><string>${escapeXml(article.summary)}</string></value></member>
         </struct>
       </value>
@@ -376,7 +391,7 @@ async function publishToWordPress(article) {
       },
       body: JSON.stringify({
         title: article.title,
-        content: article.content,
+        content: buildPublishableContent(article),
         status: "publish",
         excerpt: article.summary
       })
@@ -397,6 +412,21 @@ async function publishToWordPress(article) {
 // ============================================================================
 // 🟠 BLOGGER REST API PUBLISHING AUTOMATION
 // ============================================================================
+async function bloggerPostAlreadyExists(title, endpoint, headers) {
+  const listUrl = new URL(endpoint);
+  listUrl.searchParams.set("fetchBodies", "false");
+  listUrl.searchParams.set("maxResults", "500");
+  listUrl.searchParams.set("status", "live");
+
+  const res = await fetch(listUrl, { headers });
+  if (!res.ok) {
+    throw new Error(`Could not check existing posts (HTTP ${res.status})`);
+  }
+
+  const data = await res.json();
+  return (data.items || []).some((post) => post.title === title);
+}
+
 async function publishToBlogger(article) {
   if (!BLOGGER_CONFIG.enabled || !BLOGGER_CONFIG.blogId) {
     console.log("[Blogger] Syndication skipped (BLOGGER_ENABLED is false or not configured).");
@@ -415,13 +445,18 @@ async function publishToBlogger(article) {
   console.log(`[Blogger] Publishing post with images: "${article.title}" to Blog ID: ${BLOGGER_CONFIG.blogId}...`);
 
   try {
+    if (await bloggerPostAlreadyExists(article.title, endpoint, headers)) {
+      console.log(`[Blogger] Skipped duplicate: "${article.title}" already exists.`);
+      return;
+    }
+
     const res = await fetch(endpoint, {
       method: "POST",
       headers: headers,
       body: JSON.stringify({
         kind: "blogger#post",
         title: article.title,
-        content: article.content
+        content: buildPublishableContent(article)
       })
     });
 

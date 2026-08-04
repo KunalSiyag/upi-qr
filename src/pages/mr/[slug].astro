@@ -4,6 +4,8 @@ import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
+import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
+import { LOCALIZED_TOOLS } from "../../data/localizedTools";
 
 export async function getStaticPaths() {
   return [
@@ -42,20 +44,25 @@ export async function getStaticPaths() {
         presetType: "sbi",
         intro: "State Bank of India खात्यांसाठी त्वरित पेमेंट स्वीकारणारा QR तयार करा."
       }
-    }
+    },
+    ...LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))
   ];
 }
 
 const { slug } = Astro.params;
-const { title, headline, presetType, intro } = Astro.props;
+const { title, headline, presetType, intro, tool } = Astro.props;
 
 const generatorSlug = slug as GeneratorSlug;
-const resolvedPreset = presetType ?? getPresetFromSlug(generatorSlug);
+const resolvedPreset = tool ? undefined : (presetType ?? getPresetFromSlug(generatorSlug));
 
-const description = `${intro} १००% मोफत आणि त्वरित डाउनलोड.`;
+const description = tool ? `${tool.name}: मराठीत उपलब्ध असलेले मोफत, मोबाईलसाठी अनुकूल व्यावसायिक साधन. जलद निकाल मिळवा आणि तुमचा पेमेंट व व्यवसाय डेटा ब्राउझरमध्ये सुरक्षित ठेवा.` : `${intro} १००% मोफत आणि त्वरित डाउनलोड.`;
+const pageTitle = tool ? `${tool.name} — मराठीत वापरा | Pro UPI QR` : `${title} | Pro UPI QR (Marathi)`;
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR (Marathi)`} description={description}>
+<BaseLayout title={pageTitle} description={description}>
+  {tool ? (
+    <LocalizedToolPage lang="mr" tool={tool} />
+  ) : (
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       <a href="/mr/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; मुख्य पृष्ठावर परत जा</a>
@@ -72,4 +79,5 @@ const description = `${intro} १००% मोफत आणि त्वरि�
       <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
     </div>
   </main>
+  )}
 </BaseLayout>

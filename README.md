@@ -2,6 +2,12 @@
 
 A professional, local-first, SEO-optimized UPI QR Code Generator designed for Indian merchants, retail shops, freelancers, restaurants, and nonprofit organizations.
 
+## Dynamic QR metrics
+
+Dynamic QR destinations and scan counts use the first-party `/api/dynamic/[id]` Vercel Function. In Vercel, create and connect a **Vercel KV** database to this project; it supplies `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically. Each scan atomically increments total and mobile/desktop counters before redirecting to the current destination.
+
+For local development, copy `.env.example` to `.env` and add the KV REST credentials. Without KV credentials, the QR follows its embedded destination fallback but no authoritative metrics are recorded.
+
 **Live Application:** [https://www.proupiqr.in](https://www.proupiqr.in)
 
 ---

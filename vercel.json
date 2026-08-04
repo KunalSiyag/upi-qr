@@ -1,8 +1,21 @@
 {
   "redirects": [
-    { "source": "/hi/blog", "destination": "/blog/", "permanent": true },
-    { "source": "/hi/blog/", "destination": "/blog/", "permanent": true },
-    { "source": "/hi/blog/:slug", "destination": "/blog/:slug/", "permanent": true },
-    { "source": "/hi/blog/:slug/", "destination": "/blog/:slug/", "permanent": true }
+    {
+      "source": "/:path*",
+      "has": [{ "type": "host", "value": "proupiqr.in" }],
+      "destination": "https://www.proupiqr.in/:path*",
+      "permanent": true
+    },
+    { "source": "/old-blog/:slug", "destination": "/blog/:slug/", "permanent": true }
+  ],
+  "headers": [
+    {
+      "source": "/embed/:path*",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+    },
+    {
+      "source": "/rss.xml",
+      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, follow" }]
+    }
   ]
 }

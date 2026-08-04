@@ -4,6 +4,8 @@ import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
+import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
+import { LOCALIZED_TOOLS } from "../../data/localizedTools";
 
 export async function getStaticPaths() {
   return [
@@ -42,20 +44,25 @@ export async function getStaticPaths() {
         presetType: "sbi",
         intro: "State Bank of India ఖాతాల కోసం తక్షణమే UPI QR కోడ్‌ను పొందండి."
       }
-    }
+    },
+    ...LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))
   ];
 }
 
 const { slug } = Astro.params;
-const { title, headline, presetType, intro } = Astro.props;
+const { title, headline, presetType, intro, tool } = Astro.props;
 
 const generatorSlug = slug as GeneratorSlug;
-const resolvedPreset = presetType ?? getPresetFromSlug(generatorSlug);
+const resolvedPreset = tool ? undefined : (presetType ?? getPresetFromSlug(generatorSlug));
 
-const description = `${intro} 100% ఉచితం మరియు తక్షణ డౌన్‌లోడ్.`;
+const description = tool ? `${tool.name}: తెలుగులో అందుబాటులో ఉన్న ఉచిత, మొబైల్‌కు అనుకూల వ్యాపార సాధనం. వేగవంతమైన ఫలితాలను పొందండి మరియు మీ డేటాను బ్రౌజర్‌లోనే సురక్షితంగా ఉంచండి.` : `${intro} 100% ఉచితం మరియు తక్షణ డౌన్‌లోడ్.`;
+const pageTitle = tool ? `${tool.name} — తెలుగులో ఉపయోగించండి | Pro UPI QR` : `${title} | Pro UPI QR (Telugu)`;
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR (Telugu)`} description={description}>
+<BaseLayout title={pageTitle} description={description}>
+  {tool ? (
+    <LocalizedToolPage lang="te" tool={tool} />
+  ) : (
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       <a href="/te/" class="inline-block mb-4 text-xs font-bold text-leaf hover:underline">&larr; ప్రధాన పేజీకి తిరిగి వెళ్లండి</a>
@@ -72,4 +79,5 @@ const description = `${intro} 100% ఉచితం మరియు తక్ష�
       <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
     </div>
   </main>
+  )}
 </BaseLayout>
