@@ -20,3 +20,7 @@ service_account.json
 *.pem
 *.key
 .DS_Store
+
+# Proprietary / IP packages (local only)
+gumroad_package/
+gumroad_seo_agent_skill.zip
