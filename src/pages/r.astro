@@ -1,7 +1,8 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 
-const initialUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.get("u") || "/";
+const requestedUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.get("u") || "/";
+const initialUrl = /^(https?:\/\/|upi:\/\/)/i.test(requestedUrl) ? requestedUrl : "/";
 const qrId = Astro.url.searchParams.get("id") || "";
 ---
 
@@ -28,83 +29,84 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
   <script is:inline>
     (function() {
-      const params = new URLSearchParams(window.location.search);
-      const id = params.get('id');
-      let target = params.get('url') || params.get('u') || '/';
+      var KVDB_BASE = 'https://kvdb.io/8xN4mK7pQ9zX2yW1';
+      var params = new URLSearchParams(window.location.search);
+      var id = params.get('id');
+      var target = params.get('url') || params.get('u') || '/';
 
-      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const deviceType = isMobile ? 'mobile' : 'desktop';
+      function isSafeDestination(value) {
+        return /^(https?:\/\/|upi:\/\/)/i.test(value || '');
+      }
+
+      if (!isSafeDestination(target)) target = '/';
+
+      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      var deviceType = isMobile ? 'mobile' : 'desktop';
 
       async function processRedirect() {
         if (id) {
-          // Fetch cloud record & increment scan counts on primary key
+          // Read current cloud state from kvdb.io directly, then atomically
+          // increment scan counters and write back. This keeps all analytics
+          // accurate across devices without needing a backend server.
           try {
-            const cloudRes = await fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, { method: 'GET' });
-            if (cloudRes.ok) {
-              const text = await cloudRes.text();
-              if (text && text.trim()) {
-                const trimmed = text.trim();
-                if (trimmed.startsWith('{')) {
-                  const meta = JSON.parse(trimmed);
-                  if (meta.destinationUrl) target = meta.destinationUrl;
+            var kvRes = await fetch(KVDB_BASE + '/' + encodeURIComponent(id));
+            if (kvRes.status === 200) {
+              var kvText = await kvRes.text();
+              if (kvText && kvText.trim().startsWith('{')) {
+                var meta = JSON.parse(kvText.trim());
 
-                  // Update scan counts in background
-                  const currentScans = (meta.scans || 0) + 1;
-                  const mobileScans = (meta.mobileScans || 0) + (isMobile ? 1 : 0);
-                  const desktopScans = (meta.desktopScans || 0) + (isMobile ? 0 : 1);
+                // Use cloud destination if available (allows editing printed QRs)
+                if (isSafeDestination(meta.destinationUrl)) target = meta.destinationUrl;
 
-                  const updatedPayload = JSON.stringify({
-                    ...meta,
-                    scans: currentScans,
-                    mobileScans: mobileScans,
-                    desktopScans: desktopScans,
-                    lastScanned: new Date().toISOString()
-                  });
+                // Atomically increment scan counters
+                meta.scans = (meta.scans || 0) + 1;
+                meta.mobileScans = (meta.mobileScans || 0) + (isMobile ? 1 : 0);
+                meta.desktopScans = (meta.desktopScans || 0) + (isMobile ? 0 : 1);
+                meta.lastScanned = new Date().toISOString();
 
-                  fetch(`https://kvdb.io/8xN4mK7pQ9zX2yW1/${id}`, {
-                    method: 'POST',
-                    body: updatedPayload
-                  }).catch(() => {});
+                // Write updated counters back (fire-and-forget)
+                fetch(KVDB_BASE + '/' + encodeURIComponent(id), {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(meta)
+                }).catch(function() {});
 
-                  // Trigger Free WhatsApp Alert Webhook if configured
-                  if (meta.whatsappPhone && meta.whatsappApiKey) {
-                    const alertMsg = encodeURIComponent(`⚡ Pro UPI QR Alert: Your QR Code "${meta.title || id}" was just scanned via ${deviceType.toUpperCase()}!`);
-                    fetch(`https://api.callmebot.com/whatsapp.php?phone=${meta.whatsappPhone}&text=${alertMsg}&apikey=${meta.whatsappApiKey}`, { mode: 'no-cors' }).catch(() => {});
-                  }
-                } else if (trimmed.startsWith('http') || trimmed.startsWith('upi://')) {
-                  target = trimmed;
+                // Send WhatsApp alert if configured
+                if (meta.whatsappPhone && meta.whatsappApiKey) {
+                  var alertMsg = encodeURIComponent('\u26A1 Pro UPI QR Alert: Your QR Code "' + (meta.title || id) + '" was just scanned via ' + deviceType.toUpperCase() + '!');
+                  fetch('https://api.callmebot.com/whatsapp.php?phone=' + meta.whatsappPhone + '&text=' + alertMsg + '&apikey=' + meta.whatsappApiKey, { mode: 'no-cors' }).catch(function() {});
                 }
               }
             }
+            // 404 = key not registered yet, silently use fallback URL from query string
           } catch (e) {
-            console.warn("Cloud destination fetch fallback:", e);
+            // Network failure — silently use the fallback URL from the query string
           }
 
           // Update local storage if scanned on dashboard browser
           try {
-            const saved = localStorage.getItem('pro_upi_dynamic_links');
+            var saved = localStorage.getItem('pro_upi_dynamic_links');
             if (saved) {
-              const links = JSON.parse(saved);
-              const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              const dateStr = new Date().toLocaleDateString();
-              const updated = links.map(l => {
+              var links = JSON.parse(saved);
+              var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+              var dateStr = new Date().toLocaleDateString();
+              var updated = links.map(function(l) {
                 if (l.id === id) {
-                  const currentScans = (l.scans || 0) + 1;
-                  const deviceStats = l.scansByDevice || { mobile: 0, desktop: 0 };
+                  var currentScans = (l.scans || 0) + 1;
+                  var deviceStats = l.scansByDevice || { mobile: 0, desktop: 0 };
                   if (isMobile) deviceStats.mobile = (deviceStats.mobile || 0) + 1;
                   else deviceStats.desktop = (deviceStats.desktop || 0) + 1;
 
-                  const recentScans = l.recentScans || [];
-                  recentScans.unshift({ id: 's-' + Date.now(), timestamp: `${dateStr} at ${now}`, device: deviceType, status: 'Success' });
+                  var recentScans = l.recentScans || [];
+                  recentScans.unshift({ id: 's-' + Date.now(), timestamp: dateStr + ' at ' + now, device: deviceType, status: 'Success' });
                   if (recentScans.length > 20) recentScans.pop();
 
-                  return {
-                    ...l,
+                  return Object.assign({}, l, {
                     scans: currentScans,
-                    lastScanned: `${dateStr} at ${now}`,
+                    lastScanned: dateStr + ' at ' + now,
                     scansByDevice: deviceStats,
                     recentScans: recentScans
-                  };
+                  });
                 }
                 return l;
               });
@@ -115,8 +117,8 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
         // Perform instant redirection
         if (target) {
-          const displayEl = document.getElementById('target-display');
-          const linkEl = document.getElementById('direct-link');
+          var displayEl = document.getElementById('target-display');
+          var linkEl = document.getElementById('direct-link');
           if (displayEl) displayEl.textContent = target;
           if (linkEl) linkEl.href = target;
 

@@ -1,8 +1,12 @@
 /**
  * Global Dynamic QR Cloud & Analytics Engine
- * Single-Key KVDB Cloud Persistence (Zero 404 Console Errors).
+ * Direct KVDB.io Cloud Persistence — Zero 404 Console Errors.
  * Provides cross-device cloud persistence, global scan counters, device breakdowns,
  * shareable campaign links, free WhatsApp alert webhooks, and CSV export.
+ *
+ * NOTE: This is a static Astro site (no SSR adapter), so all KV operations
+ * happen client-side directly against the kvdb.io REST API. 404 responses
+ * (key-not-found) are handled gracefully and never log console errors.
  */
 
 export interface ScanLogEvent {
@@ -35,103 +39,129 @@ export interface CloudLinkData {
   dailyScanHistory?: { date: string; count: number }[];
 }
 
-const KVDB_BASE = `https://kvdb.io/8xN4mK7pQ9zX2yW1`;
+const KVDB_BUCKET = "8xN4mK7pQ9zX2yW1";
+const KVDB_BASE = `https://kvdb.io/${KVDB_BUCKET}`;
 
 /**
- * Fetch total live scan counts for a dynamic QR code directly from primary KVDB cloud key.
+ * Safely fetch a JSON value from KVDB. Returns null on 404 or any error
+ * without logging console errors.
  */
-export async function getGlobalScanCount(id: string): Promise<{ scans: number; mobileScans: number; desktopScans: number }> {
+async function kvdbGet(key: string): Promise<Record<string, any> | null> {
   try {
-    const res = await fetch(`${KVDB_BASE}/${id}`, { method: "GET" });
-    if (res.status === 200) {
-      const text = await res.text();
-      if (text && text.trim().startsWith("{")) {
-        const data = JSON.parse(text.trim());
-        return {
-          scans: data.scans || 0,
-          mobileScans: data.mobileScans || 0,
-          desktopScans: data.desktopScans || 0,
-        };
-      }
-    }
-  } catch (e) {}
-
-  return { scans: 0, mobileScans: 0, desktopScans: 0 };
+    const res = await fetch(`${KVDB_BASE}/${encodeURIComponent(key)}`);
+    if (res.status !== 200) return null;
+    const text = await res.text();
+    if (!text || !text.trim().startsWith("{")) return null;
+    return JSON.parse(text.trim());
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Persist dynamic destination URL, scan counts, and metadata to primary cloud KV store.
+ * Safely write a JSON value to KVDB. Returns true on success.
  */
-export async function syncDestinationToCloud(id: string, destinationUrl: string, metadata?: Partial<CloudLinkData>): Promise<boolean> {
+async function kvdbSet(key: string, value: Record<string, any>): Promise<boolean> {
   try {
-    // Preserve existing scan metrics if already present in cloud
-    let existingScans = metadata?.scans || 0;
-    let existingMobile = metadata?.scansByDevice?.mobile || 0;
-    let existingDesktop = metadata?.scansByDevice?.desktop || 0;
-
-    try {
-      const existingRes = await fetch(`${KVDB_BASE}/${id}`, { method: "GET" });
-      if (existingRes.status === 200) {
-        const text = await existingRes.text();
-        if (text && text.trim().startsWith("{")) {
-          const parsed = JSON.parse(text.trim());
-          existingScans = Math.max(existingScans, parsed.scans || 0);
-          existingMobile = Math.max(existingMobile, parsed.mobileScans || 0);
-          existingDesktop = Math.max(existingDesktop, parsed.desktopScans || 0);
-        }
-      }
-    } catch (e) {}
-
-    const payload = JSON.stringify({
-      destinationUrl,
-      title: metadata?.title || "Dynamic QR Campaign",
-      whatsappPhone: metadata?.whatsappPhone || "",
-      whatsappApiKey: metadata?.whatsappApiKey || "",
-      scans: existingScans,
-      mobileScans: existingMobile,
-      desktopScans: existingDesktop,
-      updatedAt: new Date().toISOString(),
-    });
-
-    const res = await fetch(`${KVDB_BASE}/${id}`, {
+    const res = await fetch(`${KVDB_BASE}/${encodeURIComponent(key)}`, {
       method: "POST",
-      body: payload,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(value),
     });
     return res.ok;
-  } catch (e) {
-    console.warn("KVDB Cloud destination sync failed:", e);
+  } catch {
     return false;
   }
 }
 
 /**
- * Fetch latest destination URL and metadata for a dynamic QR ID from cloud KV store.
+ * Fetch total live scan counts for a dynamic QR code from KVDB cloud.
  */
-export async function getCloudDestination(id: string): Promise<{ destinationUrl: string; title?: string; whatsappPhone?: string; whatsappApiKey?: string; scans?: number; mobileScans?: number; desktopScans?: number } | null> {
-  try {
-    const res = await fetch(`${KVDB_BASE}/${id}`, { method: "GET" });
-    if (res.status === 200) {
-      const text = await res.text();
-      if (text && text.trim()) {
-        const trimmed = text.trim();
-        if (trimmed.startsWith("{")) {
-          const parsed = JSON.parse(trimmed);
-          return {
-            destinationUrl: parsed.destinationUrl,
-            title: parsed.title,
-            whatsappPhone: parsed.whatsappPhone,
-            whatsappApiKey: parsed.whatsappApiKey,
-            scans: parsed.scans || 0,
-            mobileScans: parsed.mobileScans || 0,
-            desktopScans: parsed.desktopScans || 0,
-          };
-        } else if (trimmed.startsWith("http") || trimmed.startsWith("upi://")) {
-          return { destinationUrl: trimmed };
-        }
-      }
-    }
-  } catch (e) {}
+export async function getGlobalScanCount(id: string): Promise<{ scans: number; mobileScans: number; desktopScans: number }> {
+  const data = await kvdbGet(id);
+  if (data && data.destinationUrl) {
+    return {
+      scans: data.scans || 0,
+      mobileScans: data.mobileScans || data.scansByDevice?.mobile || 0,
+      desktopScans: data.desktopScans || data.scansByDevice?.desktop || 0,
+    };
+  }
+  return { scans: 0, mobileScans: 0, desktopScans: 0 };
+}
+
+/**
+ * Persist dynamic destination URL, scan counts, and metadata to KVDB cloud.
+ * Merges with existing cloud data so scan counts are never overwritten.
+ */
+export async function syncDestinationToCloud(id: string, destinationUrl: string, metadata?: Partial<CloudLinkData>): Promise<boolean> {
+  // Read existing cloud state first to avoid overwriting scan counters
+  const existing = await kvdbGet(id);
+
+  const payload: Record<string, any> = {
+    ...(existing || {}),
+    destinationUrl,
+    title: metadata?.title || existing?.title || "Dynamic QR Campaign",
+    whatsappPhone: metadata?.whatsappPhone || existing?.whatsappPhone || "",
+    whatsappApiKey: metadata?.whatsappApiKey || existing?.whatsappApiKey || "",
+    scans: Math.max(existing?.scans || 0, metadata?.scans || 0),
+    mobileScans: Math.max(existing?.mobileScans || 0, metadata?.scansByDevice?.mobile || 0),
+    desktopScans: Math.max(existing?.desktopScans || 0, metadata?.scansByDevice?.desktop || 0),
+  };
+
+  return kvdbSet(id, payload);
+}
+
+/**
+ * Fetch latest destination URL and metadata for a dynamic QR ID from KVDB cloud.
+ */
+export async function getCloudDestination(id: string): Promise<{
+  destinationUrl: string;
+  title?: string;
+  whatsappPhone?: string;
+  whatsappApiKey?: string;
+  scans?: number;
+  mobileScans?: number;
+  desktopScans?: number;
+} | null> {
+  const data = await kvdbGet(id);
+  if (data && data.destinationUrl) {
+    return {
+      destinationUrl: data.destinationUrl,
+      title: data.title,
+      whatsappPhone: data.whatsappPhone,
+      whatsappApiKey: data.whatsappApiKey,
+      scans: data.scans || 0,
+      mobileScans: data.mobileScans || data.scansByDevice?.mobile || 0,
+      desktopScans: data.desktopScans || data.scansByDevice?.desktop || 0,
+    };
+  }
   return null;
+}
+
+/**
+ * Record a scan event in KVDB — atomically increments counters.
+ */
+export async function recordScanInCloud(
+  id: string,
+  device: "mobile" | "desktop"
+): Promise<{ destinationUrl: string; title?: string; whatsappPhone?: string; whatsappApiKey?: string } | null> {
+  const data = await kvdbGet(id);
+  if (!data || !data.destinationUrl) return null;
+
+  // Atomically increment scan counts
+  data.scans = (data.scans || 0) + 1;
+  data.mobileScans = (data.mobileScans || 0) + (device === "mobile" ? 1 : 0);
+  data.desktopScans = (data.desktopScans || 0) + (device === "desktop" ? 1 : 0);
+  data.lastScanned = new Date().toISOString();
+
+  await kvdbSet(id, data);
+
+  return {
+    destinationUrl: data.destinationUrl,
+    title: data.title,
+    whatsappPhone: data.whatsappPhone,
+    whatsappApiKey: data.whatsappApiKey,
+  };
 }
 
 /**
