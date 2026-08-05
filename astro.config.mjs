@@ -12,7 +12,6 @@ export default defineConfig({
       prefixDefaultLocale: false
     }
   },
-  output: "hybrid",
   adapter: vercel(),
   integrations: [react(), tailwind()]
 });
