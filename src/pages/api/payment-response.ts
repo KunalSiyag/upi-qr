@@ -5,7 +5,7 @@ import {
   paymentResponseKey,
   PAYMENT_RESPONSE_TTL_SECONDS,
   type PaymentResponseRecord,
-} from "../../../lib/paymentResponse";
+} from "../../lib/paymentResponse";
 
 export const prerender = false;
 

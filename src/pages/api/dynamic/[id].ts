@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { metrics, readRecord, recordScan, safeDestination, updateRecord, validId } from "../../../../src/lib/dynamicQrStore";
+import { metrics, readRecord, recordScan, safeDestination, updateRecord, validId } from "../../../lib/dynamicQrStore";
 
 export const prerender = false;
 
