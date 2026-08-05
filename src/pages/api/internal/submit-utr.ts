@@ -1,5 +1,5 @@
 import type { APIRoute } from 'astro';
-import { updateCheckoutSessionStatus, getCheckoutSession } from '../../../../lib/kv';
+import { updateCheckoutSessionStatus, getCheckoutSession } from '../../../lib/kv';
 
 export const prerender = false;
 

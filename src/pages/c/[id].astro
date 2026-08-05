@@ -1,6 +1,6 @@
 ---
 export const prerender = false;
-import { getCheckoutSession, getMerchantByKey, type Merchant } from '../../../lib/kv';
+import { getCheckoutSession, getMerchantByKey, type Merchant } from '../../lib/kv';
 import QRCode from 'qrcode';
 import { kv } from '@vercel/kv'; // We need this just to fetch the merchant since we only store merchantId in session
 
