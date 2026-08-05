@@ -1,6 +1,7 @@
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
+import vercel from "@astrojs/vercel";
 
 export default defineConfig({
   site: "https://www.proupiqr.in",
@@ -11,5 +12,6 @@ export default defineConfig({
       prefixDefaultLocale: false
     }
   },
+  adapter: vercel(),
   integrations: [react(), tailwind()]
 });

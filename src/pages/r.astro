@@ -29,8 +29,6 @@ const qrId = Astro.url.searchParams.get("id") || "";
 
   <script is:inline>
     (function() {
-      var KVDB_BASE = 'https://kvdb.io/UTBhVqvgHGvEDSqYe3s8Th';
-      var REGISTRY_KEY = 'pro_upi_cloud_synced_ids';
       var params = new URLSearchParams(window.location.search);
       var id = params.get('id');
       var target = params.get('url') || params.get('u') || '/';
@@ -39,47 +37,20 @@ const qrId = Astro.url.searchParams.get("id") || "";
         return /^(https?:\/\/|upi:\/\/)/i.test(value || '');
       }
 
-      function isCloudSynced(qrId) {
-        try {
-          var raw = localStorage.getItem(REGISTRY_KEY);
-          return raw ? JSON.parse(raw).indexOf(qrId) !== -1 : false;
-        } catch (e) { return false; }
-      }
-
       if (!isSafeDestination(target)) target = '/';
 
       var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
       var deviceType = isMobile ? 'mobile' : 'desktop';
 
       async function processRedirect() {
-        if (id && isCloudSynced(id)) {
-          // Only fetch from cloud if this ID was previously confirmed synced.
-          // This prevents browser-level 404 console errors entirely.
+        if (id) {
+          // The first-party API reads Vercel KV server-side, so this works on
+          // every scanner's device—not just the browser that created the QR.
           try {
-            var kvRes = await fetch(KVDB_BASE + '/' + encodeURIComponent(id));
-            if (kvRes.status === 200) {
-              var kvText = await kvRes.text();
-              if (kvText && kvText.trim().startsWith('{')) {
-                var meta = JSON.parse(kvText.trim());
-
-                if (isSafeDestination(meta.destinationUrl)) target = meta.destinationUrl;
-
-                meta.scans = (meta.scans || 0) + 1;
-                meta.mobileScans = (meta.mobileScans || 0) + (isMobile ? 1 : 0);
-                meta.desktopScans = (meta.desktopScans || 0) + (isMobile ? 0 : 1);
-                meta.lastScanned = new Date().toISOString();
-
-                fetch(KVDB_BASE + '/' + encodeURIComponent(id), {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify(meta)
-                }).catch(function() {});
-
-                if (meta.whatsappPhone && meta.whatsappApiKey) {
-                  var alertMsg = encodeURIComponent('\u26A1 Pro UPI QR Alert: Your QR Code "' + (meta.title || id) + '" was just scanned via ' + deviceType.toUpperCase() + '!');
-                  fetch('https://api.callmebot.com/whatsapp.php?phone=' + meta.whatsappPhone + '&text=' + alertMsg + '&apikey=' + meta.whatsappApiKey, { mode: 'no-cors' }).catch(function() {});
-                }
-              }
+            var response = await fetch('/api/dynamic/' + encodeURIComponent(id));
+            if (response.ok) {
+              var data = await response.json();
+              if (isSafeDestination(data.destinationUrl)) target = data.destinationUrl;
             }
           } catch (e) {
             // Network failure — silently use the fallback URL from the query string
