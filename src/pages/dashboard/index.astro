@@ -1,0 +1,27 @@
+---
+import DashboardLayout from "../../layouts/DashboardLayout.astro";
+import { MerchantSettings } from "../../components/dashboard/MerchantSettings";
+import { UserButton } from "@clerk/astro/components";
+
+export const prerender = false;
+---
+
+<DashboardLayout title="Dashboard | Pro UPI QR" description="Manage your merchant settings.">
+  <div class="min-h-screen bg-gray-50">
+    <header class="bg-white border-b border-gray-200">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div class="flex items-center space-x-4">
+          <a href="/" class="text-xl font-bold text-gray-900">Pro UPI QR</a>
+          <span class="text-sm px-2 py-1 bg-blue-100 text-blue-800 rounded-md font-medium">Merchant Portal</span>
+        </div>
+        <div class="flex items-center">
+          <UserButton />
+        </div>
+      </div>
+    </header>
+
+    <main class="py-10">
+      <MerchantSettings client:load />
+    </main>
+  </div>
+</DashboardLayout>

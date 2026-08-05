@@ -24,6 +24,7 @@
     "@astrojs/react": "^6.0.2",
     "@astrojs/tailwind": "^6.0.2",
     "@astrojs/vercel": "^11.0.4",
+    "@clerk/astro": "^4.0.6",
     "@vercel/kv": "^3.0.0",
     "astro": "^7.1.6",
     "html-to-image": "^1.11.11",
