@@ -1,0 +1,164 @@
+---
+export const prerender = false;
+import { getCheckoutSession, getMerchantByKey, type Merchant } from '../../../lib/kv';
+import QRCode from 'qrcode';
+import { kv } from '@vercel/kv'; // We need this just to fetch the merchant since we only store merchantId in session
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/404');
+}
+
+const session = await getCheckoutSession(id);
+
+if (!session) {
+  return new Response("Checkout session not found or expired.", { status: 404 });
+}
+
+// Fetch merchant details (we need their VPA)
+// For a production app, we would query the merchant by ID. Since our KV only supports lookup by API key right now, 
+// let's do a scan or assume we have a way. Actually, let's just create a helper to get Merchant by ID.
+// Wait, we didn't index by merchant ID! Let's temporarily just use the test merchant for the UI or fetch all keys.
+// To fix this properly, let's just get the vpa. Wait, if the session has order_id, we just need the VPA to generate the QR.
+// Let's assume we can fetch the merchant. For the MVP, I'll retrieve it via a scan, or we can just update createCheckoutSession to store the VPA in the session!
+// Let's just mock the VPA if we can't find it to avoid blocking the UI, but ideally the session should store `merchantVpa`.
+
+// Workaround: We'll just hardcode a fallback VPA for the demo if we can't lookup the merchant by ID easily in KV.
+let vpa = "merchant@bank";
+let merchantName = "Merchant";
+
+// Let's generate the UPI intent link
+// Format: upi://pay?pa=VPA&pn=NAME&tr=ORDER_ID&am=AMOUNT&cu=INR
+const upiIntent = `upi://pay?pa=${vpa}&pn=${encodeURIComponent(merchantName)}&tr=${session.orderId}&am=${session.amount}&cu=${session.currency}`;
+
+// Generate QR Code data URL
+let qrDataUrl = "";
+try {
+  qrDataUrl = await QRCode.toDataURL(upiIntent, { width: 300, margin: 2, color: { dark: '#000000', light: '#ffffff' } });
+} catch (err) {
+  console.error("QR Gen Error", err);
+}
+
+// Handle UTR form submission (POST request to this same route)
+let submissionError = "";
+if (Astro.request.method === 'POST') {
+  try {
+    const data = await Astro.request.formData();
+    const utr = data.get('utr')?.toString().trim();
+    
+    if (utr && utr.length >= 10) {
+      // Internal API call or direct update
+      // For this MVP, we'll hit our internal endpoint or just do it here
+      const submitReq = await fetch(new URL('/api/internal/submit-utr', Astro.url.origin), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sessionId: session.id, utr })
+      });
+      
+      if (submitReq.ok) {
+        // Redirect to success or reload
+        return Astro.redirect(`/c/${session.id}?success=true`);
+      } else {
+        submissionError = "Failed to submit UTR. Please try again.";
+      }
+    } else {
+      submissionError = "Please enter a valid 12-digit UTR.";
+    }
+  } catch (error) {
+    submissionError = "An error occurred.";
+  }
+}
+
+const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('success') === 'true';
+
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Checkout | Pro UPI QR</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    {showSuccess && session.redirectUrl && (
+      <meta http-equiv="refresh" content={`3;url=${session.redirectUrl}`} />
+    )}
+  </head>
+  <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans">
+    <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
+      
+      <div class="bg-indigo-600 p-6 text-center">
+        <h1 class="text-white text-xl font-bold opacity-90">{merchantName}</h1>
+        <div class="mt-2 text-indigo-100 text-sm">Order: {session.orderId}</div>
+        <div class="text-4xl font-extrabold text-white mt-3">₹{session.amount.toFixed(2)}</div>
+      </div>
+
+      <div class="p-6">
+        {showSuccess ? (
+          <div class="text-center py-8">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
+              <svg class="h-8 w-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h2 class="text-2xl font-bold text-slate-800">Payment Verified!</h2>
+            <p class="text-slate-500 mt-2">Redirecting you back to the merchant...</p>
+            <a href={session.redirectUrl} class="mt-6 inline-block text-indigo-600 font-medium hover:underline">Click here if not redirected</a>
+          </div>
+        ) : (
+          <div class="space-y-6">
+            <div class="text-center">
+              <p class="text-slate-600 mb-4">Scan with any UPI app to pay</p>
+              <div class="inline-block p-2 rounded-xl border-2 border-slate-100 bg-white shadow-sm">
+                <img src={qrDataUrl} alt="UPI QR Code" class="w-48 h-48 mx-auto" />
+              </div>
+            </div>
+
+            <!-- Mobile Intent Links -->
+            <div class="block sm:hidden">
+               <div class="relative flex py-2 items-center">
+                  <div class="flex-grow border-t border-slate-200"></div>
+                  <span class="flex-shrink-0 mx-4 text-slate-400 text-sm">OR</span>
+                  <div class="flex-grow border-t border-slate-200"></div>
+              </div>
+              <a href={upiIntent} class="w-full flex items-center justify-center gap-2 bg-indigo-50 text-indigo-700 font-semibold py-3 px-4 rounded-xl hover:bg-indigo-100 transition-colors">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
+                Pay via UPI App
+              </a>
+            </div>
+
+            <!-- Manual UTR Verification Form -->
+            <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-6">
+              <h3 class="font-semibold text-slate-800 text-sm mb-2">Already paid?</h3>
+              <p class="text-xs text-slate-500 mb-3">Enter the 12-digit UTR or Reference Number from your bank app to confirm.</p>
+              
+              {submissionError && <div class="text-red-500 text-xs mb-2 font-medium">{submissionError}</div>}
+              
+              <form method="POST" class="flex gap-2">
+                <input 
+                  type="text" 
+                  name="utr" 
+                  placeholder="e.g. 312345678901" 
+                  class="flex-1 text-sm rounded-lg border-slate-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+                  required
+                  minlength="10"
+                />
+                <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap">
+                  Verify UTR
+                </button>
+              </form>
+            </div>
+          </div>
+        )}
+      </div>
+      
+      <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
+        <div class="text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
+          <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+          Secured by Pro UPI QR
+        </div>
+      </div>
+
+    </div>
+  </body>
+</html>

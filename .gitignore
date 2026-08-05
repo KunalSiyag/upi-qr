@@ -24,3 +24,4 @@ service_account.json
 # Proprietary / IP packages (local only)
 gumroad_package/
 gumroad_seo_agent_skill.zip
+.env*.local

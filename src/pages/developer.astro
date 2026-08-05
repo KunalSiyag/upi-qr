@@ -56,7 +56,7 @@ const schema = {
           Integrate Free UPI Payments On Your Website
         </h1>
         <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-forest/75">
-          Generate interactive client-side UPI QR widgets, payment buttons, and deep links instantly. For verified payment success or failure, connect a UPI payment gateway and send its verified server-side result to the Payment Response API below.
+          Generate interactive client-side UPI QR widgets, payment buttons, and deep links instantly. For a real checkout flow, your app sends customers to a checkout screen or QR, then your backend records the verified payment result after the gateway confirms it.
         </p>
       </div>
 
@@ -125,27 +125,36 @@ const schema = {
       </section>
 
       <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
-        <p class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Verified payment status</p>
+        <p class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Backend-only verification</p>
         <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">Payment Response API</h2>
         <p class="mt-3 text-sm sm:text-base leading-relaxed text-forest/70 max-w-3xl">
-          A native <code>upi://pay</code> link only asks a customer&apos;s UPI app to start a payment. It cannot return a trustworthy success, failure, UTR, or bank response to a web page. Record those results from your payment gateway&apos;s webhook (or your own secure server relay), then query the saved order status from your backend.
+          This API is for your server, not for the customer&apos;s browser. The browser can open a checkout screen or UPI link, but only your backend can receive and trust the final payment result from a verified gateway webhook or secure relay.
         </p>
+
+        <div class="mt-5 rounded-2xl border border-forest/10 bg-white/80 p-4 sm:p-5 text-sm leading-relaxed text-forest/75">
+          <p class="font-black text-forest">Simple client flow</p>
+          <ol class="mt-3 grid gap-2 sm:grid-cols-3">
+            <li class="rounded-xl bg-mint/20 px-3 py-3">1. Your app creates a payment request or shows a checkout screen.</li>
+            <li class="rounded-xl bg-cream/40 px-3 py-3">2. The customer pays in their UPI app.</li>
+            <li class="rounded-xl bg-mint/20 px-3 py-3">3. Your backend stores the verified result and your UI polls for status.</li>
+          </ol>
+        </div>
 
         <div class="mt-6 grid gap-5 md:grid-cols-2">
           <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5 sm:p-6">
             <h3 class="text-sm font-black text-forest">1. Receive the verified gateway result</h3>
-            <p class="mt-2 text-xs leading-relaxed text-forest/70">Configure your gateway webhook to reach your server first. Verify that gateway&apos;s signature there, normalize the result, and call this endpoint server-to-server.</p>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">Configure your gateway webhook to reach your server first. Your backend verifies the signature, normalizes the result, and then calls this endpoint server-to-server.</p>
             <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>POST /api/payment-response<br />Content-Type: application/json<br /><br />&#123; "orderId": "order_8390", "status": "SUCCESS", "transactionId": "UTR…", "amount": "250.00", "provider": "your-gateway" &#125;</code></div>
           </div>
           <div class="rounded-2xl border border-forest/10 bg-cream/50 p-5 sm:p-6">
             <h3 class="text-sm font-black text-forest">2. Read the saved response</h3>
-            <p class="mt-2 text-xs leading-relaxed text-forest/70">Your backend can poll this endpoint or update your order database when the webhook arrives. The result is retained for 90 days in Vercel KV.</p>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">Your frontend can show a payment pending screen while your backend polls this endpoint or updates your order database. The result is retained for 90 days in Vercel KV.</p>
             <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>GET /api/payment-response?orderId=order_8390<br /><br />&#123; "payment": &#123; "status": "SUCCESS", "transactionId": "UTR…", "receivedAt": "…" &#125; &#125;</code></div>
           </div>
         </div>
 
         <div class="mt-5 rounded-2xl border border-amber-700/15 bg-amber-50/70 p-4 text-xs leading-relaxed text-amber-950">
-          <strong>Security requirement:</strong> set <code>PAYMENT_WEBHOOK_SECRET</code>, <code>KV_REST_API_URL</code>, and <code>KV_REST_API_TOKEN</code> in Vercel. Every request must include <code>x-pro-upi-timestamp</code> and <code>x-pro-upi-signature</code>. The signature is HMAC-SHA256 of <code>METHOD.timestamp.rawBody</code>. Keep that secret only on your server—never in browser JavaScript or an embedded widget.
+          <strong>Backend requirement:</strong> set <code>PAYMENT_WEBHOOK_SECRET</code>, <code>KV_REST_API_URL</code>, and <code>KV_REST_API_TOKEN</code> in Vercel. The secret is only for server-to-server calls. Keep it out of browser JavaScript and out of any embedded widget.
         </div>
       </section>
 

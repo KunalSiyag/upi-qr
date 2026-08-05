@@ -10,14 +10,14 @@ For local development, copy `.env.example` to `.env` and add the KV REST credent
 
 ## Verified UPI payment responses
 
-Opening a native `upi://pay` link does **not** return a verified payment result to a browser. To record a payment status, use a UPI payment gateway's webhook (or a server-side relay that has already verified that gateway's signature) and call `POST /api/payment-response` from your backend. The endpoint saves only a normalized order response and supports signed `GET /api/payment-response?orderId=...` lookups.
+Opening a native `upi://pay` link does **not** return a verified payment result to a browser. The customer-facing part of the flow is your checkout screen or QR link. The verified payment result belongs on your backend, where a gateway webhook or secure relay can call `POST /api/payment-response` after it has already checked the provider signature. The endpoint saves a normalized order response and supports signed `GET /api/payment-response?orderId=...` lookups.
 
 Set these Vercel environment variables before using it:
 
 * `KV_REST_API_URL` and `KV_REST_API_TOKEN` — supplied by a connected Vercel KV database.
 * `PAYMENT_WEBHOOK_SECRET` — a long, unique secret shared only by the backend that calls the endpoint.
 
-Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-upi-signature`: an HMAC-SHA256 hex digest of `METHOD.timestamp.rawBody`. Requests older than five minutes are rejected; records expire after 90 days. Never put this secret in a browser or a public QR/embed URL.
+Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-upi-signature`: an HMAC-SHA256 hex digest of `METHOD.timestamp.rawBody`. Requests older than five minutes are rejected; records expire after 90 days. This secret stays on the server. It is not something the customer sees or enters.
 
 **Live Application:** [https://www.proupiqr.in](https://www.proupiqr.in)
 
