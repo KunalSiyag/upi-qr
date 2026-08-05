@@ -8,6 +8,17 @@ Dynamic QR destinations and scan counts use the first-party `/api/dynamic/[id]` 
 
 For local development, copy `.env.example` to `.env` and add the KV REST credentials. Without KV credentials, the QR follows its embedded destination fallback but no authoritative metrics are recorded.
 
+## Verified UPI payment responses
+
+Opening a native `upi://pay` link does **not** return a verified payment result to a browser. To record a payment status, use a UPI payment gateway's webhook (or a server-side relay that has already verified that gateway's signature) and call `POST /api/payment-response` from your backend. The endpoint saves only a normalized order response and supports signed `GET /api/payment-response?orderId=...` lookups.
+
+Set these Vercel environment variables before using it:
+
+* `KV_REST_API_URL` and `KV_REST_API_TOKEN` — supplied by a connected Vercel KV database.
+* `PAYMENT_WEBHOOK_SECRET` — a long, unique secret shared only by the backend that calls the endpoint.
+
+Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-upi-signature`: an HMAC-SHA256 hex digest of `METHOD.timestamp.rawBody`. Requests older than five minutes are rejected; records expire after 90 days. Never put this secret in a browser or a public QR/embed URL.
+
 **Live Application:** [https://www.proupiqr.in](https://www.proupiqr.in)
 
 ---

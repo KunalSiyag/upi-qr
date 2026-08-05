@@ -79,16 +79,18 @@ export function DynamicQrGenerator() {
         }
       }
 
+      // One-time migration for campaigns created by the former browser/KVDB
+      // implementation. The owner opens this page once, receives a private
+      // management token, and their already-printed /r/?id= QR keeps working.
+      const migrated = await Promise.all(
+        parsed.map(async (link) => link.manageToken ? link : (await syncLinkToCloud(link)) || link)
+      );
+      parsed = migrated;
       setLinks(parsed);
 
       if (parsed.length > 0) {
         const initialTarget = urlId ? parsed.find((l) => l.id === urlId) || parsed[0] : parsed[0];
         selectLink(initialTarget);
-      }
-
-      // Ensure all local campaigns are registered in cloud KVDB store
-      for (const link of parsed) {
-        syncDestinationToCloud(link.id, link.destinationUrl, link);
       }
 
       // Fetch global cloud metrics for all links
@@ -188,10 +190,14 @@ export function DynamicQrGenerator() {
       recentScans: [],
     };
 
-    const updated = [newLink, ...links];
+    const savedLink = await syncLinkToCloud(newLink);
+    if (!savedLink) {
+      alert("We could not create the dynamic QR. Please try again in a moment.");
+      return;
+    }
+    const updated = [savedLink, ...links];
     saveLinksToStorage(updated);
-    await syncLinkToCloud(newLink);
-    selectLink(newLink);
+    selectLink(savedLink);
   };
 
   const selectLink = async (link: CloudLinkData) => {
@@ -234,6 +240,11 @@ export function DynamicQrGenerator() {
 
     const success = await syncDestinationToCloud(activeLink.id, editingDestination.trim(), activeLink);
 
+    if (!success) {
+      setIsUpdatingDest(false);
+      alert("The destination could not be updated. This QR may be a legacy campaign; create a new dynamic QR to manage it in Vercel KV.");
+      return;
+    }
     const updated = links.map((l) =>
       l.id === activeLink.id ? { ...l, destinationUrl: editingDestination.trim() } : l
     );
@@ -245,7 +256,15 @@ export function DynamicQrGenerator() {
   };
 
   const togglePauseLink = async (id: string) => {
-    const updated = links.map((l) => (l.id === id ? { ...l, isPaused: !l.isPaused } : l));
+    const current = links.find((link) => link.id === id);
+    if (!current) return;
+    const next = { ...current, isPaused: !current.isPaused };
+    const success = await syncDestinationToCloud(id, current.destinationUrl, next);
+    if (!success) {
+      alert("This campaign could not be updated. Create a new Vercel KV dynamic QR to manage it.");
+      return;
+    }
+    const updated = links.map((l) => (l.id === id ? next : l));
     saveLinksToStorage(updated);
     if (activeLink?.id === id) {
       setActiveLink({ ...activeLink, isPaused: !activeLink.isPaused });
@@ -319,7 +338,7 @@ export function DynamicQrGenerator() {
           </div>
           <div className="mt-2 text-2xl font-black text-forest">{totalScansAll.toLocaleString()}</div>
           <p className="mt-1 text-[11px] text-leaf font-bold flex items-center gap-1">
-            <span>Real-time KVDB Cloud Sync</span>
+            <span>Real-time Vercel KV Sync</span>
           </p>
         </div>
 
