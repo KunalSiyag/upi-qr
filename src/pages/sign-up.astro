@@ -1,0 +1,12 @@
+---
+import DashboardLayout from "../layouts/DashboardLayout.astro";
+import { SignUp } from "@clerk/astro/components";
+
+export const prerender = false;
+---
+
+<DashboardLayout title="Sign Up | Pro UPI QR" description="Create your merchant dashboard account.">
+  <div class="min-h-screen flex items-center justify-center py-20 bg-gray-50">
+    <SignUp routing="path" path="/sign-up" signInUrl="/sign-in" forceRedirectUrl="/dashboard" />
+  </div>
+</DashboardLayout>

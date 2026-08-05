@@ -8,6 +8,7 @@ export interface Merchant {
   razorpayKeyId?: string; // For automated mode
   razorpayKeySecret?: string;
   webhookUrl?: string; // Where we send the clean webhook to the merchant
+  clerkUserId?: string; // Links this merchant to a Clerk authentication account
 }
 
 export interface CheckoutSession {
@@ -32,6 +33,28 @@ export const getMerchantByKey = async (apiKey: string): Promise<Merchant | null>
   } catch (error) {
     console.error("KV Error getMerchantByKey:", error);
     return null;
+  }
+};
+
+export const getMerchantByUserId = async (clerkUserId: string): Promise<Merchant | null> => {
+  try {
+    const apiKey = await kv.get<string>(`clerk_user:${clerkUserId}`);
+    if (!apiKey) return null;
+    return await getMerchantByKey(apiKey);
+  } catch (error) {
+    console.error("KV Error getMerchantByUserId:", error);
+    return null;
+  }
+};
+
+export const createMerchant = async (merchant: Merchant): Promise<void> => {
+  try {
+    await kv.set(`merchant_key:${merchant.apiKey}`, merchant);
+    if (merchant.clerkUserId) {
+      await kv.set(`clerk_user:${merchant.clerkUserId}`, merchant.apiKey);
+    }
+  } catch (error) {
+    console.error("KV Error createMerchant:", error);
   }
 };
 
