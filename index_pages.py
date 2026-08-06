@@ -48,13 +48,19 @@ except Exception as e:
     print(f"Failed to parse sitemap: {e}")
     sys.exit(1)
 
-print(f"Found {len(urls)} URLs in sitemap.xml. Starting bulk submit...")
+# Safety & Anti-Spam Rate Limit: Submit max 2 URLs per run to prevent Google API penalties
+LIMIT = 2
+if len(sys.argv) > 1 and sys.argv[1].isdigit():
+    LIMIT = int(sys.argv[1])
+
+target_urls = urls[:LIMIT]
+print(f"Found {len(urls)} URLs in sitemap.xml. Rate limited to submitting {len(target_urls)} high-priority URLs...")
 
 endpoint = "https://indexing.googleapis.com/v3/urlNotifications:publish"
 success_count = 0
 failed_count = 0
 
-for idx, url in enumerate(urls):
+for idx, url in enumerate(target_urls):
     data = {
         "url": url,
         "type": "URL_UPDATED"
