@@ -78,7 +78,7 @@ export function EmbedCard() {
                   <span className="text-[10px] font-black text-[#4285f4]">GPay</span>
                 )}
                 {params.logo === "phonepe" && (
-                  <span className="text-[10px] font-black text-[#5f259f]">Pe</span>
+                  <img src="/phonepe.png" alt="PhonePe" className="h-full w-full object-contain" />
                 )}
                 {params.logo === "paytm" && (
                   <span className="text-[9px] font-black text-[#00baf2]">Paytm</span>

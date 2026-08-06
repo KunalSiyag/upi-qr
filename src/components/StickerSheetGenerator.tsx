@@ -4,7 +4,7 @@ import QRCode from "qrcode";
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
 
 const presetLogos: Record<string, string> = {
-  phonepe: "/favicon.svg",
+  phonepe: "/phonepe.png",
   gpay: "/googlepay.png",
   paytm: "/paytm.ico",
   bhim: "/bhim.ico",

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 
 const presetLogos = {
-  phonepe: "/favicon.svg", // Or SVG/PNG asset if added, default high quality SVG fallback
+  phonepe: "/phonepe.png", // Or SVG/PNG asset if added, default high quality SVG fallback
   paytm: "/paytm.ico",
   gpay: "/googlepay.png",
   bhim: "/bhim.ico",
