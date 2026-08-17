@@ -8,13 +8,19 @@ KEY = "7e4c2b9a8f1d4c3ab5d6e7f80a1c2b3d"
 HOST = "www.proupiqr.in"
 KEY_LOCATION = f"https://{HOST}/{KEY}.txt"
 
-if not os.path.exists("dist/sitemap.xml"):
-    print("Error: 'dist/sitemap.xml' not found. Please run 'npm run build' first to generate the sitemap.")
+SITEMAP_CANDIDATES = [
+    "dist/client/sitemap.xml",
+    "dist/sitemap.xml",
+    ".vercel/output/static/sitemap.xml",
+]
+SITEMAP_PATH = next((path for path in SITEMAP_CANDIDATES if os.path.exists(path)), None)
+if not SITEMAP_PATH:
+    print("Error: sitemap.xml not found under dist/. Please run 'npm run build' first.")
     sys.exit(1)
 
 # Parse Sitemap URLs
 try:
-    tree = ET.parse("dist/sitemap.xml")
+    tree = ET.parse(SITEMAP_PATH)
     root = tree.getroot()
     # Handle XML Namespace
     ns = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
@@ -34,6 +40,7 @@ endpoints = [
 data = {
     "host": HOST,
     "key": KEY,
+    "keyLocation": KEY_LOCATION,
     "urlList": urls
 }
 

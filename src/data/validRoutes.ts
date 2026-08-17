@@ -100,6 +100,11 @@ export const HINDI_SLUGS = new Set([
   "salon-qr-generator",
   "parking-qr-generator",
   "temple-qr-generator",
+  "sbi-business-qr-code-generator",
+  "hdfc-business-qr-code-generator",
+  "icici-business-qr-code-generator",
+  "universal-upi-qr-code-generator-for-bank-account",
+  "doctor-clinic-upi-qr-generator",
   ...localizedToolSlugs,
 ]);
 

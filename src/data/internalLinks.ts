@@ -1,3 +1,5 @@
+import { routeExistsInLang } from "./validRoutes";
+
 export type GeneratorSlug =
   | "phonepe-qr-generator"
   | "google-pay-qr-generator"
@@ -599,7 +601,8 @@ const tagToPreset: Record<string, PresetType> = {
 };
 
 export function generatorPath(slug: GeneratorSlug, isHindi = false): string {
-  return isHindi ? `/hi/${slug}/` : `/${slug}/`;
+  if (isHindi && routeExistsInLang(slug, "hi")) return `/hi/${slug}/`;
+  return `/${slug}/`;
 }
 
 export function guidePath(slug: string): string {

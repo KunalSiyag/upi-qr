@@ -1,14 +1,25 @@
 /**
- * Web 2.0 Satellite Syndication & DR Link Building Engine
- * Automates publishing rich, long-form guest posts with embedded images & widgets to:
- * 1. WordPress REST API (using Application Passwords)
- * 2. Blogger API v3 (Google Blogger REST API)
+ * Satellite syndication for unique, unpublished articles only.
+ *
+ * Never republishes a post that already exists on Blogger or WordPress.
+ * Checks: local ledger, paginated Blogger list, Blogger search, WordPress search.
+ * Sources: curated satellite articles + unpublished posts from src/content/blog.
  *
  * Usage:
  *   node scripts/syndicate-satellites.mjs
+ *   node scripts/syndicate-satellites.mjs --dry-run
+ *   node scripts/syndicate-satellites.mjs --limit=1
+ *   SYNDICATE_LIMIT=1 node scripts/syndicate-satellites.mjs
  */
 
-// Uses Node.js native global fetch (Node.js 18+)
+import { existsSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
+const STATE_PATH = join(ROOT, ".syndication-state.json");
+const BLOG_DIR = join(ROOT, "src", "content", "blog");
+const SITE_URL = "https://www.proupiqr.in";
 
 // ============================================================================
 // CONFIGURATION (Set via Environment Variables or direct values)
@@ -63,6 +74,7 @@ async function getBloggerAccessToken() {
 // ============================================================================
 const SATELLITE_ARTICLES = [
   {
+    slug: "zero-mdr-merchant-upi-qr-2026",
     title: "The Definitive 2026 Manual for Zero-MDR Merchant UPI QR Code Implementation in India",
     summary: "An authoritative guide for merchants, retailers, clinics, and freelancers on deploying zero-commission UPI QR payment standees, understanding NPCI URI protocols, and eliminating 2% payment gateway MDR fees.",
     content: `
@@ -216,6 +228,7 @@ const SATELLITE_ARTICLES = [
     `
   },
   {
+    slug: "a4-bulk-upi-qr-sticker-sheet",
     title: "A4 Bulk UPI QR Code Sticker Sheet Printing Manual for Multi-Counter Retail & Restaurants",
     summary: "A practical guide for supermarkets, cloud kitchens, tuition centers, and event organizers to print multiple customized QR stickers on a single A4 sheet with vector precision.",
     content: `
@@ -292,7 +305,184 @@ const SATELLITE_ARTICLES = [
   }
 ];
 
+function parseArgs(argv) {
+  const args = { dryRun: false, limit: Number(process.env.SYNDICATE_LIMIT || 1) };
+  for (const arg of argv.slice(2)) {
+    if (arg === "--dry-run") args.dryRun = true;
+    else if (arg.startsWith("--limit=")) args.limit = Math.max(0, Number(arg.slice(8)) || 0);
+  }
+  if (!Number.isFinite(args.limit) || args.limit < 1) args.limit = 1;
+  return args;
+}
+
+function normalizeTitle(value) {
+  return String(value || "")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+}
+
+function articleSlug(article) {
+  if (article.slug) return String(article.slug).trim();
+  return normalizeTitle(article.title).replace(/\s+/g, "-").slice(0, 80) || "untitled";
+}
+
+function loadState() {
+  if (!existsSync(STATE_PATH)) return { posts: {} };
+  try {
+    const parsed = JSON.parse(readFileSync(STATE_PATH, "utf8"));
+    return parsed && typeof parsed === "object" ? { posts: parsed.posts || {} } : { posts: {} };
+  } catch {
+    return { posts: {} };
+  }
+}
+
+function saveState(state) {
+  writeFileSync(STATE_PATH, JSON.stringify(state, null, 2));
+}
+
+function parseFrontmatter(raw) {
+  const match = raw.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n([\s\S]*)$/);
+  if (!match) return { data: {}, body: raw };
+  const data = {};
+  for (const line of match[1].split(/\r?\n/)) {
+    const idx = line.indexOf(":");
+    if (idx === -1) continue;
+    const key = line.slice(0, idx).trim();
+    let value = line.slice(idx + 1).trim();
+    if ((value.startsWith('"') && value.endsWith('"')) || (value.startsWith("'") && value.endsWith("'"))) {
+      value = value.slice(1, -1);
+    }
+    data[key] = value;
+  }
+  return { data, body: match[2] };
+}
+
+function escapeHtml(value) {
+  return String(value)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+function markdownToHtml(markdown) {
+  const lines = String(markdown).replace(/\r\n/g, "\n").split("\n");
+  const html = [];
+  let inList = false;
+  let inCode = false;
+  let codeBuffer = [];
+
+  const flushList = () => {
+    if (inList) {
+      html.push("</ul>");
+      inList = false;
+    }
+  };
+
+  const inline = (text) =>
+    escapeHtml(text)
+      .replace(/`([^`]+)`/g, "<code>$1</code>")
+      .replace(/\*\*([^*]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\[([^\]]+)\]\((https?:[^)]+|\/[^)]+)\)/g, (_, label, href) => {
+        const abs = href.startsWith("http") ? href : `${SITE_URL}${href}`;
+        return `<a href="${abs}" target="_blank" rel="noopener">${label}</a>`;
+      });
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      if (inCode) {
+        html.push(`<pre><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
+        codeBuffer = [];
+        inCode = false;
+      } else {
+        flushList();
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) {
+      codeBuffer.push(line);
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushList();
+      continue;
+    }
+
+    const heading = line.match(/^(#{1,3})\s+(.+)$/);
+    if (heading) {
+      flushList();
+      const level = heading[1].length + 1;
+      html.push(`<h${level}>${inline(heading[2])}</h${level}>`);
+      continue;
+    }
+
+    if (/^[-*]\s+/.test(line)) {
+      if (!inList) {
+        html.push("<ul>");
+        inList = true;
+      }
+      html.push(`<li>${inline(line.replace(/^[-*]\s+/, ""))}</li>`);
+      continue;
+    }
+
+    flushList();
+    html.push(`<p>${inline(line)}</p>`);
+  }
+
+  flushList();
+  if (inCode) html.push(`<pre><code>${escapeHtml(codeBuffer.join("\n"))}</code></pre>`);
+  return html.join("\n");
+}
+
+function loadBlogArticles() {
+  if (!existsSync(BLOG_DIR)) return [];
+  return readdirSync(BLOG_DIR)
+    .filter((file) => file.endsWith(".md"))
+    .map((file) => {
+      const slug = file.replace(/\.mdx?$/, "");
+      const raw = readFileSync(join(BLOG_DIR, file), "utf8");
+      const { data, body } = parseFrontmatter(raw);
+      const title = data.title || slug;
+      const summary = data.description || title;
+      const canonical = `${SITE_URL}/blog/${slug}/`;
+      const html = markdownToHtml(body);
+      return {
+        slug,
+        title,
+        summary,
+        sourceUrl: canonical,
+        content: `
+      <article style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; line-height: 1.8; color: #0f172a; max-width: 860px; margin: 0 auto; padding: 12px;">
+        <p><em>Originally published on <a href="${canonical}" target="_blank" rel="noopener">Pro UPI QR</a>.</em></p>
+        ${html}
+      </article>`
+      };
+    })
+    .sort((a, b) => a.slug.localeCompare(b.slug));
+}
+
+function collectArticles() {
+  const seen = new Set();
+  const articles = [];
+  for (const article of [...SATELLITE_ARTICLES, ...loadBlogArticles()]) {
+    const slug = articleSlug(article);
+    if (seen.has(slug)) continue;
+    seen.add(slug);
+    articles.push({ ...article, slug });
+  }
+  return articles;
+}
+
 function buildPublishableContent(article) {
+  const canonical = article.sourceUrl || `${SITE_URL}/`;
   return `${article.content}
     <section style="margin-top: 36px; padding: 24px; border: 1px solid #d1fae5; border-radius: 16px; background: #f0fdf4;">
       <h2 style="margin-top: 0;">Practical checklist before you share or print a payment QR</h2>
@@ -303,7 +493,7 @@ function buildPublishableContent(article) {
         <li><strong>Design for the actual scan distance:</strong> retain a clear white border around the code, avoid placing it on reflective material, and test it under the lighting used at the counter.</li>
         <li><strong>Keep a replacement process:</strong> staff should know where the source file is stored and who can verify a replacement QR, so a damaged or tampered sticker is not left in use.</li>
       </ol>
-      <p>For the live browser-based tool and the latest printable templates, visit <a href="https://www.proupiqr.in/" rel="noopener">Pro UPI QR</a>. This guide is educational; banks and UPI apps remain responsible for payment authorization and transaction status.</p>
+      <p>Read the original guide and use the live browser-based tool at <a href="${canonical}" rel="noopener">${canonical}</a>. This guide is educational; banks and UPI apps remain responsible for payment authorization and transaction status.</p>
     </section>`;
 }
 
@@ -361,133 +551,286 @@ async function publishToWordPressXmlRpc(article) {
   throw new Error(`HTTP ${res.status}`);
 }
 
-async function publishToWordPress(article) {
+function wordpressAuthHeader() {
+  return "Basic " + Buffer.from(`${WORDPRESS_CONFIG.username}:${WORDPRESS_CONFIG.applicationPassword}`).toString("base64");
+}
+
+async function wordpressPostAlreadyExists(article) {
+  const baseUrl = WORDPRESS_CONFIG.siteUrl.replace(/\/$/, "");
+  const endpoint = new URL(`${baseUrl}/wp-json/wp/v2/posts`);
+  endpoint.searchParams.set("search", article.title);
+  endpoint.searchParams.set("per_page", "20");
+  endpoint.searchParams.set("status", "publish");
+
+  const res = await fetch(endpoint, { headers: { Authorization: wordpressAuthHeader() } });
+  if (!res.ok) {
+    throw new Error(`Could not check existing WordPress posts (HTTP ${res.status})`);
+  }
+
+  const items = await res.json();
+  const wanted = normalizeTitle(article.title);
+  return (Array.isArray(items) ? items : []).some((post) => {
+    const existing = typeof post.title === "string" ? post.title : post.title?.rendered;
+    return normalizeTitle(existing) === wanted;
+  });
+}
+
+async function publishToWordPress(article, options) {
   const wpUrl = WORDPRESS_CONFIG.siteUrl;
   if (!WORDPRESS_CONFIG.enabled || !wpUrl || !wpUrl.startsWith("http")) {
     console.log("[WordPress] Syndication skipped (WP_ENABLED is false or WP_SITE_URL is not a valid HTTP URL).");
-    return;
+    return { skipped: true };
   }
 
-  console.log(`[WordPress] Publishing article with images: "${article.title}" to ${WORDPRESS_CONFIG.siteUrl}...`);
+  if (options.state.posts[article.slug]?.wordpress?.id) {
+    console.log(`[WordPress] Skipped duplicate: "${article.title}" already in local ledger.`);
+    return { duplicate: true };
+  }
 
-  // Primary Method: XML-RPC (Works on free WordPress.com subdomains & shared hosting)
+  try {
+    if (await wordpressPostAlreadyExists(article)) {
+      recordPublish(options.state, article.slug, "wordpress", { id: "existing", url: "", publishedAt: new Date().toISOString() });
+      console.log(`[WordPress] Skipped duplicate: "${article.title}" already exists.`);
+      return { duplicate: true };
+    }
+  } catch (error) {
+    console.error(`[WordPress] Duplicate check failed; refusing to publish. ${error.message}`);
+    return { error: error.message };
+  }
+
+  if (options.dryRun) {
+    console.log(`[WordPress] Dry run: would publish "${article.title}".`);
+    return { dryRun: true };
+  }
+
+  console.log(`[WordPress] Publishing unpublished article: "${article.title}" to ${WORDPRESS_CONFIG.siteUrl}...`);
+
   try {
     const xmlrpcSuccess = await publishToWordPressXmlRpc(article);
-    if (xmlrpcSuccess) return;
+    if (xmlrpcSuccess) {
+      recordPublish(options.state, article.slug, "wordpress", { id: "xmlrpc", url: "", publishedAt: new Date().toISOString() });
+      return { published: true };
+    }
   } catch (xmlrpcErr) {
     console.log(`[WordPress XML-RPC] XML-RPC skipped/failed (${xmlrpcErr.message}). Trying REST API fallback...`);
   }
 
-  // Fallback Method: REST API (/wp-json/wp/v2/posts)
   const endpoint = `${WORDPRESS_CONFIG.siteUrl.replace(/\/$/, "")}/wp-json/wp/v2/posts`;
-  const authHeader = "Basic " + Buffer.from(`${WORDPRESS_CONFIG.username}:${WORDPRESS_CONFIG.applicationPassword}`).toString("base64");
 
   try {
     const res = await fetch(endpoint, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": authHeader
+        Authorization: wordpressAuthHeader()
       },
       body: JSON.stringify({
         title: article.title,
         content: buildPublishableContent(article),
         status: "publish",
-        excerpt: article.summary
+        excerpt: article.summary,
+        slug: `proupiqr-${article.slug}`
       })
     });
 
     if (res.ok) {
       const data = await res.json();
+      recordPublish(options.state, article.slug, "wordpress", {
+        id: String(data.id || ""),
+        url: data.link || "",
+        publishedAt: new Date().toISOString()
+      });
       console.log(`[WordPress REST API] ✅ Post Published Successfully! URL: ${data.link}`);
-    } else {
-      const err = await res.text();
-      console.error(`[WordPress REST API] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
+      return { published: true, url: data.link };
     }
+
+    const err = await res.text();
+    console.error(`[WordPress REST API] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
+    return { error: err };
   } catch (error) {
     console.error(`[WordPress REST API] ❌ Request error:`, error);
+    return { error: String(error) };
   }
 }
 
 // ============================================================================
 // 🟠 BLOGGER REST API PUBLISHING AUTOMATION
 // ============================================================================
-async function bloggerPostAlreadyExists(title, endpoint, headers) {
-  const listUrl = new URL(endpoint);
-  listUrl.searchParams.set("fetchBodies", "false");
-  listUrl.searchParams.set("maxResults", "500");
-  listUrl.searchParams.set("status", "live");
-
-  const res = await fetch(listUrl, { headers });
-  if (!res.ok) {
-    throw new Error(`Could not check existing posts (HTTP ${res.status})`);
-  }
-
-  const data = await res.json();
-  return (data.items || []).some((post) => post.title === title);
+function bloggerHeaders(accessToken) {
+  const headers = { "Content-Type": "application/json" };
+  if (accessToken) headers.Authorization = `Bearer ${accessToken}`;
+  return headers;
 }
 
-async function publishToBlogger(article) {
+function bloggerPostsUrl(path = "") {
+  const url = `https://www.googleapis.com/blogger/v3/blogs/${BLOGGER_CONFIG.blogId}/posts${path}`;
+  return BLOGGER_CONFIG.apiKey ? `${url}${url.includes("?") ? "&" : "?"}key=${BLOGGER_CONFIG.apiKey}` : url;
+}
+
+function titlesMatch(left, right) {
+  return normalizeTitle(left) === normalizeTitle(right);
+}
+
+async function listAllBloggerPosts(headers) {
+  const posts = [];
+  let pageToken = "";
+  let includeStatus = true;
+
+  do {
+    const listUrl = new URL(bloggerPostsUrl("/"));
+    listUrl.searchParams.set("fetchBodies", "false");
+    listUrl.searchParams.set("maxResults", "50");
+    if (includeStatus) listUrl.searchParams.set("status", "live");
+    if (pageToken) listUrl.searchParams.set("pageToken", pageToken);
+
+    const res = await fetch(listUrl, { headers });
+    if (!res.ok && includeStatus && !pageToken) {
+      includeStatus = false;
+      continue;
+    }
+    if (!res.ok) {
+      throw new Error(`Could not list existing Blogger posts (HTTP ${res.status})`);
+    }
+
+    const data = await res.json();
+    posts.push(...(data.items || []));
+    pageToken = data.nextPageToken || "";
+  } while (pageToken);
+
+  return posts;
+}
+
+async function bloggerPostAlreadyExists(article, headers) {
+  const existing = await listAllBloggerPosts(headers);
+  if (existing.some((post) => titlesMatch(post.title, article.title))) return true;
+  if (existing.some((post) => (post.labels || []).includes(article.slug))) return true;
+
+  const searchUrl = new URL(bloggerPostsUrl("/search"));
+  searchUrl.searchParams.set("q", `"${article.title}"`);
+  const searchRes = await fetch(searchUrl, { headers });
+  if (searchRes.ok) {
+    const searchData = await searchRes.json();
+    if ((searchData.items || []).some((post) => titlesMatch(post.title, article.title))) return true;
+  }
+
+  return false;
+}
+
+async function publishToBlogger(article, options) {
   if (!BLOGGER_CONFIG.enabled || !BLOGGER_CONFIG.blogId) {
     console.log("[Blogger] Syndication skipped (BLOGGER_ENABLED is false or not configured).");
-    return;
+    return { skipped: true };
+  }
+
+  if (options.state.posts[article.slug]?.blogger?.id) {
+    console.log(`[Blogger] Skipped duplicate: "${article.title}" already in local ledger.`);
+    return { duplicate: true };
   }
 
   const accessToken = await getBloggerAccessToken();
-  const url = `https://www.googleapis.com/blogger/v3/blogs/${BLOGGER_CONFIG.blogId}/posts/`;
-  const endpoint = BLOGGER_CONFIG.apiKey ? `${url}?key=${BLOGGER_CONFIG.apiKey}` : url;
-  const headers = { "Content-Type": "application/json" };
-  
-  if (accessToken) {
-    headers["Authorization"] = `Bearer ${accessToken}`;
-  }
-
-  console.log(`[Blogger] Publishing post with images: "${article.title}" to Blog ID: ${BLOGGER_CONFIG.blogId}...`);
+  const headers = bloggerHeaders(accessToken);
 
   try {
-    if (await bloggerPostAlreadyExists(article.title, endpoint, headers)) {
+    if (await bloggerPostAlreadyExists(article, headers)) {
+      recordPublish(options.state, article.slug, "blogger", { id: "existing", url: "", publishedAt: new Date().toISOString() });
       console.log(`[Blogger] Skipped duplicate: "${article.title}" already exists.`);
-      return;
+      return { duplicate: true };
     }
+  } catch (error) {
+    console.error(`[Blogger] Duplicate check failed; refusing to publish. ${error.message}`);
+    return { error: error.message };
+  }
 
-    const res = await fetch(endpoint, {
+  if (options.dryRun) {
+    console.log(`[Blogger] Dry run: would publish "${article.title}".`);
+    return { dryRun: true };
+  }
+
+  console.log(`[Blogger] Publishing unpublished post: "${article.title}" to Blog ID: ${BLOGGER_CONFIG.blogId}...`);
+
+  try {
+    const res = await fetch(bloggerPostsUrl("/"), {
       method: "POST",
-      headers: headers,
+      headers,
       body: JSON.stringify({
         kind: "blogger#post",
         title: article.title,
-        content: buildPublishableContent(article)
+        content: buildPublishableContent(article),
+        labels: ["proupiqr", article.slug]
       })
     });
 
     if (res.ok) {
       const data = await res.json();
+      recordPublish(options.state, article.slug, "blogger", {
+        id: String(data.id || ""),
+        url: data.url || "",
+        publishedAt: new Date().toISOString()
+      });
       console.log(`[Blogger] ✅ Post Published Successfully! URL: ${data.url}`);
-    } else {
-      const err = await res.text();
-      console.error(`[Blogger] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
+      return { published: true, url: data.url };
     }
+
+    const err = await res.text();
+    console.error(`[Blogger] ❌ Failed to publish. Status: ${res.status}. Error: ${err}`);
+    return { error: err };
   } catch (error) {
     console.error(`[Blogger] ❌ Request error:`, error);
+    return { error: String(error) };
   }
+}
+
+function recordPublish(state, slug, platform, payload) {
+  if (!state.posts[slug]) state.posts[slug] = {};
+  state.posts[slug][platform] = payload;
+  saveState(state);
+}
+
+function isFullyPublished(article, state) {
+  const entry = state.posts[article.slug] || {};
+  const wpNeeded = WORDPRESS_CONFIG.enabled;
+  const bloggerNeeded = BLOGGER_CONFIG.enabled;
+  const wpDone = Boolean(entry.wordpress?.id);
+  const bloggerDone = Boolean(entry.blogger?.id);
+  if (wpNeeded && bloggerNeeded) return wpDone && bloggerDone;
+  if (bloggerNeeded) return bloggerDone;
+  if (wpNeeded) return wpDone;
+  return wpDone || bloggerDone;
 }
 
 // ============================================================================
 // MAIN EXECUTION ROUTINE
 // ============================================================================
 async function main() {
-  console.log("==========================================================");
-  console.log("🌐 Starting Satellite High-Quality Rich Post Syndication (DR Engine)");
-  console.log("==========================================================");
+  const args = parseArgs(process.argv);
+  const state = loadState();
+  const articles = collectArticles();
+  const pending = articles.filter((article) => !isFullyPublished(article, state));
 
-  for (const article of SATELLITE_ARTICLES) {
-    await publishToWordPress(article);
-    await publishToBlogger(article);
+  console.log("==========================================================");
+  console.log("🌐 Satellite syndication (unique unpublished posts only)");
+  console.log("==========================================================");
+  console.log(`Catalog: ${articles.length} unique articles`);
+  console.log(`Already recorded: ${articles.length - pending.length}`);
+  console.log(`Pending: ${pending.length}`);
+  console.log(`Publishing at most ${args.limit} new article(s)${args.dryRun ? " (dry run)" : ""}`);
+
+  const queue = pending.slice(0, args.limit);
+  if (queue.length === 0) {
+    console.log("\nNothing new to publish. Existing titles will not be uploaded again.");
+    return;
   }
 
-  console.log("\n✨ Satellite Syndication Run Complete!");
+  for (const article of queue) {
+    console.log(`\n--- ${article.slug} ---`);
+    await publishToWordPress(article, { state, dryRun: args.dryRun });
+    await publishToBlogger(article, { state, dryRun: args.dryRun });
+  }
+
+  console.log("\n✨ Satellite syndication run complete. Ledger: .syndication-state.json");
 }
 
 main().catch((err) => {
   console.error("Fatal error during syndication:", err);
+  process.exit(1);
 });

@@ -27,20 +27,37 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
+function changefreqFor(path: string): string {
+  if (path === "/" || path === "/universal-qr-generator/") return "weekly";
+  if (path.startsWith("/blog/")) return "monthly";
+  if (path.includes("/privacy") || path.includes("/terms") || path.includes("/disclaimer")) return "yearly";
+  return "monthly";
+}
+
+function priorityFor(path: string): string {
+  if (path === "/") return "1.0";
+  if (path === "/universal-qr-generator/" || path === "/blog/") return "0.9";
+  if (path.startsWith("/blog/")) return "0.7";
+  if (path.startsWith("/hi/") || path.startsWith("/ta/") || path.startsWith("/te/") || path.startsWith("/mr/")) return "0.6";
+  return "0.8";
+}
+
 export const GET: APIRoute = async ({ site }) => {
   const baseUrl = site?.toString().replace(/\/$/, "") ?? "https://www.proupiqr.in";
-  const siteLastModified = formatLastmod(new Date());
 
   const blogPosts = await getCollection("blog");
 
   const entries = [
     ...uniquePaths.map((path) => ({
       path,
-      lastmod: siteLastModified,
+      // Recrawl signal for locale tool URLs that GSC previously logged as 404.
+      lastmod: path.startsWith("/hi/") && !path.includes("/blog/")
+        ? formatLastmod(new Date("2026-08-17T00:00:00Z"))
+        : null,
     })),
     ...blogPosts.map((post) => ({
       path: `/blog/${post.id.replace(/\.mdx?$/, "")}/`,
-      lastmod: formatLastmod(post.data.pubDate),
+      lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
       image: post.data.image
         ? post.data.image.startsWith("http")
           ? post.data.image
@@ -53,18 +70,11 @@ export const GET: APIRoute = async ({ site }) => {
   const urls = entries
     .map((entry) => {
       const loc = escapeXml(`${baseUrl}${entry.path}`);
-      const priority =
-        entry.path === "/"
-          ? "1.0"
-          : entry.path === "/universal-qr-generator/"
-          ? "0.9"
-          : entry.path.startsWith("/blog/")
-          ? "0.7"
-          : "0.8";
+      const lastmodXml = entry.lastmod ? `<lastmod>${entry.lastmod}</lastmod>` : "";
       const imageXml = entry.image
         ? `<image:image><image:loc>${escapeXml(entry.image)}</image:loc><image:title>${escapeXml(entry.title || "Pro UPI QR")}</image:title></image:image>`
         : "";
-      return `<url><loc>${loc}</loc><lastmod>${entry.lastmod}</lastmod><changefreq>weekly</changefreq><priority>${priority}</priority>${imageXml}</url>`;
+      return `<url><loc>${loc}</loc>${lastmodXml}<changefreq>${changefreqFor(entry.path)}</changefreq><priority>${priorityFor(entry.path)}</priority>${imageXml}</url>`;
     })
     .join("");
 

@@ -69,8 +69,8 @@ jobs:
           BLOGGER_CLIENT_SECRET: ${{ secrets.BLOGGER_CLIENT_SECRET }}
           BLOGGER_REFRESH_TOKEN: ${{ secrets.BLOGGER_REFRESH_TOKEN }}
           BLOGGER_ACCESS_TOKEN: ${{ secrets.BLOGGER_ACCESS_TOKEN }}
-        # Satellite publishing is deliberately manual. Re-running fixed articles
-        # from a scheduled workflow creates duplicate posts on external blogs.
+        # Satellite publishing stays manual: npm run syndicate:satellites -- --limit=1
+        # The script now refuses to republish titles that already exist.
         run: npm run seo:all
 
       - name: Generate Workflow Summary

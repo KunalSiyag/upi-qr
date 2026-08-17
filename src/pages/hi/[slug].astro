@@ -5,7 +5,7 @@ import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
 import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
-import { LOCALIZED_TOOLS } from "../../data/localizedTools";
+import { LOCALIZED_TOOLS, getLocalizedToolCopy } from "../../data/localizedTools";
 
 export async function getStaticPaths() {
   return [
@@ -283,29 +283,101 @@ export async function getStaticPaths() {
         intro: "मंदिरों, धार्मिक ट्रस्टों और एनजीओ के लिए कमीशन-मुक्त दान पोस्टर सेट करें।"
       }
     },
+    {
+      params: { slug: "sbi-business-qr-code-generator" },
+      props: {
+        title: "SBI बिजनेस QR कोड जनरेटर",
+        headline: "मुफ्त SBI बिजनेस UPI भुगतान QR बनाएं",
+        presetType: "sbi",
+        intro: "दुकान काउंटर के लिए स्टेट बैंक ऑफ इंडिया बिजनेस और मर्चेंट UPI QR पोस्टर जनरेट करें।"
+      }
+    },
+    {
+      params: { slug: "hdfc-business-qr-code-generator" },
+      props: {
+        title: "HDFC बिजनेस QR कोड जनरेटर",
+        headline: "HDFC मर्चेंट बिजनेस UPI QR बनाएं",
+        presetType: "hdfc",
+        intro: "क्लाइंट बिलिंग और स्टोर चेकआउट के लिए HDFC बैंक बिजनेस भुगतान QR स्टैंडी बनाएं।"
+      }
+    },
+    {
+      params: { slug: "icici-business-qr-code-generator" },
+      props: {
+        title: "ICICI बिजनेस UPI QR जनरेटर",
+        headline: "ICICI बैंक मर्चेंट बिजनेस UPI QR बनाएं",
+        presetType: "icici",
+        intro: "बिना मर्चेंट प्रोसेसिंग शुल्क के ICICI बैंक बिजनेस कलेक्शन QR स्टैंडी जनरेट करें।"
+      }
+    },
+    {
+      params: { slug: "universal-upi-qr-code-generator-for-bank-account" },
+      props: {
+        title: "बैंक खाते के लिए यूनिवर्सल UPI QR जनरेटर",
+        headline: "अपने बैंक खाते के लिए यूनिवर्सल UPI QR बनाएं",
+        presetType: "phonepe",
+        intro: "SBI, HDFC, ICICI सहित किसी भी बैंक खाते के लिए एक QR बनाएं जो PhonePe, GPay, Paytm और BHIM पर चले।"
+      }
+    },
+    {
+      params: { slug: "doctor-clinic-upi-qr-generator" },
+      props: {
+        title: "डॉक्टर और क्लिनिक UPI QR जनरेटर",
+        headline: "क्लिनिक और अस्पताल के लिए स्कैन-टू-पे पोस्टर बनाएं",
+        presetType: "freelance",
+        intro: "परामर्श डेस्क, लैब और फार्मेसी के लिए साफ भुगतान QR पोस्टर प्रिंट करें।"
+      }
+    },
     ...LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))
   ];
 }
 
 const { title, headline, intro, presetType, tool } = Astro.props;
-const description = tool ? `${tool.name}: हिंदी में उपलब्ध मुफ्त, मोबाइल-अनुकूल व्यापार टूल। तेज़ परिणाम पाएँ और अपना भुगतान या व्यवसाय डेटा सुरक्षित रूप से अपने ब्राउज़र में रखें।` : `${headline}. ${intro}`;
-const pageTitle = tool ? `${tool.name} — हिंदी में उपयोग करें | Pro UPI QR` : `${title} | Pro UPI QR`;
+const hiCopy = tool ? getLocalizedToolCopy(tool, "hi") : null;
+const description = hiCopy
+  ? hiCopy.description
+  : `${headline}. ${intro}`;
+const pageTitle = hiCopy ? hiCopy.title : `${title} | Pro UPI QR`;
 const generatorSlug = Astro.params.slug as GeneratorSlug;
 const resolvedPreset = tool ? undefined : getPresetFromSlug(generatorSlug);
 
+const pageUrl = new URL(Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`, Astro.site).toString();
 const schema = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  "name": tool ? tool.name : `${title} | Pro UPI QR`,
-  "applicationCategory": "BusinessApplication",
-  "operatingSystem": "Any",
-  "url": new URL(Astro.url.pathname, Astro.site).toString(),
-  "description": description,
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "INR"
-  }
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: hiCopy ? hiCopy.name : `${title} | Pro UPI QR`,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "hi-IN",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    ...(hiCopy?.steps?.length
+      ? [{
+          "@type": "HowTo",
+          name: hiCopy.name,
+          description: hiCopy.intro,
+          step: hiCopy.steps.map((text, index) => ({
+            "@type": "HowToStep",
+            position: index + 1,
+            text
+          }))
+        }]
+      : []),
+    ...(hiCopy?.faqs?.length
+      ? [{
+          "@type": "FAQPage",
+          mainEntity: hiCopy.faqs.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: { "@type": "Answer", text: faq.answer }
+          }))
+        }]
+      : [])
+  ]
 };
 ---
 

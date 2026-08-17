@@ -36,7 +36,13 @@ async function fetchSitemapUrls() {
     try {
       const fs = await import("fs/promises");
       const path = await import("path");
-      const localPath = path.join(process.cwd(), "dist", "sitemap.xml");
+      const { existsSync } = await import("fs");
+      const candidates = [
+        path.join(process.cwd(), "dist", "client", "sitemap.xml"),
+        path.join(process.cwd(), "dist", "sitemap.xml"),
+      ];
+      const localPath = candidates.find((candidate) => existsSync(candidate));
+      if (!localPath) throw new Error("No local sitemap.xml found");
       console.log(`⚠️  Could not fetch remote sitemap. Trying local file: ${localPath}`);
       const xml = await fs.readFile(localPath, "utf-8");
       return parseSitemapXml(xml);

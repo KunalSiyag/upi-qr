@@ -4,7 +4,6 @@ import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
-import SeoSchema from "../components/SeoSchema.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../data/internalLinks";
 
 export async function getStaticPaths() {
@@ -332,68 +331,289 @@ export async function getStaticPaths() {
 }
 
 const { title, headline, intro, presetType } = Astro.props;
-const description = `${headline}. ${intro}`;
+const combinedDescription = `${headline}. ${intro}`;
+const description =
+  combinedDescription.length <= 160
+    ? combinedDescription
+    : intro.length <= 160
+      ? intro
+      : `${intro.slice(0, 157).replace(/\s+\S*$/, "")}...`;
 const generatorSlug = Astro.params.slug as GeneratorSlug;
 const resolvedPreset = getPresetFromSlug(generatorSlug);
 
 const pageUrl = new URL(Astro.url.pathname, Astro.site).toString();
 
 // Preset-specific metadata & VPA guidelines for content enrichment
-const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: string; tip: string }> = {
+const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: string; tip: string; extraFaq?: { question: string; answer: string } }> = {
   phonepe: {
     vpaFormats: ["mobile@ybl", "mobile@ibl", "mobile@axl", "customname@ybl"],
     targetAudience: "PhonePe users, retail checkouts, and daily UPI collections.",
-    tip: "PhonePe supports YBL (YES Bank), IBL (IndusInd), and AXL (Axis Bank) handles natively."
+    tip: "PhonePe supports YBL (YES Bank), IBL (IndusInd), and AXL (Axis Bank) handles natively.",
+    extraFaq: {
+      question: "Can I print a PhonePe QR without a PhonePe Business account?",
+      answer: "Yes. Enter your existing PhonePe UPI ID (usually ending in @ybl, @ibl, or @axl). The printed QR is a standard NPCI code, so customers can still pay from PhonePe or any other UPI app."
+    }
   },
   gpay: {
     vpaFormats: ["name@oksbi", "name@okhdfcbank", "name@okicici", "name@okaxis"],
     targetAudience: "Google Pay (GPay) app users, small businesses, and invoice payments.",
-    tip: "Google Pay automatically formats VPAs based on the user's linked bank account (e.g. @oksbi, @okhdfcbank)."
+    tip: "Google Pay automatically formats VPAs based on the user's linked bank account (e.g. @oksbi, @okhdfcbank).",
+    extraFaq: {
+      question: "Does a Google Pay QR only work inside GPay?",
+      answer: "No. A GPay-compatible QR generated here uses the public upi://pay format. Google Pay users scan it in GPay, while PhonePe, Paytm, and bank apps can scan the same poster."
+    }
   },
   paytm: {
     vpaFormats: ["mobile@paytm", "username@paytm"],
     targetAudience: "Paytm Wallet & UPI users, kirana stores, and billing desks.",
-    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for 0% MDR direct bank credit."
+    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for 0% MDR direct bank credit.",
+    extraFaq: {
+      question: "Do I need a Paytm merchant or Soundbox to use this QR?",
+      answer: "No. Paste your @paytm UPI ID, print the poster, and money settles to the linked bank account. A Soundbox is optional and is not required to accept UPI."
+    }
+  },
+  bhim: {
+    vpaFormats: ["mobile@upi", "username@upi"],
+    targetAudience: "BHIM users and merchants who want an NPCI-native QR without a private-app brand.",
+    tip: "BHIM UPI IDs often use the @upi handle. The same printed QR still scans in PhonePe, GPay, and bank apps.",
+    extraFaq: {
+      question: "Is a BHIM QR different from a PhonePe or GPay QR?",
+      answer: "The visual brand can differ, but the payment payload is the same NPCI URI. A BHIM-compatible QR generated here works in every major UPI app."
+    }
+  },
+  whatsapp: {
+    vpaFormats: ["mobile@ybl", "name@okicici", "mobile@paytm"],
+    targetAudience: "WhatsApp Business chats, status updates, and catalog payments.",
+    tip: "Export the QR image and pin it to your WhatsApp Business profile, catalog header, or status so customers can pay without leaving the chat thread.",
+    extraFaq: {
+      question: "Can I add this QR to a WhatsApp status or catalog?",
+      answer: "Yes. Download the PNG, upload it to WhatsApp Business as a catalog image, status, or about photo, and customers can long-press or scan to pay."
+    }
+  },
+  amazon: {
+    vpaFormats: ["mobile@apl", "username@yapl"],
+    targetAudience: "Amazon Pay UPI users and sellers who also accept in-store UPI.",
+    tip: "Amazon Pay UPI IDs often end in @apl. The generated standee still accepts other UPI apps at the same counter.",
+    extraFaq: {
+      question: "Will Amazon Pay users see my shop name correctly?",
+      answer: "Enter the same payee name you use in Amazon Pay UPI. The pn= field is what appears on the confirmation screen after a scan."
+    }
   },
   sbi: {
     vpaFormats: ["mobile@sbi", "username@sbi", "username@yono"],
     targetAudience: "State Bank of India (SBI) savings & merchant current account holders.",
-    tip: "SBI UPI IDs work across all Indian UPI apps with instant settlement into your SBI bank account."
+    tip: "SBI UPI IDs work across all Indian UPI apps with instant settlement into your SBI bank account.",
+    extraFaq: {
+      question: "Can I create an SBI QR without visiting the branch?",
+      answer: "Yes. Use the UPI ID shown in YONO or any UPI app linked to SBI. Print the poster here and skip the bank-issued plastic standee."
+    }
   },
   hdfc: {
     vpaFormats: ["mobile@hdfcbank", "username@payzapp", "username@hdfcbank"],
     targetAudience: "HDFC Bank merchant accounts, corporate checkouts, and billing counters.",
-    tip: "HDFC Bank supports both standard consumer VPAs (@hdfcbank) and PayZapp handles (@payzapp)."
+    tip: "HDFC Bank supports both standard consumer VPAs (@hdfcbank) and PayZapp handles (@payzapp).",
+    extraFaq: {
+      question: "Does this replace HDFC SmartHub or PayZapp merchant QR?",
+      answer: "It creates a standard UPI QR that credits your HDFC VPA. You do not need SmartHub to print a working counter poster."
+    }
   },
   icici: {
     vpaFormats: ["mobile@icici", "username@pockets", "username@icici"],
     targetAudience: "ICICI Bank business and savings account holders.",
-    tip: "ICICI UPI QRs offer 0% MDR charges for standard P2P and P2PM merchant transfers."
+    tip: "ICICI UPI QRs offer 0% MDR charges for standard P2P and P2PM merchant transfers.",
+    extraFaq: {
+      question: "Which ICICI UPI ID should I print?",
+      answer: "Use the ID visible in iMobile or any linked UPI app, typically name@icici or mobile@icici. Test-scan before you laminate the standee."
+    }
+  },
+  axis: {
+    vpaFormats: ["mobile@axisbank", "username@okaxis", "mobile@axl"],
+    targetAudience: "Axis Bank account holders and Axis-linked PhonePe or GPay users.",
+    tip: "Axis handles include @axisbank, @okaxis, and @axl. Any of them can be printed as a universal UPI poster.",
+    extraFaq: {
+      question: "Can customers pay an Axis QR from PhonePe?",
+      answer: "Yes. The QR is not locked to Axis Mobile. PhonePe, GPay, Paytm, and BHIM can all scan it and credit the Axis VPA."
+    }
+  },
+  kotak: {
+    vpaFormats: ["mobile@kotak", "username@kaypay"],
+    targetAudience: "Kotak Mahindra Bank savings and current account holders.",
+    tip: "Kotak UPI IDs typically use @kotak. Print a large contrast QR for bright store lighting.",
+    extraFaq: {
+      question: "Is a Kotak 811 UPI ID supported?",
+      answer: "Yes, as long as the ID is a valid VPA. Paste the exact handle from the Kotak app and verify with a ₹1 test scan."
+    }
+  },
+  pnb: {
+    vpaFormats: ["mobile@pnb", "username@pnb"],
+    targetAudience: "Punjab National Bank branch customers and PNB One users.",
+    tip: "Use the UPI ID shown in PNB One. Settlement is instant to the linked PNB account.",
+    extraFaq: {
+      question: "Can I print a PNB QR if I only have PNB One?",
+      answer: "Yes. Copy the VPA from PNB One, generate the poster here, and display it at the counter. No extra merchant onboarding is required."
+    }
+  },
+  canara: {
+    vpaFormats: ["mobile@canarabank", "username@cnrb"],
+    targetAudience: "Canara Bank account holders collecting shop or tuition payments.",
+    tip: "Canara UPI IDs often end in @canarabank. Keep a 2 cm quiet zone around the printed code.",
+    extraFaq: {
+      question: "Does Canara charge MDR on this QR?",
+      answer: "Standard person-to-person and small merchant UPI transfers into a Canara VPA do not add a Pro UPI QR fee. Bank and NPCI rules still apply."
+    }
+  },
+  bob: {
+    vpaFormats: ["mobile@barodampay", "username@bob"],
+    targetAudience: "Bank of Baroda merchants and Baroda M-Connect users.",
+    tip: "Look for @barodampay or @bob in the official app, then print a weather-resistant standee for outdoor counters.",
+    extraFaq: {
+      question: "Will a Bank of Baroda QR work for GPay customers?",
+      answer: "Yes. GPay, PhonePe, and other apps read the same upi://pay string and send funds to your Baroda VPA."
+    }
+  },
+  indusind: {
+    vpaFormats: ["mobile@indus", "username@indusind"],
+    targetAudience: "IndusInd Bank current-account shops and @ibl PhonePe users.",
+    tip: "IndusInd VPAs include @indus and @ibl. Confirm the payee name matches your shop board before printing.",
+    extraFaq: {
+      question: "Is @ibl the same as an IndusInd QR?",
+      answer: "@ibl is an IndusInd-backed PhonePe handle. You can print either @ibl or @indus; both credit an IndusInd-linked account."
+    }
+  },
+  union: {
+    vpaFormats: ["mobile@unionbankofindia", "username@ubi"],
+    targetAudience: "Union Bank of India savings and merchant account holders.",
+    tip: "Copy the VPA from Union Bank’s UPI app and print on matte paper to reduce counter glare.",
+    extraFaq: {
+      question: "Can I use a Union Bank QR for donation counters?",
+      answer: "Yes. Leave the amount blank for variable donations, or lock a fixed amount for a specific seva or ticket."
+    }
+  },
+  idfc: {
+    vpaFormats: ["mobile@idfcbank", "username@idfcfirst"],
+    targetAudience: "IDFC FIRST Bank mobile-first merchants and freelancers.",
+    tip: "IDFC FIRST UPI IDs typically use @idfcbank. Pair a fixed-amount QR with invoices for retainers.",
+    extraFaq: {
+      question: "Does this work with the IDFC FIRST Mobile app?",
+      answer: "Yes. Use the UPI ID shown in IDFC FIRST Mobile. Customers do not need that app; any UPI app can scan the poster."
+    }
+  },
+  idbi: {
+    vpaFormats: ["mobile@idbi", "username@idbibank"],
+    targetAudience: "IDBI Bank account holders collecting store or clinic fees.",
+    tip: "Print at least an 8 cm QR square for a 3-foot scan distance at the billing desk.",
+    extraFaq: {
+      question: "Can I change the IDBI UPI ID later without reprinting?",
+      answer: "A static printed QR is tied to the VPA you enter now. If the ID changes, generate a new poster and replace the old standee the same day."
+    }
+  },
+  yes: {
+    vpaFormats: ["mobile@yesbank", "username@ybl"],
+    targetAudience: "Yes Bank account holders and PhonePe @ybl users.",
+    tip: "Many PhonePe IDs ending in @ybl settle through Yes Bank. Confirm the displayed payee name before you print.",
+    extraFaq: {
+      question: "Is a Yes Bank QR the same as a PhonePe @ybl QR?",
+      answer: "Often yes — @ybl is Yes Bank-backed. Printing your exact VPA is safer than copying a third-party PhonePe business QR."
+    }
+  },
+  rbl: {
+    vpaFormats: ["mobile@rbl", "username@rblbank"],
+    targetAudience: "RBL Bank merchants and current-account retailers.",
+    tip: "Use the VPA from the RBL app and laminate the print if the counter is near a cash window.",
+    extraFaq: {
+      question: "Can I put a fixed amount on an RBL QR?",
+      answer: "Yes. Enter the amount in the generator for a set price such as a membership or parking fee. Leave it blank for variable bills."
+    }
+  },
+  central: {
+    vpaFormats: ["mobile@centralbank", "username@cbin"],
+    targetAudience: "Central Bank of India branch customers and CBIN UPI users.",
+    tip: "Copy the handle from the CBIN app. Test-scan under the same lights you use at the shop.",
+    extraFaq: {
+      question: "Do I need a Central Bank merchant account?",
+      answer: "No. A regular savings or current UPI ID is enough to print a working collection QR for the counter."
+    }
   },
   kirana: {
     vpaFormats: ["storename@upi", "mobile@bankhandle"],
     targetAudience: "Grocery, Kirana, General Stores, and local retail counters.",
-    tip: "Place your printed UPI QR poster at eye-level near the billing register for fastest customer checkout."
+    tip: "Place your printed UPI QR poster at eye-level near the billing register for fastest customer checkout.",
+    extraFaq: {
+      question: "Should a kirana QR have a fixed amount?",
+      answer: "Usually no. Leave amount empty so each customer types the bill total. Use fixed-amount stickers only for packaged combos."
+    }
   },
   restaurant: {
     vpaFormats: ["cafename@upi", "tablename@bankhandle"],
     targetAudience: "Restaurants, Cafes, Food Trucks, and Dining Counters.",
-    tip: "Print 5x7 inch acrylic table-tent cards so patrons can scan and pay directly from their dining table."
+    tip: "Print 5x7 inch acrylic table-tent cards so patrons can scan and pay directly from their dining table.",
+    extraFaq: {
+      question: "Can each table have its own restaurant QR?",
+      answer: "Yes. Generate one QR per table and put the table number in the note field so settlements are easier to reconcile."
+    }
   },
   cab: {
     vpaFormats: ["drivername@upi", "cabno@bankhandle"],
     targetAudience: "Auto Rickshaws, Taxis, Cabs, and Local Transport Drivers.",
-    tip: "Laminate an A5 poster and hang it behind the front seats or attach it to the dashboard."
+    tip: "Laminate an A5 poster and hang it behind the front seats or attach it to the dashboard.",
+    extraFaq: {
+      question: "What size QR works on a cab dashboard?",
+      answer: "Use at least a 6 cm square with high contrast. Laminate it so sunlight and AC vents do not fade or curl the print."
+    }
   },
   freelance: {
     vpaFormats: ["freelancer@upi", "name@bankhandle"],
     targetAudience: "Freelancers, Consultants, Designers, and Remote Professionals.",
-    tip: "Include a fixed-amount UPI QR code directly on your PDF invoices to eliminate payment gateway fees."
+    tip: "Include a fixed-amount UPI QR code directly on your PDF invoices to eliminate payment gateway fees.",
+    extraFaq: {
+      question: "Can I put this QR on a PDF invoice?",
+      answer: "Yes. Download PNG or SVG, drop it into your invoice, and lock the amount so clients cannot underpay."
+    }
+  },
+  gym: {
+    vpaFormats: ["gymname@upi", "trainer@bankhandle"],
+    targetAudience: "Gyms, yoga studios, and personal trainers collecting memberships.",
+    tip: "Print a fixed-amount QR for monthly fees and a separate open-amount QR for walk-in day passes.",
+    extraFaq: {
+      question: "How should a gym collect monthly fees with UPI?",
+      answer: "Create a fixed-amount QR for the plan price and a note such as “June fee — Priya”. Keep a shared folder of the source files for reprints."
+    }
+  },
+  salon: {
+    vpaFormats: ["salon@upi", "parlour@bankhandle"],
+    targetAudience: "Salons, spas, and beauty parlours at the front desk.",
+    tip: "Keep a compact standee at reception and a second sticker at the billing drawer.",
+    extraFaq: {
+      question: "Should salon packages use fixed-amount QRs?",
+      answer: "Yes for listed packages. Use an open-amount QR at the desk for custom services and tips."
+    }
+  },
+  parking: {
+    vpaFormats: ["parking@upi", "valet@bankhandle"],
+    targetAudience: "Parking lots, valet stands, and vehicle holding areas.",
+    tip: "Use a high-contrast, weatherproof print and a fixed amount for the posted hourly or daily rate.",
+    extraFaq: {
+      question: "What if parking rates change during the day?",
+      answer: "Keep an open-amount QR for variable hours, or print separate stickers for hourly, daily, and night rates."
+    }
+  },
+  temple: {
+    vpaFormats: ["trustname@upi", "temple@bankhandle"],
+    targetAudience: "Temples, religious trusts, and donation desks.",
+    tip: "Print large type for the trust name and keep a second QR for a specific seva if you want earmarked donations.",
+    extraFaq: {
+      question: "Can a temple use one QR for all donations?",
+      answer: "Yes. Leave amount blank for general daan. Create extra QRs with notes such as “annadanam” if you need separate books."
+    }
   },
   donation: {
     vpaFormats: ["trustname@upi", "ngo@bankhandle"],
     targetAudience: "Temples, Non-Profit Organizations, NGOs, and Charitable Drives.",
-    tip: "NPCI levies 0% MDR on charitable donations, ensuring 100% of collected funds reach your organization."
+    tip: "NPCI levies 0% MDR on charitable donations, ensuring 100% of collected funds reach your organization.",
+    extraFaq: {
+      question: "Should NGOs lock a donation amount?",
+      answer: "Leave it open for general fundraising. Use a fixed amount only for a published ticket, kit, or membership."
+    }
   }
 };
 
@@ -419,7 +639,8 @@ const presetFaqs = [
   {
     question: `How do I print a durable standee for my checkout counter?`,
     answer: `Download the high-resolution PNG or PDF image, print it on 300 GSM photo paper or A4 sticker sheet, and insert it into a standard 5x7 inch or A5 acrylic T-standee.`
-  }
+  },
+  ...(currentDetail.extraFaq ? [currentDetail.extraFaq] : [])
 ];
 
 const schema = {
@@ -442,13 +663,6 @@ const schema = {
       ],
       "softwareVersion": "2.0.0",
       "browserRequirements": "Requires HTML5 & JavaScript enabled browser",
-      "aggregateRating": {
-        "@type": "AggregateRating",
-        "ratingValue": "4.9",
-        "ratingCount": "1280",
-        "bestRating": "5",
-        "worstRating": "1"
-      },
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -496,10 +710,15 @@ const schema = {
     }
   ]
 };
+
+const seoTitle = (() => {
+  const withFree = title.toLowerCase().startsWith("free") ? title : `Free ${title}`;
+  const withBrand = `${withFree} | Pro UPI QR`;
+  return withBrand.length <= 60 ? withBrand : withFree;
+})();
 ---
 
-<BaseLayout title={`${title} | Pro UPI QR`} description={description} schema={schema}>
-  <SeoSchema name={title} description={intro} faqs={presetFaqs} />
+<BaseLayout title={seoTitle} description={description} schema={schema}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       

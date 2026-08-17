@@ -71,7 +71,7 @@ const graph: any[] = [
     "headline": post.data.title,
     "description": post.data.description,
     "datePublished": post.data.pubDate.toISOString(),
-    "dateModified": post.data.pubDate.toISOString(),
+    "dateModified": (post.data.updatedDate ?? post.data.pubDate).toISOString(),
     "image": postImageUrl,
     "author": {
       "@type": "Person",

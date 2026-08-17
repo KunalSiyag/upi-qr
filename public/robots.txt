@@ -30,3 +30,4 @@ User-agent: FacebookBot
 Allow: /
 
 Sitemap: https://www.proupiqr.in/sitemap.xml
+Sitemap: https://www.proupiqr.in/rss.xml

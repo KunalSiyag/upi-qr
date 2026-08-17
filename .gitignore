@@ -25,3 +25,5 @@ service_account.json
 gumroad_package/
 gumroad_seo_agent_skill.zip
 .env*.local
+.syndication-state.json
+.indexing_state.json

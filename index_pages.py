@@ -19,8 +19,14 @@ if not os.path.exists(SERVICE_ACCOUNT_FILE):
     print(f"Error: Credentials file '{SERVICE_ACCOUNT_FILE}' not found in the root directory.")
     sys.exit(1)
 
-if not os.path.exists("dist/sitemap.xml"):
-    print("Error: 'dist/sitemap.xml' not found. Please run 'npm run build' first to generate the sitemap.")
+SITEMAP_CANDIDATES = [
+    "dist/client/sitemap.xml",
+    "dist/sitemap.xml",
+    ".vercel/output/static/sitemap.xml",
+]
+SITEMAP_PATH = next((path for path in SITEMAP_CANDIDATES if os.path.exists(path)), None)
+if not SITEMAP_PATH:
+    print("Error: sitemap.xml not found under dist/. Please run 'npm run build' first.")
     sys.exit(1)
 
 # Load existing indexing state
@@ -61,7 +67,7 @@ if not force_run and custom_limit is None and last_run_ts > 0 and days_since_las
 
 # Parse Sitemap URLs
 try:
-    tree = ET.parse("dist/sitemap.xml")
+    tree = ET.parse(SITEMAP_PATH)
     root = tree.getroot()
     ns = {"ns": "http://www.sitemaps.org/schemas/sitemap/0.9"}
     all_urls = [loc.text for loc in root.findall(".//ns:loc", ns)]

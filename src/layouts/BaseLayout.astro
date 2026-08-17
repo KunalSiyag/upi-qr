@@ -17,10 +17,10 @@ interface Props {
 const { title, description, canonical, schema, image, noindex = false } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
-const defaultOgSvg = `/api/og.svg`;
+const defaultOgImage = "/images/og-image.png";
 const ogImageUrl = image 
   ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
-  : new URL(defaultOgSvg, Astro.site).toString();
+  : new URL(defaultOgImage, Astro.site).toString();
 
 const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
 const rawPath = Astro.url.pathname;
@@ -101,6 +101,7 @@ if (cleanPath !== "/") {
     <meta property="og:site_name" content="Pro UPI QR" />
     <meta property="og:locale" content={currentLang === "en" ? "en_IN" : `${currentLang}_IN`} />
     <meta property="og:image" content={ogImageUrl} />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
 
@@ -133,17 +134,14 @@ if (cleanPath !== "/") {
       }
     })} />
 
-    <!-- WebSite Sitelinks Searchbox Rich Snippet -->
     <script type="application/ld+json" set:html={JSON.stringify({
       "@context": "https://schema.org",
       "@type": "WebSite",
+      "@id": "https://www.proupiqr.in/#website",
       "name": "Pro UPI QR",
       "url": "https://www.proupiqr.in/",
-      "potentialAction": {
-        "@type": "SearchAction",
-        "target": "https://www.proupiqr.in/universal-qr-generator/?q={search_term_string}",
-        "query-input": "required name=search_term_string"
-      }
+      "inLanguage": ["en-IN", "hi-IN"],
+      "publisher": { "@id": "https://www.proupiqr.in/#organization" }
     })} />
 
     <!-- Breadcrumb Rich Snippet -->

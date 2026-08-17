@@ -1,34 +1,19 @@
 ---
+import { routeExistsInLang } from "../data/validRoutes";
+
 interface Props {
   isHindi?: boolean;
 }
 
 const { isHindi = false } = Astro.props;
 
-// Define which slugs have valid Hindi translations
-const validHindiSlugs = new Set([
-  "", "phonepe-qr-generator", "google-pay-qr-generator", "paytm-qr-generator",
-  "donation-qr-generator", "bhim-qr-generator", "whatsapp-pay-qr-generator",
-  "amazon-pay-qr-generator", "sbi-qr-generator", "hdfc-qr-generator",
-  "icici-qr-generator", "axis-qr-generator", "kotak-qr-generator",
-  "pnb-qr-generator", "canara-qr-generator", "bob-qr-generator",
-  "indusind-qr-generator", "union-qr-generator", "kirana-qr-generator",
-  "cab-driver-qr-generator", "freelance-qr-generator", "restaurant-qr-generator",
-  "idfc-qr-generator", "idbi-qr-generator", "yes-bank-qr-generator",
-  "rbl-qr-generator", "central-bank-qr-generator", "gym-qr-generator",
-  "salon-qr-generator", "parking-qr-generator", "temple-qr-generator"
-]);
-
-// Helper to construct path depending on locale
 function getPath(slug: string): string {
-  // If slug starts with / or is an absolute URL, return as is
   if (slug.startsWith("/") || slug.startsWith("http")) {
     return slug;
   }
-  
-  const cleanSlug = slug.replace(/\/$/, "");
-  
-  if (isHindi && validHindiSlugs.has(cleanSlug)) {
+
+  const cleanSlug = slug.replace(/^\/|\/$/g, "");
+  if (isHindi && routeExistsInLang(cleanSlug, "hi")) {
     return `/hi/${cleanSlug}/`;
   }
   return `/${cleanSlug}/`;

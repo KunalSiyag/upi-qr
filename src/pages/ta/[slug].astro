@@ -5,7 +5,7 @@ import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../../data/internalLinks";
 import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
-import { LOCALIZED_TOOLS } from "../../data/localizedTools";
+import { LOCALIZED_TOOLS, getLocalizedToolCopy } from "../../data/localizedTools";
 
 export async function getStaticPaths() {
   return [
@@ -55,8 +55,9 @@ const { title, headline, presetType, intro, tool } = Astro.props;
 const generatorSlug = slug as GeneratorSlug;
 const resolvedPreset = tool ? undefined : (presetType ?? getPresetFromSlug(generatorSlug));
 
-const description = tool ? `${tool.name}: தமிழில் கிடைக்கும் இலவச, மொபைலுக்கு ஏற்ற வணிகக் கருவி. வேகமான முடிவுகள் மற்றும் உலாவியில் பாதுகாப்பான செயலாக்கம்.` : `${intro} 100% இலவசம் மற்றும் உடனடி பதிவிறக்கம்.`;
-const pageTitle = tool ? `${tool.name} — தமிழில் பயன்படுத்துங்கள் | Pro UPI QR` : `${title} | Pro UPI QR (Tamil)`;
+const localeCopy = tool ? getLocalizedToolCopy(tool, "ta") : null;
+const description = localeCopy ? localeCopy.description : `${intro} 100% இலவசம் மற்றும் உடனடி பதிவிறக்கம்.`;
+const pageTitle = localeCopy ? localeCopy.title : `${title} | Pro UPI QR (Tamil)`;
 ---
 
 <BaseLayout title={pageTitle} description={description}>

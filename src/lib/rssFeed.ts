@@ -16,12 +16,16 @@ export async function createRssFeed(site: URL | undefined, lang: keyof typeof fe
   const baseUrl = site?.toString().replace(/\/$/, "") ?? "https://www.proupiqr.in";
   const prefix = lang === "en" ? "" : `/${lang}`;
   const copy = feedCopy[lang];
-  const posts = (await getCollection("blog")).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+  // Only English has real blog HTML. Other locales would advertise 404 or noindex redirects.
+  const posts = lang === "en"
+    ? (await getCollection("blog")).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf())
+    : [];
   const items = posts.map((post) => {
     const slug = post.id.replace(/\.mdx?$/, "");
-    const link = `${baseUrl}${prefix}/blog/${slug}/`;
+    const link = `${baseUrl}/blog/${slug}/`;
     return `<item><title>${escapeXml(post.data.title)}</title><link>${escapeXml(link)}</link><guid isPermaLink="true">${escapeXml(link)}</guid><description>${escapeXml(post.data.description)}</description><pubDate>${post.data.pubDate.toUTCString()}</pubDate><author>${escapeXml(post.data.author ?? "Pro UPI QR Team")}</author></item>`;
   }).join("\n");
-  const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${escapeXml(copy.title)}</title><link>${baseUrl}${prefix}/blog/</link><description>${escapeXml(copy.description)}</description><language>${copy.language}</language><lastBuildDate>${new Date().toUTCString()}</lastBuildDate>${items}</channel></rss>`;
+  const channelLink = lang === "en" ? `${baseUrl}/blog/` : `${baseUrl}${prefix}/`;
+  const xml = `<?xml version="1.0" encoding="UTF-8"?><rss version="2.0"><channel><title>${escapeXml(copy.title)}</title><link>${channelLink}</link><description>${escapeXml(copy.description)}</description><language>${copy.language}</language><lastBuildDate>${new Date().toUTCString()}</lastBuildDate>${items}</channel></rss>`;
   return new Response(xml, { headers: { "Content-Type": "application/xml; charset=utf-8", "Cache-Control": "public, max-age=3600, s-maxage=86400" } });
 }

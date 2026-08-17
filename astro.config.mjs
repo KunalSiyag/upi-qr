@@ -6,6 +6,7 @@ import clerk from "@clerk/astro";
 
 export default defineConfig({
   site: "https://www.proupiqr.in",
+  trailingSlash: "always",
   i18n: {
     defaultLocale: "en",
     locales: ["en", "hi"],
