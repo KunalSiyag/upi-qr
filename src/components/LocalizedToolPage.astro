@@ -19,6 +19,8 @@ import { EmiCalculator } from "./EmiCalculator";
 import { GratuityCalculator } from "./GratuityCalculator";
 import { SipCalculator } from "./SipCalculator";
 import { SalarySlipGenerator } from "./SalarySlipGenerator";
+import { MsmedInterestCalculator } from "./MsmedInterestCalculator";
+import { ProformaInvoiceGenerator } from "./ProformaInvoiceGenerator";
 import { UpiCalculator } from "./UpiCalculator";
 import { OfferPosterGenerator } from "./OfferPosterGenerator";
 import { MenuQrGenerator } from "./MenuQrGenerator";
@@ -72,6 +74,8 @@ const path = `/${lang}/${tool.slug}/`;
         {tool.component === "gratuity" && <GratuityCalculator client:load />}
         {tool.component === "sipCalculator" && <SipCalculator client:load />}
         {tool.component === "salarySlip" && <SalarySlipGenerator client:load />}
+        {tool.component === "msmed" && <MsmedInterestCalculator client:load />}
+        {tool.component === "proforma" && <ProformaInvoiceGenerator client:load />}
         {tool.component === "upiCalculator" && <UpiCalculator client:load />}
         {tool.component === "offerPoster" && <OfferPosterGenerator client:load />}
         {tool.component === "menuQr" && <MenuQrGenerator client:load />}

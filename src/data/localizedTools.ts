@@ -16,7 +16,7 @@ export type LocalizedTool = {
     | "digitalCard" | "dynamicQr" | "stickers" | "gst" | "whatsapp"
     | "bulk" | "invoice" | "receipt" | "paidStamp" | "rentReceipt"
     | "paymentReminder" | "quotation" | "splitBill" | "cashDenomination"
-    | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip"
+    | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip" | "msmed" | "proforma"
     | "upiCalculator" | "offerPoster"
     | "menuQr" | "margin" | "limits" | "decoder" | "upiLink" | "survey"
     | "default";
@@ -1072,6 +1072,74 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       intro: "HR software नको; details भरून slip WhatsApp वर पाठवा.",
       steps: ["Company, employee तपशील", "Earnings/deductions", "PDF डाउनलोड"],
       faqs: [{ question: "Data upload होतो?", answer: "नाही, browser मध्येच." }]
+    }
+  }),
+  tool("msmed-interest-calculator", "MSMED Interest Calculator", "msmed", {
+    hi: {
+      name: "MSMED ब्याज कैलकुलेटर",
+      title: "MSMED लेट पेमेंट ब्याज - 15% सालाना | मुफ्त",
+      description: "देर से payment पर Section 16 के तहत 15% सालाना ब्याज निकालें — days overdue, claim amount और PDF statement।",
+      intro: "बड़े buyers 90+ दिन late pay करते हैं? कानून आपको 15% सालाना ब्याज दिलाता है — exact रकम जानें।",
+      steps: ["Bill amount और date भरें", "Credit days (max 45) चुनें", "Claim statement PDF download करें"],
+      faqs: [{ question: "Buyer 60 दिन terms दे रहा है?", answer: "MSME suppliers के लिए 45 दिन से ज़्यादा terms legally मान्य नहीं — interest 45वें दिन से चलेगा।" }]
+    },
+    ta: {
+      name: "MSMED வட்டி கால்குலேட்டர்",
+      title: "MSMED தாமத வட்டி - 15% | இலவசம்",
+      description: "தாமதமான B2B பேமெண்டுகளுக்கு Section 16-ன் கீழ் 15% வட்டி — days overdue, claim PDF.",
+      intro: "பெரிய கம்பெனிகள் தாமதமாக செலுத்துகிறதா? சட்டப்படி 15% வட்டி உங்களுக்கு.",
+      steps: ["Bill amount, date", "Credit days (45 max)", "Claim PDF"],
+      faqs: [{ question: "Buyer 60 நாள் சொல்கிறார்?", answer: "MSME-க்கு 45 நாட்களுக்கு மேல் செல்லாது; 45-ல் இருந்தே வட்டி." }]
+    },
+    te: {
+      name: "MSMED వడ్డీ కాలిక్యులేటర్",
+      title: "MSMED ఆలస్య వడ్డీ - 15% | ఉచితం",
+      description: "ఆలస్య B2B చెల్లింపులకు Section 16 ప్రకారం 15% వడ్డీ — overdue days, claim PDF.",
+      intro: "పెద్ద buyers ఆలస్యంగా చెల్లిస్తున్నారా? చట్టం 15% వడ్డీ ఇస్తుంది.",
+      steps: ["Bill amount, date", "Credit days (45 max)", "Claim PDF"],
+      faqs: [{ question: "Buyer 60 రోజులు అంటున్నారా?", answer: "MSME కి 45 రోజులు దాటి చెల్లదు; 45 నుంచి వడ్డీ." }]
+    },
+    mr: {
+      name: "MSMED व्याज कॅल्क्युलेटर",
+      title: "MSMED उशीर व्याज - 15% | मोफत",
+      description: "उशीरा झालेल्या B2B देयकांसाठी Section 16 नुसार 15% व्याज — days overdue, claim PDF.",
+      intro: "मोठे खरेदीदार उशीरा पैसे देतात? कायदा 15% व्याज देतो.",
+      steps: ["Bill रक्कम, तारीख", "Credit days (45 max)", "Claim PDF"],
+      faqs: [{ question: "Buyer 60 दिवस म्हणतो?", answer: "MSME साठी 45 पेक्षा जास्त दिवस चालत नाही; 45 पासून व्याज." }]
+    }
+  }),
+  tool("proforma-invoice-generator", "Proforma Invoice Generator", "proforma", {
+    hi: {
+      name: "प्रोफॉर्मा इनवॉइस जनरेटर",
+      title: "मुफ्त Proforma Invoice - Advance Payment PDF",
+      description: "Advance payment और order confirmation के लिए proforma invoice PDF बनाएं — items, taxes, buyer PO reference और UPI QR सहित।",
+      intro: "Tax invoice नहीं, formal preview। Buyer PO reference और validity के साथ professional document भेजें।",
+      steps: ["Business और buyer details भरें", "Items, tax, validity set करें", "Proforma PDF download करें"],
+      faqs: [{ question: "क्या इस पर GST charge होगा?", answer: "नहीं। Proforma tax invoice नहीं है — supply पर formal tax invoice issue होगा।" }]
+    },
+    ta: {
+      name: "புரொஃபார்மா இன்வாய்ஸ் ஜெனரேட்டர்",
+      title: "இலவச Proforma Invoice - Advance Payment PDF",
+      description: "Advance payment/order confirmation-க்கு proforma invoice PDF — items, tax, PO reference, UPI QR.",
+      intro: "Tax invoice அல்ல; formal preview. PO reference உடன் அனுப்பலாம்.",
+      steps: ["Business, buyer விவரம்", "Items, tax, validity", "PDF பதிவிறக்கம்"],
+      faqs: [{ question: "GST சேர்க்கப்படுமா?", answer: "இல்லை. Supply நேரத்தில் tax invoice வரும்." }]
+    },
+    te: {
+      name: "ప్రొఫార్మా ఇన్వాయిస్ జనరేటర్",
+      title: "ఉచిత Proforma Invoice - Advance Payment PDF",
+      description: "Advance payment/order confirmation కోసం proforma invoice PDF — items, tax, PO reference, UPI QR.",
+      intro: "Tax invoice కాదు; formal preview. PO reference తో పంపండి.",
+      steps: ["Business, buyer వివరాలు", "Items, tax, validity", "PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "GST చేర్చుతారా?", answer: "లేదు. Supply సమయంలో tax invoice వస్తుంది." }]
+    },
+    mr: {
+      name: "प्रोफॉर्मा इन्व्हॉइस जनरेटर",
+      title: "मोफत Proforma Invoice - Advance Payment PDF",
+      description: "Advance payment/order confirmation साठी proforma invoice PDF — items, tax, PO reference, UPI QR.",
+      intro: "Tax invoice नाही; formal preview. PO reference सह पाठवा.",
+      steps: ["Business, buyer तपशील", "Items, tax, validity", "PDF डाउनलोड"],
+      faqs: [{ question: "GST जोडले जाईल?", answer: "नाही. Supply वेळी tax invoice येईल." }]
     }
   })
 ];
