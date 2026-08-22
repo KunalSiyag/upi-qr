@@ -375,8 +375,8 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
 </header>
 
 <!-- Mobile Dropdown Menu -->
-  <div id="mobile-menu" class="hidden fixed inset-0 z-[70] bg-white overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] lg:hidden" role="dialog" aria-modal="true">
-    <div class="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-forest/10 bg-white px-4 py-3">
+  <div id="mobile-menu" role="dialog" aria-modal="true" class="lg:hidden" style="display:none;position:fixed;inset:0;z-index:80;background:#ffffff;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;touch-action:pan-y;padding-top:env(safe-area-inset-top)">
+    <div style="position:sticky;top:0;z-index:10;background:#ffffff" class="flex items-center justify-between gap-2 border-b border-forest/10 px-4 py-3">
       <span class="flex items-center gap-2 text-base font-black tracking-tight text-forest">
         <img src="/favicon.svg" alt="" class="h-7 w-7 rounded-lg" loading="lazy" />
         Pro UPI QR
@@ -385,7 +385,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
         <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
       </button>
     </div>
-    <div class="space-y-3 p-4">
+    <div class="space-y-3 p-4" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
     <div>
       <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "QR जनरेटर्स" : "QR Code Generators"}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
@@ -462,7 +462,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
 
   function openMobileMenu() {
     if (!menu) return;
-    menu.classList.remove('hidden');
+    menu.style.display = 'block';
     lockBodyScroll();
     btn?.setAttribute('aria-expanded', 'true');
     requestAnimationFrame(() => { menu.scrollTop = 0; });
@@ -470,14 +470,14 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
 
   function closeMobileMenu() {
     if (!menu) return;
-    menu.classList.add('hidden');
+    menu.style.display = 'none';
     unlockBodyScroll();
     btn?.setAttribute('aria-expanded', 'false');
   }
 
   if (btn && menu) {
     btn.addEventListener('click', () => {
-      menu.classList.contains('hidden') ? openMobileMenu() : closeMobileMenu();
+      getComputedStyle(menu).display === 'none' ? openMobileMenu() : closeMobileMenu();
     });
   }
   closeBtn?.addEventListener('click', closeMobileMenu);
