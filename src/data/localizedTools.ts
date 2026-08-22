@@ -16,7 +16,7 @@ export type LocalizedTool = {
     | "digitalCard" | "dynamicQr" | "stickers" | "gst" | "whatsapp"
     | "bulk" | "invoice" | "receipt" | "paidStamp" | "rentReceipt"
     | "paymentReminder" | "quotation" | "splitBill" | "cashDenomination"
-    | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip" | "msmed" | "proforma"
+    | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip" | "msmed" | "proforma" | "breakEven" | "treds"
     | "upiCalculator" | "offerPoster"
     | "menuQr" | "margin" | "limits" | "decoder" | "upiLink" | "survey"
     | "default";
@@ -1140,6 +1140,74 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       intro: "Tax invoice नाही; formal preview. PO reference सह पाठवा.",
       steps: ["Business, buyer तपशील", "Items, tax, validity", "PDF डाउनलोड"],
       faqs: [{ question: "GST जोडले जाईल?", answer: "नाही. Supply वेळी tax invoice येईल." }]
+    }
+  }),
+  tool("break-even-calculator", "Break-Even Calculator", "breakEven", {
+    hi: {
+      name: "ब्रेक-ईवन कैलकुलेटर",
+      title: "Break-Even कैलकुलेटर - कितने unit से profit | मुफ्त",
+      description: "महीने के fixed costs cover करने के लिए कितने units बेचने होंगे — margin of safety और target profit units सहित।",
+      intro: "Rent agreement sign करने से पहले जानें — survival number क्या है।",
+      steps: ["Monthly fixed costs भरें", "Price और variable cost/unit डालें", "Break-even units देखें"],
+      faqs: [{ question: "Fixed vs variable cost क्या है?", answer: "Fixed वो है जो zero sales पर भी देना पड़ता है (rent, salary); variable हर unit के साथ बदलता है (material)।" }]
+    },
+    ta: {
+      name: "பிரேக்-ஈவன் கால்குலேட்டர்",
+      title: "Break-Even கால்குலேட்டர் - எத்தனை unit | இலவசம்",
+      description: "மாத fixed costs-ஐ ஈடுகட்ட எவ்வளவு units விற்க வேண்டும் — margin of safety உடன்.",
+      intro: "Rent agreement-க்கு முன் survival number தெரிஞ்சுக்கோங்க.",
+      steps: ["Fixed costs", "Price, variable cost", "Units பார்க்க"],
+      faqs: [{ question: "Fixed vs variable?", answer: "Zero sales-லும் கட்ட வேண்டியது fixed; unit-க்கு மாறுவது variable." }]
+    },
+    te: {
+      name: "బ్రేక్-ఈవెన్ కాలిక్యులేటర్",
+      title: "Break-Even కాలిక్యులేటర్ - ఎన్ని units | ఉచితం",
+      description: "నెల fixed costs భరించడానికి ఎన్ని units అమ్మాలి — margin of safety సహా.",
+      intro: "Rent agreement ముందు survival number తెలుసుకోండి.",
+      steps: ["Fixed costs", "Price, variable cost", "Units చూడండి"],
+      faqs: [{ question: "Fixed vs variable?", answer: "Zero sales కూడా చెల్లించాల్సింది fixed; unit ప్రకారం మారేది variable." }]
+    },
+    mr: {
+      name: "ब्रेक-इव्हेन कॅल्क्युलेटर",
+      title: "Break-Even कॅल्क्युलेटर - किती units | मोफत",
+      description: "महिन्याचे fixed costs भरण्यासाठी किती units विकावे — margin of safety सह.",
+      intro: "Rent agreement करण्याआधी survival number पाहा.",
+      steps: ["Fixed costs भरा", "Price, variable cost", "Units पाहा"],
+      faqs: [{ question: "Fixed vs variable?", answer: "Zero sales वरही द्यावे लागणारे fixed; unitनुसार बदलणारे variable." }]
+    }
+  }),
+  tool("treds-calculator", "TReDS Discounting Calculator", "treds", {
+    hi: {
+      name: "TReDS कैलकुलेटर",
+      title: "TReDS Discounting कैलकुलेटर - Net Proceeds | मुफ्त",
+      description: "RXIL/Invoicemart/M1xchange पर invoice discount करने से कितना cash मिलेगा — discount, charges और effective annualised rate सहित।",
+      intro: "Financier का bid accept करने से पहले exact net proceeds जानें — overdraft से comparison आसान।",
+      steps: ["Invoice value भरें", "Discount rate और days डालें", "Net proceeds देखें"],
+      faqs: [{ question: "Buyer को पता चलेगा?", answer: "सिर्फ acceptance और maturity payment तक — financing decision buyer से invisible रहता है।" }]
+    },
+    ta: {
+      name: "TReDS கால்குலேட்டர்",
+      title: "TReDS கால்குலேட்டர் - Net Proceeds | இலவசம்",
+      description: "Invoice discount-ல் எவ்வளவு cash — discount, charges, effective annualised rate உடன்.",
+      intro: "Bid accept செய்யும் முன் exact net proceeds தெரிஞ்சுக்கோங்க.",
+      steps: ["Invoice value", "Rate, days", "Net proceeds"],
+      faqs: [{ question: "Buyer-க்கு தெரியுமா?", answer: "Acceptance/maturity மட்டுமே; financing தெரியாது." }]
+    },
+    te: {
+      name: "TReDS కాలిక్యులేటర్",
+      title: "TReDS కాలిక్యులేటర్ - Net Proceeds | ఉచితం",
+      description: "Invoice discounting వల్ల ఎంత cash — discount, charges, effective annualised rate సహా.",
+      intro: "Bid accept చేసే ముందు ఖచ్చితమైన net proceeds తెలుసుకోండి.",
+      steps: ["Invoice value", "Rate, days", "Net proceeds"],
+      faqs: [{ question: "Buyer కి తెలుస్తుందా?", answer: "Acceptance/maturity మాత్రమే; financing కనిపించదు." }]
+    },
+    mr: {
+      name: "TReDS कॅल्क्युलेटर",
+      title: "TReDS कॅल्क्युलेटर - Net Proceeds | मोफत",
+      description: "Invoice discounting वर किती cash — discount, charges, effective annualised rate सह.",
+      intro: "Bid स्वीकारण्यापूर्वी अचूक net proceeds पाहा.",
+      steps: ["Invoice रक्कम", "Rate, days", "Net proceeds"],
+      faqs: [{ question: "Buyer ला कळेल?", answer: "Acceptance/maturity पुरते; financing लपवलेले." }]
     }
   })
 ];

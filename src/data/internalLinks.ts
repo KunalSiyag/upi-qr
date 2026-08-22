@@ -614,6 +614,29 @@ export const guides: GuideLink[] = [
     presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
     tags: ["Billing", "Invoicing", "Merchant Tips", "Record Keeping"],
   },
+  {
+    slug: "udyam-registration-guide-msme-benefits",
+    title: "Udyam Registration Guide - MSME Benefits & How to Apply",
+    description: "Free Udyam registration walkthrough plus every benefit it unlocks: 15% late-payment interest rights, collateral-free loans, TReDS access.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
+    tags: ["MSME", "Government Schemes", "Billing"],
+    featured: true,
+  },
+  {
+    slug: "government-schemes-small-businesses-india-2026",
+    title: "Government Schemes for Small Businesses - 2026 Roundup",
+    description: "Mudra loans, CGTMSE guarantees, TReDS discounting, PM SVANidhi, and MSMED payment protection explained for small merchants.",
+    presetTypes: ["phonepe", "gpay", "paytm", "kirana", "freelance"],
+    tags: ["MSME", "Government Schemes", "Finance", "Reference"],
+    featured: true,
+  },
+  {
+    slug: "treds-invoice-discounting-msme-guide",
+    title: "TReDS Explained - Discount Unpaid Invoices for Instant Cash",
+    description: "Convert accepted invoices from large buyers into cash within days via RXIL, Invoicemart, or M1xchange — eligibility, costs, and flow.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
+    tags: ["MSME", "Government Schemes", "Finance", "Billing"],
+  },
 ];
 
 const tagToPreset: Record<string, PresetType> = {
