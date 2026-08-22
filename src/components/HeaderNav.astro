@@ -35,7 +35,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
   </a>
 
   <!-- Desktop Navigation -->
-  <nav class="hidden md:flex items-center gap-1 text-xs md:text-sm font-semibold text-forest/80">
+  <nav class="hidden lg:flex items-center gap-1 text-xs md:text-sm font-semibold text-forest/80">
     <!-- QR Generators Dropdown -->
     <div class="relative group px-2 py-1">
       <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
@@ -365,15 +365,27 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
     </div>
 
     <!-- Mobile Menu Button -->
-    <button type="button" id="mobile-menu-btn" aria-label="Open navigation menu" aria-controls="mobile-menu" aria-expanded="false" class="md:hidden flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
+    <button type="button" id="mobile-menu-btn" aria-label="Open navigation menu" aria-controls="mobile-menu" aria-expanded="false" class="lg:hidden flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
     </button>
   </div>
 
-  <!-- Mobile Dropdown Menu -->
-  <div id="mobile-menu" class="hidden absolute top-full left-0 right-0 mt-3 p-4 rounded-3xl border border-forest/10 bg-white/95 shadow-2xl backdrop-blur-xl md:hidden z-50 space-y-3 max-h-[82vh] overflow-y-auto overscroll-contain">
+</header>
+
+<!-- Mobile Dropdown Menu -->
+  <div id="mobile-menu" class="hidden fixed inset-0 z-[70] bg-white overflow-y-auto overscroll-contain lg:hidden" role="dialog" aria-modal="true">
+    <div class="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-forest/10 bg-white px-4 py-3">
+      <span class="flex items-center gap-2 text-base font-black tracking-tight text-forest">
+        <img src="/favicon.svg" alt="" class="h-7 w-7 rounded-lg" loading="lazy" />
+        Pro UPI QR
+      </span>
+      <button type="button" id="mobile-menu-close" aria-label="Close navigation menu" class="flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
+        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+      </button>
+    </div>
+    <div class="space-y-3 p-4">
     <div>
       <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "QR जनरेटर्स" : "QR Code Generators"}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
@@ -420,18 +432,32 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
       <a href="/blog/" class="p-2 hover:text-leaf">Guides</a>
       <a href="/developer/" class="p-2 hover:text-leaf">Developers</a>
     </div>
+    </div>
   </div>
-</header>
 
 <script>
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
+  const closeBtn = document.getElementById('mobile-menu-close');
+
+  function openMobileMenu() {
+    if (!menu) return;
+    menu.classList.remove('hidden');
+    document.documentElement.style.overflow = 'hidden';
+    btn?.setAttribute('aria-expanded', 'true');
+    menu.scrollTop = 0;
+  }
+  function closeMobileMenu() {
+    if (!menu) return;
+    menu.classList.add('hidden');
+    document.documentElement.style.overflow = '';
+    btn?.setAttribute('aria-expanded', 'false');
+  }
+
   if (btn && menu) {
     btn.addEventListener('click', () => {
-      menu.classList.toggle('hidden');
-      const isOpen = !menu.classList.contains('hidden');
-      btn.setAttribute('aria-expanded', String(isOpen));
-      btn.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
+      menu.classList.contains('hidden') ? openMobileMenu() : closeMobileMenu();
     });
   }
+  closeBtn?.addEventListener('click', closeMobileMenu);
 </script>
