@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 export function OfferPosterGenerator() {
   const [theme, setTheme] = useState<"festive" | "clearance" | "cashback" | "minimal">("festive");
@@ -36,12 +37,8 @@ export function OfferPosterGenerator() {
     if (!posterRef.current) return;
     setIsExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${shopName.toLowerCase().replace(/\s+/g, "-")}-offer-poster.png`;
-      a.click();
+      const dataUrl = await safeToPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
+      downloadDataUrl(dataUrl, `${shopName.toLowerCase().replace(/\s+/g, "-")}-offer-poster.png`);
     } catch (e) {
       console.error("Poster PNG export error:", e);
     } finally {
@@ -53,9 +50,8 @@ export function OfferPosterGenerator() {
     if (!posterRef.current) return;
     setIsExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
-      const dataUrl = await toPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
+      const dataUrl = await safeToPng(posterRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();

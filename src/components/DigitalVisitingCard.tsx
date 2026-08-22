@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 export function DigitalVisitingCard() {
   const [name, setName] = useState("Vikram Sharma");
@@ -45,15 +46,11 @@ END:VCARD`;
   const downloadVcf = () => {
     const blob = new Blob([vcardText], { type: "text/vcard;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `${name.toLowerCase().replace(/\s+/g, "-")}.vcf`;
-    a.click();
+    downloadDataUrl(url, `${name.toLowerCase().replace(/\s+/g, "-")}.vcf`);
   };
 
   const createClonedCardForExport = async () => {
     if (!cardRef.current) return null;
-    const { toPng } = await import("html-to-image");
 
     const clone = cardRef.current.cloneNode(true) as HTMLDivElement;
     clone.style.position = "fixed";
@@ -73,7 +70,7 @@ END:VCARD`;
     document.body.appendChild(clone);
     await new Promise((res) => setTimeout(res, 200));
 
-    const dataUrl = await toPng(clone, {
+    const dataUrl = await safeToPng(clone, {
       pixelRatio: 3,
       cacheBust: true,
       width: 700,
@@ -93,10 +90,7 @@ END:VCARD`;
     try {
       const dataUrl = await createClonedCardForExport();
       if (!dataUrl) return;
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${name.toLowerCase().replace(/\s+/g, "-")}-business-card.png`;
-      a.click();
+      downloadDataUrl(dataUrl, `${name.toLowerCase().replace(/\s+/g, "-")}-business-card.png`);
     } catch (e) {
       console.error("Card PNG export error:", e);
     } finally {

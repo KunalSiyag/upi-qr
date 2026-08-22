@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
@@ -190,7 +190,7 @@ export function InvoiceGenerator() {
     const targetHeight = measuredHeight || 1100;
 
     try {
-      const dataUrl = await withTimeout(toPng(clone, {
+      const dataUrl = await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -213,7 +213,7 @@ export function InvoiceGenerator() {
           border: "none",
           borderRadius: "0"
         }
-      }));
+      });
       return { dataUrl, targetHeight };
     } finally {
       document.body.removeChild(clone);
@@ -241,7 +241,7 @@ export function InvoiceGenerator() {
       pdf.save(`${safeInvoiceNo()}.pdf`);
       setDownloadPdfState("idle");
     } catch (err) {
-      console.error("PDF download failed:", err);
+      console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setDownloadPdfState("error");
     }
   }
@@ -257,13 +257,10 @@ export function InvoiceGenerator() {
       setDownloadPngState("busy");
       const { dataUrl } = await renderPaperToPng();
 
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `${safeInvoiceNo()}.png`;
-      link.click();
+      downloadDataUrl(dataUrl, `${safeInvoiceNo()}.png`);
       setDownloadPngState("idle");
     } catch (err) {
-      console.error("PNG download failed:", err);
+      console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setDownloadPngState("error");
     }
   }
@@ -309,10 +306,7 @@ export function InvoiceGenerator() {
       if (!sharedVisually) {
         try {
           const { dataUrl } = await renderPaperToPng();
-          const link = document.createElement("a");
-          link.href = dataUrl;
-          link.download = `${safeInvoiceNo()}.png`;
-          link.click();
+          downloadDataUrl(dataUrl, `${safeInvoiceNo()}.png`);
         } catch (err) {
           console.error("Invoice image export failed:", err);
         }

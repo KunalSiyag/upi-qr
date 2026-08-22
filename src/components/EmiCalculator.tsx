@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 const draftKey = "proupiqr-emi-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -112,7 +112,7 @@ export function EmiCalculator() {
     await new Promise((res) => setTimeout(res, 250));
     const targetHeight = clone.offsetHeight || 1100;
     try {
-      return await withTimeout(toPng(clone, {
+      return await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -123,7 +123,7 @@ export function EmiCalculator() {
           minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
           boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0"
         }
-      }), "EMI schedule render");
+      });
     } finally {
       document.body.removeChild(clone);
     }
@@ -141,7 +141,7 @@ export function EmiCalculator() {
       pdf.save(`${fileName()}.pdf`);
       setPdfState("idle");
     } catch (err) {
-      console.error("PDF failed:", err);
+      console.error("PDF failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
     }
   }
@@ -149,13 +149,10 @@ export function EmiCalculator() {
   async function downloadPng() {
     try {
       setPngState("busy");
-      const link = document.createElement("a");
-      link.href = await renderPaper();
-      link.download = `${fileName()}.png`;
-      link.click();
+      downloadDataUrl(await renderPaper(), `${fileName()}.png`);
       setPngState("idle");
     } catch (err) {
-      console.error("PNG failed:", err);
+      console.error("PNG failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setPngState("error");
     }
   }

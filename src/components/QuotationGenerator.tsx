@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 type QuoteItem = { id: number; name: string; qty: string; price: string };
 
@@ -117,7 +117,7 @@ export function QuotationGenerator() {
     await new Promise((r) => setTimeout(r, 250));
     const targetHeight = clone.offsetHeight || 1100;
     try {
-      const dataUrl = await withTimeout(toPng(clone, {
+      const dataUrl = await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -128,7 +128,7 @@ export function QuotationGenerator() {
           minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
           boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0"
         }
-      }), "Quotation render");
+      });
       return dataUrl;
     } finally {
       document.body.removeChild(clone);
@@ -147,7 +147,7 @@ export function QuotationGenerator() {
       pdf.save(`${safeFileName()}.pdf`);
       setPdfState("idle");
     } catch (err) {
-      console.error("PDF download failed:", err);
+      console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
     }
   }
@@ -155,13 +155,10 @@ export function QuotationGenerator() {
   async function downloadPng() {
     try {
       setPngState("busy");
-      const link = document.createElement("a");
-      link.href = await renderPaper();
-      link.download = `${safeFileName()}.png`;
-      link.click();
+      downloadDataUrl(await renderPaper(), `${safeFileName()}.png`);
       setPngState("idle");
     } catch (err) {
-      console.error("PNG download failed:", err);
+      console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setPngState("error");
     }
   }
@@ -193,10 +190,7 @@ export function QuotationGenerator() {
         }
       }
       if (!shared) {
-        const link = document.createElement("a");
-        link.href = await renderPaper();
-        link.download = `${safeFileName()}.png`;
-        link.click();
+        downloadDataUrl(await renderPaper(), `${safeFileName()}.png`);
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
       }
       setShareState("idle");

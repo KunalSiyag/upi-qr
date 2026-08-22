@@ -2,6 +2,7 @@ import { toPng } from "html-to-image";
 import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 const presetLogos = {
   phonepe: "/phonepe.png", // Or SVG/PNG asset if added, default high quality SVG fallback
@@ -650,10 +651,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
-    const link = document.createElement("a");
-    link.href = canvasRef.current.toDataURL("image/png");
-    link.download = `${safeName || "upi-qr"}.png`;
-    link.click();
+    downloadDataUrl(canvasRef.current.toDataURL("image/png"), `${safeName || "upi-qr"}.png`);
   }
 
   async function copyUpiLink() {
@@ -713,7 +711,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       const targetHeight = measuredHeight || 520;
 
       // Render the clone. We explicitly set style opacity to '1' so the generated canvas/PNG has 100% visibility.
-      const dataUrl = await toPng(clone, {
+      const dataUrl = await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 3, // High-res export
         width: 360,
@@ -740,10 +738,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           .toLowerCase()
           .replace(/[^a-z0-9]+/g, "-")
           .replace(/^-|-$/g, "");
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `${safeName || "upi-template"}-${activeTemplate.id}.png`;
-      link.click();
+      downloadDataUrl(dataUrl, `${safeName || "upi-template"}-${activeTemplate.id}.png`);
       setDownloadState("idle");
     } catch (err) {
       console.error("Download failed:", err);
@@ -781,7 +776,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       const measuredHeight = clone.offsetHeight;
       const targetHeight = measuredHeight || 520;
 
-      const dataUrl = await toPng(clone, {
+      const dataUrl = await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 3,
         width: 360,
@@ -825,7 +820,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       pdf.save(`${safeName || 'upi-invoice'}-${activeTemplate.id}.pdf`);
       setPdfDownloadState("idle");
     } catch (err) {
-      console.error("PDF download failed:", err);
+      console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfDownloadState("error");
     }
   }

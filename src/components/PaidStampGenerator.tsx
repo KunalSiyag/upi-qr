@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 const draftKey = "proupiqr-paid-stamp-draft";
 const MAX_DIMENSION = 1800;
@@ -180,10 +181,7 @@ export function PaidStampGenerator() {
   function downloadCanvas() {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    const link = document.createElement("a");
-    link.href = canvas.toDataURL("image/png");
-    link.download = `${fileName}.png`;
-    link.click();
+    downloadDataUrl(canvas.toDataURL("image/png"), `${fileName}.png`);
   }
 
   async function downloadStampedPdf() {
@@ -203,7 +201,7 @@ export function PaidStampGenerator() {
       pdf.addImage(dataUrl, "JPEG", 0, 0, widthMm, heightMm);
       pdf.save(`${fileName}.pdf`);
     } catch (err) {
-      console.error("PDF download failed:", err);
+      console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setError("Could not generate the PDF. Try downloading the PNG instead.");
     }
   }

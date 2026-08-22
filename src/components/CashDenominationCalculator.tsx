@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 const draftKey = "proupiqr-cash-denomination-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -97,7 +97,7 @@ export function CashDenominationCalculator() {
     await new Promise((r) => setTimeout(r, 250));
     const targetHeight = clone.offsetHeight || 900;
     try {
-      return await withTimeout(toPng(clone, {
+      return await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -108,7 +108,7 @@ export function CashDenominationCalculator() {
           minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
           boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0"
         }
-      }), "Summary render");
+      });
     } finally {
       document.body.removeChild(clone);
     }
@@ -130,7 +130,7 @@ export function CashDenominationCalculator() {
       pdf.save(`${fileName()}.pdf`);
       setPdfState("idle");
     } catch (err) {
-      console.error("PDF failed:", err);
+      console.error("PDF failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
     }
   }
@@ -138,13 +138,10 @@ export function CashDenominationCalculator() {
   async function downloadPng() {
     try {
       setPngState("busy");
-      const link = document.createElement("a");
-      link.href = await renderPaper();
-      link.download = `${fileName()}.png`;
-      link.click();
+      downloadDataUrl(await renderPaper(), `${fileName()}.png`);
       setPngState("idle");
     } catch (err) {
-      console.error("PNG failed:", err);
+      console.error("PNG failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setPngState("error");
     }
   }
@@ -170,13 +167,13 @@ export function CashDenominationCalculator() {
 
         <div className="mt-5 space-y-2">
           {rows.map((row, idx) => (
-            <div key={`${row.type}-${row.value}-${idx}`} className="flex items-center gap-3 rounded-2xl bg-cream px-3 py-2">
-              <span className={`flex h-11 w-14 shrink-0 items-center justify-center rounded-lg text-xs font-black ${row.type === "note" ? "bg-forest text-white" : "border border-forest/20 bg-white text-forest"}`}>
+            <div key={`${row.type}-${row.value}-${idx}`} className="flex items-center gap-1.5 sm:gap-3 rounded-2xl bg-cream px-2 sm:px-3 py-2">
+              <span className={`flex h-10 w-11 shrink-0 items-center justify-center rounded-lg text-xs font-black sm:h-11 sm:w-14 ${row.type === "note" ? "bg-forest text-white" : "border border-forest/20 bg-white text-forest"}`}>
                 ₹{row.value}
               </span>
-              <span className="w-10 text-[10px] font-bold uppercase tracking-wide text-forest/50">{row.type}</span>
-              <div className="ml-auto flex items-center gap-1.5">
-                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) - 1)} aria-label={`Remove one ₹${row.value} ${row.type}`} className="h-8 w-8 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">−</button>
+              <span className="hidden min-w-[36px] text-[10px] font-bold uppercase tracking-wide text-forest/50 sm:block">{row.type}</span>
+              <div className="ml-auto flex items-center gap-1">
+                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) - 1)} aria-label={`Remove one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">−</button>
                 <input
                   type="number"
                   min={0}
@@ -184,11 +181,11 @@ export function CashDenominationCalculator() {
                   aria-label={`Count of ₹${row.value} ${row.type}`}
                   value={counts[row.index] ?? ""}
                   onChange={(e) => setCount(row.index, Number(e.target.value))}
-                  className="h-9 w-16 rounded-lg border border-forest/15 bg-white text-center text-sm font-black outline-none focus:border-leaf"
+                  className="h-9 w-14 shrink-0 rounded-lg border border-forest/15 bg-white text-center text-sm font-black outline-none focus:border-leaf sm:w-16"
                 />
-                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) + 1)} aria-label={`Add one ₹${row.value} ${row.type}`} className="h-8 w-8 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">+</button>
+                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) + 1)} aria-label={`Add one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">+</button>
               </div>
-              <span className="w-24 shrink-0 text-right text-sm font-black text-forest tabular-nums">{money(row.lineTotal)}</span>
+              <span className="min-w-[62px] shrink-0 text-right text-sm font-black text-forest tabular-nums">{money(row.lineTotal)}</span>
             </div>
           ))}
         </div>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useId, useMemo } from "react";
 import QRCode from "qrcode";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
 
@@ -124,12 +125,8 @@ export function StickerSheetGenerator() {
     if (!sheetRef.current) return;
     setIsGenerating(true);
     try {
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `upi-qr-stickers-${layout}.png`;
-      a.click();
+      const dataUrl = await safeToPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
+      downloadDataUrl(dataUrl, `upi-qr-stickers-${layout}.png`);
     } catch (e) {
       console.error("PNG export failed:", e);
     } finally {
@@ -141,9 +138,8 @@ export function StickerSheetGenerator() {
     if (!sheetRef.current) return;
     setIsGenerating(true);
     try {
-      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
-      const dataUrl = await toPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
+      const dataUrl = await safeToPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297);
       pdf.save(`upi-qr-stickers-${layout}.pdf`);

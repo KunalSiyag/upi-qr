@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 interface MenuItem {
   name: string;
@@ -164,12 +165,8 @@ Do NOT wrap output in markdown codeblocks or extra text.`
     if (!menuRef.current) return;
     setIsExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
-      const dataUrl = await toPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
-      const a = document.createElement("a");
-      a.href = dataUrl;
-      a.download = `${storeName.toLowerCase().replace(/\s+/g, "-")}-qr-menu.png`;
-      a.click();
+      const dataUrl = await safeToPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
+      downloadDataUrl(dataUrl, `${storeName.toLowerCase().replace(/\s+/g, "-")}-qr-menu.png`);
     } catch (e) {
       console.error("Menu PNG export error:", e);
     } finally {
@@ -181,9 +178,8 @@ Do NOT wrap output in markdown codeblocks or extra text.`
     if (!menuRef.current) return;
     setIsExporting(true);
     try {
-      const { toPng } = await import("html-to-image");
       const { jsPDF } = await import("jspdf");
-      const dataUrl = await toPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
+      const dataUrl = await safeToPng(menuRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();

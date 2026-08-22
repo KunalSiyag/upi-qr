@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { amountInWordsInr } from "../lib/inr-words";
 
 const draftKey = "proupiqr-salary-slip-draft";
@@ -103,7 +103,7 @@ export function SalarySlipGenerator() {
     await new Promise((r) => setTimeout(r, 250));
     const targetHeight = clone.offsetHeight || 1100;
     try {
-      return await withTimeout(toPng(clone, {
+      return await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -114,7 +114,7 @@ export function SalarySlipGenerator() {
           minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
           boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0"
         }
-      }), "Salary slip render");
+      });
     } finally {
       document.body.removeChild(clone);
     }
@@ -137,7 +137,7 @@ export function SalarySlipGenerator() {
       pdf.save(`${fileName()}.pdf`);
       setPdfState("idle");
     } catch (err) {
-      console.error("PDF failed:", err);
+      console.error("PDF failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
     }
   }
@@ -145,13 +145,10 @@ export function SalarySlipGenerator() {
   async function downloadPng() {
     try {
       setPngState("busy");
-      const link = document.createElement("a");
-      link.href = await renderPaper();
-      link.download = `${fileName()}.png`;
-      link.click();
+      downloadDataUrl(await renderPaper(), `${fileName()}.png`);
       setPngState("idle");
     } catch (err) {
-      console.error("PNG failed:", err);
+      console.error("PNG failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setPngState("error");
     }
   }
@@ -180,10 +177,7 @@ export function SalarySlipGenerator() {
         }
       }
       if (!shared) {
-        const link = document.createElement("a");
-        link.href = await renderPaper();
-        link.download = `${fileName()}.png`;
-        link.click();
+        downloadDataUrl(await renderPaper(), `${fileName()}.png`);
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
       }
     } catch (err) {

@@ -1,6 +1,7 @@
 import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 // Our brand-aligned types
 const typeList = [
@@ -253,10 +254,7 @@ export function UniversalQrForm() {
 
   async function downloadPng() {
     if (!canvasRef.current) return;
-    const a = document.createElement("a");
-    a.href = canvasRef.current.toDataURL("image/png");
-    a.download = "qr-code.png";
-    a.click();
+    downloadDataUrl(canvasRef.current.toDataURL("image/png"), "qr-code.png");
   }
 
   async function downloadStyledCard() {
@@ -282,7 +280,7 @@ export function UniversalQrForm() {
       // Let layout settle
       await new Promise(resolve => setTimeout(resolve, 200));
 
-      const data = await toPng(clone, {
+      const data = await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 3,
         style: {
@@ -293,10 +291,7 @@ export function UniversalQrForm() {
 
       clone.remove();
 
-      const a = document.createElement("a");
-      a.href = data;
-      a.download = "qr-styled.png";
-      a.click();
+      downloadDataUrl(data, "qr-styled.png");
     } catch (err) {
       console.error("Failed to download styled card:", err);
     }

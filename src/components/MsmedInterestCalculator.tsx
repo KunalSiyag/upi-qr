@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 const draftKey = "proupiqr-msmed-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -98,7 +98,7 @@ export function MsmedInterestCalculator() {
     await new Promise((r) => setTimeout(r, 250));
     const targetHeight = clone.offsetHeight || 900;
     try {
-      return await withTimeout(toPng(clone, {
+      return await safeToPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -109,7 +109,7 @@ export function MsmedInterestCalculator() {
           minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
           boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0"
         }
-      }), "MSMED statement render");
+      });
     } finally {
       document.body.removeChild(clone);
     }
@@ -131,7 +131,7 @@ export function MsmedInterestCalculator() {
       pdf.save(`${fileName()}.pdf`);
       setPdfState("idle");
     } catch (err) {
-      console.error("PDF failed:", err);
+      console.error("PDF failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
     }
   }

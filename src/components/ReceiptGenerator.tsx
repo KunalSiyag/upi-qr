@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { toPng } from "html-to-image";
+import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 type ReceiptItem = { id: number; name: string; qty: string; price: string };
 
@@ -132,7 +132,7 @@ export function ReceiptGenerator() {
     const measuredHeight = clone.offsetHeight;
     const targetHeight = measuredHeight || 1000;
 
-    const dataUrl = await withTimeout(toPng(clone, {
+    const dataUrl = await safeToPng(clone, {
       cacheBust: true,
       pixelRatio: 2,
       width,
@@ -155,7 +155,7 @@ export function ReceiptGenerator() {
         border: "none",
         borderRadius: "0"
       }
-    }));
+    });
 
     document.body.removeChild(clone);
     return { dataUrl, targetHeight };
@@ -188,7 +188,7 @@ export function ReceiptGenerator() {
       pdf.save(`${safeFileName("receipt")}.pdf`);
       setDownloadPdfState("idle");
     } catch (err) {
-      console.error("PDF download failed:", err);
+      console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setDownloadPdfState("error");
     }
   }
@@ -198,13 +198,10 @@ export function ReceiptGenerator() {
       setDownloadPngState("busy");
       const { dataUrl } = await renderPaperToPng();
 
-      const link = document.createElement("a");
-      link.href = dataUrl;
-      link.download = `${safeFileName("receipt")}.png`;
-      link.click();
+      downloadDataUrl(dataUrl, `${safeFileName("receipt")}.png`);
       setDownloadPngState("idle");
     } catch (err) {
-      console.error("PNG download failed:", err);
+      console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setDownloadPngState("error");
     }
   }
@@ -256,10 +253,7 @@ export function ReceiptGenerator() {
       if (!sharedVisually) {
         try {
           const { dataUrl } = await renderPaperToPng();
-          const link = document.createElement("a");
-          link.href = dataUrl;
-          link.download = `${safeFileName("receipt")}.png`;
-          link.click();
+          downloadDataUrl(dataUrl, `${safeFileName("receipt")}.png`);
         } catch (err) {
           console.error("Receipt image export failed:", err);
         }
