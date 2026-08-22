@@ -375,7 +375,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
 </header>
 
 <!-- Mobile Dropdown Menu -->
-  <div id="mobile-menu" class="hidden fixed inset-0 z-[70] bg-white overflow-y-auto overscroll-contain lg:hidden" role="dialog" aria-modal="true">
+  <div id="mobile-menu" class="hidden fixed inset-0 z-[70] bg-white overflow-y-auto overscroll-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y] lg:hidden" role="dialog" aria-modal="true">
     <div class="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-forest/10 bg-white px-4 py-3">
       <span class="flex items-center gap-2 text-base font-black tracking-tight text-forest">
         <img src="/favicon.svg" alt="" class="h-7 w-7 rounded-lg" loading="lazy" />
@@ -440,17 +440,38 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
   const menu = document.getElementById('mobile-menu');
   const closeBtn = document.getElementById('mobile-menu-close');
 
+  let savedScrollY = 0;
+
+  function lockBodyScroll() {
+    savedScrollY = window.scrollY;
+    document.body.style.position = 'fixed';
+    document.body.style.top = '-' + savedScrollY + 'px';
+    document.body.style.left = '0';
+    document.body.style.right = '0';
+    document.body.style.width = '100%';
+  }
+
+  function unlockBodyScroll() {
+    document.body.style.position = '';
+    document.body.style.top = '';
+    document.body.style.left = '';
+    document.body.style.right = '';
+    document.body.style.width = '';
+    window.scrollTo(0, savedScrollY);
+  }
+
   function openMobileMenu() {
     if (!menu) return;
     menu.classList.remove('hidden');
-    document.documentElement.style.overflow = 'hidden';
+    lockBodyScroll();
     btn?.setAttribute('aria-expanded', 'true');
-    menu.scrollTop = 0;
+    requestAnimationFrame(() => { menu.scrollTop = 0; });
   }
+
   function closeMobileMenu() {
     if (!menu) return;
     menu.classList.add('hidden');
-    document.documentElement.style.overflow = '';
+    unlockBodyScroll();
     btn?.setAttribute('aria-expanded', 'false');
   }
 
