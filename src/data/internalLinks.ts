@@ -583,6 +583,37 @@ export const guides: GuideLink[] = [
     presetTypes: ["phonepe", "gpay", "paytm"],
     tags: ["WhatsApp Business", "Social Media", "Tutorial"],
   },
+  {
+    slug: "rent-receipt-format-hra-exemption-india",
+    title: "Rent Receipt Format for HRA Exemption (2026 Guide)",
+    description: "Correct rent receipt fields, revenue stamp rules, PAN requirements, and a fast monthly workflow for tenants and landlords.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Rent Receipt", "HRA", "Tax", "Billing"],
+    featured: true,
+  },
+  {
+    slug: "how-to-write-payment-reminder-message-overdue-invoice",
+    title: "How to Write a Payment Reminder Message (Templates + Timing)",
+    description: "Polite escalation ladder from friendly nudge to final notice, with copy-paste templates for WhatsApp, SMS, and email.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance", "restaurant"],
+    tags: ["Billing", "Invoicing", "Merchant Tips"],
+    featured: true,
+  },
+  {
+    slug: "quotation-vs-estimate-vs-invoice-vs-receipt",
+    title: "Quotation vs Estimate vs Invoice vs Receipt: Which Document When",
+    description: "The four money documents explained with GST treatment, numbering conventions, and a worked example for small businesses.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance", "restaurant"],
+    tags: ["Billing", "Invoicing", "GST", "Reference"],
+    featured: true,
+  },
+  {
+    slug: "how-to-stamp-paid-on-invoice-bill-photo",
+    title: "How to Add a PAID Stamp to Any Invoice or Bill",
+    description: "Digital proof-of-payment stamps with date and signature — why they matter and how to apply them without uploading documents.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
+    tags: ["Billing", "Invoicing", "Merchant Tips", "Record Keeping"],
+  },
 ];
 
 const tagToPreset: Record<string, PresetType> = {

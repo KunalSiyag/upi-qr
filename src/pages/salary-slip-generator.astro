@@ -1,0 +1,124 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SalarySlipGenerator } from "../components/SalarySlipGenerator";
+
+const title = "Free Salary Slip Generator with Deductions PDF | Pro UPI QR";
+const description = "Create professional monthly salary slips with earnings, PF, professional tax, and TDS deductions. Amount in words, PDF download, WhatsApp share. Free, browser-only.";
+
+const faqs = [
+  {
+    question: "Why do employees need a salary slip?",
+    answer: "Payslips are proof of income for loan approvals, credit cards, visa applications, rental agreements, and background checks. Employers issuing them monthly also create clean records for TDS compliance and employee disputes."
+  },
+  {
+    question: "What should a salary slip contain?",
+    answer: "Employer name and address, employee details (name, ID, designation), pay period, paid days versus loss-of-pay days, an itemised earnings breakdown (basic, HRA, allowances), itemised deductions (PF, professional tax, TDS), net pay, and the amount in words. All of these print on this tool's slip."
+  },
+  {
+    question: "Is the salary slip legally required?",
+    answer: "Most state Shops & Establishments Acts require employers to issue wage slips each pay period. Even where enforcement is thin, providing payslips protects employers during disputes and helps employees access credit."
+  },
+  {
+    question: "Does my payroll data get uploaded anywhere?",
+    answer: "No. Slips are generated entirely inside your browser; drafts stay on your device. Safe to use even on a shared office computer — just avoid saving drafts there if others use it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Salary Slip Generator by Pro UPI QR",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/salary-slip-generator/",
+      description,
+      featureList: [
+        "Monthly payslip PDF generator",
+        "Earnings and deduction breakdowns",
+        "PF and professional tax quick-fill",
+        "Amount in words for net pay",
+        "WhatsApp image sharing"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to make a salary slip",
+      step: [
+        { "@type": "HowToStep", name: "Enter company and employee details" },
+        { "@type": "HowToStep", name: "Set the pay month and attendance days" },
+        { "@type": "HowToStep", name: "Fill earnings and apply PF/PT deductions" },
+        { "@type": "HowToStep", name: "Download the slip as PDF or share on WhatsApp" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Salary Slip Generator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Billing &amp; HR</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free salary slip generator for small employers</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Issue clean monthly payslips with earnings, PF, professional tax, and TDS breakdowns — plus net pay in words that banks actually accept. No HR software, no watermark, no signup.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#salary-slip-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create salary slip</a>
+            <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More business tools →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="salary-slip-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <SalarySlipGenerator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Salary slip questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">The rest of your paperwork, sorted too.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/gratuity-calculator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Gratuity Calculator</a>
+          <a href="/invoice-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Invoice Generator</a>
+          <a href="/tools/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Browse all tools →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

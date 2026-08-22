@@ -1,0 +1,118 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { GLOSSARY_TERMS, getGlossaryTerm } from "../../data/glossary";
+
+export async function getStaticPaths() {
+  return GLOSSARY_TERMS.map((term, index) => ({
+    params: { term: term.slug },
+    props: { term, index }
+  }));
+}
+
+const { term, index } = Astro.props;
+const prev = GLOSSARY_TERMS[index - 1];
+const next = GLOSSARY_TERMS[index + 1];
+
+const pageUrl = new URL(`/glossary/${term.slug}/`, Astro.site).toString();
+const alternates = [{ lang: "en", url: pageUrl }, { lang: "x-default", url: pageUrl }];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "DefinedTerm",
+      name: term.term,
+      alternateName: term.full,
+      description: term.shortDef,
+      inDefinedTermSet: {
+        "@type": "DefinedTermSet",
+        name: "Pro UPI QR Payments Glossary",
+        url: new URL("/glossary/", Astro.site).toString()
+      },
+      url: pageUrl
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Glossary", item: "https://www.proupiqr.in/glossary/" },
+        { "@type": "ListItem", position: 3, name: term.term, item: pageUrl }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: term.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "WebPage",
+      "@id": pageUrl
+    }
+  ]
+};
+---
+
+<BaseLayout title={`${term.term} — Meaning & How It Works | Pro UPI QR`} description={term.shortDef} canonical={pageUrl} alternates={alternates} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-8 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-3xl">
+        <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/glossary/" class="hover:text-leaf transition-colors">Glossary</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">{term.term}</span>
+        </nav>
+
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">{term.category}</p>
+        <h1 class="mt-4 text-4xl font-black leading-tight tracking-tight text-forest md:text-5xl">What is {term.term}?</h1>
+        <p class="mt-3 text-sm font-bold uppercase tracking-wide text-forest/50">{term.full} · <span class="normal-case">{term.hindi}</span></p>
+        <p class="mt-5 rounded-[1.5rem] border-l-4 border-leaf bg-mint/70 p-5 text-lg font-semibold leading-8 text-forest">{term.shortDef}</p>
+
+        <div class="mt-7 space-y-5 text-base leading-8 text-forest/85">
+          {term.body.map((paragraph) => <p>{paragraph}</p>)}
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 pb-6 md:px-6 lg:px-8">
+      <div class="rounded-[1.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+        <h2 class="text-xl font-black text-forest">{term.term}: quick answers</h2>
+        <div class="mt-4 grid gap-4">
+          {term.faqs.map((faq) => (
+            <details open class="rounded-2xl bg-cream p-4">
+              <summary class="cursor-pointer list-none text-sm font-black text-forest">{faq.question}</summary>
+              <p class="mt-2 text-sm leading-6 text-forest/75">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-6 md:px-6 lg:px-8">
+      <p class="text-xs font-black uppercase tracking-[0.18em] text-leaf">Use it right now</p>
+      <div class="mt-3 grid gap-3 sm:grid-cols-3">
+        {term.related.map((rel) => (
+          <a href={rel.href} class="group rounded-2xl border border-forest/10 bg-white/88 p-4 text-sm font-bold text-forest shadow-sm transition hover:border-leaf/40 hover:text-leaf">
+            {rel.label}
+            <span class="mt-1 block text-[11px] font-black uppercase tracking-wider text-leaf opacity-80 group-hover:opacity-100">Open →</span>
+          </a>
+        ))}
+      </div>
+    </section>
+
+    <nav aria-label="Adjacent glossary terms" class="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-8 md:px-6 lg:px-8">
+      {prev ? (
+        <a href={`/glossary/${prev.slug}/`} class="rounded-full border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:border-leaf transition">← {prev.term}</a>
+      ) : <span />}
+      <a href="/glossary/" class="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf transition">All terms</a>
+      {next ? (
+        <a href={`/glossary/${next.slug}/`} class="rounded-full border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:border-leaf transition">{next.term} →</a>
+      ) : <span />}
+    </nav>
+  </main>
+</BaseLayout>

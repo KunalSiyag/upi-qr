@@ -1,0 +1,1 @@
+Continue development exactly per ROADMAP.md: pick the highest unchecked item, implement fully, test it in the browser, tick the checkbox, then update ROADMAP.md. Follow AGENTS.md conventions strictly. End with a git commit.

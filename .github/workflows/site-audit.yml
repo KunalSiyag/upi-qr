@@ -1,0 +1,85 @@
+name: Site Quality Gate
+
+# 24/7 automated tester: builds the site and runs every audit on every push,
+# plus a nightly full sweep. Failures show up as red X marks on commits and
+# can notify via email/Slack (GitHub → Settings → Notifications).
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+  schedule:
+    # Nightly full audit at 02:30 UTC (08:00 IST)
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production site
+        run: npx astro build
+        env:
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+
+      - name: JSX guard (no raw class= attributes)
+        run: |
+          if grep -rn 'class="' src/components/*.tsx | grep -v 'className'; then
+            echo "::error::Raw class= found in JSX — use className="
+            exit 1
+          fi
+          echo "[jsx-guard] OK"
+
+      - name: SEO health check (titles, descriptions, schema)
+        run: python3 scripts/seo_health_check.py
+
+      - name: Broken link audit (all internal hrefs/srcs)
+        run: python3 scripts/link_audit.py dist/client --fail-on-broken
+
+      - name: Sitemap sanity (every URL exists in build)
+        run: |
+          python3 - <<'EOF'
+          import re, os
+          xml = open(".vercel/output/static/sitemap.xml").read()
+          locs = re.findall(r"<loc>([^<]+)</loc>", xml)
+          root = ".vercel/output/static"
+          missing = []
+          for loc in locs:
+              p = loc.replace("https://www.proupiqr.in", "")
+              if p == "/":
+                  ok = os.path.isfile(f"{root}/index.html")
+              else:
+                  ok = os.path.isfile(os.path.join(root, p.strip("/"), "index.html"))
+              if not ok:
+                  missing.append(loc)
+          print(f"[sitemap] {len(locs)} URLs checked")
+          if missing:
+              print("[sitemap] MISSING FROM BUILD:")
+              for m in missing:
+                  print(" ", m)
+              raise SystemExit(1)
+          print("[sitemap] OK")
+          EOF
+
+      - name: RSS validity
+        run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"
+
+      - name: Summary
+        if: always()
+        run: echo "Quality gate finished. Check the steps above for failures."

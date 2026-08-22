@@ -1,0 +1,124 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { EmiCalculator } from "../components/EmiCalculator";
+
+const title = "EMI Calculator with Yearly Amortization Schedule PDF | Pro UPI QR";
+const description = "Calculate loan EMI, total interest, and full amortization schedule for home, car, or business loans. Download the yearly schedule as PDF. Free, browser-only.";
+
+const faqs = [
+  {
+    question: "How is EMI calculated?",
+    answer: "EMI = P × r × (1+r)^n / ((1+r)^n − 1), where P is the loan principal, r is the monthly interest rate (annual rate ÷ 12 ÷ 100), and n is the total number of months. Early EMIs are mostly interest; the principal share grows every month."
+  },
+  {
+    question: "Why does total interest sometimes exceed half my EMI payments?",
+    answer: "Long tenures at higher rates do that. A 20-year loan at 9% repays nearly ₹10 lakh interest on a ₹10 lakh principal. Shortening tenure or prepaying early in the schedule cuts interest the most — the yearly table shows exactly where your money goes."
+  },
+  {
+    question: "Does this include processing fees or insurance?",
+    answer: "No. The schedule shows pure principal + interest, which is what your lender's EMI is built on. Add processing fees and insurance separately when comparing offers — they change the effective cost, not the EMI."
+  },
+  {
+    question: "Can I download the full repayment schedule?",
+    answer: "Yes — download the year-by-year amortization table as PDF or PNG for records, discussions with your lender, or sharing with a co-applicant."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "EMI Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/emi-calculator/",
+      description,
+      featureList: [
+        "Monthly EMI calculation for any loan",
+        "Year-by-year amortization table",
+        "Principal vs interest split visualization",
+        "Schedule PDF/PNG export",
+        "Browser-only, no signup"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to calculate loan EMI",
+      step: [
+        { "@type": "HowToStep", name: "Enter loan amount, interest rate, and tenure" },
+        { "@type": "HowToStep", name: "Review monthly EMI and total interest instantly" },
+        { "@type": "HowToStep", name: "Check the yearly amortization table" },
+        { "@type": "HowToStep", name: "Download the schedule as PDF if needed" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">EMI Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Loan EMI calculator with full amortization schedule</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See your exact monthly EMI, how much is really going to interest, and a year-by-year repayment table you can download as PDF — before you sign anything.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#emi-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Calculate my EMI</a>
+            <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="emi-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <EmiCalculator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">EMI questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Selling on EMI? Collect instalments without gateway fees.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/invoice-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Invoice Generator</a>
+          <a href="/payment-reminder-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">EMI Reminder Messages</a>
+          <a href="/tools/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Browse all tools →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

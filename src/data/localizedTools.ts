@@ -14,8 +14,12 @@ export type LocalizedTool = {
   name: string;
   component:
     | "digitalCard" | "dynamicQr" | "stickers" | "gst" | "whatsapp"
-    | "bulk" | "invoice" | "upiCalculator" | "offerPoster" | "menuQr"
-    | "margin" | "limits" | "decoder" | "upiLink" | "survey" | "default";
+    | "bulk" | "invoice" | "receipt" | "paidStamp" | "rentReceipt"
+    | "paymentReminder" | "quotation" | "splitBill" | "cashDenomination"
+    | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip"
+    | "upiCalculator" | "offerPoster"
+    | "menuQr" | "margin" | "limits" | "decoder" | "upiLink" | "survey"
+    | "default";
   copy: Record<SupportedToolLanguage, LocalizedToolCopy>;
 };
 
@@ -283,6 +287,176 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       intro: "क्लायंट PDF मधील QR स्कॅन करून तीच रक्कम भरू शकतो.",
       steps: ["क्लायंट तपशील भरा", "UPI ID जोडा", "PDF डाउनलोड करा"],
       faqs: [{ question: "हे अकाउंटिंग सॉफ्टवेअर आहे का?", answer: "नाही. हे जलद इनव्हॉइस+QR साधन आहे." }]
+    }
+  }),
+  tool("receipt-generator", "Payment Receipt Generator", "receipt", {
+    hi: {
+      name: "पेमेंट रसीद जनरेटर",
+      title: "UPI QR और PAID स्टैम्प वाली मुफ्त रसीद | हिंदी",
+      description: "PAID स्टैम्प और UPI QR के साथ पेमेंट रसीद PDF बनाएं। UPI, नकद, कार्ड या बैंक ट्रांसफर का रिकॉर्ड रखें।",
+      intro: "भुगतान मिलने पर तुरंत रसीद दें। UTR नंबर, पेमेंट मोड और PAID स्टैम्प के साथ PDF या WhatsApp पर भेजें।",
+      steps: ["ग्राहक और रसीद नंबर भरें", "पेमेंट मोड और UTR जोड़ें", "रसीद PDF डाउनलोड करें"],
+      faqs: [{ question: "इनवॉइस और रसीद में क्या अंतर है?", answer: "इनवॉइस भुगतान से पहले बिल है। रसीद भुगतान मिलने का प्रमाण है, जिस पर PAID स्टैम्प लगता है।" }]
+    },
+    ta: {
+      name: "பேமென்ட் ரசீது ஜெனரேட்டர்",
+      title: "UPI QR மற்றும் PAID ஸ்டாம்புடன் இலவச ரசீது",
+      description: "PAID ஸ்டாம்பு மற்றும் UPI QR உடன் பேமென்ட் ரசீது PDF உருவாக்குங்கள்.",
+      intro: "பணம் வந்தவுடன் ரசீது கொடுங்கள். UTR எண், பேமென்ட் முறை மற்றும் PAID ஸ்டாம்புடன் PDF பெறுங்கள்.",
+      steps: ["வாடிக்கையாளர் மற்றும் ரசீது எண் உள்ளிடவும்", "பேமென்ட் முறை மற்றும் UTR சேர்க்கவும்", "ரசீது PDF பதிவிறக்கவும்"],
+      faqs: [{ question: "இன்வாய்ஸ்-க்கும் ரசீதுக்கும் வேறுபாடு?", answer: "இன்வாய்ஸ் பில்; ரசீது பணம் வந்ததற்கான ஆவணம், PAID ஸ்டாம்புடன்." }]
+    },
+    te: {
+      name: "పేమెంట్ రసీదు జనరేటర్",
+      title: "UPI QR మరియు PAID స్టాంప్‌తో ఉచిత రసీదు",
+      description: "PAID స్టాంప్ మరియు UPI QRతో పేమెంట్ రసీదు PDF సృష్టించండి.",
+      intro: "చెల్లింపు వచ్చిన వెంటనే రసీదు ఇవ్వండి. UTR నంబర్, పేమెంట్ మోడ్ మరియు PAID స్టాంప్‌తో PDF పొందండి.",
+      steps: ["కస్టమర్ మరియు రసీదు నంబర్ నమోదు చేయండి", "పేమెంట్ మోడ్ మరియు UTR జోడించండి", "రసీదు PDF డౌన్‌లోడ్ చేయండి"],
+      faqs: [{ question: "ఇన్వాయిస్, రసీదు తేడా?", answer: "ఇన్వాయిస్ బిల్లు; రసీదు చెల్లింపుకు నిరూపణ, PAID స్టాంప్‌తో." }]
+    },
+    mr: {
+      name: "पेमेंट पावती जनरेटर",
+      title: "UPI QR आणि PAID स्टॅम्पसह मोफत पावती",
+      description: "PAID स्टॅम्प आणि UPI QR सह पेमेंट पावती PDF तयार करा.",
+      intro: "पैसे मिळताच पावती द्या. UTR नंबर, पेमेंट मोड आणि PAID स्टॅम्पसह PDF घ्या.",
+      steps: ["ग्राहक आणि पावती क्रमांक भरा", "पेमेंट मोड आणि UTR जोडा", "पावती PDF डाउनलोड करा"],
+      faqs: [{ question: "इनव्हॉइस आणि पावतीमध्ये फरक?", answer: "इनव्हॉइस म्हणजे बिल; पावती म्हणजे पैसे मिळाल्याचा पुरावा, PAID स्टॅम्पसह." }]
+    }
+  }),
+  tool("paid-stamp-generator", "Paid Stamp Generator", "paidStamp", {
+    hi: {
+      name: "PAID स्टैम्प जनरेटर",
+      title: "इनवॉइस फोटो पर PAID स्टैम्प लगाएं | मुफ्त",
+      description: "किसी भी बिल या इनवॉइस फोटो पर तारीख और सिग्नेचर के साथ PAID स्टैम्प लगाएं। पूरी तरह ब्राउज़र में।",
+      intro: "प्रिंट या फोटो वाले बिल पर PAID स्टैम्प लगाएं और स्टैम्प्ड PNG या PDF डाउनलोड करें। कुछ भी अपलोड नहीं होता।",
+      steps: ["बिल की फोटो अपलोड करें", "स्टैम्प टेक्स्ट, रंग और पोजीशन चुनें", "स्टैम्प्ड PNG या PDF डाउनलोड करें"],
+      faqs: [{ question: "क्या बिल कहीं अपलोड होता है?", answer: "नहीं। स्टैम्पिंग आपके ब्राउज़र में होती है। इमेज डिवाइस से बाहर नहीं जाती।" }]
+    },
+    ta: {
+      name: "PAID ஸ்டாம்ப் ஜெனரேட்டர்",
+      title: "இன்வாய்ஸ் போட்டோவில் PAID ஸ்டாம்ப் | இலவசம்",
+      description: "எந்த பில் அல்லது இன்வாய்ஸ் போட்டோவிலும் தேதி மற்றும் சிக்னேச்சருடன் PAID ஸ்டாம்ப் சேர்க்கவும்.",
+      intro: "பிரிண்ட் அல்லது போட்டோ பில்லில் PAID ஸ்டாம்ப் போட்டு ஸ்டாம்ப் செய்யப்பட்ட PNG அல்லது PDF பதிவிறக்கவும்.",
+      steps: ["பில் போட்டோவை பதிவேற்றவும்", "ஸ்டாம்ப் உரை, நிறம், இடத்தை தேர்வு செய்யவும்", "PNG அல்லது PDF பதிவிறக்கவும்"],
+      faqs: [{ question: "பில் எங்காவது பதிவேற்றப்படுகிறதா?", answer: "இல்லை. ஸ்டாம்பிங் உங்கள் உலாவியிலேயே நடக்கிறது." }]
+    },
+    te: {
+      name: "PAID స్టాంప్ జనరేటర్",
+      title: "ఇన్వాయిస్ ఫోటోపై PAID స్టాంప్ | ఉచితం",
+      description: "ఏ బిల్లు లేదా ఇన్వాయిస్ ఫోటోపైనైనా తేదీ మరియు సంతకంతో PAID స్టాంప్ జోడించండి.",
+      intro: "ప్రింట్ లేదా ఫోటో బిల్లుపై PAID స్టాంప్ వేసి స్టాంప్ చేసిన PNG లేదా PDF డౌన్‌లోడ్ చేయండి.",
+      steps: ["బిల్లు ఫోటో అప్‌లోడ్ చేయండి", "స్టాంప్ టెక్స్ట్, రంగు, స్థానం ఎంచుకోండి", "PNG లేదా PDF డౌన్‌లోడ్ చేయండి"],
+      faqs: [{ question: "బిల్లు ఎక్కడైనా అప్‌లోడ్ అవుతుందా?", answer: "లేదు. స్టాంపింగ్ మీ బ్రౌజర్‌లోనే జరుగుతుంది." }]
+    },
+    mr: {
+      name: "PAID स्टॅम्प जनरेटर",
+      title: "इनव्हॉइस फोटोवर PAID स्टॅम्प लावा | मोफत",
+      description: "कोणत्याही बिल किंवा इनव्हॉइस फोटोवर तारीख आणि स्वाक्षरीसह PAID स्टॅम्प लावा.",
+      intro: "प्रिंट केलेल्या किंवा फोटो असलेल्या बिलवर PAID स्टॅम्प लावा आणि स्टॅम्प केलेली PNG किंवा PDF डाउनलोड करा.",
+      steps: ["बिलचा फोटो अपलोड करा", "स्टॅम्प मजकूर, रंग आणि जागा निवडा", "PNG किंवा PDF डाउनलोड करा"],
+      faqs: [{ question: "बिल कुठे अपलोड होते?", answer: "नाही. स्टॅम्पिंग तुमच्या ब्राउझरमध्येच होते." }]
+    }
+  }),
+  tool("rent-receipt-generator", "Rent Receipt Generator", "rentReceipt", {
+    hi: {
+      name: "किराया रसीद जनरेटर",
+      title: "HRA के लिए मुफ्त किराया रसीद PDF | रेवेन्यू स्टैम्प फॉर्मेट",
+      description: "मासिक किराया रसीद बनाएं — शब्दों में राशि, रेवेन्यू स्टैम्प बॉक्स और लैंडलॉर्ड PAN के साथ।",
+      intro: "HRA क्लेम के लिए हर महीने की हस्ताक्षर-योग्य किराया रसीद सेकंडों में बनाएं। PDF डाउनलोड करें।",
+      steps: ["मकान मालिक, किरायेदार और किराया भरें", "महीना और पेमेंट मोड चुनें", "रसीद PDF डाउनलोड करें"],
+      faqs: [{ question: "क्या HRA के लिए हर महीने की रसीद चाहिए?", answer: "हाँ, नियोक्ता आमतौर पर 12 महीनों की हस्ताक्षरित रसीदें मांगते हैं। 'अगला महीना' बटन से नंबरिंग जारी रहती है。" }]
+    },
+    ta: {
+      name: "வாடகை ரசீது ஜெனரேட்டர்",
+      title: "HRA-க்கு இலவச வாடகை ரசீது PDF | ரெவென்யூ ஸ்டாம்ப்",
+      description: "மாத வாடகை ரசீது — வார்த்தைகளில் தொகை, ரெவென்யூ ஸ்டாம்ப் பெட்டி உடன்.",
+      intro: "HRA கிளைமுக்கு ஒவ்வொரு மாதமும் கையொப்பத்திற்கான வாடகை ரசீது உருவாக்கலாம்.",
+      steps: ["வீட்டுஉரிமையாளர், குடியிருப்பாளர் விவரம்", "மாதம் மற்றும் பேமென்ட் முறை தேர்வு", "ரசீது PDF பதிவிறக்கம்"],
+      faqs: [{ question: "HRA-க்கு மாதந்தோறும் ரசீது தேவையா?", answer: "ஆம், பொதுவாக 12 மாத கையொப்பமிட்ட ரசீதுகள் தேவை." }]
+    },
+    te: {
+      name: "అద్దె రశీదు జనరేటర్",
+      title: "HRA కోసం ఉచిత అద్దె రశీదు PDF",
+      description: "నెలవారీ అద్దె రశీదు — పదాల్లో మొత్తం, రెవెన్యూ స్టాంప్ బాక్స్‌తో.",
+      intro: "HRA క్లెయిమ్ కోసం ప్రతి నెలా సంతకానికి సిద్ధమైన అద్దె రశీదు తయారు చేయండి.",
+      steps: ["యజమాని, కౌలుదారు వివరాలు", "నెల మరియు పేమెంట్ మోడ్ ఎంపిక", "రశీదు PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "HRA కి ప్రతి నెల రశీదు కావాలా?", answer: "అవును, సాధారణంగా 12 నెలల సంతకం చేసిన రశీదులు కావాలి." }]
+    },
+    mr: {
+      name: "भाडे पावती जनरेटर",
+      title: "HRA साठी मोफत भाडे पावती PDF",
+      description: "मासिक भाडे पावती — शब्दांत रक्कम आणि रेव्हेन्यू स्टॅम्प चौकटीसह.",
+      intro: "HRA दाव्यासाठी दर महिन्याला स्वाक्षरीसाठी तयार भाडे पावती तयार करा.",
+      steps: ["मालक, भाडेकरू आणि भाडे भरा", "महिना आणि पेमेंट मोड निवडा", "पावती PDF डाउनलोड करा"],
+      faqs: [{ question: "HRA साठी दर महिन्याला पावती लागते का?", answer: "हो, बहुतेक 12 महिन्यांच्या स्वाक्षरी केलेल्या पावत्या मागितल्या जातात." }]
+    }
+  }),
+  tool("payment-reminder-generator", "Payment Reminder Generator", "paymentReminder", {
+    hi: {
+      name: "पेमेंट रिमाइंडर जनरेटर",
+      title: "WhatsApp के लिए पेमेंट याद दिलाने वाला मैसेज | मुफ्त",
+      description: "ओवरड्यू इनवॉइस के लिए विनम्र रिमाइंडर मैसेज बनाएं — फ्रेंडली, प्रोफेशनल या फर्म टोन में।",
+      intro: "असहज पैसों की बातचीत को एक टैप में बदलें। UPI ID जोड़ें और WhatsApp/SMS पर भेजें।",
+      steps: ["इनवॉइस नंबर और राशि भरें", "ड्यू डेट डालें — ओवरड्यू दिन अपने आप गिने जाएंगे", "टोन चुनें और WhatsApp पर भेजें"],
+      faqs: [{ question: "रिमाइंडर में UPI ID देनी चाहिए?", answer: "हाँ, इससे ग्राहक को तुरंत भुगतान का रास्ता मिल जाता है और बहाने खत्म होते हैं।" }]
+    },
+    ta: {
+      name: "பேமென்ட் ரிமைண்டர் ஜெனரேட்டர்",
+      title: "WhatsApp-க்கு பேமென்ட் நினைவூட்டல் | இலவசம்",
+      description: "நிலுவை இன்வாய்ஸுக்கு மரியாதையான நினைவூட்டல் செய்திகள் — நட்பு, நிபுணர் அல்லது கண்டிப்பான டோன்.",
+      intro: "UPI ID சேர்த்து WhatsApp/SMS வழியாக அனுப்புங்கள்.",
+      steps: ["இன்வாய்ஸ் எண், தொகை உள்ளிடவும்", "நிலுவை நாட்கள் தானாக கணக்கிடப்படும்", "டோன் தேர்வு செய்து அனுப்பவும்"],
+      faqs: [{ question: "ரிமைண்டரில் UPI ID கொடுக்கலாமா?", answer: "ஆம், உடனடி பேமென்டுக்கு வழி இருக்கும்." }]
+    },
+    te: {
+      name: "పేమెంట్ రిమైండర్ జనరేటర్",
+      title: "WhatsApp కోసం పేమెంట్ రిమైండర్ మెసేజ్ | ఉచితం",
+      description: "బకాయి ఇన్వాయిస్‌ల కోసం మర్యాదైన రిమైండర్ మెసేజ్‌లు — స్నేహపూర్వక, ప్రొఫెషనల్ లేదా కఠిన టోన్‌లో.",
+      intro: "UPI ID జోడించి WhatsApp/SMS ద్వారా పంపండి.",
+      steps: ["ఇన్వాయిస్ నంబర్, మొత్తం నమోదు", "ఓవర్‌డ్యూ రోజులు స్వయంచాలకంగా లెక్క", "టోన్ ఎంచుకుని పంపండి"],
+      faqs: [{ question: "రిమైండర్‌లో UPI ID ఇవ్వాలా?", answer: "అవును, వెంటనే చెల్లించడానికి మార్గం దొరుకుతుంది." }]
+    },
+    mr: {
+      name: "पेमेंट रिमाइंडर जनरेटर",
+      title: "WhatsApp साठी पेमेंट आठवण संदेश | मोफत",
+      description: "उशिरा झालेल्या बिलांसाठी नम्र आठवण संदेश — मैत्रीपूर्ण, व्यावसायिक किंवा कठोर टोनमध्ये.",
+      intro: "UPI ID जोडा आणि WhatsApp/SMS वर पाठवा.",
+      steps: ["इन्व्हॉइस क्रमांक आणि रक्कम भरा", "उशीर दिवस आपोआप मोजले जातात", "टोन निवडा आणि पाठवा"],
+      faqs: [{ question: "रिमाइंडरमध्ये UPI ID द्यावी का?", answer: "हो, लगेच देयकाचा मार्ग मिळतो." }]
+    }
+  }),
+  tool("quotation-generator", "Quotation Generator", "quotation", {
+    hi: {
+      name: "कोटेशन जनरेटर",
+      title: "GST और UPI एडवांस QR वाला मुफ्त कोटेशन PDF",
+      description: "लाइन आइटम, टैक्स, वैधता तिथि और शर्तों के साथ प्रोफेशनल कोटेशन/एस्टीमेट PDF बनाएं।",
+      intro: "क्लाइंट को साफ-सुथरा एस्टीमेट भेजें — एडवांस के लिए UPI QR भी छप सकता है।",
+      steps: ["बिजनेस, क्लाइंट और कोट नंबर भरें", "आइटम, टैक्स और वैधता तिथि सेट करें", "PDF डाउनलोड या WhatsApp पर भेजें"],
+      faqs: [{ question: "कोटेशन और इनवॉइस में अंतर?", answer: "कोटेशन काम से पहले कीमत बताता है; इनवॉइस देने के बाद भुगतान मांगता है।" }]
+    },
+    ta: {
+      name: "கோட்டேஷன் ஜெனரேட்டர்",
+      title: "GST & UPI QR உடன் இலவச கோட்டேஷன் PDF",
+      description: "லைன் ஐட்டங்கள், வரி, செல்லுபடி தேதி, விதிமுறைகளுடன் கோட்டேஷன் PDF.",
+      intro: "வாடிக்கையாளருக்கு சுத்தமான மதிப்பீடு அனுப்புங்கள்.",
+      steps: ["வணிகம், வாடிக்கையாளர், எண் உள்ளிடவும்", "ஐட்டங்கள், வரி, தேதி அமைக்கவும்", "PDF அல்லது WhatsApp பகிர்வு"],
+      faqs: [{ question: "கோட்டேஷன் vs இன்வாய்ஸ்?", answer: "கோட்டேஷன் முன்மொழிவு; இன்வாய்ஸ் பில்." }]
+    },
+    te: {
+      name: "కోటేషన్ జనరేటర్",
+      title: "GST & UPI QR తో ఉచిత కోటేషన్ PDF",
+      description: "లైన్ ఐటమ్‌లు, పన్ను, చెల్లుబాటు తేదీ, నిబంధనలతో కోటేషన్ PDF.",
+      intro: "కస్టమర్‌కు శుభ్రమైన అంచనా పంపండి.",
+      steps: ["వ్యాపారం, కస్టమర్, నంబర్ నమోదు", "ఐటమ్‌లు, పన్ను, తేదీ సెట్", "PDF లేదా WhatsApp షేర్"],
+      faqs: [{ question: "కోటేషన్ vs ఇన్వాయిస్?", answer: "కోటేషన్ ప్రతిపాదన; ఇన్వాయిస్ బిల్లు." }]
+    },
+    mr: {
+      name: "कोटेशन जनरेटर",
+      title: "GST आणि UPI QR सह मोफत कोटेशन PDF",
+      description: "लाइन आयटम, कर, वैधता तारीख आणि अटींसह कोटेशन PDF तयार करा.",
+      intro: "ग्राहकाला स्वच्छ अंदाज पाठवा.",
+      steps: ["व्यवसाय, ग्राहक, क्रमांक भरा", "आयटम, कर, तारीख सेट करा", "PDF किंवा WhatsApp शेअर"],
+      faqs: [{ question: "कोटेशन vs इन्व्हॉइस?", answer: "कोटेशन म्हणजे प्रस्ताव; इन्व्हॉइस म्हणजे बिल." }]
     }
   }),
   tool("upi-calculator", "UPI Savings Calculator", "upiCalculator", {
@@ -660,6 +834,244 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       intro: "खाते नको. डेटा ब्राउझरमध्येच राहतो.",
       steps: ["नाव भरा", "UPI ID टाका", "लगेच डाउनलोड करा"],
       faqs: [{ question: "नंतर लॉगिन विचारतील का?", answer: "स्टॅटिक QR साठी नाही." }]
+    }
+  }),
+  tool("split-bill-calculator", "Split Bill Calculator", "splitBill", {
+    hi: {
+      name: "बिल स्प्लिट कैलकुलेटर",
+      title: "UPI के साथ बिल बांटें - फेयर शेयर कैलकुलेटर | मुफ्त",
+      description: "दोस्तों में बिल बराबर या कस्टम हिस्सों में बांटें — टिप सहित — और हर एक को WhatsApp पर UPI ID के साथ अपनी राशि भेजें।",
+      intro: "आपने बिल भरा, अब सब आपको लौटाएं। हर शेयर सटीक ₹1 तक राउंड होता है और कुल हमेशा पूरे बिल के बराबर रहता है।",
+      steps: ["बिल और टिप डालें", "लोगों की संख्या चुनें", "हर दोस्त को WhatsApp पर शेयर भेजें"],
+      faqs: [{ question: "क्या कुछ लोग ज़्यादा दे सकते हैं?", answer: "हाँ, कस्टम मोड में हर person की अलग राशि भरें; कम-ज़्यादा होने पर चेतावनी मिलती है।" }]
+    },
+    ta: {
+      name: "பில் ஸ்ப்ளிட் கால்குலேட்டர்",
+      title: "UPI-யுடன் பில் பிரிக்கும் கால்குலேட்டர் | இலவசம்",
+      description: "நண்பர்களுக்கு இடையே பில்லை சமமாக அல்லது தனித்தனியாக பிரித்து WhatsApp-ல் UPI ஐ அனுப்புங்கள்.",
+      intro: "ஒவ்வொரு பங்கும் சரியான ரூபாயில்; மொத்தம் எப்போதும் பில்லுக்கு சமம்.",
+      steps: ["பில், டிப் உள்ளிடவும்", "நபர்கள் எண்ணிக்கை", "WhatsApp-ல் பங்கு அனுப்பவும்"],
+      faqs: [{ question: "சிலர் அதிகமாக கட்டலாமா?", answer: "ஆம், கஸ்டம் மோடில் தனி தொகை; குறை/அதிகம் எச்சரிக்கை உண்டு." }]
+    },
+    te: {
+      name: "బిల్లు స్ప్లిట్ కాలిక్యులేటర్",
+      title: "UPIతో బిల్లు పంచే కాలిక్యులేటర్ | ఉచితం",
+      description: "స్నేహితులతో బిల్లును సమానంగా లేదా కస్టమ్ వాటాలుగా పంచి WhatsApp ద్వారా UPI ID పంపండి.",
+      intro: "ప్రతి వాటా ఖచ్చితంగా రూపాయి వరకు; మొత్తం ఎప్పుడూ బిల్లుకు సమానం.",
+      steps: ["బిల్లు, టిప్ నమోదు", "వ్యక్తుల సంఖ్య ఎంపిక", "WhatsApp లో వాటా పంపిణీ"],
+      faqs: [{ question: "కొందరు ఎక్కువ కట్టవచ్చా?", answer: "అవును, కస్టమ్ మోడ్‌లో వ్యక్తిగత మొత్తాలు; తక్కువ-ఎక్కువ హెచ్చరిక." }]
+    },
+    mr: {
+      name: "बिल स्प्लिट कॅल्क्युलेटर",
+      title: "UPI सह बिल वाटा - फेअर शेअर | मोफत",
+      description: "मित्रांमध्ये बिल समान किंवा कस्टम वाटांमध्ये वाटा आणि WhatsApp वर UPI ID सह रक्कम पाठवा.",
+      intro: "प्रत्येक वाटा अचूक रुपयापर्यंत; एकूण नेहमी बिलइतकाच.",
+      steps: ["बिल आणि टिप भरा", "व्यक्ती संख्या निवडा", "WhatsApp वर वाटा पाठवा"],
+      faqs: [{ question: "काही जण जास्त देऊ शकतात?", answer: "हो, कस्टम मोडमध्ये स्वतंत्र रक्कम; कमी-जास्तीची सूचना मिळते." }]
+    }
+  }),
+  tool("cash-denomination-calculator", "Cash Denomination Calculator", "cashDenomination", {
+    hi: {
+      name: "कैश डेनोमिनेशन कैलकुलेटर",
+      title: "दुकान की कैश गिनती और शिफ्ट क्लोजिंग | मुफ्त टूल",
+      description: "नोट और सिक्कों की गिनती से कैश टोटल निकालें, रिकॉर्ड से variance जांचें, शिफ्ट क्लोजिंग PDF डाउनलोड करें।",
+      intro: "दिन के अंत में ड्रॉअर गिनें — छोटा-ज़्यादा तुरंत दिखे, साफ समरी रिकॉर्ड रहे।",
+      steps: ["हर denomination की गिनती भरें", "expected राशि डालें", "समरी PDF डाउनलोड करें"],
+      faqs: [{ question: "क्या डेटा अपलोड होता है?", answer: "नहीं, सब ब्राउज़र में होता है। साझा कंप्यूटर पर भी सुरक्षित।" }]
+    },
+    ta: {
+      name: "கேஷ் டினாமினேஷன் கால்குலேட்டர்",
+      title: "கடை பணம் கணக்கு & ஷிஃப்ட் முடிவு | இலவசம்",
+      description: "நோட்டு, நாணய எண்ணிக்கையிலிருந்து மொத்தம், வித்தியாசம் சோதனை, ஷிஃப்ட் PDF.",
+      intro: "நாள் இறுதியில் டிராயரை எண்ணுங்கள்; குறை-அதிகம் உடனே தெரியும்.",
+      steps: ["ஒவ்வொரு மதிப்பின் எண்ணிக்கை", "எதிர்பார்க்கும் தொகை", "PDF பதிவிறக்கம்"],
+      faqs: [{ question: "தரவு பதிவேற்றமா?", answer: "இல்லை, எல்லாம் உலாவியிலேயே." }]
+    },
+    te: {
+      name: "క్యాష్ డినామినేషన్ కాలిక్యులేటర్",
+      title: "షాప్ క్యాష్ లెక్క & షిఫ్ట్ క్లోజింగ్ | ఉచితం",
+      description: "నోట్లు, నాణేల లెక్క నుంచి మొత్తం, వ్యత్యాసం తనిఖీ, షిఫ్ట్ PDF.",
+      intro: "రోజు చివర్లో డ్రాయర్ లెక్కించండి; తక్కువ-ఎక్కువ వెంటనే తెలుస్తుంది.",
+      steps: ["ప్రతి విలువ లెక్క", "అంచనా మొత్తం", "PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "డేటా అప్‌లోడా?", answer: "లేదు, అంతా బ్రౌజర్‌లోనే." }]
+    },
+    mr: {
+      name: "कॅश डिनॉमिनेशन कॅल्क्युलेटर",
+      title: "दुकानाची रोख रक्कम आणि शिफ्ट क्लोजिंग | मोफत",
+      description: "नोटा-नाण्यांच्या मोजमापातून एकूण रक्कम, फरक तपासणी आणि शिफ्ट PDF.",
+      intro: "दिवसाच्या शेवटी ड्रॉअर मोजा; कमी-जास्त लगेच दिसेल.",
+      steps: ["प्रत्येक दराची मोजणी", "अपेक्षित रक्कम", "PDF डाउनलोड"],
+      faqs: [{ question: "डेटा अपलोड होतो?", answer: "नाही, सर्व ब्राउझरमध्येच." }]
+    }
+  }),
+  tool("credit-note-generator", "GST Credit Note Generator", "creditNote", {
+    hi: {
+      name: "जीएसटी क्रेडिट नोट जनरेटर",
+      title: "Section 34 फॉर्मेट में मुफ्त GST क्रेडिट नोट PDF",
+      description: "सेल्स रिटर्न, डिस्काउंट या बिलिंग सुधार के लिए GST-कम्प्लायंट क्रेडिट नोट बनाएं — CGST/SGST या IGST के साथ।",
+      intro: "ओरिजिनल इनवॉइस का रेफरेंस जरूरी है; टूल खुद याद दिलाता है और GSTR-1 के लिए PDF देता है।",
+      steps: ["GST विवरण भरें", "ओरिजिनल इनवॉइस रेफर करें", "क्रेडिट PDF डाउनलोड करें"],
+      faqs: [{ question: "क्रेडिट नोट कब जरूरी है?", answer: "इनवॉइस के बाद सेल रिटर्न, डिस्काउंट या रेट सुधार पर Section 34 के तहत जरूरी है।" }]
+    },
+    ta: {
+      name: "GST கிரெடிட் நோட் ஜெனரேட்டர்",
+      title: "Section 34 ஃபார்மெட் GST கிரெடிட் நோட் PDF",
+      description: "சேல்ஸ் ரிட்டர்ன், டிஸ்கவுண்ட், பில்லிங் திருத்தங்களுக்கு GST-இணக்கமான கிரெடிட் நோட்.",
+      intro: "அசல் இன்வாய்ஸ் குறிப்பு கட்டாயம்; GSTR-1-க்கு PDF கிடைக்கும்.",
+      steps: ["GST விவரங்கள்", "அசல் இன்வாய்ஸ் குறிப்பு", "PDF பதிவிறக்கம்"],
+      faqs: [{ question: "கிரெடிட் நோட் எப்போது?", answer: "இன்வாய்ஸுக்குப் பின் ரிட்டர்ன்/டிஸ்கவுண்ட் ஏற்பட்டால் Section 34-ன் கீழ்." }]
+    },
+    te: {
+      name: "GST క్రెడిట్ నోట్ జనరేటర్",
+      title: "Section 34 ఫార్మాట్ GST క్రెడిట్ నోట్ PDF",
+      description: "సేల్స్ రిటర్న్స్, డిస్కౌంట్లు, బిల్లింగ్ సవరణలకు GST-అనుగుణ క్రెడిట్ నోట్.",
+      intro: "ఒరిజినల్ ఇన్వాయిస్ రిఫరెన్స్ తప్పనిసరి; GSTR-1 కోసం PDF.",
+      steps: ["GST వివరాలు", "ఒరిజినల్ ఇన్వాయిస్ రిఫరెన్స్", "PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "క్రెడిట్ నోట్ ఎప్పుడు?", answer: "ఇన్వాయిస్ తర్వాత రిటర్న్/డిస్కౌంట్ జరిగితే Section 34 ప్రకారం." }]
+    },
+    mr: {
+      name: "GST क्रेडिट नोट जनरेटर",
+      title: "Section 34 फॉरमॅटमध्ये मोफत GST क्रेडिट नोट PDF",
+      description: "सेल्स रिटर्न, डिस्काउंट किंवा बिलिंग दुरुस्तीसाठी GST-अनुरूप क्रेडिट नोट.",
+      intro: "मूळ बिलाचा संदर्भ आवश्यक; GSTR-1 साठी PDF मिळते.",
+      steps: ["GST तपशील भरा", "मूळ बिलाचा संदर्भ द्या", "PDF डाउनलोड करा"],
+      faqs: [{ question: "क्रेडिट नोट कधी लागते?", answer: "बिलानंतर रिटर्न/डिस्काउंट झाल्यास Section 34 नुसार." }]
+    }
+  }),
+  tool("emi-calculator", "EMI Calculator", "emiCalculator", {
+    hi: {
+      name: "EMI कैलकुलेटर",
+      title: "लोन EMI कैलकुलेटर - वार्षिक शेड्यूल PDF सहित | मुफ्त",
+      description: "Home, car या business loan की monthly EMI, total interest और year-by-year amortization schedule निकालें। PDF download मुफ्त।",
+      intro: "Sign करने से पहले जानें — हर EMI में कितना interest जा रहा है और कौन-से साल में balance कितना बचेगा।",
+      steps: ["Amount, rate और tenure भरें", "Monthly EMI और interest देखें", "Schedule PDF download करें"],
+      faqs: [{ question: "क्या processing fee शामिल है?", answer: "नहीं। Schedule pure principal + interest दिखाता है — fee/insurance lender के हिसाब से अलग है।" }]
+    },
+    ta: {
+      name: "EMI கால்குலேட்டர்",
+      title: "கடன் EMI கால்குலேட்டர் - ஆண்டு அட்டவணை PDF | இலவசம்",
+      description: "Home/car/business கடனுக்கு monthly EMI, total interest மற்றும் amortization schedule PDF.",
+      intro: "ஒப்படைக்கும் முன் எவ்வளவு interest போகிறது என்று தெரிந்து கொள்ளுங்கள்.",
+      steps: ["Amount, rate, tenure", "EMI மற்றும் interest பார்க்க", "PDF பதிவிறக்கம்"],
+      faqs: [{ question: "Processing fee சேர்க்கப்பட்டதா?", answer: "இல்லை. Principal + interest மட்டுமே." }]
+    },
+    te: {
+      name: "EMI కాలిక్యులేటర్",
+      title: "లోన్ EMI కాలిక్యులేటర్ - ఏడాది షెడ్యూల్ PDF | ఉచితం",
+      description: "Home/car/business లోన్‌కి నెలవారీ EMI, మొత్తం interest, amortization schedule PDF.",
+      intro: "సంతకానికి ముందే interest ఎంత వెళ్తుందో తెలుసుకోండి.",
+      steps: ["Amount, rate, tenure నమోదు", "EMI, interest చూడండి", "PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "Processing fee కలుపుతారా?", answer: "లేదు. Principal + interest మాత్రమే." }]
+    },
+    mr: {
+      name: "EMI कॅल्क्युलेटर",
+      title: "लोन EMI कॅल्क्युलेटर - वार्षिक वेळापत्रक PDF | मोफत",
+      description: "Home/car/business कर्जाची monthly EMI, एकूण व्याज आणि amortization schedule PDF.",
+      intro: "स्वाक्षरीआधी व्याजात किती जाते ते पाहा.",
+      steps: ["रक्कम, दर, कालावधी भरा", "EMI आणि व्याज पाहा", "PDF डाउनलोड करा"],
+      faqs: [{ question: "Processing fee समाविष्ट आहे?", answer: "नाही. फक्त मुद्दल + व्याज." }]
+    }
+  }),
+  tool("gratuity-calculator", "Gratuity Calculator", "gratuity", {
+    hi: {
+      name: "ग्रैच्युटी कैलकुलेटर",
+      title: "Gratuity कैलकुलेटर - 15/26 फॉर्मूला | मुफ्त टूल",
+      description: "नौकरी छोड़ने पर gratuity राशि जानें — 15/26 फॉर्मूला, 5 साल eligibility, ₹20 लाख ceiling के साथ। मुफ्त और तुरंत।",
+      intro: "Payment of Gratuity Act का exact formula — rounding rules समेत, जो ज़्यादातर calculators भूल जाते हैं।",
+      steps: ["Basic + DA salary भरें", "सालों की service डालें", "Gratuity estimate देखें"],
+      faqs: [{ question: "5 साल से कम service पर?", answer: "Act के तहत gratuity नहीं मिलती (death/disability छोड़कर)।" }]
+    },
+    ta: {
+      name: "கிராச்சுவிட்டி கால்குலேட்டர்",
+      title: "கிராச்சுவிட்டி கால்குலேட்டர் - 15/26 ஃபார்முலா | இலவசம்",
+      description: "வேலை விட்டு விலகும்போது கிராச்சுவிட்டி தொகை — 15/26 ஃபார்முலா, 5 ஆண்டு தகுதி, ₹20 லட்சம் வரம்பு.",
+      intro: "Rounding விதிகள் உட்பட exact formula.",
+      steps: ["Basic+DA ஊதியம்", "ஆண்டுகள் service", "Estimate பார்க்க"],
+      faqs: [{ question: "5 வருடத்திற்குக் குறைவா?", answer: "Act-ன் கீழ் இல்லை (death/disability தவிர)." }]
+    },
+    te: {
+      name: "గ్రాచ్యుటీ కాలిక్యులేటర్",
+      title: "గ్రాచ్యుటీ కాలిక్యులేటర్ - 15/26 ఫార్ములా | ఉచితం",
+      description: "ఉద్యోగం విడిచినప్పుడు గ్రాచ్యుటీ — 15/26 ఫార్ములా, 5 ఏళ్ల అర్హత, ₹20 లక్షల సీలింగ్.",
+      intro: "Rounding నియమాలతో సహా ఖచ్చితమైన ఫార్ములా.",
+      steps: ["Basic+DA జీతం", "సంవత్సరాల service", "Estimate చూడండి"],
+      faqs: [{ question: "5 ఏళ్ల లోపా?", answer: "Act కింద రాదు (death/disability తప్ప)." }]
+    },
+    mr: {
+      name: "ग्रॅच्युइटी कॅल्क्युलेटर",
+      title: "ग्रॅच्युइटी कॅल्क्युलेटर - 15/26 फॉर्म्युला | मोफत",
+      description: "नोकरी सोडताना ग्रॅच्युइटी रक्कम — 15/26 फॉर्म्युला, 5 वर्षे पात्रता, ₹20 लाख मर्यादा.",
+      intro: "Rounding नियमांसह बरोबर फॉर्म्युला.",
+      steps: ["Basic+DA पगार", "वर्षे service", "Estimate पाहा"],
+      faqs: [{ question: "5 वर्षांपेक्षा कमी?", answer: "Act नुसार नाही (death/disability सोडून)." }]
+    }
+  }),
+  tool("sip-calculator", "SIP Calculator", "sipCalculator", {
+    hi: {
+      name: "SIP कैलकुलेटर",
+      title: "SIP कैलकुलेटर - Inflation Adjustment सहित | मुफ्त",
+      description: "हर महीने की SIP से कितना corpus बनेगा — year-by-year growth table और inflation-adjusted असली value दोनों देखें।",
+      intro: "Nominal मaturity ही नहीं, आज की purchasing power में value भी — जो ज़्यादातर calculators छिपाते हैं।",
+      steps: ["Monthly amount भरें", "Expected return और years चुनें", "Growth table देखें"],
+      faqs: [{ question: "कौन-सा return assume करें?", answer: "Equity funds historically 11–13% सालाना, debt 6–8%। Returns guaranteed नहीं हैं।" }]
+    },
+    ta: {
+      name: "SIP கால்குலேட்டர்",
+      title: "SIP கால்குலேட்டர் - Inflation Adjustment | இலவசம்",
+      description: "மாத SIP எவ்வளவு corpus உருவாக்கும் — ஆண்டுவாரி growth table மற்றும் inflation-adjusted real value.",
+      intro: "Nominal மட்டுமல்ல, இன்றைய மதிப்பிலும் பாருங்கள்.",
+      steps: ["Monthly தொகை", "Return, வருடங்கள்", "Growth table"],
+      faqs: [{ question: "Return என்ன assume?", answer: "Equity 11–13%, debt 6–8%. Returns உறுதி இல்லை." }]
+    },
+    te: {
+      name: "SIP కాలిక్యులేటర్",
+      title: "SIP కాలిక్యులేటర్ - Inflation Adjustment | ఉచితం",
+      description: "నెలవారీ SIP నుంచి ఎంత corpus — ఏడాది వారీ growth table, inflation-adjusted real value కలిపి.",
+      intro: "Nominal మాత్రమే కాదు, ఈరోజు విలువలో కూడా చూడండి.",
+      steps: ["Monthly మొత్తం", "Return, సంవత్సరాలు", "Growth table"],
+      faqs: [{ question: "Return ఎంత assume?", answer: "Equity 11–13%, debt 6–8%. Returns హామీ కాదు." }]
+    },
+    mr: {
+      name: "SIP कॅल्क्युलेटर",
+      title: "SIP कॅल्क्युलेटर - Inflation Adjustment | मोफत",
+      description: "दरमहिना SIP किती corpus बनवेल — वार्षिक growth table आणि inflation-adjusted खरी किंमत.",
+      intro: "फक्त nominal नाही, आजच्या परताव्यात value पाहा.",
+      steps: ["Monthly रक्कम", "Return, वर्षे", "Growth table पाहा"],
+      faqs: [{ question: "किती return गृहित धरावे?", answer: "Equity 11–13%, debt 6–8%. Return हमखास नसतो." }]
+    }
+  }),
+  tool("salary-slip-generator", "Salary Slip Generator", "salarySlip", {
+    hi: {
+      name: "सैलरी स्लिप जनरेटर",
+      title: "मुफ्त Salary Slip जनरेटर - PF, PT, TDS सहित PDF",
+      description: "छोटे employers हर महीने professional पेस्लिप बनाएं — earnings, deductions, net pay शब्दों में। PDF download मुफ्त।",
+      intro: "HR software की जरूरत नहीं। Employee details भरें, PF/PT quick-fill करें, slip WhatsApp पर भेजें।",
+      steps: ["Company और employee details भरें", "Earnings/deductions डालें", "Slip PDF डाउनलोड करें"],
+      faqs: [{ question: "क्या data upload होता है?", answer: "नहीं, सब browser में होता है। Drafts device पर रहते हैं।" }]
+    },
+    ta: {
+      name: "சம்பள ஸ்லிப் ஜெனரேட்டர்",
+      title: "இலவச சம்பள ஸ்லிப் - PF, TDS உடன் PDF",
+      description: "சிறு முதலாளிகள் மாதாந்திர payslip — earnings, deductions, net pay PDF-ல்.",
+      intro: "HR software இல்லை; details போட்டு slip உருவாக்கி WhatsApp அனுப்பலாம்.",
+      steps: ["Company, employee விவரம்", "Earnings/deductions", "PDF பதிவிறக்கம்"],
+      faqs: [{ question: "Data upload ஆகுமா?", answer: "இல்லை, browser-லேயே." }]
+    },
+    te: {
+      name: "సాలరీ స్లిప్ జనరేటర్",
+      title: "ఉచిత సాలరీ స్లిప్ - PF, TDS తో PDF",
+      description: "చిన్న యజమానులు నెలవారీ payslips — earnings, deductions, net pay PDF.",
+      intro: "HR software అవసరం లేదు; details నింపి slip పంపండి.",
+      steps: ["Company, employee వివరాలు", "Earnings/deductions", "PDF డౌన్‌లోడ్"],
+      faqs: [{ question: "Data upload అవుతుందా?", answer: "లేదు, browser లోనే." }]
+    },
+    mr: {
+      name: "सॅलरी स्लिप जनरेटर",
+      title: "मोफत सॅलरी स्लिप - PF, TDS सह PDF",
+      description: "लहान मालकांसाठी दरमहा payslip — earnings, deductions, net pay PDF.",
+      intro: "HR software नको; details भरून slip WhatsApp वर पाठवा.",
+      steps: ["Company, employee तपशील", "Earnings/deductions", "PDF डाउनलोड"],
+      faqs: [{ question: "Data upload होतो?", answer: "नाही, browser मध्येच." }]
     }
   })
 ];

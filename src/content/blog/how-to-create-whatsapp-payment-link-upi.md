@@ -81,3 +81,10 @@ Request the customer to reply with a screenshot of the transaction receipt once 
 Creating a UPI link for WhatsApp is one of the easiest ways to modernise your customer support chat. It takes less than a minute to generate, reduces the hassle of sharing bank coordinates, and guarantees that payments go to the correct account without errors.
 
 **[Generate a clean WhatsApp Payment Link now &rarr;](https://www.proupiqr.in)**
+
+## Related Guides
+
+- [Payment reminder message templates](/blog/how-to-write-payment-reminder-message-overdue-invoice/) — what to send when the link goes ignored
+- [Quotation vs estimate vs invoice vs receipt](/blog/quotation-vs-estimate-vs-invoice-vs-receipt/) — which document belongs at each stage
+- [Rent receipt format for HRA exemption](/blog/rent-receipt-format-hra-exemption-india/) — for tenants and landlords
+- [Browse all free merchant tools](/tools/)

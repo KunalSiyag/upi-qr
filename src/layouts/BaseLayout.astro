@@ -12,9 +12,10 @@ interface Props {
   schema?: Record<string, unknown>;
   image?: string;
   noindex?: boolean;
+  alternates?: { lang: string; url: string }[];
 }
 
-const { title, description, canonical, schema, image, noindex = false } = Astro.props;
+const { title, description, canonical, schema, image, noindex = false, alternates } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
 const defaultOgImage = "/images/og-image.png";
@@ -85,12 +86,18 @@ if (cleanPath !== "/") {
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/favicon.svg" />
     <link rel="manifest" href="/manifest.json" />
-    {hasEnglish && <link rel="alternate" hreflang="en" href={englishUrl} />}
-    {hasHindi && <link rel="alternate" hreflang="hi" href={hindiUrl} />}
-    {hasTamil && <link rel="alternate" hreflang="ta" href={tamilUrl} />}
-    {hasTelugu && <link rel="alternate" hreflang="te" href={teluguUrl} />}
-    {hasMarathi && <link rel="alternate" hreflang="mr" href={marathiUrl} />}
-    {hasEnglish && <link rel="alternate" hreflang="x-default" href={englishUrl} />}
+    {alternates
+      ? alternates.map((alt) => <link rel="alternate" hreflang={alt.lang} href={alt.url} />)
+      : (
+        <>
+          {hasEnglish && <link rel="alternate" hreflang="en" href={englishUrl} />}
+          {hasHindi && <link rel="alternate" hreflang="hi" href={hindiUrl} />}
+          {hasTamil && <link rel="alternate" hreflang="ta" href={tamilUrl} />}
+          {hasTelugu && <link rel="alternate" hreflang="te" href={teluguUrl} />}
+          {hasMarathi && <link rel="alternate" hreflang="mr" href={marathiUrl} />}
+          {hasEnglish && <link rel="alternate" hreflang="x-default" href={englishUrl} />}
+        </>
+      )}
     <meta name="generator" content={Astro.generator} />
     <meta name="theme-color" content="#113b2c" />
 

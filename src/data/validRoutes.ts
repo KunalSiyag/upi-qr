@@ -1,4 +1,6 @@
-export const ENGLISH_SLUGS = new Set([
+import { GLOSSARY_SLUGS } from "./glossary";
+
+export const ENGLISH_SLUGS = new Set(["glossary",
   "",
   "phonepe-qr-generator",
   "google-pay-qr-generator",
@@ -41,6 +43,19 @@ export const ENGLISH_SLUGS = new Set([
   "survey-qr-generator",
   "generator",
   "invoice-generator",
+  "receipt-generator",
+  "paid-stamp-generator",
+  "rent-receipt-generator",
+  "payment-reminder-generator",
+  "quotation-generator",
+  "split-bill-calculator",
+  "cash-denomination-calculator",
+  "credit-note-generator",
+  "emi-calculator",
+  "gratuity-calculator",
+  "sip-calculator",
+  "salary-slip-generator",
+  "tools",
   "qr-sticker-generator",
   "bulk-qr",
   "upi-calculator",
@@ -60,6 +75,7 @@ export const ENGLISH_SLUGS = new Set([
   "terms",
   "disclaimer",
   "blog",
+  ...GLOSSARY_SLUGS,
 ]);
 
 import { localizedToolSlugs } from "./localizedTools";

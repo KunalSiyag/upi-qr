@@ -1,0 +1,123 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { SipCalculator } from "../components/SipCalculator";
+
+const title = "SIP Calculator with Inflation Adjustment & Growth Table | Pro UPI QR";
+const description = "Project SIP maturity value with yearly growth table and inflation-adjusted real returns. See how ₹5,000 a month compounds over 10-20 years. Free, browser-only.";
+
+const faqs = [
+  {
+    question: "How is SIP maturity value calculated?",
+    answer: "Using the standard future-value formula: FV = P × ((1+i)^n − 1) ÷ i × (1+i), where P is your monthly instalment, i is the monthly return (annual ÷ 12 ÷ 100) and n is total months. The extra (1+i) factor accounts for each instalment compounding from its own deposit date."
+  },
+  {
+    question: "Why does the calculator show an inflation-adjusted value?",
+    answer: "₹1 crore after 20 years will not buy what ₹1 crore buys today. Enter expected inflation (~6% is typical for India) to see your maturity value in today's purchasing power — the number most calculators hide."
+  },
+  {
+    question: "What return should I assume for equity mutual funds?",
+    answer: "Historically, diversified equity funds have delivered around 11–13% annually over long periods, while debt funds sit nearer 6–8%. Returns are not guaranteed — treat projections as planning estimates, not promises."
+  },
+  {
+    question: "Does this account for step-up SIPs or lumpsum additions?",
+    answer: "This version projects a fixed monthly amount. If you plan annual step-ups, run the calculation once per phase or use a higher average monthly figure."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "SIP Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/sip-calculator/",
+      description,
+      featureList: [
+        "Monthly SIP future-value projection",
+        "Year-by-year growth table with gains",
+        "Inflation-adjusted real value",
+        "Invested vs gains split visualization",
+        "Projection PDF/PNG export"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to calculate SIP returns",
+      step: [
+        { "@type": "HowToStep", name: "Enter your monthly investment amount" },
+        { "@type": "HowToStep", name: "Set expected annual return and tenure" },
+        { "@type": "HowToStep", name: "Optionally add inflation to see real value" },
+        { "@type": "HowToStep", name: "Review the yearly growth table" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">SIP Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">SIP calculator with inflation adjustment</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See what your monthly SIP actually becomes — nominal value, wealth gained, a year-by-year growth table, and the honest inflation-adjusted figure in today's money.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#sip-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Project my SIP</a>
+            <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="sip-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <SipCalculator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">SIP questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Collecting payments too? Skip gateway fees entirely.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/emi-calculator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">EMI Calculator</a>
+          <a href="/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Free UPI QR Generator →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

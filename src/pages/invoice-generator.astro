@@ -11,12 +11,16 @@ const faqs = [
     answer: "Yes. Enter your invoice details, UPI ID, amount, GST, discount, and notes. Pro UPI QR generates the payment QR and places it inside a print-ready invoice that you can save as PDF."
   },
   {
+    question: "Does it support currencies and tax systems outside India?",
+    answer: "Yes. Pick a country template at the top of the builder: India GST (₹ with CGST/SGST split), US Sales Tax ($), UK VAT (£), EU VAT (€), UAE VAT (AED), Australia GST (A$), or a generic no-tax global template. Amounts format in the local currency and the tax line relabels automatically; non-INR templates swap the UPI QR for a bank payment details block."
+  },
+  {
     question: "Is the invoice data uploaded to a server?",
     answer: "No. The invoice draft and QR generation run in your browser. Drafts are saved locally on your device so you can continue numbering invoices without creating an account."
   },
   {
     question: "Who should use this UPI invoice generator?",
-    answer: "It is useful for freelancers, consultants, home bakers, tuition teachers, clinics, photographers, plumbers, electricians, and shop owners who want customers to scan and pay directly from the invoice."
+    answer: "It is useful for freelancers, consultants, home bakers, tuition teachers, clinics, photographers, plumbers, electricians, exporters, and shop owners who want customers to scan and pay directly from the invoice."
   },
   {
     question: "Can developers integrate Pro UPI QR into their own apps?",
@@ -37,6 +41,7 @@ const schema = {
       "featureList": [
         "Invoice PDF generator",
         "Embedded UPI QR code",
+        "Country templates: India GST, US, UK, EU, UAE, Australia",
         "GST and discount calculation",
         "Local browser draft saving",
         "Print and save as PDF"
@@ -81,7 +86,7 @@ const schema = {
         <div class="max-w-4xl">
           <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Merchant toolkit</p>
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free UPI invoice generator with QR code PDF</h1>
-          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Create a professional invoice, calculate GST and discounts, embed a UPI payment QR automatically, then print or save as PDF for WhatsApp, email, or client billing.</p>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Create a professional invoice, calculate GST, VAT, or sales tax with country templates for India, US, UK, EU, UAE, and Australia — then embed a UPI payment QR and save as PDF for WhatsApp, email, or client billing.</p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#invoice-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create invoice PDF</a>
             <a href="#roadmap" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">See API roadmap</a>
@@ -102,16 +107,17 @@ const schema = {
         <h2 class="mt-3 text-3xl font-black tracking-tight md:text-5xl">From QR generator to UPI merchant toolkit.</h2>
         <div class="mt-8 grid gap-4 md:grid-cols-3">
           {[
-            ["Public API", "Generate PNG, SVG, base64 QR, UPI URI, and invoice PDFs from billing systems and POS apps."],
-            ["Payment links", "Create hosted pay pages like /pay/invoice-102 with logo, amount, UPI button, and QR."],
-            ["Bulk CSV invoices", "Upload customer or room lists and export hundreds of payment-ready invoices or QR posters."],
-            ["JavaScript embed", "Drop a script into any website to render a Pay via UPI widget without backend code."],
-            ["Receipt generator", "Mark invoices as paid, add a paid stamp, and export receipt PDFs for customers."],
-            ["QR poster redesign", "Upload an existing bank QR image, extract the UPI intent, and turn it into a branded standee."],
-          ].map(([heading, copy]) => (
+            ["Public API", "Generate PNG, SVG, base64 QR, UPI URI, and invoice PDFs from billing systems and POS apps.", ""],
+            ["Payment links", "Create hosted pay pages like /pay/invoice-102 with logo, amount, UPI button, and QR.", ""],
+            ["Bulk CSV invoices", "Upload customer or room lists and export hundreds of payment-ready invoices or QR posters.", ""],
+            ["JavaScript embed", "Drop a script into any website to render a Pay via UPI widget without backend code.", ""],
+            ["Receipt generator — Live now", "Mark payments as received with a PAID-stamped receipt PDF that records mode, UTR, and a UPI QR.", "/receipt-generator/"],
+            ["Paid stamp generator — Live now", "Upload an existing bill photo and stamp it PAID with date and signature, fully in your browser.", "/paid-stamp-generator/"],
+          ].map(([heading, copy, href]) => (
             <article class="rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
               <h3 class="text-xl font-black">{heading}</h3>
               <p class="mt-3 text-sm leading-7 text-white/72">{copy}</p>
+              {href && <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">Open tool →</a>}
             </article>
           ))}
         </div>

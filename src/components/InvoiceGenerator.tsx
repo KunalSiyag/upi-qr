@@ -1,12 +1,58 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
+import { toPng } from "html-to-image";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
 const draftKey = "proupiqr-invoice-draft";
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value || 0);
+const EXPORT_TIMEOUT_MS = 20000;
+
+function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
+  return new Promise<T>((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`${label} timed out`)), EXPORT_TIMEOUT_MS);
+    promise.then(
+      (value) => { clearTimeout(timer); resolve(value); },
+      (err) => { clearTimeout(timer); reject(err); }
+    );
+  });
+}
+
+type InvoiceTemplate = {
+  id: string;
+  flag: string;
+  label: string;
+  currency: string;
+  locale: string;
+  taxLabel: string;
+  taxIdLabel: string;
+  defaultTax: string;
+  docTitle: string;
+  splitTax?: boolean;
+};
+
+export const invoiceTemplates: InvoiceTemplate[] = [
+  { id: "in-gst", flag: "🇮🇳", label: "India · GST ₹", currency: "INR", locale: "en-IN", taxLabel: "GST", taxIdLabel: "GSTIN", defaultTax: "18", docTitle: "Tax invoice", splitTax: true },
+  { id: "us-sales", flag: "🇺🇸", label: "USA · Sales Tax $", currency: "USD", locale: "en-US", taxLabel: "Sales Tax", taxIdLabel: "EIN / Tax ID", defaultTax: "0", docTitle: "Invoice" },
+  { id: "uk-vat", flag: "🇬🇧", label: "UK · VAT £", currency: "GBP", locale: "en-GB", taxLabel: "VAT", taxIdLabel: "VAT Reg. No.", defaultTax: "20", docTitle: "VAT invoice" },
+  { id: "eu-vat", flag: "🇪🇺", label: "EU · VAT €", currency: "EUR", locale: "en-IE", taxLabel: "VAT", taxIdLabel: "VAT ID", defaultTax: "19", docTitle: "VAT invoice" },
+  { id: "ae-vat", flag: "🇦🇪", label: "UAE · VAT د.إ", currency: "AED", locale: "en-AE", taxLabel: "VAT", taxIdLabel: "TRN", defaultTax: "5", docTitle: "Tax invoice" },
+  { id: "au-gst", flag: "🇦🇺", label: "Australia · GST A$", currency: "AUD", locale: "en-AU", taxLabel: "GST", taxIdLabel: "ABN", defaultTax: "10", docTitle: "Tax invoice" },
+  { id: "global", flag: "🌍", label: "Global · No Tax", currency: "USD", locale: "en-001", taxLabel: "Tax", taxIdLabel: "Tax ID", defaultTax: "0", docTitle: "Invoice" }
+];
+
+function makeMoney(locale: string, currency: string) {
+  return (value: number) => new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(value || 0);
+}
+
+function formatDate(iso: string, locale: string) {
+  const date = new Date(iso);
+  if (!iso || isNaN(date.getTime())) return iso;
+  try {
+    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(date);
+  } catch {
+    return iso;
+  }
 }
 
 function isValidUpiId(upiId: string) {
@@ -28,8 +74,11 @@ const initialItems: InvoiceItem[] = [
 ];
 
 export function InvoiceGenerator() {
+  const [templateId, setTemplateId] = useState("in-gst");
   const [merchant, setMerchant] = useState("ABC Solutions");
+  const [taxId, setTaxId] = useState("");
   const [upiId, setUpiId] = useState("merchant@upi");
+  const [bankDetails, setBankDetails] = useState("");
   const [customer, setCustomer] = useState("Client Name");
   const [invoiceNo, setInvoiceNo] = useState("INV-0001");
   const [invoiceDate, setInvoiceDate] = useState(today);
@@ -40,13 +89,19 @@ export function InvoiceGenerator() {
   const [items, setItems] = useState<InvoiceItem[]>(initialItems);
   const [qrDataUrl, setQrDataUrl] = useState("");
 
+  const template = invoiceTemplates.find((t) => t.id === templateId) ?? invoiceTemplates[0];
+  const money = useMemo(() => makeMoney(template.locale, template.currency), [template]);
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const draft = JSON.parse(saved);
+      setTemplateId(invoiceTemplates.some((t) => t.id === draft.templateId) ? draft.templateId : "in-gst");
       setMerchant(draft.merchant ?? "ABC Solutions");
+      setTaxId(draft.taxId ?? "");
       setUpiId(draft.upiId ?? "merchant@upi");
+      setBankDetails(draft.bankDetails ?? "");
       setCustomer(draft.customer ?? "Client Name");
       setInvoiceNo(draft.invoiceNo ?? "INV-0001");
       setInvoiceDate(draft.invoiceDate ?? today);
@@ -79,12 +134,19 @@ export function InvoiceGenerator() {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
-  }, [merchant, upiId, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
+    localStorage.setItem(draftKey, JSON.stringify({ templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
+  }, [templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
+
+  const selectTemplate = (nextId: string) => {
+    setTemplateId(nextId);
+    const next = invoiceTemplates.find((t) => t.id === nextId);
+    if (next) setGstPercent(next.defaultTax);
+  };
 
   const invoiceRef = useRef<HTMLDivElement | null>(null);
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
   const [downloadPngState, setDownloadPngState] = useState<"idle" | "busy" | "error">("idle");
+  const [shareState, setShareState] = useState<"idle" | "busy">("idle");
 
   const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
@@ -93,38 +155,42 @@ export function InvoiceGenerator() {
   const addItem = () => setItems((current) => [...current, { id: Date.now(), name: "New item", qty: "1", price: "0" }]);
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
 
-  async function downloadInvoicePdf() {
-    if (!invoiceRef.current) return;
+  function safeInvoiceNo() {
+    return (invoiceNo || "invoice")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-|-$/g, "");
+  }
+
+  async function renderPaperToPng() {
+    if (!invoiceRef.current) throw new Error("Invoice preview not ready");
+    const el = invoiceRef.current;
+
+    const clone = el.cloneNode(true) as HTMLDivElement;
+    clone.style.position = "fixed";
+    clone.style.left = "0";
+    clone.style.top = "0";
+    clone.style.zIndex = "-9999";
+    clone.style.opacity = "0";
+    clone.style.pointerEvents = "none";
+    clone.style.width = "800px";
+    clone.style.minWidth = "800px";
+    clone.style.maxWidth = "800px";
+    clone.style.padding = "36px";
+    clone.style.boxSizing = "border-box";
+    clone.style.height = "auto";
+    clone.style.boxShadow = "none";
+    clone.style.border = "none";
+    clone.style.borderRadius = "0";
+
+    document.body.appendChild(clone);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+
+    const measuredHeight = clone.offsetHeight;
+    const targetHeight = measuredHeight || 1100;
+
     try {
-      setDownloadPdfState("busy");
-      const { toPng } = await import("html-to-image");
-      const { jsPDF } = await import("jspdf");
-      const el = invoiceRef.current;
-      
-      const clone = el.cloneNode(true) as HTMLDivElement;
-      clone.style.position = "fixed";
-      clone.style.left = "0";
-      clone.style.top = "0";
-      clone.style.zIndex = "-9999";
-      clone.style.opacity = "0";
-      clone.style.pointerEvents = "none";
-      clone.style.width = "800px";
-      clone.style.minWidth = "800px";
-      clone.style.maxWidth = "800px";
-      clone.style.padding = "36px";
-      clone.style.boxSizing = "border-box";
-      clone.style.height = "auto";
-      clone.style.boxShadow = "none";
-      clone.style.border = "none";
-      clone.style.borderRadius = "0";
-      
-      document.body.appendChild(clone);
-      await new Promise((resolve) => setTimeout(resolve, 250));
-
-      const measuredHeight = clone.offsetHeight;
-      const targetHeight = measuredHeight || 1100;
-
-      const dataUrl = await toPng(clone, {
+      const dataUrl = await withTimeout(toPng(clone, {
         cacheBust: true,
         pixelRatio: 2,
         width: 800,
@@ -147,9 +213,19 @@ export function InvoiceGenerator() {
           border: "none",
           borderRadius: "0"
         }
-      });
-
+      }));
+      return { dataUrl, targetHeight };
+    } finally {
       document.body.removeChild(clone);
+    }
+  }
+
+  async function downloadInvoicePdf() {
+    if (!invoiceRef.current) return;
+    try {
+      setDownloadPdfState("busy");
+      const { jsPDF } = await withTimeout(import("jspdf"), "PDF engine");
+      const { dataUrl, targetHeight } = await renderPaperToPng();
 
       const pxToMm = 0.2646;
       const widthMm = 800 * pxToMm;
@@ -162,13 +238,7 @@ export function InvoiceGenerator() {
       });
 
       pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
-      
-      const safeInvoiceNo = (invoiceNo || "invoice")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
-
-      pdf.save(`${safeInvoiceNo}.pdf`);
+      pdf.save(`${safeInvoiceNo()}.pdf`);
       setDownloadPdfState("idle");
     } catch (err) {
       console.error("PDF download failed:", err);
@@ -176,71 +246,20 @@ export function InvoiceGenerator() {
     }
   }
 
+  async function dataUrlToPngFile(dataUrl: string, fileName: string) {
+    const blob = await (await fetch(dataUrl)).blob();
+    return new File([blob], fileName, { type: "image/png" });
+  }
+
   async function downloadInvoicePng() {
     if (!invoiceRef.current) return;
     try {
       setDownloadPngState("busy");
-      const { toPng } = await import("html-to-image");
-      const el = invoiceRef.current;
-      
-      const clone = el.cloneNode(true) as HTMLDivElement;
-      clone.style.position = "fixed";
-      clone.style.left = "0";
-      clone.style.top = "0";
-      clone.style.zIndex = "-9999";
-      clone.style.opacity = "0";
-      clone.style.pointerEvents = "none";
-      clone.style.width = "800px";
-      clone.style.minWidth = "800px";
-      clone.style.maxWidth = "800px";
-      clone.style.padding = "36px";
-      clone.style.boxSizing = "border-box";
-      clone.style.height = "auto";
-      clone.style.boxShadow = "none";
-      clone.style.border = "none";
-      clone.style.borderRadius = "0";
-      
-      document.body.appendChild(clone);
-      await new Promise((resolve) => setTimeout(resolve, 250));
-
-      const measuredHeight = clone.offsetHeight;
-      const targetHeight = measuredHeight || 1100;
-
-      const dataUrl = await toPng(clone, {
-        cacheBust: true,
-        pixelRatio: 2,
-        width: 800,
-        height: targetHeight,
-        style: {
-          opacity: "1",
-          transform: "none",
-          transformOrigin: "top left",
-          width: "800px",
-          height: `${targetHeight}px`,
-          maxWidth: "800px",
-          maxHeight: `${targetHeight}px`,
-          minWidth: "800px",
-          minHeight: `${targetHeight}px`,
-          margin: "0",
-          padding: "36px",
-          boxSizing: "border-box",
-          backgroundColor: "#ffffff",
-          boxShadow: "none",
-          border: "none",
-          borderRadius: "0"
-        }
-      });
-
-      document.body.removeChild(clone);
-
-      const safeInvoiceNo = (invoiceNo || "invoice")
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, "-")
-        .replace(/^-|-$/g, "");
+      const { dataUrl } = await renderPaperToPng();
 
       const link = document.createElement("a");
       link.href = dataUrl;
-      link.download = `${safeInvoiceNo}.png`;
+      link.download = `${safeInvoiceNo()}.png`;
       link.click();
       setDownloadPngState("idle");
     } catch (err) {
@@ -249,18 +268,63 @@ export function InvoiceGenerator() {
     }
   }
 
-  const shareOnWhatsapp = () => {
-    const message = `*Tax Invoice from ${merchant || "Merchant"}*\n` +
+  function buildShareMessage() {
+    return `*${template.docTitle} from ${merchant || "Merchant"}*\n` +
       `----------------------------\n` +
       `*Invoice No:* ${invoiceNo}\n` +
       `*Customer:* ${customer}\n` +
       `*Total Payable:* ${money(totals.total)}\n` +
-      `*Due Date:* ${dueDate}\n\n` +
-      `*Pay via UPI App:* ${upiUrl}\n\n` +
+      `*Due Date:* ${formatDate(dueDate, template.locale)}\n\n` +
+      (template.currency === "INR" ? `*Pay via UPI:* ${upiId || "yourname@upi"}\nThe attached invoice has a scan-and-pay QR.\n\n` : "") +
       `Generated free via Pro UPI QR (https://www.proupiqr.in)`;
-    const url = `https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`;
-    window.open(url, "_blank");
-  };
+  }
+
+  async function shareOnWhatsapp() {
+    if (shareState === "busy") return;
+    try {
+      setShareState("busy");
+
+      let sharedVisually = false;
+      if (navigator.share && navigator.canShare) {
+        try {
+          const { dataUrl } = await renderPaperToPng();
+          const file = await dataUrlToPngFile(dataUrl, `${safeInvoiceNo()}.png`);
+          if (navigator.canShare({ files: [file] })) {
+            await navigator.share({
+              files: [file],
+              title: `${template.docTitle} ${invoiceNo}`,
+              text: buildShareMessage()
+            });
+            sharedVisually = true;
+          }
+        } catch (err) {
+          if ((err as DOMException)?.name === "AbortError") {
+            setShareState("idle");
+            return;
+          }
+          console.warn("Native share unavailable, falling back to download + WhatsApp.", err);
+        }
+      }
+
+      if (!sharedVisually) {
+        try {
+          const { dataUrl } = await renderPaperToPng();
+          const link = document.createElement("a");
+          link.href = dataUrl;
+          link.download = `${safeInvoiceNo()}.png`;
+          link.click();
+        } catch (err) {
+          console.error("Invoice image export failed:", err);
+        }
+        window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(buildShareMessage())}`, "_blank");
+      }
+
+      setShareState("idle");
+    } catch (err) {
+      console.error("WhatsApp share failed:", err);
+      setShareState("idle");
+    }
+  }
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
@@ -273,9 +337,11 @@ export function InvoiceGenerator() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={shareOnWhatsapp}
-              className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm"
+              disabled={shareState === "busy"}
+              title="Share the invoice image with a scan-and-pay QR via WhatsApp"
+              className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
             >
-              💬 WhatsApp Share
+              {shareState === "busy" ? "Preparing…" : "💬 WhatsApp Share"}
             </button>
             <button
               onClick={downloadInvoicePdf}
@@ -294,14 +360,32 @@ export function InvoiceGenerator() {
           </div>
         </div>
 
+        <div className="mt-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Country template</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {invoiceTemplates.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => selectTemplate(t.id)}
+                aria-pressed={t.id === templateId}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${t.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
+              >
+                {t.flag} {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">Business name<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">UPI ID<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{template.taxIdLabel} (optional)<input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder={`${template.taxIdLabel} shown on invoice`} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">UPI ID{template.currency !== "INR" && " (INR payments only)"}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Customer<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Invoice number<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Invoice date<input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">GST %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{template.taxLabel} %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Discount ₹<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
@@ -317,21 +401,23 @@ export function InvoiceGenerator() {
           ))}
         </div>
 
-        <label className="mt-5 block text-sm font-bold text-forest">Invoice notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
+        <label className="mt-5 block text-sm font-bold text-forest">Invoice notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="mt-4 block text-sm font-bold text-forest">{template.currency === "INR" ? "Bank / payment details (optional)" : "Bank / payment details"}<textarea value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} rows={3} placeholder={template.currency === "INR" ? "Shown below the QR if filled" : "Account name, IBAN / account no., SWIFT, payment terms…"} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
       </div>
 
       <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Tax invoice</p>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{template.docTitle} · {template.flag} {template.currency}</p>
             <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
+            {taxId && <p className="mt-1 text-sm font-semibold text-forest/65">{template.taxIdLabel}: {taxId}</p>}
             <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
           </div>
           <div className="rounded-2xl bg-mint p-4 text-right">
             <p className="text-sm font-black text-forest">{invoiceNo}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">Issued: {invoiceDate}</p>
-            <p className="text-xs font-semibold text-forest/65">Due: {dueDate}</p>
+            <p className="mt-1 text-xs font-semibold text-forest/65">Issued: {formatDate(invoiceDate, template.locale)}</p>
+            <p className="text-xs font-semibold text-forest/65">Due: {formatDate(dueDate, template.locale)}</p>
           </div>
         </header>
 
@@ -349,13 +435,30 @@ export function InvoiceGenerator() {
 
         <section className="mt-6 grid gap-6 sm:grid-cols-[1fr_260px]">
           <div className="rounded-2xl border border-dashed border-forest/20 p-4">
-            <p className="text-sm font-black text-forest">Payment QR</p>
-            <div className="mt-3 flex items-center gap-4">{qrDataUrl && <img src={qrDataUrl} alt="UPI payment QR for this invoice" className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-sm leading-6 text-forest/70">Scan with PhonePe, Google Pay, Paytm, BHIM, or any UPI app. The QR includes invoice number and payable amount.</p></div>
+            {template.currency === "INR" ? (
+              <>
+                <p className="text-sm font-black text-forest">Payment QR</p>
+                <div className="mt-3 flex items-center gap-4">{qrDataUrl && <img src={qrDataUrl} alt="UPI payment QR for this invoice" className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-sm leading-6 text-forest/70">Scan with PhonePe, Google Pay, Paytm, BHIM, or any UPI app. The QR includes invoice number and payable amount.</p></div>
+                {bankDetails && <p className="mt-3 whitespace-pre-line border-t border-dashed border-forest/15 pt-3 text-xs leading-5 text-forest/70"><strong className="text-forest">Bank details:</strong>{"\n"}{bankDetails}</p>}
+              </>
+            ) : (
+              <>
+                <p className="text-sm font-black text-forest">Payment details</p>
+                {bankDetails ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-forest/75">{bankDetails}</p> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 font-semibold text-amber-800">Add your bank account, IBAN / account number, SWIFT code, or other payment instructions in the builder so customers know how to pay.</p>}
+              </>
+            )}
           </div>
           <div className="space-y-2 text-sm">
             <div className="flex justify-between"><span>Subtotal</span><strong>{money(totals.subtotal)}</strong></div>
             <div className="flex justify-between"><span>Discount</span><strong>- {money(totals.discountValue)}</strong></div>
-            <div className="flex justify-between"><span>GST ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
+            {template.splitTax && (Number(gstPercent) || 0) > 0 ? (
+              <>
+                <div className="flex justify-between"><span>CGST ({(Number(gstPercent) || 0) / 2}%)</span><strong>{money(totals.gst / 2)}</strong></div>
+                <div className="flex justify-between"><span>SGST ({(Number(gstPercent) || 0) / 2}%)</span><strong>{money(totals.gst / 2)}</strong></div>
+              </>
+            ) : (
+              <div className="flex justify-between"><span>{template.taxLabel} ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
+            )}
             <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">Total</span><strong>{money(totals.total)}</strong></div>
           </div>
         </section>

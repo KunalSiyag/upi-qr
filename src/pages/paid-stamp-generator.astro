@@ -1,0 +1,134 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PaidStampGenerator } from "../components/PaidStampGenerator";
+
+const title = "Free Paid Stamp Generator for Invoices & Bills | Pro UPI QR";
+const description = "Add a PAID stamp with date and signature to any invoice photo or PDF page. Also download a transparent PAID stamp PNG. Runs fully in your browser — no upload, no login.";
+
+const faqs = [
+  {
+    question: "How do I add a PAID stamp to an invoice photo?",
+    answer: "Take a photo of the bill or screenshot the invoice, upload it to this tool, adjust the stamp position, size, and ink opacity, then download the stamped PNG or PDF. Everything happens on your device."
+  },
+  {
+    question: "Is my invoice uploaded anywhere?",
+    answer: "No. The stamping runs entirely inside your browser using canvas. Your customer invoices, bills, and receipts never leave your phone or laptop, and nothing is stored after you close the tab."
+  },
+  {
+    question: "Can I change the stamp text instead of PAID?",
+    answer: "Yes. Type any text up to 18 characters such as RECEIVED, SETTLED, CANCELLED, VERIFIED, or DUPLICATE. You can also add a date line like 'Paid on 21 Aug 2026' and a signature name under the stamp."
+  },
+  {
+    question: "Can I get just the stamp without an image?",
+    answer: "Yes. Skip the upload and download a transparent PAID stamp PNG that you can overlay on documents in Word, Canva, or any photo editor."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Paid Stamp Generator by Pro UPI QR",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/paid-stamp-generator/",
+      "description": description,
+      "featureList": [
+        "PAID stamp on invoice photos",
+        "Custom stamp text and colours",
+        "Date line and signature option",
+        "Transparent stamp PNG export",
+        "100% browser-based processing"
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to add a paid stamp to an invoice",
+      "description": "Stamp PAID on any invoice photo directly in your browser.",
+      "step": [
+        { "@type": "HowToStep", "name": "Upload the invoice photo or screenshot" },
+        { "@type": "HowToStep", "name": "Choose stamp text, colour, size, and position" },
+        { "@type": "HowToStep", "name": "Optionally add payment date and signature" },
+        { "@type": "HowToStep", "name": "Download the stamped PNG or PDF" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/#tools" class="hover:text-leaf transition-colors">Merchant Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Paid Stamp Generator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Merchant toolkit</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free paid stamp generator for invoices &amp; bills</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Already printed or photographed the bill? Upload it, stamp PAID with the payment date and your signature, then download the stamped copy. Nothing is uploaded — stamping happens in your browser.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#stamp-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Stamp my invoice</a>
+            <a href="/receipt-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Create a fresh receipt →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="stamp-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <PaidStampGenerator client:load />
+      </div>
+    </section>
+
+    <section id="related-tools" class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Complete the billing loop</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight md:text-5xl">Bill, collect, and prove payment.</h2>
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            ["UPI Invoice Generator", "Start clean. Create GST-ready invoice PDFs with an embedded payment QR.", "/invoice-generator/", "Open invoice tool"],
+            ["Payment Receipt Generator", "Acknowledge payments with a receipt PDF that includes mode, UTR, and UPI QR.", "/receipt-generator/", "Open receipt tool"],
+            ["UPI QR Generator", "Print a permanent counter QR standee so customers pay you instantly.", "/", "Create counter QR"]
+          ].map(([heading, copy, href, cta]) => (
+            <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
+              <h3 class="text-xl font-black">{heading}</h3>
+              <p class="mt-3 flex-1 text-sm leading-7 text-white/72">{copy}</p>
+              <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">{cta} →</a>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Paid stamp questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

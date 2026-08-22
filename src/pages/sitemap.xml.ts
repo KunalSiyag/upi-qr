@@ -1,6 +1,7 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
 import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS } from "../data/validRoutes";
+import { GLOSSARY_TERMS } from "../data/glossary";
 
 // Programmatically generate all valid static paths for each locale
 const allStaticPaths: string[] = [
@@ -46,9 +47,10 @@ export const GET: APIRoute = async ({ site }) => {
   const baseUrl = site?.toString().replace(/\/$/, "") ?? "https://www.proupiqr.in";
 
   const blogPosts = await getCollection("blog");
+  const hindiBlogPosts = await getCollection("blogHi");
 
   const entries = [
-    ...uniquePaths.map((path) => ({
+    ...uniquePaths.filter((path) => !path.startsWith("/glossary/")).map((path) => ({
       path,
       // Recrawl signal for locale tool URLs that GSC previously logged as 404.
       lastmod: path.startsWith("/hi/") && !path.includes("/blog/")
@@ -57,6 +59,24 @@ export const GET: APIRoute = async ({ site }) => {
     })),
     ...blogPosts.map((post) => ({
       path: `/blog/${post.id.replace(/\.mdx?$/, "")}/`,
+      lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
+      image: post.data.image
+        ? post.data.image.startsWith("http")
+          ? post.data.image
+          : `${baseUrl}${post.data.image.startsWith("/") ? "" : "/"}${post.data.image}`
+        : null,
+      title: post.data.title,
+    })),
+    // Glossary knowledge-base pages.
+    ...GLOSSARY_TERMS.map((term) => ({
+      path: `/glossary/${term.slug}/`,
+      lastmod: formatLastmod(new Date()),
+      image: null,
+      title: `${term.term} — ${term.full}`,
+    })),
+    // Indexable Hindi translations (paired with English via hreflang).
+    ...hindiBlogPosts.map((post) => ({
+      path: `/hi/blog/${post.id.replace(/\.mdx?$/, "")}/`,
       lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
       image: post.data.image
         ? post.data.image.startsWith("http")

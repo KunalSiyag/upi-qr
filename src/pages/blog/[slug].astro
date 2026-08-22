@@ -112,9 +112,22 @@ const schema = {
   "@context": "https://schema.org",
   "@graph": graph
 };
+
+// Hindi translation (if it exists) → hreflang cluster for bilingual indexing.
+import { getCollection as getBlogCollections } from "astro:content";
+const hasHindiTranslation = (await getBlogCollections("blogHi")).some(
+  (p) => p.id.replace(/\.mdx?$/, "") === postSlug
+);
+const alternates = [
+  { lang: "en", url: postUrl },
+  ...(hasHindiTranslation
+    ? [{ lang: "hi", url: new URL(`/hi/blog/${postSlug}/`, Astro.site).toString() }]
+    : []),
+  { lang: "x-default", url: postUrl }
+];
 ---
 
-<BaseLayout title={title} description={description} schema={schema} image={post.data.image}>
+<BaseLayout title={title} description={description} schema={schema} image={post.data.image} alternates={alternates}>
   <main class="mx-auto max-w-4xl px-4 py-16 md:px-6 lg:px-8">
     <article class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-12">
       

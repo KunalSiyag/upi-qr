@@ -73,3 +73,14 @@ No. Standard UPI only operates between domestic Indian bank accounts. If you wor
 
 ## Design Your Invoices Faster
 Make billing a breeze. Head over to our dedicated [Invoice PDF Generator](/invoice-generator/) to design GST-ready invoices with an embedded UPI QR code that clients can settle in seconds.
+
+## Keep the Money Moving
+
+Invoicing is only one step of the freelance money loop. Complete it with these free tools and guides:
+
+- **Quotations that win work** — send estimates with validity dates and an advance-payment QR using the [quotation generator](/quotation-generator/), or learn [which document to send when](/blog/quotation-vs-estimate-vs-invoice-vs-receipt/)
+- **Polite payment chasing** — when an invoice ages past due, use these [payment reminder message templates](/blog/how-to-write-payment-reminder-message-overdue-invoice/) or generate one instantly with the [payment reminder tool](/payment-reminder-generator/)
+- **Proof of settlement** — acknowledge every payment with a [PAID-stamped receipt PDF](/receipt-generator/) so clients have zero room for "I already paid" confusion
+- **Mark old bills settled** — stamp PAID with date and signature on any bill photo via the [paid stamp generator](/paid-stamp-generator/)
+
+All of them run entirely in your browser — no signup, nothing uploaded.

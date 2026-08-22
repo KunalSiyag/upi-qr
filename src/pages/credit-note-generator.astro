@@ -1,0 +1,126 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { CreditNoteGenerator } from "../components/CreditNoteGenerator";
+
+const title = "Free GST Credit Note Generator (Section 34 Format PDF) | Pro UPI QR";
+const description = "Create GST-compliant credit notes for sales returns, discounts, and corrections. References the original invoice, splits CGST/SGST or IGST, exports as PDF. Free.";
+
+const faqs = [
+  {
+    question: "When is a credit note required under GST?",
+    answer: "Whenever a taxed supply changes after invoicing — goods returned, a discount given after the sale, rate corrections, short supplies, or a fully cancelled invoice. Section 34 of the CGST Act requires the supplier to issue a credit note referencing the original tax invoice so both parties' GST records adjust correctly."
+  },
+  {
+    question: "What details must a GST credit note contain?",
+    answer: "At minimum: your name, address, and GSTIN; the recipient's details; a consecutive credit note number and date; the original invoice's number and date; the value of taxable supplies reduced, tax amount reduced, and the reason. This tool includes every mandatory field."
+  },
+  {
+    question: "Is there a deadline for issuing a credit note?",
+    answer: "Yes — it must be issued before 30 November following the end of the financial year of the original supply, or the date of filing the annual return, whichever is earlier. It must also be reported in your GSTR-1 for the period in which it was issued. Confirm exact dates with your CA."
+  },
+  {
+    question: "How do I decide between CGST+SGST and IGST?",
+    answer: "It follows the original invoice's place of supply. Same-state sales split tax equally into CGST and SGST; sales to another state use IGST. The toggle updates the breakdown instantly."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "GST Credit Note Generator by Pro UPI QR",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/credit-note-generator/",
+      "description": description,
+      "featureList": [
+        "Section 34 compliant credit notes",
+        "Original invoice reference validation",
+        "CGST/SGST and IGST breakdowns",
+        "Itemised taxable value adjustments",
+        "PDF and PNG export"
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to issue a GST credit note",
+      "description": "Generate a compliant credit note against an existing tax invoice.",
+      "step": [
+        { "@type": "HowToStep", "name": "Enter supplier and customer GST details" },
+        { "@type": "HowToStep", "name": "Reference the original invoice number and date" },
+        { "@type": "HowToStep", "name": "Add items being credited with tax rates" },
+        { "@type": "HowToStep", "name": "Download the PDF and report it in GSTR-1" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">GST Credit Note Generator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Billing &amp; compliance</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free GST credit note generator</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Sales returned? Discount after billing? Issue a Section 34–compliant credit note that references the original invoice, adjusts CGST/SGST or IGST correctly, and exports as a clean PDF for GSTR-1 filing.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#credit-note-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create credit note</a>
+            <a href="/invoice-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Need the invoice instead? →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="credit-note-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <CreditNoteGenerator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Credit note questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+        <p class="mt-6 text-xs leading-6 font-medium text-forest/55">Disclaimer: This tool prepares documents based on general GST rules. Filing timelines and special cases vary — confirm with your chartered accountant before filing returns.</p>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">The complete billing stack, free forever.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/invoice-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Invoice Generator</a>
+          <a href="/receipt-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Receipt Generator</a>
+          <a href="/tools/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Browse all tools →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

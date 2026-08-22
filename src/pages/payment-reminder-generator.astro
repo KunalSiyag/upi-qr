@@ -1,0 +1,134 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PaymentReminderGenerator } from "../components/PaymentReminderGenerator";
+
+const title = "Payment Reminder Message Generator for WhatsApp & SMS | Pro UPI QR";
+const description = "Write polite payment reminder messages for overdue invoices in seconds — friendly, professional, or firm tones for WhatsApp, SMS, and email. Free, no signup.";
+
+const faqs = [
+  {
+    question: "How do I remind a client to pay an overdue invoice?",
+    answer: "Enter the invoice number, amount, and due date, then pick a tone. The tool drafts a ready-to-send message — a friendly nudge, a professional reminder, or a firm final notice — that you can copy or send straight through WhatsApp, SMS, or email."
+  },
+  {
+    question: "Should I include a UPI ID in payment reminders?",
+    answer: "Yes. Adding your UPI ID removes every excuse for delay — the customer can copy it into any UPI app and clear dues instantly with zero gateway fees. For an even smoother flow, attach an invoice PDF with a scan-and-pay QR from our invoice generator."
+  },
+  {
+    question: "How firm should a final notice be?",
+    answer: "Stay factual and calm: state the invoice number, amount, original due date, days overdue, and the consequence of continued delay. The 'Firm final notice' tone follows exactly this structure so you stay professional while making urgency clear."
+  },
+  {
+    question: "Is this payment reminder tool free?",
+    answer: "Yes, completely free with no login. Drafts are saved locally on your device, and nothing you type is uploaded to any server."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Payment Reminder Message Generator by Pro UPI QR",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/payment-reminder-generator/",
+      "description": description,
+      "featureList": [
+        "Friendly, professional, and firm reminder tones",
+        "WhatsApp, SMS, and email handoff",
+        "Automatic days-overdue calculation",
+        "UPI pay link insertion",
+        "Copy-to-clipboard message"
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to write a payment reminder message",
+      "description": "Draft a polite overdue invoice reminder with a UPI pay link.",
+      "step": [
+        { "@type": "HowToStep", "name": "Enter customer, invoice number, and amount due" },
+        { "@type": "HowToStep", "name": "Set the due date to auto-calculate overdue days" },
+        { "@type": "HowToStep", "name": "Choose friendly, professional, or firm tone" },
+        { "@type": "HowToStep", "name": "Copy the message or send via WhatsApp, SMS, or email" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Payment Reminder Generator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Merchant toolkit</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Payment reminder messages customers actually act on</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Turn awkward money conversations into one tap. Pick a tone, add your UPI ID, and send a polite — or firm — overdue invoice reminder over WhatsApp, SMS, or email.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#reminder-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Draft my reminder</a>
+            <a href="/invoice-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Need the invoice first? →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="reminder-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <PaymentReminderGenerator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Complete the billing loop</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight md:text-4xl">Bill → remind → get paid → receipt.</h2>
+        <div class="mt-8 grid gap-4 md:grid-cols-3">
+          {[
+            ["UPI Invoice Generator", "Send GST-ready invoices with a scan-and-pay QR before dues arise.", "/invoice-generator/"],
+            ["Payment Receipt Generator", "The moment money lands, acknowledge it with a PAID-stamped receipt.", "/receipt-generator/"],
+            ["Rent Receipt Generator", "Monthly rent receipts with revenue stamp format for HRA claims.", "/rent-receipt-generator/"]
+          ].map(([heading, copy, href]) => (
+            <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
+              <h3 class="text-xl font-black">{heading}</h3>
+              <p class="mt-3 flex-1 text-sm leading-7 text-white/72">{copy}</p>
+              <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">Open tool →</a>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Reminder questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

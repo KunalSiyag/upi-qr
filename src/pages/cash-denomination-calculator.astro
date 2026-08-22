@@ -1,0 +1,125 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { CashDenominationCalculator } from "../components/CashDenominationCalculator";
+
+const title = "Cash Denomination Calculator for Shift Closing | Pro UPI QR";
+const description = "Count your shop's cash drawer by note and coin, check variance against recorded sales, and download a shift-closing summary PDF. Free, offline, no signup.";
+
+const faqs = [
+  {
+    question: "How do shopkeepers count cash at the end of the day?",
+    answer: "Sort notes and coins by denomination, count each stack, and multiply count × value — this tool does that instantly as you type. Add your expected amount from the billing system to see whether you are over or short before locking up."
+  },
+  {
+    question: "What is a good cash variance limit for a shop?",
+    answer: "Many retailers investigate any shortage beyond ₹50–₹100 per shift per counter, since recurring small shortages usually point to billing mistakes rather than theft. Recording variance daily with a summary like this makes patterns visible within a week."
+  },
+  {
+    question: "Does my cash data get uploaded anywhere?",
+    answer: "No. Counting happens entirely in your browser and drafts stay on your device. The downloadable summary is generated locally too — safe even on a shared shop computer."
+  },
+  {
+    question: "Can I use it for multiple counters?",
+    answer: "Yes. Name each counter (Counter 1, Delivery desk…), finish its summary, then clear and start the next. Each downloaded PDF is stamped with the counter name and date so records never mix."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "name": "Cash Denomination Calculator by Pro UPI QR",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any",
+      "url": "https://www.proupiqr.in/cash-denomination-calculator/",
+      "description": description,
+      "featureList": [
+        "All Indian note and coin denominations",
+        "Automatic totals with stepper counting",
+        "Variance against expected cash",
+        "Printable shift-closing summary PDF/PNG",
+        "Offline browser-only operation"
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": { "@type": "Answer", "text": faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      "name": "How to close a cash shift with denomination counting",
+      "description": "Count the drawer by denomination and reconcile against sales.",
+      "step": [
+        { "@type": "HowToStep", "name": "Sort cash into notes and coins by value" },
+        { "@type": "HowToStep", "name": "Enter the count for each denomination" },
+        { "@type": "HowToStep", "name": "Add your expected amount to see variance" },
+        { "@type": "HowToStep", "name": "Download the shift summary for records" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Cash Denomination Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Cash denomination calculator for shift closing</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Sort the drawer once, tap in the counts, and know instantly whether you're over or short against your records. Download a clean shift-closing summary your accountant will love.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#cash-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Count my drawer</a>
+            <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="cash-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <CashDenominationCalculator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Cash counting questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Reduce cash at the counter altogether.</h2>
+        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/72">A printed UPI standee takes seconds to make and cuts counting work forever.</p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Create UPI QR standee →</a>
+          <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Browse all tools</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

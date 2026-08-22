@@ -1,0 +1,123 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GratuityCalculator } from "../components/GratuityCalculator";
+
+const title = "Gratuity Calculator India - Act Formula & ₹20L Cap | Pro UPI QR";
+const description = "Calculate gratuity on leaving a job: 15/26 formula, 5-year eligibility, 6-month rounding rule, and the ₹20 lakh tax ceiling. Free instant calculator for employees and HR.";
+
+const faqs = [
+  {
+    question: "Who is eligible for gratuity in India?",
+    answer: "Employees with at least 5 years of continuous service under an employer covered by the Payment of Gratuity Act, 1972 — typically factories, shops, and establishments with 10 or more employees. The 5-year rule is waived in cases of death or disability."
+  },
+  {
+    question: "How is gratuity calculated?",
+    answer: "For employers covered by the Act: (15 × last drawn basic salary + DA × completed years) ÷ 26. A service fraction above six months rounds up to a full year. Employers not covered by the Act commonly pay half a month's salary per year of actual service."
+  },
+  {
+    question: "Is gratuity taxable?",
+    answer: "For private-sector employees covered by the Act, the least of: actual gratuity, ₹20 lakh, or salary-based statutory formula is exempt from income tax. Amounts above the ₹20 lakh ceiling are taxed as income."
+  },
+  {
+    question: "Does 7 years 7 months count as 8 years for gratuity?",
+    answer: "Yes — under the Act, any service period beyond 6 months in the final year rounds up to a full year. So 7 years 7 months qualifies as 8 years when applying the 15/26 formula."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Gratuity Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/gratuity-calculator/",
+      description,
+      featureList: [
+        "Payment of Gratuity Act 15/26 formula",
+        "5-year eligibility check",
+        "6-month rounding rule applied",
+        "₹20 lakh statutory ceiling option",
+        "Covered vs non-covered employer toggle"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to calculate gratuity amount",
+      step: [
+        { "@type": "HowToStep", name: "Enter last drawn monthly basic salary plus DA" },
+        { "@type": "HowToStep", name: "Enter total years of continuous service" },
+        { "@type": "HowToStep", name: "Confirm whether employer is covered by the Act" },
+        { "@type": "HowToStep", name: "Review the estimated payable gratuity" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Gratuity Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Gratuity calculator — know your exit payout</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Leaving a job after 5+ years? Estimate your gratuity using the exact Payment of Gratuity Act formula, including the rounding rules and ₹20 lakh tax ceiling that most calculators ignore.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#gratuity-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Calculate my gratuity</a>
+            <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gratuity-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <GratuityCalculator client:load />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Gratuity questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Running payroll or hiring? Keep every rupee documented.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/salary-slip-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Salary Slip Generator →</a>
+          <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Browse all tools</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

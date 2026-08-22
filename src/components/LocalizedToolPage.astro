@@ -7,6 +7,18 @@ import { GstCalculator } from "./GstCalculator";
 import { WhatsappOrderGenerator } from "./WhatsappOrderGenerator";
 import { BulkQrGenerator } from "./BulkQrGenerator";
 import { InvoiceGenerator } from "./InvoiceGenerator";
+import { ReceiptGenerator } from "./ReceiptGenerator";
+import { PaidStampGenerator } from "./PaidStampGenerator";
+import { RentReceiptGenerator } from "./RentReceiptGenerator";
+import { PaymentReminderGenerator } from "./PaymentReminderGenerator";
+import { QuotationGenerator } from "./QuotationGenerator";
+import { SplitBillCalculator } from "./SplitBillCalculator";
+import { CashDenominationCalculator } from "./CashDenominationCalculator";
+import { CreditNoteGenerator } from "./CreditNoteGenerator";
+import { EmiCalculator } from "./EmiCalculator";
+import { GratuityCalculator } from "./GratuityCalculator";
+import { SipCalculator } from "./SipCalculator";
+import { SalarySlipGenerator } from "./SalarySlipGenerator";
 import { UpiCalculator } from "./UpiCalculator";
 import { OfferPosterGenerator } from "./OfferPosterGenerator";
 import { MenuQrGenerator } from "./MenuQrGenerator";
@@ -48,6 +60,18 @@ const path = `/${lang}/${tool.slug}/`;
         {tool.component === "whatsapp" && <WhatsappOrderGenerator client:load />}
         {tool.component === "bulk" && <BulkQrGenerator client:load />}
         {tool.component === "invoice" && <InvoiceGenerator client:load />}
+        {tool.component === "receipt" && <ReceiptGenerator client:load />}
+        {tool.component === "paidStamp" && <PaidStampGenerator client:load />}
+        {tool.component === "rentReceipt" && <RentReceiptGenerator client:load />}
+        {tool.component === "paymentReminder" && <PaymentReminderGenerator client:load />}
+        {tool.component === "quotation" && <QuotationGenerator client:load />}
+        {tool.component === "splitBill" && <SplitBillCalculator client:load />}
+        {tool.component === "cashDenomination" && <CashDenominationCalculator client:load />}
+        {tool.component === "creditNote" && <CreditNoteGenerator client:load />}
+        {tool.component === "emiCalculator" && <EmiCalculator client:load />}
+        {tool.component === "gratuity" && <GratuityCalculator client:load />}
+        {tool.component === "sipCalculator" && <SipCalculator client:load />}
+        {tool.component === "salarySlip" && <SalarySlipGenerator client:load />}
         {tool.component === "upiCalculator" && <UpiCalculator client:load />}
         {tool.component === "offerPoster" && <OfferPosterGenerator client:load />}
         {tool.component === "menuQr" && <MenuQrGenerator client:load />}

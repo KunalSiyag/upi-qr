@@ -1,0 +1,83 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { GLOSSARY_TERMS, GLOSSARY_CATEGORIES } from "../../data/glossary";
+
+const title = "UPI & Payments Glossary - VPA, MDR, IMPS, GSTIN Explained | Pro UPI QR";
+const description = "Plain-language definitions for 24+ Indian payments and billing terms: UPI, VPA, NPCI, MDR, IMPS vs NEFT vs RTGS, credit notes, GSTIN, revenue stamps, and more.";
+
+const hubUrl = new URL("/glossary/", Astro.site).toString();
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      name: title,
+      description,
+      url: hubUrl,
+      inLanguage: "en-IN",
+      mainEntity: {
+        "@type": "ItemList",
+        itemListElement: GLOSSARY_TERMS.map((t, i) => ({
+          "@type": "ListItem",
+          position: i + 1,
+          name: `${t.term} — ${t.full}`,
+          url: `https://www.proupiqr.in/glossary/${t.slug}/`
+        }))
+      }
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} canonical={hubUrl} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Glossary</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Knowledge base</p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">The Indian payments glossary, in plain language</h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">{GLOSSARY_TERMS.length} terms that merchants, freelancers, and small businesses actually run into — VPA, MDR, collect requests, credit notes, IFSC, revenue stamps — each explained without jargon and linked to a free tool you can use immediately.</p>
+        <nav aria-label="Glossary categories" class="mt-6 flex flex-wrap gap-2">
+          {GLOSSARY_CATEGORIES.map((cat) => (
+            <a href={`#${cat.toLowerCase().replace(/[^a-z]+/g, "-")}`} class="rounded-full border border-forest/15 bg-white px-4 py-1.5 text-xs font-bold text-forest hover:border-leaf transition">{cat}</a>
+          ))}
+        </nav>
+      </div>
+    </section>
+
+    {GLOSSARY_CATEGORIES.map((category) => {
+      const terms = GLOSSARY_TERMS.filter((t) => t.category === category);
+      if (!terms.length) return null;
+      return (
+        <section id={category.toLowerCase().replace(/[^a-z]+/g, "-")} class="scroll-mt-28 px-4 py-8 md:px-6 lg:px-8">
+          <div class="mx-auto max-w-7xl">
+            <h2 class="text-xl font-black tracking-tight text-forest md:text-2xl">{category}</h2>
+            <div class="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {terms.map((term) => (
+                <a href={`/glossary/${term.slug}/`} class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(17,59,44,0.12)]">
+                  <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{term.term}</h3>
+                  <p class="text-[11px] font-bold uppercase tracking-wide text-forest/45">{term.full}</p>
+                  <p class="mt-2 flex-1 text-sm leading-6 text-forest/70">{term.shortDef}</p>
+                  <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf opacity-80 group-hover:opacity-100">Read definition →</span>
+                </a>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    })}
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Learned the term? Now use the tool.</h2>
+        <p class="mx-auto mt-3 max-w-2xl text-sm leading-7 text-white/72">Every definition links to a free browser utility — invoices, receipts, QR standees, calculators — no signup, nothing uploaded.</p>
+        <a href="/tools/" class="mt-6 inline-block rounded-full bg-sun px-6 py-3 text-sm font-black text-forest transition hover:bg-white">Browse all tools →</a>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
