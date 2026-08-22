@@ -1,0 +1,163 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "Invoice vs Receipt - Key Differences & When to Use Each | Pro UPI QR";
+const description = "Invoice vs receipt vs credit note explained with a comparison table, GST treatment, a worked example, and free generators for each document. Plain language, no jargon.";
+
+const faqs = [
+  {
+    question: "Can I use an invoice as proof of payment?",
+    answer: "No. An invoice only proves that payment was demanded, not that money arrived. Only a signed receipt or a bank/UPI statement proves settlement. That is why every invoice should be followed by a receipt once the customer pays."
+  },
+  {
+    question: "Is a credit note the same as a refund?",
+    answer: "A credit note is the GST-compliant document that reduces a previously issued tax invoice — it may accompany a refund, or simply adjust future balances without any money moving. A refund is the actual return of money and can exist without paperwork (bad idea) or with a credit note (correct)."
+  },
+  {
+    question: "Do both invoice and receipt need serial numbers?",
+    answer: "GST tax invoices legally require consecutive serial numbers. Receipts are best-practice numbered too (RCPT-0001 style) so each payment acknowledgement can be referenced in reminders, audits, and disputes."
+  },
+  {
+    question: "Can one document be both invoice and receipt?",
+    answer: "Some small vendors write 'PAID' across an invoice copy — functional but messy. The clean pattern is two documents: the invoice demanding payment before, and a receipt acknowledging it after. Our generators produce both in matching formats within seconds."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      name: title,
+      description,
+      url: "https://www.proupiqr.in/invoice-vs-receipt/",
+      inLanguage: "en-IN"
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Compare Documents", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "Invoice vs Receipt", item: "https://www.proupiqr.in/invoice-vs-receipt/" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Invoice vs Receipt</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Document guide</p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Invoice vs receipt vs credit note — which document, when?</h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Three documents, three different jobs. Mixing them up costs small businesses money in disputes, GST filings, and awkward client conversations. Here is the complete picture in plain language.</p>
+      </div>
+    </section>
+
+    <section class="px-4 py-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">The 30-second answer</h2>
+        <div class="mt-5 overflow-x-auto rounded-[1.5rem] border border-white/75 bg-white/88 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+          <table class="w-full min-w-[640px] text-left text-sm">
+            <thead><tr class="bg-mint text-[11px] uppercase tracking-widest text-forest/70"><th class="p-4">Question</th><th class="p-4">Invoice</th><th class="p-4">Receipt</th><th class="p-4">Credit note</th></tr></thead>
+            <tbody class="[&_td]:border-t [&_td]:border-forest/10 [&_td]:p-4 [&_strong]:text-forest">
+              <tr><td class="font-black text-forest">When is it issued?</td><td>Before/at supply, demanding payment</td><td>After money is received</td><td>After the original invoice needs reducing</td></tr>
+              <tr><td class="font-black text-forest">Does it demand money?</td><td class="font-bold text-green-700">Yes — creates the obligation</td><td>No</td><td>No — it reduces an earlier obligation</td></tr>
+              <tr><td class="font-black text-forest">Does it prove payment?</td><td>No</td><td class="font-bold text-green-700">Yes — the only document that does</td><td>No</td></tr>
+              <tr><td class="font-black text-forest">GST relevance</td><td>Tax invoice charges GST; input credit rides on it</td><td>Acknowledgement only — no tax charged</td><td>Reduces output tax; buyer trims input credit</td></tr>
+              <tr><td class="font-black text-forest">Serial number needed?</td><td>Mandatory (consecutive)</td><td>Best practice (RCPT-0001…)</td><td>Mandatory own series (CN-0001…)</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Invoice — the document that creates the debt</h2>
+      <p class="mt-4 text-base leading-8 text-forest/80">Under GST law a tax invoice must carry your GSTIN, a consecutive number, date, recipient details, itemised values, tax rate and amount, and place of supply. It converts delivered work into a payable obligation — the document accountants file and buyers use for input tax credit.</p>
+      <p class="mt-4 text-base leading-8 text-forest/85">Intra-state supplies split tax into CGST + SGST; inter-state uses IGST. If you are not GST-registered you issue a plain bill of supply instead and cannot charge GST at all.</p>
+      <a href="/invoice-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a tax invoice PDF →</a>
+      <p class="mt-2 text-xs font-semibold text-forest/55">Country templates for India (CGST/SGST), US, UK, EU, UAE, and Australia.</p>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Receipt — proof that closes the loop</h2>
+      <p class="mt-4 text-base leading-8 text-forest/80">A receipt acknowledges specific money received on a specific date via a specific mode — cash, UPI, bank transfer, cheque — ideally with the UTR/reference printed. It ends disputes ("I never paid") before they start and gives your customer documentation for their own records.</p>
+      <p class="mt-4 text-base leading-8 text-forest/85">Issue receipts within minutes of payment, not at month-end. For rent specifically, tenants need the HRA format with amount in words and a revenue stamp box — see our <a href="/blog/rent-receipt-format-hra-exemption-india/" class="font-bold text-leaf hover:underline">rent receipt guide</a> for that variant.</p>
+      <a href="/receipt-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a paid receipt →</a>
+      <p class="mt-2 text-xs font-semibold text-forest/55">PAID-stamped, mode + UTR recorded, WhatsApp-shareable image attached.</p>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Credit note — the correction document</h2>
+      <p class="mt-4 text-base leading-8 text-forest/80">Goods returned, discount granted after billing, rate corrected downward, invoice cancelled — none of these let you edit the original invoice. Section 34 of the CGST Act requires a credit note that references the original invoice's number and date while stating the reduced taxable value and tax.</p>
+      <p class="mt-4 text-base leading-8 text-forest/85">Both sides adjust their returns: your GSTR-1 shows lower output tax; the buyer reduces input credit by the same amount. Deadline: issue before 30 November following the supply's financial year, and report in the period's GSTR-1.</p>
+      <a href="/credit-note-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a compliant credit note →</a>
+      <p class="mt-2 text-xs font-semibold text-forest/55">Original-invoice validation, CGST/SGST ↔ IGST toggle, PDF export.</p>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">A worked example</h2>
+      <div class="mt-4 space-y-3 rounded-[1.5rem] bg-cream p-5 text-sm leading-7 text-forest/85">
+        <p><strong class="text-forest">Day 1:</strong> Café owner asks for branding. You send <strong>QTN-0031</strong>: ₹45,000 + 18% GST, valid 30 days, 50% advance.</p>
+        <p><strong>Day 3:</strong> She approves; ₹22,500 advance arrives by UPI. You issue receipt <strong>RCPT-0117</strong> referencing the quote.</p>
+        <p><strong>Day 24:</strong> Work delivered. Tax invoice <strong>INV-2026-058</strong> raised for ₹53,100 total, advance adjusted, balance due in 7 days.</p>
+        <p><strong>Day 26:</strong> Balance paid via the invoice's embedded QR. Instant receipt <strong>RCPT-0118</strong> marks full settlement.</p>
+        <p><strong>Day 30:</strong> She returns one signage board unused — credit note <strong>CN-0009</strong> reduces the billed value against INV-2026-058.</p>
+      </div>
+      <p class="mt-4 text-sm leading-7 text-forest/70">Four documents, four unambiguous moments, zero WhatsApp archaeology when accounts are questioned a year later.</p>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Common mixing mistakes</h2>
+      <ul class="mt-4 list-disc space-y-2 pl-5 text-base leading-7 text-forest/80">
+        <li>Sending a "quotation" after delivery — by then it must be an invoice.</li>
+        <li>Marking estimates as quotations — clients treat quoted prices as fixed promises.</li>
+        <li>Raising UPI collect requests without any invoice — collect requests prove nothing about what was purchased.</li>
+        <li>Invoicing but never receipting — leaves "I already paid" permanently arguable.</li>
+        <li>Reusing invoice numbers without financial-year prefixes — filing-season confusion guaranteed.</li>
+      </ul>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Frequently asked questions</h2>
+      <div class="mt-5 grid gap-4">
+        {faqs.map((faq) => (
+          <details open class="rounded-2xl bg-cream p-4">
+            <summary class="cursor-pointer list-none text-sm font-black text-forest">{faq.question}</summary>
+            <p class="mt-2 text-sm leading-6 text-forest/75">{faq.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 md:px-6 lg:px-8">
+      <div class="rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Every document here, generated free in seconds.</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/invoice-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Invoice Generator</a>
+          <a href="/receipt-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Receipt Generator</a>
+          <a href="/credit-note-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Credit Note Generator</a>
+          <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">All tools →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

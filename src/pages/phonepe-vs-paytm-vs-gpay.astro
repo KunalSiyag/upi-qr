@@ -1,0 +1,151 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+const title = "PhonePe vs Paytm vs Google Pay for Business QR - Compared | Pro UPI QR";
+const description = "PhonePe, Paytm, or Google Pay for your shop's payment QR? The honest answer: UPI is interoperable — compare merchant features instead: soundboxes, dashboards, and settlement.";
+
+const faqs = [
+  {
+    question: "Which UPI app should my shop's QR code be from?",
+    answer: "Any of them — or none. UPI QRs are fully interoperable: a customer using PhonePe can scan a QR generated for a Paytm VPA and vice versa. What matters is that the underlying UPI ID is yours and verified. Generate one universal QR and every app works with it."
+  },
+  {
+    question: "Then why do PhonePe, Paytm, and GPay compete for merchants?",
+    answer: "For the merchant account extras around the QR: Bluetooth soundboxes that announce payments aloud, business dashboards with sales analytics, loan offers based on your transaction history, and loyalty to their wider ecosystems. The payment rail underneath is identical."
+  },
+  {
+    question: "Do any of them charge commission on UPI payments?",
+    answer: "No. NPCI mandates zero MDR on standard UPI transactions across all apps — you receive the full amount whether the customer pays via PhonePe, Paytm, GPay, BHIM, or any other UPI app."
+  },
+  {
+    question: "Can I have QR codes from multiple apps at my counter?",
+    answer: "You can, but it clutters the counter and confuses customers about which to scan. One clean universal standee plus (optionally) one merchant-app soundbox covers everything most shops need."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      name: title,
+      description,
+      url: "https://www.proupiqr.in/phonepe-vs-paytm-vs-gpay/",
+      inLanguage: "en-IN"
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Compare", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "PhonePe vs Paytm vs Google Pay", item: "https://www.proupiqr.in/phonepe-vs-paytm-vs-gpay/" }
+      ]
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    }
+  ]
+};
+
+const rows = [
+  ["Customer coverage", "Massive tier-2/3 + north India skew", "Strong wallet + huge small-merchant base", "Dominant in metros/urban Android"],
+  ["Merchant soundbox", "Yes — widely deployed", "Yes — original market leader", "Limited availability"],
+  ["Business dashboard & analytics", "PhonePe Business app", "Paytm for Business app (deepest feature set)", "Google Pay for Business (simpler)"],
+  ["Zero MDR on UPI", "Yes", "Yes", "Yes"],
+  ["Instant bank settlement", "Yes — direct to your account", "Yes — direct or Paytm bank wallet flows", "Yes — direct to your account"],
+  ["Works with any customer app?", "Yes — all UPI apps scan it", "Yes", "Yes"],
+  ["Loan offers from tx history", "Occasional partner offers", "Pre-approved business loans common", "Limited"]
+];
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">PhonePe vs Paytm vs Google Pay</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Honest comparison</p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">PhonePe vs Paytm vs Google Pay for your shop's QR</h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">The uncomfortable truth first: for accepting payments, the choice barely matters — UPI is interoperable, so one QR works everywhere. The real differences live in merchant extras like soundboxes and dashboards. Here is the full picture.</p>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-4 pb-4 md:px-6 lg:px-8">
+      <div class="rounded-[1.5rem] border-l-4 border-leaf bg-mint/70 p-5 text-base font-semibold leading-8 text-forest">
+        Bottom line up front: print one universal UPI QR standee and every customer can pay you from any app. Then optionally pick ONE merchant app for its soundbox and sales dashboard — choose by whichever ecosystem serves your location and volume best.
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Merchant features compared</h2>
+        <div class="mt-5 overflow-x-auto rounded-[1.5rem] border border-white/75 bg-white/88 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+          <table class="w-full min-w-[680px] text-left text-sm">
+            <thead><tr class="bg-mint text-[11px] uppercase tracking-widest text-forest/70"><th class="p-4">Factor</th><th class="p-4 font-black text-forest">PhonePe</th><th class="p-4 font-black text-forest">Paytm</th><th class="p-4 font-black text-forest">Google Pay</th></tr></thead>
+            <tbody class="[&_td]:border-t [&_td]:border-forest/10 [&_td]:p-4">
+              {rows.map(([factor, a, b, c]) => (
+                <tr><td class="font-black text-forest">{factor}</td><td>{a}</td><td>{b}</td><td>{c}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-3 text-xs leading-5 font-medium text-forest/55">Feature availability varies by city and changes frequently — verify current offerings inside each app's business section.</p>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Choose by your situation</h2>
+      <div class="mt-5 grid gap-4 md:grid-cols-2">
+        <div class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-sm"><h3 class="font-black text-forest">Kirana / street stall / cart vendor</h3><p class="mt-2 text-sm leading-6 text-forest/75">Print one universal QR standee (free here). Add a soundbox later if fake-screenshot fraud is a worry — Paytm and PhonePe both deploy aggressively.</p></div>
+        <div class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-sm"><h3 class="font-black text-forest">Freelancer / consultant billing clients</h3><p class="mt-2 text-sm leading-6 text-forest/75">Skip app loyalty entirely. Put an embedded payment QR inside proper invoices so clients pay exact amounts — reconciliation becomes trivial.</p></div>
+        <div class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-sm"><h3 class="font-black text-forest">Restaurant / salon with staff</h3><p class="mt-2 text-sm leading-6 text-forest/75">A soundbox matters most (staff hear confirmations during rush). Pick the provider with reliable local deployment; the QR itself stays universal.</p></div>
+        <div class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-sm"><h3 class="font-black text-forest">Growing business needing credit</h3><p class="mt-2 text-sm leading-6 text-forest/75">Paytm's merchant-lending history is deepest; PhonePe runs partner offers too. Either way, your Udyam registration matters more than the app choice.</p></div>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-5xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Generate once, work everywhere</h2>
+      <p class="mt-3 max-w-3xl text-base leading-7 text-forest/80">Because every UPI app scans every QR, the smart move is a single beautiful standee instead of three competing stickers. Create it free with your own branding, print at any size, and accept payments from all 500+ million UPI users.</p>
+      <div class="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <a href="/phonepe-qr-generator/" class="rounded-[1.25rem] border p-4 text-center transition hover:border-[#5f259f]/40 hover:bg-mint/40" style="border-color:#5f259f33"><strong class="text-forest">PhonePreset QR</strong><span class="mt-1 block text-xs text-forest/60">Purple-accented template</span></a>
+        <a href="/google-pay-qr-generator/" class="rounded-[1.25rem] border p-4 text-center transition hover:border-[#4285f4]/40 hover:bg-mint/40" style="border-color:#4285f433"><strong class="text-forest">GPay preset QR</strong><span class="mt-1 block text-xs text-forest/60">Blue-accented template</span></a>
+        <a href="/paytm-qr-generator/" class="rounded-[1.25rem] border p-4 text-center transition hover:border-[#00baf2]/40 hover:bg-mint/40" style="border-color:#00baf233"><strong class="text-forest">Paytm preset QR</strong><span class="mt-1 block text-xs text-forest/60">Cyan-accented template</span></a>
+        <a href="/universal-qr-generator/" class="rounded-[1.25rem] border border-leaf/40 p-4 text-center transition hover:bg-mint/40"><strong class="text-forest">Universal QR (recommended)</strong><span class="mt-1 block text-xs text-forest/60">Neutral design for all apps</span></a>
+      </div>
+    </section>
+
+    <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
+      <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Frequently asked questions</h2>
+      <div class="mt-5 grid gap-4">
+        {faqs.map((faq) => (
+          <details open class="rounded-2xl bg-cream p-4">
+            <summary class="cursor-pointer list-none text-sm font-black text-forest">{faq.question}</summary>
+            <p class="mt-2 text-sm leading-6 text-forest/75">{faq.answer}</p>
+          </details>
+        ))}
+      </div>
+    </section>
+
+    <section class="mx-auto w-full max-w-7xl px-4 pb-16 md:px-6 lg:px-8">
+      <div class="rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Related reading</h2>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/blog/paytm-vs-phonepe-vs-gpay-which-qr-best-for-shop/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Deeper blog comparison</a>
+          <a href="/blog/static-vs-dynamic-upi-qr-code-difference/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Static vs dynamic QR</a>
+          <a href="/tools/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">All tools →</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
