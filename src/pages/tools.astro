@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { TOPIC_HUBS } from "../data/topicHubs";
 
 const title = "All Free Merchant Tools - QR, Billing, Invoices | Pro UPI QR";
 const description = "Browse every free tool: invoice and receipt generators, rent receipts, quotations, reminders, paid stamps, QR generators, GST calculators, and UPI guides.";
@@ -20,11 +21,17 @@ const categories = [
       { name: "Gratuity Calculator", href: "/gratuity-calculator/", desc: "Exit payout via the statutory 15/26 formula — eligibility, rounding, and ₹20L cap included." },
       { name: "SIP Calculator", href: "/sip-calculator/", desc: "Monthly SIP maturity projection with yearly growth table and inflation-adjusted value." },
       { name: "Salary Slip Generator", href: "/salary-slip-generator/", desc: "Monthly payslips with PF/PT/TDS breakdowns and amount in words." },
-      { name: "MSMED Interest Calculator", href: "/msmed-interest-calculator/", desc: "Statutory 15% p.a. interest claims on late B2B payments under the MSMED Act." },
+      { name: "MSMED Interest Calculator", href: "/msmed-interest-calculator/", desc: "19.5% statutory interest on late B2B payments under Section 16 of the MSMED Act." },
       { name: "Proforma Invoice Generator", href: "/proforma-invoice-generator/", desc: "Advance-payment documents with buyer PO reference and optional UPI QR." },
       { name: "Break-Even Calculator", href: "/break-even-calculator/", desc: "Survival-unit count, target-profit units, and margin of safety for any business." },
       { name: "TReDS Discounting Calculator", href: "/treds-calculator/", desc: "Net proceeds and effective cost when discounting large-buyer invoices." },
-      { name: "WhatsApp Order Creator", href: "/whatsapp-order-generator/", desc: "Pre-filled order messages with pay links for chat-based selling." }
+      { name: "MSME Receivables Tracker", href: "/msme-receivables/", desc: "Invoice aging, 45-day due tracker, and Section 16 demand letters." },
+      { name: "WhatsApp Order Creator", href: "/whatsapp-order-generator/", desc: "Pre-filled order messages with pay links for chat-based selling." },
+      { name: "Purchase Order Generator", href: "/purchase-order-generator/", desc: "Formal POs with buyer/supplier GSTINs, delivery terms, and line items." },
+      { name: "Delivery Challan Generator", href: "/delivery-challan-generator/", desc: "Goods dispatch document with vehicle, transporter, e-way bill, and receiver sign-off." },
+      { name: "GST Debit Note Generator", href: "/debit-note-generator/", desc: "Section 34 debit notes to increase tax on understated invoices." },
+      { name: "Bill of Supply Generator", href: "/bill-of-supply-generator/", desc: "Zero-GST bills for composition dealers and exempt supply." },
+      { name: "Cash Memo Generator", href: "/cash-memo-generator/", desc: "Simple retail billing slips for kirana shops, counters, and walk-in sales." }
     ]
   },
   {
@@ -45,7 +52,8 @@ const categories = [
     blurb: "Branded printables that make payments effortless.",
     tools: [
       { name: "Digital Visiting Card", href: "/digital-visiting-card/", desc: "vCard plus UPI business cards you can share via link or NFC." },
-      { name: "Shop Sale Poster Builder", href: "/offer-poster-generator/", desc: "Discount banners and offer posters with your QR baked in." }
+      { name: "Shop Sale Poster Builder", href: "/offer-poster-generator/", desc: "Discount banners and offer posters with your QR baked in." },
+      { name: "Printable template gallery", href: "/print-templates/", desc: "A4, A5, 5×7, table tents, counter cards, and A4 sticker sheets with size notes." }
     ]
   },
   {
@@ -64,13 +72,14 @@ const categories = [
     name: "Learn, Fix & Build",
     blurb: "Understand UPI deeper and plug it into your own stack.",
     tools: [
-      { name: "NPCI UPI Error Resolver", href: "/upi-error-codes/", desc: "Decode UPI failure codes and refund timelines." },
+      { name: "NPCI UPI Error Resolver", href: "/upi-error-codes/", desc: "NPCI returned error? Decode U16, Z9, ZM and 30+ codes plus RBI refund TAT." },
       { name: "UPI QR Decoder", href: "/upi-qr-decoder/", desc: "Inspect any UPI QR before you trust or print it." },
       { name: "Developer API & Widgets", href: "/developer/", desc: "Embeddable QR widgets and endpoint roadmap." },
       { name: "Payments Glossary", href: "/glossary/", desc: "Every UPI and billing term explained in plain language." },
       { name: "Invoice vs Receipt vs Credit Note", href: "/invoice-vs-receipt/", desc: "Which document when — with a worked example and free generators." },
       { name: "PhonePe vs Paytm vs GPay", href: "/phonepe-vs-paytm-vs-gpay/", desc: "Honest merchant comparison: interoperability, soundboxes, dashboards." },
-      { name: "Blog & Guides", href: "/blog/", desc: "Printing, security, and setup guides for Indian merchants." }
+      { name: "Blog & Guides", href: "/blog/", desc: "Printing, security, and setup guides for Indian merchants." },
+      { name: "About & editorial policies", href: "/about/", desc: "Who writes the guides, how facts are checked, and the public corrections log." }
     ]
   }
 ];
@@ -88,7 +97,23 @@ const categories = [
         </nav>
         <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Everything is free</p>
         <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Every Pro UPI QR merchant tool in one place</h1>
-        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Twenty-plus browser-only tools covering the full money workflow — create QR codes, bill customers, chase payments, stamp proof, and learn the rules. No signups, no uploads, no fees.</p>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Twenty-plus tools covering the full money workflow — create QR codes, bill customers, chase payments, stamp proof, and learn the rules. Local tools need no signup or upload; only cloud-backed dynamic redirects require an account.</p>
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Browse by topic</h2>
+        <p class="mt-1 text-sm font-semibold text-forest/65">Full inventories live on these hubs. This page remains the complete tool list.</p>
+        <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TOPIC_HUBS.map((hub) => (
+            <a href={hub.path} class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5">
+              <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{hub.shortName}</h3>
+              <p class="mt-2 flex-1 text-xs leading-6 text-forest/70">{hub.blurb}</p>
+              <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf">Open hub →</span>
+            </a>
+          ))}
+        </div>
       </div>
     </section>
 

@@ -1,0 +1,35 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { DebitNoteGenerator } from "../components/DebitNoteGenerator";
+
+const title = "GST Debit Note Generator - Section 34 Compliant | Pro UPI QR";
+const description = "Create a Section 34 GST debit note when an original invoice understated value or tax. Browser-only, no login, PDF export.";
+
+const faqs = [
+  { question: "When do I issue a debit note?", answer: "Issue a debit note when a previously issued tax invoice understates the taxable value or the tax charged — for example, you billed ₹10,000 but the correct value is ₹12,000. The debit note increases the tax payable by the difference. Section 34 of the CGST Act requires both supplier and buyer to adjust their returns accordingly." },
+  { question: "How is a debit note different from a credit note?", answer: "A credit note reduces the original invoice (returns, discounts, corrections downward). A debit note increases it (under-charged tax, missed line items, post-shipment additions). Both reference the original invoice number and date and must be issued within the Section 34 time window." },
+  { question: "Must I reference the original invoice?", answer: "Yes. Section 34 explicitly requires the original tax invoice reference. Without it, the debit note may be invalid for GST purposes and the buyer cannot claim the additional input tax credit." },
+  { question: "Is my data uploaded to a server?", answer: "No. All data stays in your browser's localStorage. Nothing is uploaded. Export as PDF from your device." }
+];
+
+const schema = { "@context": "https://schema.org", "@graph": [{ "@type": "WebApplication", name: "GST Debit Note Generator by Pro UPI QR", applicationCategory: "BusinessApplication", operatingSystem: "Any", url: "https://www.proupiqr.in/debit-note-generator/", description, featureList: ["Section 34 GST debit note", "Original invoice reference", "Additional taxable amount calculation", "GST per-item breakdown"], offers: { "@type": "Offer", price: "0", priceCurrency: "INR" } }, { "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })) }, { "@type": "HowTo", name: "How to issue a GST debit note", step: [{ "@type": "HowToStep", name: "Enter supplier and buyer GSTINs" }, { "@type": "HowToStep", name: "Reference the original tax invoice number and date" }, { "@type": "HowToStep", name: "Add the additional items and charges" }, { "@type": "HowToStep", name: "Download as PDF" }] }] };
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60"><a href="/" class="hover:text-leaf transition-colors">Home</a><span>/</span><a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a><span>/</span><span class="text-forest font-bold" aria-current="page">Debit Note</span></nav>
+        <div class="max-w-4xl"><p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Merchant documents</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">GST debit note generator</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Under-charged on an earlier invoice? Issue a Section 34 debit note to increase tax payable — with original invoice reference, additional line items, and automatic GST calculation.</p>
+          <div class="mt-7 flex flex-wrap gap-3"><a href="#dn-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create debit note</a><a href="/credit-note-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Need a credit note? →</a></div>
+        </div>
+      </div>
+    </section>
+    <section id="dn-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8"><div class="mx-auto max-w-7xl"><DebitNoteGenerator client:visible /></div></section>
+    <section class="px-4 py-14 md:px-6 lg:px-8"><div class="mx-auto max-w-5xl"><p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p><h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Debit note questions</h2><div class="mt-8 grid gap-4">{faqs.map((faq) => (<details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5"><summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary><p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p></details>))}</div></div></section>
+    <section class="px-4 pb-16 md:px-6 lg:px-8"><div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10"><h2 class="text-2xl font-black tracking-tight md:text-3xl">Complete your GST document suite.</h2><p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/72">Credit notes, debit notes, and tax invoices — the full Section 34 toolkit.</p><div class="mt-6 flex flex-wrap justify-center gap-3"><a href="/credit-note-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Credit notes →</a><a href="/invoice-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Tax invoice</a></div></div></section>
+  </main>
+</BaseLayout>

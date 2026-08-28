@@ -1,0 +1,34 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { DeliveryChallan } from "../components/DeliveryChallan";
+
+const title = "Free Delivery Challan Generator for Indian Businesses | Pro UPI QR";
+const description = "Create a goods delivery challan (DC) with supplier, buyer, vehicle, e-way bill number, and item list. Browser-only, no login, PDF export.";
+
+const faqs = [
+  { question: "What is a delivery challan?", answer: "A delivery challan (DC) is a transport document that accompanies goods in transit. It records what is being shipped, from whom, to whom, by which vehicle, and is often cross-referenced with an e-way bill. It is not a tax invoice — it records only the contents and movement, not the value for tax purposes." },
+  { question: "Do I need a separate delivery challan with an e-way bill?", answer: "An e-way bill is mandatory for inter-state movement of goods above ₹50,000. A delivery challan provides additional detail — the items packed, the transporter, and vehicle details — and is often required by the buyer at the receiving gate alongside the e-way bill and tax invoice." },
+  { question: "Is my data uploaded to a server?", answer: "No. All data stays in your browser's localStorage. Nothing is uploaded. Export as PDF from your device." }
+];
+
+const schema = { "@context": "https://schema.org", "@graph": [{ "@type": "WebApplication", name: "Delivery Challan Generator by Pro UPI QR", applicationCategory: "BusinessApplication", operatingSystem: "Any", url: "https://www.proupiqr.in/delivery-challan-generator/", description, featureList: ["Supplier and buyer details", "Vehicle and transporter fields", "E-way bill reference", "Item list with quantity and unit", "Receiver sign-off block"], offers: { "@type": "Offer", price: "0", priceCurrency: "INR" } }, { "@type": "FAQPage", mainEntity: faqs.map((f) => ({ "@type": "Question", name: f.question, acceptedAnswer: { "@type": "Answer", text: f.answer } })) }, { "@type": "HowTo", name: "How to create a delivery challan", step: [{ "@type": "HowToStep", name: "Enter supplier and buyer details" }, { "@type": "HowToStep", name: "Add items with quantity and unit" }, { "@type": "HowToStep", name: "Add vehicle and transporter info" }, { "@type": "HowToStep", name: "Download as PDF with receiver sign-off block" }] }] };
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60"><a href="/" class="hover:text-leaf transition-colors">Home</a><span>/</span><a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a><span>/</span><span class="text-forest font-bold" aria-current="page">Delivery Challan</span></nav>
+        <div class="max-w-4xl"><p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Merchant documents</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Delivery challan generator</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Create a delivery challan with supplier, buyer, vehicle, e-way bill reference, and itemised packing list. Free, no signup, exports as PDF.</p>
+          <div class="mt-7 flex flex-wrap gap-3"><a href="#dc-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create challan now</a><a href="/invoice-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Need a tax invoice? →</a></div>
+        </div>
+      </div>
+    </section>
+    <section id="dc-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8"><div class="mx-auto max-w-7xl"><DeliveryChallan client:visible /></div></section>
+    <section class="px-4 py-14 md:px-6 lg:px-8"><div class="mx-auto max-w-5xl"><p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p><h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Delivery challan questions</h2><div class="mt-8 grid gap-4">{faqs.map((faq) => (<details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5"><summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary><p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p></details>))}</div></div></section>
+    <section class="px-4 pb-16 md:px-6 lg:px-8"><div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10"><h2 class="text-2xl font-black tracking-tight md:text-3xl">Complete your dispatch paperwork.</h2><p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/72">Challans, invoices, and e-way documentation — all from one place.</p><div class="mt-6 flex flex-wrap justify-center gap-3"><a href="/invoice-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Invoice PDF →</a><a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">All tools</a></div></div></section>
+  </main>
+</BaseLayout>

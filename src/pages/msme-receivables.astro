@@ -1,0 +1,151 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { MsmeReceivables } from "../components/MsmeReceivables";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+
+const title = "MSME Receivables — Invoice Aging & Demand Letters | Pro UPI QR";
+const description = "Track MSME invoices by age, compute 19.5% statutory interest under Section 16, and draft demand letters. Browser-only private processing.";
+
+const faqs = [
+  {
+    question: "What does the MSME receivables tool do?",
+    answer: "It helps micro and small enterprise suppliers track unpaid invoices by age, calculate delayed-payment interest at 19.5% p.a. (3× the RBI Bank Rate), and generate a formal Section 16 demand letter that can be used before filing with an MSE Facilitation Council."
+  },
+  {
+    question: "How is MSMED interest calculated?",
+    answer: "The MSMED Act mandates compound interest at three times the RBI Bank Rate (currently 6.5% × 3 = 19.5% p.a. with monthly rests) on delayed payments beyond the agreed credit period, capped at 45 days. This tool uses exact integer arithmetic for every invoice and computes both simple and monthly-compounded figures."
+  },
+  {
+    question: "Can I file the demand letter directly with the Council?",
+    answer: "Yes. The demand letter serves as a pre-litigation notice under Section 16. After sending it, if the buyer does not pay within 15 days, you can file a reference before the MSE Facilitation Council for your state through the SAMADHAAN portal (samadhaan.msme.gov.in). The Council can award interest with monthly compounding and enforce it as a civil court decree."
+  },
+  {
+    question: "Is my invoice data safe?",
+    answer: "Yes. All invoice entries and supplier details stay in your browser's localStorage. Nothing is uploaded to any server. The demand letter and aging report are generated entirely on your device."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "MSME Receivables Tracker by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/msme-receivables/",
+      description,
+      featureList: [
+        "Invoice aging tracker with 5 buckets",
+        "Section 16 demand letter generator",
+        "MSMED interest at 19.5% p.a. (3× RBI Bank Rate)",
+        "45-day statutory credit cap enforcement",
+        "CSV import/export",
+        "PDF aging report and letter export"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to track MSME receivables and prepare a demand letter",
+      step: [
+        { "@type": "HowToStep", name: "Add your business name and Udyam number" },
+        { "@type": "HowToStep", name: "Enter overdue invoices with buyer, date, and amount" },
+        { "@type": "HowToStep", name: "Review aging buckets and accrued interest" },
+        { "@type": "HowToStep", name: "Switch to Demand Letter tab, copy or export as PDF" }
+      ]
+    }
+  ]
+};
+
+const internalLinks = [
+  { href: "/msmed-interest-calculator/", label: "MSMED interest calculator", description: "Single-invoice Section 16 interest statement with simple and compound modes" },
+  { href: "/invoice-generator/", label: "UPI invoice generator", description: "Create invoices with embedded payment QRs" },
+  { href: "/proforma-invoice-generator/", label: "Proforma invoice generator", description: "Generate proforma invoices for advance payments and quotes" },
+  { href: "/payment-reminder-generator/", label: "Payment reminder generator", description: "Send polite, firm, or final payment reminders" },
+  { href: "/credit-note-generator/", label: "Credit note generator", description: "Issue credit notes for returned goods or billing corrections" },
+  { href: "/treds-calculator/", label: "TReDS discounting calculator", description: "Net proceeds when you discount a large-buyer invoice" },
+];
+
+const reviewDate = "2026-08-29";
+const reviewer = "Kunal Siyag";
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">MSME Receivables</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">MSME toolkit</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">MSME receivables — track aging, draft demand letters</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Waiting 90, 120, or 200 days for corporate payments? Upload your outstanding invoices, bucket them by age, compute statutory interest at 19.5% p.a., and generate a Section 16 demand letter — all in your browser, nothing uploaded.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#msme-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Start tracking</a>
+            <a href="#faqs" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">How it works ↓</a>
+          </div>
+          <p class="mt-4 text-[11px] leading-5 font-semibold text-forest/50">
+            Reviewed by {reviewer} on {reviewDate}. Sources: <a href="https://msme.gov.in" class="underline hover:text-leaf">MSME Ministry</a> · <a href="https://samadhaan.msme.gov.in" class="underline hover:text-leaf">SAMADHAAN</a> · <a href="https://rbi.org.in" class="underline hover:text-leaf">RBI Bank Rate</a> · <a href="https://dcmsme.gov.in" class="underline hover:text-leaf">DC MSME</a>
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="msme-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <MsmeReceivables client:visible />
+      </div>
+    </section>
+
+    <section id="faqs" class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">MSME receivables questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+        <p class="mt-6 text-xs leading-6 font-medium text-forest/55">
+          Legal notice: This tool computes indicative interest and drafts a letter based on published MSMED provisions and RBI Bank Rate notifications. It is not legal advice. Verify your Udyam registration, confirm the current Bank Rate on rbi.org.in, and file through samadhaan.msme.gov.in. Last reviewed {reviewDate} by {reviewer}.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 pb-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <h2 class="text-lg font-black text-forest mb-4">Related tools</h2>
+        <InternalLinkHub links={internalLinks} />
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Prevention is better than interest.</h2>
+        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/72">Invoices with embedded UPI QRs settle in hours, not months. Stop financing corporate buyers for free.</p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/invoice-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Invoice with payment QR →</a>
+          <a href="/msmed-interest-calculator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Single-invoice interest calculator</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

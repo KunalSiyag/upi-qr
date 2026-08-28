@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { buildUpiUri } from "../lib/upi-uri";
 
 export function DeveloperConsole() {
   const [form, setForm] = useState({
@@ -26,7 +27,7 @@ export function DeveloperConsole() {
   }, [form]);
 
   const rawUpiLink = useMemo(() => {
-    return `upi://pay?pa=${encodeURIComponent(form.pa)}&pn=${encodeURIComponent(form.pn)}${form.am ? `&am=${encodeURIComponent(form.am)}` : ""}${form.tn ? `&tn=${encodeURIComponent(form.tn)}` : ""}&cu=INR`;
+    return buildUpiUri({ pa: form.pa, pn: form.pn, am: form.am || undefined, tn: form.tn || undefined, cu: "INR" });
   }, [form]);
 
   const codeSnippets = {

@@ -2,8 +2,11 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
-import { getFeaturedGuides, guidePath } from "../data/internalLinks";
-import InternalLinkHub from "../components/InternalLinkHub.astro";
+import TemplateThumb from "../components/TemplateThumb.astro";
+import { getCollection } from "astro:content";
+import { guidePath } from "../data/internalLinks";
+import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
+import { ogImageForPath } from "../data/siteImages";
 
 const title = "Free UPI QR Code Generator | PhonePe, GPay, Paytm";
 const description =
@@ -63,6 +66,7 @@ const schema = {
       applicationCategory: "BusinessApplication",
       operatingSystem: "Any",
       url: "https://www.proupiqr.in/",
+      image: "https://www.proupiqr.in/images/og-image.jpg",
       description,
       offers: {
         "@type": "Offer",
@@ -198,13 +202,23 @@ const merchantTools = [
   { title: "GST Credit Note Generator", href: "/credit-note-generator/", copy: "Section 34 compliant credit notes for returns, discounts, and corrections.", status: "Live now" },
   { title: "Paid Stamp Generator", href: "/paid-stamp-generator/", copy: "Upload any bill photo and stamp PAID with date and signature, right inside your browser.", status: "Live now" },
   { title: "All Merchant Tools", href: "/tools/", copy: "Browse every QR generator, billing tool, calculator, and guide in one hub.", status: "20+ tools" },
-  { title: "Developer API", href: "/invoice-generator/#roadmap", copy: "Planned endpoints for QR PNG, SVG, UPI URI, invoice PDFs, and JavaScript embeds.", status: "Roadmap" }
+  { title: "Purchase Order Generator", href: "/purchase-order-generator/", copy: "Formal POs with buyer/supplier GSTINs, delivery terms, and line items.", status: "New" },
+  { title: "Cash Memo Generator", href: "/cash-memo-generator/", copy: "Simple retail billing slips for kirana shops and walk-in counter sales.", status: "New" },
+  { title: "MSME Receivables Tracker", href: "/msme-receivables/", copy: "Invoice aging buckets, 45-day due alerts, and Section 16 demand letters with interest.", status: "New" },
+  { title: "Developer API", href: "/developer/", copy: "Embed UPI QR widgets, payment links, and authenticated checkout sessions.", status: "Live now" }
 ];
 
-const featuredGuides = getFeaturedGuides(6);
+const posts = await getCollection("blog");
+const featuredGuides = pickFeaturedPosts(posts, 6);
 ---
 
-<BaseLayout title={title} description={description} schema={schema}>
+<BaseLayout
+  title={title}
+  description={description}
+  schema={schema}
+  image={ogImageForPath("/").src}
+  preloadImage={{ href: "/images/template/abc-shop-standee-480.avif", type: "image/avif" }}
+>
   <main>
     <section class="relative overflow-hidden px-4 pb-24 md:pb-32 pt-12 md:px-6 lg:px-8">
       <div class="grid-glow absolute inset-x-0 top-0 h-[28rem]"></div>
@@ -248,63 +262,63 @@ const featuredGuides = getFeaturedGuides(6);
                   href="/phonepe-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-[#5f259f]/5 px-3.5 py-1.5 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
                 >
-                  <img src="/favicon.svg" alt="PhonePe" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/favicon.svg" alt="PhonePe" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   PhonePe QR
                 </a>
                 <a
                   href="/google-pay-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-[#4285f4]/5 px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
                 >
-                  <img src="/googlepay.png" alt="Google Pay" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/googlepay.png" alt="Google Pay" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   Google Pay QR
                 </a>
                 <a
                   href="/paytm-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#00baf2]/25 bg-[#00baf2]/5 px-3.5 py-1.5 text-xs font-bold text-[#00baf2] transition hover:bg-[#00baf2] hover:text-white"
                 >
-                  <img src="/paytm.ico" alt="Paytm" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/paytm.ico" alt="Paytm" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   Paytm QR
                 </a>
                 <a
                   href="/bhim-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#e55523]/25 bg-[#e55523]/5 px-3.5 py-1.5 text-xs font-bold text-[#e55523] transition hover:bg-[#e55523] hover:text-white"
                 >
-                  <img src="/bhim.ico" alt="BHIM" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/bhim.ico" alt="BHIM" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   BHIM QR
                 </a>
                 <a
                   href="/whatsapp-pay-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#25d366]/25 bg-[#25d366]/5 px-3.5 py-1.5 text-xs font-bold text-[#25d366] transition hover:bg-[#25d366] hover:text-white"
                 >
-                  <img src="/whatsapp.png" alt="WhatsApp" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/whatsapp.png" alt="WhatsApp" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   WhatsApp QR
                 </a>
                 <a
                   href="/amazon-pay-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#ff9900]/25 bg-[#ff9900]/5 px-3.5 py-1.5 text-xs font-bold text-[#ff9900] transition hover:bg-[#ff9900] hover:text-white"
                 >
-                  <img src="/amazonpay.png" alt="Amazon Pay" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/amazonpay.png" alt="Amazon Pay" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   Amazon Pay QR
                 </a>
                 <a
                   href="/sbi-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#00a2e8]/25 bg-[#00a2e8]/5 px-3.5 py-1.5 text-xs font-bold text-[#00a2e8] transition hover:bg-[#00a2e8] hover:text-white"
                 >
-                  <img src="/sbi.ico" alt="SBI" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/sbi.ico" alt="SBI" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   SBI QR
                 </a>
                 <a
                   href="/hdfc-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#1c3f94]/25 bg-[#1c3f94]/5 px-3.5 py-1.5 text-xs font-bold text-[#1c3f94] transition hover:bg-[#1c3f94] hover:text-white"
                 >
-                  <img src="/hdfc.ico" alt="HDFC" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/hdfc.ico" alt="HDFC" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   HDFC QR
                 </a>
                 <a
                   href="/icici-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#f27220]/25 bg-[#f27220]/5 px-3.5 py-1.5 text-xs font-bold text-[#f27220] transition hover:bg-[#f27220] hover:text-white"
                 >
-                  <img src="/icici.ico" alt="ICICI" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/icici.ico" alt="ICICI" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   ICICI QR
                 </a>
                 <a
@@ -358,11 +372,14 @@ const featuredGuides = getFeaturedGuides(6);
                   <div class="mt-3 rounded-[1.1rem] bg-mint p-4">
                     <p class="text-base font-black text-forest text-center">Scan & Pay</p>
                     <div class="mt-3 overflow-hidden rounded-xl border border-forest/10 bg-white shadow-sm">
-                      <img
+                      <TemplateThumb
                         src="/images/template/abc-shop-standee.png"
                         alt="Shop payment standee template"
-                        class="h-[240px] w-full object-cover object-top"
+                        width={220}
+                        height={240}
                         loading="eager"
+                        fetchpriority="high"
+                        class="h-[240px] w-full object-cover object-top"
                       />
                     </div>
                   </div>
@@ -374,11 +391,13 @@ const featuredGuides = getFeaturedGuides(6);
                   <div class="mt-3 rounded-[1.1rem] bg-white/10 p-4">
                     <p class="text-base font-black text-center">Support Us</p>
                     <div class="mt-3 overflow-hidden rounded-xl border border-white/15 bg-white shadow-sm">
-                      <img
+                      <TemplateThumb
                         src="/images/template/abc-temple-donation.png"
                         alt="Temple donation template"
+                        width={220}
+                        height={240}
+                        loading="lazy"
                         class="h-[240px] w-full object-cover object-top"
-                        loading="eager"
                       />
                     </div>
                   </div>
@@ -411,7 +430,7 @@ const featuredGuides = getFeaturedGuides(6);
               </span>
             </div>
           </div>
-          <GeneratorForm client:load />
+          <GeneratorForm client:visible />
         </div>
       </div>
     </section>
@@ -439,6 +458,22 @@ const featuredGuides = getFeaturedGuides(6);
     </section>
 
     <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Topics</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Find the right tool without scanning a hundred footer links.</h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {TOPIC_HUBS.map((hub) => (
+            <a href={hub.path} class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 transition hover:border-leaf/40">
+              <h3 class="text-lg font-black text-forest">{hub.shortName}</h3>
+              <p class="mt-2 text-sm leading-7 text-forest/72">{hub.blurb}</p>
+              <span class="mt-3 inline-block text-xs font-bold text-leaf">Open hub →</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
         {features.map((feature) => (
           <article class="section-card rounded-[1.75rem] border border-white/75 bg-white/86 p-6">
@@ -459,6 +494,8 @@ const featuredGuides = getFeaturedGuides(6);
           <p class="mt-4 text-lg leading-8 text-forest/72">
             Generate once, switch styles instantly, and download a printable payment image for your
             counter, table, donation desk, or client share flow.
+            See paper sizes in the
+            <a href="/print-templates/" class="font-bold text-leaf hover:underline">A4, A5, 5×7, and sticker gallery</a>.
           </p>
         </div>
 
@@ -478,11 +515,13 @@ const featuredGuides = getFeaturedGuides(6);
 
               {/* Template preview image */}
               <div class="mt-4 rounded-2xl bg-cream p-4 border border-forest/5 flex flex-col items-center justify-center min-h-[170px] relative overflow-hidden shadow-inner">
-                <img
+                <TemplateThumb
                   src={template.image}
-                  alt={template.name}
+                  alt={`${template.name} printable UPI QR template`}
+                  width={340}
+                  height={170}
+                  loading="lazy"
                   class="h-full w-full rounded-xl object-cover object-top"
-                  loading={idx < 2 ? "eager" : "lazy"}
                 />
               </div>
 
@@ -494,7 +533,6 @@ const featuredGuides = getFeaturedGuides(6);
           ))}
         </div>
 
-        <InternalLinkHub variant="guides" guideLimit={6} />
       <div class="mt-8"></div>
       <AffiliateProducts />
       </div>
@@ -541,14 +579,14 @@ const featuredGuides = getFeaturedGuides(6);
         <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
           {featuredGuides.map((guide) => (
             <a
-              href={guidePath(guide.slug)}
+              href={guidePath(guide.id.replace(/\.mdx?$/, ""))}
               class="group flex flex-col justify-between rounded-[1.75rem] border border-white/75 bg-white/86 p-6 transition-all duration-300 hover:border-leaf/20 hover:shadow-[0_18px_48px_rgba(17,59,44,0.08)]"
             >
               <div>
                 <h3 class="text-lg font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
-                  {guide.title}
+                  {guide.data.title}
                 </h3>
-                <p class="mt-3 text-sm leading-7 text-forest/72 line-clamp-3">{guide.description}</p>
+                <p class="mt-3 text-sm leading-7 text-forest/72 line-clamp-3">{guide.data.description}</p>
               </div>
               <span class="mt-5 text-xs font-bold text-leaf group-hover:translate-x-1 transition-transform inline-block">
                 Read guide &rarr;
@@ -593,10 +631,6 @@ const featuredGuides = getFeaturedGuides(6);
           <a href="/survey-qr-generator/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
             <svg class="h-3.5 w-3.5 text-leaf" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
             <span>Survey & Google Review QR</span>
-          </a>
-          <a href="/universal-upi-qr-code-generator-for-bank-account/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
-            <span>Bank Account Universal UPI QR</span>
           </a>
           <a href="/sbi-business-qr-code-generator/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
             <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>

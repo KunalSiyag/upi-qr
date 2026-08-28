@@ -5,7 +5,7 @@ import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
 
 const title = "Free UPI QR Embed & Developer API Portal | Pro UPI QR";
 const description =
-  "Integrate free UPI payment widgets, buttons, and redirection APIs into your HTML website, React, Vue or mobile app. 100% free, commission-free gateway.";
+  "Build UPI QR embeds, native payment links, authenticated checkout sessions, and signed server-side payment status integrations for Indian apps.";
 
 const schema = {
   "@context": "https://schema.org",
@@ -66,6 +66,28 @@ const schema = {
       </div>
 
       {/* API Documentation Section */}
+      <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
+        <p class="inline-flex rounded-full bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Merchant API key required</p>
+        <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">Hosted Checkout Sessions</h2>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/70 sm:text-base">
+          Create a 24-hour checkout with an exact INR amount and public HTTPS return URL. Reusing the same <code>order_id</code> is idempotent. A customer-submitted UTR remains <code>verification_pending</code> until your server checks its bank records and confirms the session.
+        </p>
+        <div class="mt-5 grid gap-5 md:grid-cols-3">
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <h3 class="text-sm font-black text-forest">1. Create</h3>
+            <code class="mt-3 block break-words rounded-xl bg-forest p-3 text-[11px] text-white">POST /api/v1/checkout-sessions/<br />Authorization: Bearer puqi_live_...</code>
+          </div>
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <h3 class="text-sm font-black text-forest">2. Inspect</h3>
+            <code class="mt-3 block break-words rounded-xl bg-forest p-3 text-[11px] text-white">GET /api/v1/checkout-sessions/:id/<br />Authorization: Bearer puqi_live_...</code>
+          </div>
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <h3 class="text-sm font-black text-forest">3. Confirm</h3>
+            <code class="mt-3 block break-words rounded-xl bg-forest p-3 text-[11px] text-white">PATCH /api/v1/checkout-sessions/:id/<br />&#123; "status": "paid", "confirmed": true &#125;</code>
+          </div>
+        </div>
+      </section>
+
       <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
         <h2 class="text-2xl sm:text-3xl font-black text-forest tracking-tight">Redirection API & Query Parameters</h2>
         <p class="mt-3 sm:mt-4 text-sm sm:text-base text-forest/70 max-w-3xl">
@@ -143,33 +165,33 @@ const schema = {
         <div class="mt-6 grid gap-5 md:grid-cols-2">
           <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5 sm:p-6">
             <h3 class="text-sm font-black text-forest">1. Receive the verified gateway result</h3>
-            <p class="mt-2 text-xs leading-relaxed text-forest/70">Configure your gateway webhook to reach your server first. Your backend verifies the signature, normalizes the result, and then calls this endpoint server-to-server.</p>
-            <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>POST /api/payment-response<br />Content-Type: application/json<br /><br />&#123; "orderId": "order_8390", "status": "SUCCESS", "transactionId": "UTR…", "amount": "250.00", "provider": "your-gateway" &#125;</code></div>
+            <p class="mt-2 text-xs leading-relaxed text-forest/70">Configure your gateway webhook to reach your server first. Your backend verifies the provider signature, uses a globally unique order ID, normalizes the result, and then calls this endpoint server-to-server.</p>
+            <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>POST /api/payment-response/<br />Content-Type: application/json<br />x-pro-upi-timestamp: 1787832000000<br />x-pro-upi-signature: sha256=...<br /><br />&#123; "orderId": "order_8390", "status": "SUCCESS", "transactionId": "UTR…", "amountPaise": 25000, "provider": "your-gateway" &#125;</code></div>
           </div>
           <div class="rounded-2xl border border-forest/10 bg-cream/50 p-5 sm:p-6">
             <h3 class="text-sm font-black text-forest">2. Read the saved response</h3>
             <p class="mt-2 text-xs leading-relaxed text-forest/70">Your frontend can show a payment pending screen while your backend polls this endpoint or updates your order database. The result is retained for 90 days in Vercel KV.</p>
-            <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>GET /api/payment-response?orderId=order_8390<br /><br />&#123; "payment": &#123; "status": "SUCCESS", "transactionId": "UTR…", "receivedAt": "…" &#125; &#125;</code></div>
+            <div class="mt-4 overflow-x-auto rounded-xl bg-forest p-3 font-mono text-[11px] leading-relaxed text-white"><code>GET /api/payment-response/?orderId=order_8390<br />x-pro-upi-timestamp: 1787832000000<br />x-pro-upi-signature: sha256=...<br /><br />&#123; "payment": &#123; "status": "SUCCESS", "transactionId": "UTR…", "receivedAt": "…" &#125; &#125;</code></div>
           </div>
         </div>
 
         <div class="mt-5 rounded-2xl border border-amber-700/15 bg-amber-50/70 p-4 text-xs leading-relaxed text-amber-950">
-          <strong>Backend requirement:</strong> set <code>PAYMENT_WEBHOOK_SECRET</code>, <code>KV_REST_API_URL</code>, and <code>KV_REST_API_TOKEN</code> in Vercel. The secret is only for server-to-server calls. Keep it out of browser JavaScript and out of any embedded widget.
+          <strong>Backend requirement:</strong> set <code>PAYMENT_WEBHOOK_SECRET</code>, <code>KV_REST_API_URL</code>, and <code>KV_REST_API_TOKEN</code> in Vercel. Sign POST as <code>POST.timestamp.rawBody</code> and GET as <code>GET.timestamp.sortedQuery</code>. The secret is only for server-to-server calls. Keep it out of browser JavaScript and embedded widgets. This response store is separate from hosted checkout sessions and does not change their status automatically.
         </div>
       </section>
 
       {/* Integration Guides and Code Snippets */}
       <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 grid gap-6 sm:gap-8 md:grid-cols-2 w-full min-w-0">
         <div class="rounded-2xl sm:rounded-3xl bg-mint/30 p-4 sm:p-6 md:p-8 border border-leaf/10 w-full min-w-0">
-          <h3 class="text-base sm:text-lg font-black text-forest">Redirection API Endpoint</h3>
+          <h3 class="text-base sm:text-lg font-black text-forest">Native UPI Intent Link</h3>
           <p class="mt-3 text-xs leading-relaxed text-forest/70">
-            Redirecting customers directly to their default payment app is ideal for mobile checkout screens. Use the base URL structure below:
+            Open the standard UPI URI directly from your mobile checkout. Pro UPI QR does not provide an unrestricted redirect endpoint for arbitrary destinations.
           </p>
           <div class="mt-4 rounded-xl bg-forest p-3 font-mono text-[11px] text-[#fff] overflow-x-auto shadow-inner w-full min-w-0">
-            <code>https://www.proupiqr.in/r/?url=upi%3A%2F%2Fpay%3Fpa%3Dmerchant%40upi%26pn%3DPro%2520UPI%2520QR%26am%3D250</code>
+            <code>upi://pay?pa=merchant@upi&amp;pn=Pro%20UPI%20QR&amp;am=250.00&amp;cu=INR</code>
           </div>
           <p class="mt-3 text-[10px] text-forest/50 leading-relaxed">
-            Note: All spaces and special characters must be properly URL-encoded.
+            Encode parameter values and verify the payee and amount in the UPI app before authorizing payment.
           </p>
         </div>
 
@@ -186,6 +208,165 @@ const schema = {
               ✓ No SDKs to Install
             </span>
           </div>
+        </div>
+      </section>
+
+      {/* UPI URI Parser & Builder Library */}
+      <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
+        <p class="inline-flex rounded-full bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Open-source utility</p>
+        <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">UPI URI Parser &amp; Builder</h2>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/70 sm:text-base">
+          A single 4 kB TypeScript module that both constructs valid <code>upi://pay?...</code> links from typed fields and parses them back into structured data. Copy it into any JavaScript, React, Next.js, or Node project. Zero dependencies. Based on NPCI UPI Linking Specification v1.6.
+        </p>
+
+        <div class="mt-8 grid gap-6 md:grid-cols-2">
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <h3 class="text-sm font-black text-forest mb-3">Build a UPI URI</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[11px] text-white overflow-x-auto">
+              <code>import &#123; buildUpiUri &#125; from './lib/upi-uri';<br/><br/>const uri = buildUpiUri(&#123;<br/>  pa: 'shop@upi',<br/>  pn: 'My Shop',<br/>  am: '250.50'<br/>&#125;);<br/>// "upi://pay?pa=shop%40upi&amp;pn=My%20Shop&amp;am=250.50&amp;cu=INR"</code>
+            </div>
+          </div>
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <h3 class="text-sm font-black text-forest mb-3">Parse a UPI URI</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[11px] text-white overflow-x-auto">
+              <code>import &#123; parseUpiUri &#125; from './lib/upi-uri';<br/><br/>const r = parseUpiUri('upi://pay?...');<br/>r.pa // "shop@upi"<br/>r.pn // "My Shop"<br/>r.amountPaise // 25050<br/>r.valid // true</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 grid gap-4 sm:grid-cols-3">
+          <div class="rounded-xl border border-forest/10 bg-mint/20 p-4">
+            <h4 class="text-xs font-black text-forest">buildUpiUri(fields)</h4>
+            <p class="mt-1 text-[10px] text-forest/70 leading-relaxed">Accepts &#123; pa, pn, am?, tn?, cu?, mc?, tr?, ref? &#125;. Returns an encoded UPI URI string. Omits optional fields when empty.</p>
+          </div>
+          <div class="rounded-xl border border-forest/10 bg-mint/20 p-4">
+            <h4 class="text-xs font-black text-forest">parseUpiUri(uri)</h4>
+            <p class="mt-1 text-[10px] text-forest/70 leading-relaxed">Returns &#123; pa, pn, am, tn, cu, amountPaise, amountNumeric, valid &#125;. amountPaise is integer paise or null.</p>
+          </div>
+          <div class="rounded-xl border border-forest/10 bg-mint/20 p-4">
+            <h4 class="text-xs font-black text-forest">isValidUpiUri(uri)</h4>
+            <p class="mt-1 text-[10px] text-forest/70 leading-relaxed">Returns boolean. Validates VPA format (regex), payee name presence, amount decimal places, and char safety.</p>
+          </div>
+        </div>
+
+        <div class="mt-4 rounded-2xl border border-amber-700/15 bg-amber-50/70 p-3 text-[10px] text-amber-950">
+          <strong>Source:</strong> Copy <code>/src/lib/upi-uri.ts</code> from the site source. No npm package yet. The parser uses <code>URLSearchParams</code>, which is available in browsers, Node 18+, React Native, and Android/iOS webviews. Full source is ~120 lines, MIT-licensed.
+        </div>
+      </section>
+
+      {/* Platform code examples: React, Next.js, Android, iOS */}
+      <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
+        <h2 class="text-2xl sm:text-3xl font-black text-forest tracking-tight">Platform Integration Examples</h2>
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/70 sm:text-base">
+          Copy-paste ready code for four platforms. All examples use the free UPI intent — no API key, no SDK, no server.
+        </p>
+
+        <div class="mt-8 grid gap-8 md:grid-cols-2">
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#61DAFB]/20 px-2 py-0.5 text-[10px] font-black text-forest">React 18+</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">TypeScript</span></div>
+            <h3 class="text-sm font-black text-forest mb-2">React Component</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
+              <code>{`import React from 'react';
+
+function UpiPayButton({ vpa, name, amount }: { vpa: string; name: string; amount?: number }) {
+  const pay = () => {
+    const params = new URLSearchParams({ pa: vpa, pn: name, cu: "INR" });
+    if (amount) params.set("am", amount.toFixed(2));
+    window.location.href = \`upi://pay?\${params}\`;
+  };
+
+  return (
+    <button onClick={pay}
+      className="rounded-full bg-emerald-800 px-6 py-3 text-white font-bold hover:bg-emerald-700">
+      Pay ₹{amount ? amount.toFixed(2) : "..."}
+    </button>
+  );
+}
+
+export default UpiPayButton;`}</code>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-black text-forest">Next.js 14+</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">App Router</span></div>
+            <h3 class="text-sm font-black text-forest mb-2">Next.js Server + Client</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
+              <code>{`// app/api/upi-link/route.ts — Server Component
+import { NextResponse } from 'next/server';
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url);
+  const vpa = searchParams.get('vpa') || 'shop@upi';
+  const name = searchParams.get('name') || 'My Shop';
+  const amt = searchParams.get('amount');
+  const params = new URLSearchParams({ pa: vpa, pn: name, cu: 'INR' });
+  if (amt) params.set('am', amt);
+  return NextResponse.redirect(\`upi://pay?\${params}\`);
+}
+
+// Usage: /api/upi-link?vpa=shop@upi&name=Store&amount=250`}</code>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#3DDC84]/20 px-2 py-0.5 text-[10px] font-black text-forest">Android</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">Kotlin</span></div>
+            <h3 class="text-sm font-black text-forest mb-2">Android (Kotlin)</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
+              <code>{`// Open a UPI payment intent in any installed UPI app
+fun payViaUpi(context: Context, vpa: String, name: String, amount: String?) {
+    val uri = Uri.Builder()
+        .scheme("upi")
+        .authority("pay")
+        .appendQueryParameter("pa", vpa)
+        .appendQueryParameter("pn", name)
+        .appendQueryParameter("cu", "INR")
+        .apply { amount?.let { appendQueryParameter("am", it) } }
+        .build()
+
+    val intent = Intent(Intent.ACTION_VIEW, uri).apply {
+        setPackage("com.google.android.apps.nbu.paisa.user") // GPay fallback
+    }
+    try {
+        context.startActivity(intent)
+    } catch (e: ActivityNotFoundException) {
+        // No UPI app installed — show install prompt
+    }
+}`}</code>
+            </div>
+          </div>
+
+          <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#007AFF]/20 px-2 py-0.5 text-[10px] font-black text-forest">iOS</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">Swift</span></div>
+            <h3 class="text-sm font-black text-forest mb-2">iOS (Swift)</h3>
+            <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
+              <code>{`// Open UPI payment via URL scheme (Swift)
+func payViaUpi(vpa: String, name: String, amount: String?) {
+    var components = URLComponents()
+    components.scheme = "upi"
+    components.host = "pay"
+    components.queryItems = [
+        URLQueryItem(name: "pa", value: vpa),
+        URLQueryItem(name: "pn", value: name),
+        URLQueryItem(name: "cu", value: "INR")
+    ]
+    if let amt = amount {
+        components.queryItems?.append(URLQueryItem(name: "am", value: amt))
+    }
+
+    guard let url = components.url else { return }
+
+    if UIApplication.shared.canOpenURL(url) {
+        UIApplication.shared.open(url)
+    } else {
+        // Fallback: open App Store UPI app
+    }
+}`}</code>
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-6 rounded-2xl border border-forest/10 bg-mint/20 p-4 text-xs text-forest/75 leading-relaxed">
+          <p><strong>Attribution:</strong> Embedding the Pro UPI QR widget is free for any commercial or non-commercial use. Widget attribution ("Powered by Pro UPI QR") may be disabled by setting <code>?attribution=none</code> on the embed URL. We ask that you do not use the widget in link schemes, keyword-stuffed footer links, or hidden embeds — this violates Google's link-spam policy and can hurt <em>your</em> site's search rankings.</p>
         </div>
       </section>
     </div>

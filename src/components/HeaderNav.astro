@@ -1,5 +1,7 @@
 ---
 import { routeExistsInLang } from "../data/validRoutes";
+import { chromeFor } from "../data/localeChrome";
+import { localeHref, type SiteLang } from "../lib/locale";
 
 interface Props {
   isHindi?: boolean;
@@ -21,17 +23,19 @@ const languages = [
   { code: "mr", label: "मराठी", path: routeExistsInLang(currentSlug, "mr") ? (currentSlug ? `/mr/${currentSlug}/` : "/mr/") : "/mr/" }
 ];
 
-let activeLang = languages[0];
-if (currentPath.startsWith("/hi")) activeLang = languages[1];
-else if (currentPath.startsWith("/ta")) activeLang = languages[2];
-else if (currentPath.startsWith("/te")) activeLang = languages[3];
-else if (currentPath.startsWith("/mr")) activeLang = languages[4];
+const localeMatch = currentPath.match(/^\/(hi|ta|te|mr)(?:\/|$)/);
+const currentLang = localeMatch?.[1] ?? "en";
+const siteLang: SiteLang = (currentLang === "hi" || currentLang === "ta" || currentLang === "te" || currentLang === "mr") ? currentLang : "en";
+const chrome = chromeFor(siteLang);
+const p = (slug: string) => localeHref(siteLang, slug);
+const activeLang = languages.find((language) => language.code === currentLang) ?? languages[0];
+const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
 ---
 
 <div class="relative">
 <header class="flex items-center justify-between gap-4 rounded-full border border-white/80 bg-white/85 px-4 py-3 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.06)] pointer-events-auto transition-all">
-  <a href={isHindi ? "/hi/" : "/"} class="flex items-center gap-2.5 text-sm sm:text-lg font-black tracking-tight text-forest shrink-0 hover:opacity-90">
-    <img src="/favicon.svg" alt="Pro UPI QR Logo" class="h-8 w-8 rounded-xl shadow-sm" />
+  <a href={localeHome} class="flex items-center gap-2.5 text-sm sm:text-lg font-black tracking-tight text-forest shrink-0 hover:opacity-90">
+    <img src="/favicon.svg" alt="Pro UPI QR Logo" width="32" height="32" class="h-8 w-8 rounded-xl shadow-sm" />
     <span>Pro UPI QR</span>
   </a>
 
@@ -40,23 +44,23 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
     <!-- QR Generators Dropdown -->
     <div class="relative group px-2 py-1">
       <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
-        <span>{isHindi ? "QR जनरेटर्स" : "QR Generators"}</span>
+        <span>{chrome.qrGenerators}</span>
         <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-64">
         <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-1">
-          <a href={isHindi ? "/hi/" : "/"} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={localeHome} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
             </div>
             <div>
-              <div class="text-xs font-bold text-forest">{isHindi ? "UPI QR जनरेटर" : "UPI QR Generator"}</div>
-              <div class="text-[10px] text-forest/60">{isHindi ? "UPI ऐप्स के लिए स्टैंडर्ड QR" : "Standard QR for all UPI apps"}</div>
+              <div class="text-xs font-bold text-forest">{chrome.upiQrGenerator}</div>
+              <div class="text-[10px] text-forest/60">{chrome.upiQrGeneratorHint}</div>
             </div>
           </a>
-          <a href="/universal-qr-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("universal-qr-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
             </div>
@@ -65,7 +69,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">URL, Text, WiFi, vCard & Contact</div>
             </div>
           </a>
-          <a href="/qr-sticker-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("qr-sticker-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
             </div>
@@ -74,7 +78,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Print 4, 6, or 12 counter stickers</div>
             </div>
           </a>
-          <a href="/bulk-qr/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("bulk-qr")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
             </div>
@@ -83,7 +87,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Batch generate QRs from Excel</div>
             </div>
           </a>
-          <a href="/dynamic-qr-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("dynamic-qr-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
@@ -92,6 +96,9 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Editable redirect QR links</div>
             </div>
           </a>
+          <a href={p("upi-qr-generators")} class="block rounded-xl p-2 text-center text-[11px] font-black uppercase tracking-wider text-leaf hover:bg-mint/60">
+            {isHindi ? "सभी UPI QR जनरेटर →" : "All UPI QR generators →"}
+          </a>
         </div>
       </div>
     </div>
@@ -99,14 +106,14 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
     <!-- Merchant Tools Dropdown -->
     <div class="relative group px-2 py-1">
       <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
-        <span>{isHindi ? "मर्चेंट टूल्स" : "Merchant Tools"}</span>
+        <span>{chrome.merchantTools}</span>
         <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
           <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
         </svg>
       </button>
       <div class="absolute right-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-[36rem]">
         <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl grid grid-cols-2 gap-0.5">
-          <a href="/invoice-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("invoice-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
@@ -115,7 +122,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">GST invoices with payment QR</div>
             </div>
           </a>
-          <a href="/receipt-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("receipt-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
             </div>
@@ -124,7 +131,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Paid receipts with UTR &amp; QR</div>
             </div>
           </a>
-          <a href="/paid-stamp-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("paid-stamp-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 7v10a1 1 0 001 1h14a2 2 0 002-2V9a2 2 0 00-2-2h-3l-2-2H8l-2 2H4a1 1 0 00-1 1zm7 4h4m-2-2v4"/></svg>
             </div>
@@ -133,7 +140,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Stamp PAID on bill photos</div>
             </div>
           </a>
-          <a href="/rent-receipt-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("rent-receipt-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 12l9-9 9 9M5 10v10a1 1 0 001 1h4v-6h4v6h4a1 1 0 001-1V10"/></svg>
             </div>
@@ -142,7 +149,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">HRA receipts, revenue stamp format</div>
             </div>
           </a>
-          <a href="/quotation-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("quotation-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
             </div>
@@ -151,7 +158,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Estimates with validity &amp; terms</div>
             </div>
           </a>
-          <a href="/payment-reminder-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("payment-reminder-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
             </div>
@@ -160,7 +167,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Polite overdue WhatsApp messages</div>
             </div>
           </a>
-          <a href="/split-bill-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("split-bill-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
             </div>
@@ -169,7 +176,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Fair shares + UPI pay links</div>
             </div>
           </a>
-          <a href="/cash-denomination-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("cash-denomination-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
@@ -178,7 +185,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Shift closing &amp; variance check</div>
             </div>
           </a>
-          <a href="/credit-note-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("credit-note-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z"/></svg>
             </div>
@@ -187,7 +194,34 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Section 34 returns &amp; adjustments</div>
             </div>
           </a>
-          <a href="/gratuity-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("debit-note-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 14l6-6m-5.5.5h.01m4.99 5h.01M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16l3.5-2 3.5 2 3.5-2 3.5 2z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">GST Debit Note Generator</div>
+              <div class="text-[10px] text-forest/60">Section 34 increase/addition</div>
+            </div>
+          </a>
+          <a href={p("purchase-order-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3h18v18H3V3zm4 4h10v2H7V7zm0 4h10v2H7v-2zm0 4h6v2H7v-2z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Purchase Order Generator</div>
+              <div class="text-[10px] text-forest/60">Formal POs with GSTINs &amp; terms</div>
+            </div>
+          </a>
+          <a href={p("delivery-challan-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-1h1v1zm0-4h-1V8h1v4zm-9 9h16a1 1 0 001-1V4a1 1 0 00-1-1H4a1 1 0 00-1 1v16a1 1 0 001 1z"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">Delivery Challan Generator</div>
+              <div class="text-[10px] text-forest/60">Vehicle, e-way bill, receiver block</div>
+            </div>
+          </a>
+          <a href={p("gratuity-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v13m0-13V6a2 2 0 112 2h-2zm0 0V5.5A2.5 2.5 0 109.5 8H12zm-7 4h14M5 12a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 00-2-2M5 12V7a2 2 0 012-2h10a2 2 0 012 2v5"/></svg>
             </div>
@@ -196,7 +230,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">15/26 exit payout estimate</div>
             </div>
           </a>
-          <a href="/salary-slip-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("salary-slip-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h4M7 5H5a2 2 0 00-2 2v12a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 3h6a1 1 0 011 1v2H8V4a1 1 0 011-1z"/></svg>
             </div>
@@ -205,16 +239,16 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Monthly payslips with deductions</div>
             </div>
           </a>
-          <a href="/msmed-interest-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("msmed-interest-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
             </div>
             <div>
               <div class="text-xs font-bold text-forest">MSMED Interest Calculator</div>
-              <div class="text-[10px] text-forest/60">15% p.a. on late B2B payments</div>
+              <div class="text-[10px] text-forest/60">RBI-linked MSMED late-payment interest</div>
             </div>
           </a>
-          <a href="/proforma-invoice-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("proforma-invoice-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
             </div>
@@ -223,7 +257,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Advance-payment request documents</div>
             </div>
           </a>
-          <a href="/break-even-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("break-even-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 3v18h18M9 17V9m4 8V5m4 12v-6"/></svg>
             </div>
@@ -232,7 +266,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Survival units + safety margin</div>
             </div>
           </a>
-          <a href="/treds-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("treds-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h4m4 0h.01M5 20h14a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
             </div>
@@ -241,7 +275,16 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Cash now on big-buyer invoices</div>
             </div>
           </a>
-          <a href="/sip-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("msme-receivables")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+            <div class="p-1.5 rounded-lg bg-mint text-leaf">
+              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/></svg>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-forest">MSME Receivables Tracker</div>
+              <div class="text-[10px] text-forest/60">Aging, 45-day tracker, demand letters</div>
+            </div>
+          </a>
+          <a href={p("sip-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"/></svg>
             </div>
@@ -250,7 +293,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Growth table + inflation view</div>
             </div>
           </a>
-          <a href="/emi-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("emi-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h1m4 0h1M4 7h16M5 11h14M7 21l1-14M17 21l-1-14"/></svg>
             </div>
@@ -259,7 +302,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Loan EMI + amortization PDF</div>
             </div>
           </a>
-          <a href="/gst-calculator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("gst-calculator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"/></svg>
             </div>
@@ -268,7 +311,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Tax breakdown + Payment QR</div>
             </div>
           </a>
-          <a href="/offer-poster-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("offer-poster-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 7h10v10H7z"/></svg>
             </div>
@@ -277,7 +320,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Printable discount banners</div>
             </div>
           </a>
-          <a href="/whatsapp-order-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("whatsapp-order-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
             </div>
@@ -286,7 +329,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Direct pay chat links</div>
             </div>
           </a>
-          <a href="/menu-qr-generator/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("menu-qr-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
             </div>
@@ -295,7 +338,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Printable price list cards</div>
             </div>
           </a>
-          <a href="/upi-error-codes/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("upi-error-codes")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
             </div>
@@ -304,7 +347,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">Error codes & refund TAT</div>
             </div>
           </a>
-          <a href="/digital-visiting-card/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("digital-visiting-card")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 012-2h2a2 2 0 012 2v1m-6 0h6"/></svg>
             </div>
@@ -313,7 +356,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
               <div class="text-[10px] text-forest/60">vCard + UPI business cards</div>
             </div>
           </a>
-          <a href="/upi-limits/" class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
+          <a href={p("upi-limits")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
             <div class="p-1.5 rounded-lg bg-mint text-leaf">
               <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/></svg>
             </div>
@@ -327,13 +370,58 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
     </div>
 
     <!-- All Tools -->
-    <a href="/tools/" class="px-2 py-1 hover:text-leaf transition-colors">{isHindi ? "सभी टूल्स" : "All Tools"}</a>
+    <a href={p("tools")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.allTools}</a>
+
+    <!-- Topics Dropdown -->
+    <div class="relative group px-2 py-1">
+      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus:outline-none">
+        <span>{chrome.topics}</span>
+        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-72">
+        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-0.5">
+          <a href={p("upi-qr-generators")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "UPI QR जनरेटर" : "UPI QR generators"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "ऐप, बैंक, दुकान प्रीसेट" : "App, bank, and shop presets"}</div>
+          </a>
+          <a href={p("merchant-setup")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "मर्चेंट सेटअप" : "Merchant setup"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "PhonePe, GPay, साउंडबॉक्स" : "PhonePe, GPay, soundboxes"}</div>
+          </a>
+          <a href={p("print-upi-qr")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "प्रिंट और स्टैंडी" : "Print, stickers, standees"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "आकार, स्टीकर, पोस्टर" : "Sizes, sticker sheets, posters"}</div>
+          </a>
+          <a href={p("print-templates")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "प्रिंट टेम्पलेट" : "Printable templates"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "A4, A5, 5×7, टेबल टेंट" : "A4, A5, 5×7, table tents"}</div>
+          </a>
+          <a href={p("upi-errors-and-limits")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "एरर, लिमिट, सुरक्षा" : "Errors, limits, safety"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "NPCI कोड और रिफंड TAT" : "NPCI codes and refund TAT"}</div>
+          </a>
+          <a href={p("merchant-documents")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "इनवॉइस और दस्तावेज़" : "Invoices & documents"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "इनवॉइस, रसीद, कोटेशन" : "Invoices, receipts, quotations"}</div>
+          </a>
+          <a href={p("business-calculators")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "बिज़नेस कैलकुलेटर" : "Business calculators"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "GST, EMI, MSMED, TReDS" : "GST, EMI, MSMED, TReDS"}</div>
+          </a>
+        </div>
+      </div>
+    </div>
 
     <!-- Guides & Blog -->
-    <a href="/blog/" class="px-2 py-1 hover:text-leaf transition-colors">{isHindi ? "गाइड" : "Guides"}</a>
+    <a href={p("blog")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.guides}</a>
 
     <!-- Developers -->
-    <a href="/developer/" class="px-2 py-1 hover:text-leaf transition-colors">{isHindi ? "डेवलपर्स" : "Developers"}</a>
+    <a href={p("developer")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.developers}</a>
+
+    <!-- About -->
+    <a href={p("about")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.about}</a>
   </nav>
 
   <div class="flex items-center gap-2 sm:gap-3">
@@ -366,7 +454,7 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
     </div>
 
     <!-- Mobile Menu Button -->
-    <button type="button" id="mobile-menu-btn" aria-label="Open navigation menu" aria-controls="mobile-menu" aria-expanded="false" class="xl:hidden flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
+    <button type="button" id="mobile-menu-btn" aria-label={chrome.openMenu} aria-controls="mobile-menu" aria-expanded="false" class="xl:hidden flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
       <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
         <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
       </svg>
@@ -379,50 +467,69 @@ else if (currentPath.startsWith("/mr")) activeLang = languages[4];
   <nav id="mobile-menu" aria-label="Mobile navigation" hidden class="xl:hidden pointer-events-auto absolute inset-x-0 top-[calc(100%+0.5rem)] z-40 max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain rounded-3xl border border-forest/10 bg-white shadow-2xl">
     <div class="space-y-3 p-4" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
     <div>
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "QR जनरेटर्स" : "QR Code Generators"}</div>
+      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.qrGenerators}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href={isHindi ? "/hi/" : "/"} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI QR</a>
-        <a href="/universal-qr-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Universal QR</a>
-        <a href="/qr-sticker-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">A4 Stickers</a>
-        <a href="/bulk-qr/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Bulk CSV QR</a>
-        <a href="/dynamic-qr-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Dynamic QR</a>
+        <a href={localeHome} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI QR</a>
+        <a href={p("universal-qr-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Universal QR</a>
+        <a href={p("qr-sticker-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">A4 Stickers</a>
+        <a href={p("bulk-qr")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Bulk CSV QR</a>
+        <a href={p("dynamic-qr-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Dynamic QR</a>
       </div>
     </div>
 
     <div class="border-t border-forest/10 pt-2">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{isHindi ? "मर्चेंट टूल्स" : "Merchant Tools & Calculators"}</div>
+      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.merchantTools}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href="/invoice-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Invoice PDF</a>
-        <a href="/receipt-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Receipt PDF</a>
-        <a href="/paid-stamp-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Paid Stamp</a>
-        <a href="/rent-receipt-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Rent Receipt</a>
-        <a href="/quotation-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Quotation</a>
-        <a href="/payment-reminder-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Payment Reminder</a>
-        <a href="/split-bill-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Split Bill</a>
-        <a href="/cash-denomination-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Cash Counter</a>
-        <a href="/credit-note-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Credit Note</a>
-        <a href="/emi-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">EMI Calculator</a>
-        <a href="/gratuity-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Gratuity</a>
-        <a href="/sip-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">SIP Calc</a>
-        <a href="/salary-slip-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Salary Slip</a>
-        <a href="/msmed-interest-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">MSMED Interest</a>
-        <a href="/proforma-invoice-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Proforma</a>
-        <a href="/break-even-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Break-Even</a>
-        <a href="/gst-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">GST Calculator</a>
-        <a href="/offer-poster-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Offer Poster</a>
-        <a href="/whatsapp-order-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">WhatsApp Order</a>
-        <a href="/menu-qr-generator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Menu Builder</a>
-        <a href="/upi-error-codes/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Errors</a>
-        <a href="/margin-calculator/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Margin Calculator</a>
-        <a href="/digital-visiting-card/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Visiting Card</a>
-        <a href="/upi-limits/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Limits</a>
+        <a href={p("invoice-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Invoice PDF</a>
+        <a href={p("receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Receipt PDF</a>
+        <a href={p("paid-stamp-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Paid Stamp</a>
+        <a href={p("rent-receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Rent Receipt</a>
+        <a href={p("quotation-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Quotation</a>
+        <a href={p("payment-reminder-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Payment Reminder</a>
+        <a href={p("split-bill-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Split Bill</a>
+        <a href={p("cash-denomination-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Cash Counter</a>
+        <a href={p("credit-note-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Credit Note</a>
+        <a href={p("debit-note-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Debit Note</a>
+        <a href={p("purchase-order-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Purchase Order</a>
+        <a href={p("delivery-challan-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Delivery Challan</a>
+        <a href={p("bill-of-supply-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Bill of Supply</a>
+        <a href={p("cash-memo-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Cash Memo</a>
+        <a href={p("emi-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">EMI Calculator</a>
+        <a href={p("gratuity-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Gratuity</a>
+        <a href={p("sip-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">SIP Calc</a>
+        <a href={p("salary-slip-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Salary Slip</a>
+        <a href={p("msmed-interest-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">MSMED Interest</a>
+        <a href={p("msme-receivables")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">MSME Receivables</a>
+        <a href={p("proforma-invoice-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Proforma</a>
+        <a href={p("break-even-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Break-Even</a>
+        <a href={p("gst-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">GST Calculator</a>
+        <a href={p("offer-poster-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Offer Poster</a>
+        <a href={p("whatsapp-order-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">WhatsApp Order</a>
+        <a href={p("menu-qr-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Menu Builder</a>
+        <a href={p("upi-error-codes")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Errors</a>
+        <a href={p("margin-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Margin Calculator</a>
+        <a href={p("digital-visiting-card")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Visiting Card</a>
+        <a href={p("upi-limits")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Limits</a>
       </div>
     </div>
 
+    <div class="border-t border-forest/10 pt-2">
+      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.topics}</div>
+      <div class="grid grid-cols-2 gap-1 text-xs">
+        <a href={p("upi-qr-generators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "QR जनरेटर" : "QR generators"}</a>
+        <a href={p("merchant-setup")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "मर्चेंट सेटअप" : "Merchant setup"}</a>
+        <a href={p("print-upi-qr")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट / स्टैंडी" : "Print / standees"}</a>
+        <a href={p("print-templates")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट टेम्पलेट" : "Print templates"}</a>
+        <a href={p("upi-errors-and-limits")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "एरर / लिमिट" : "Errors / limits"}</a>
+        <a href={p("merchant-documents")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "दस्तावेज़" : "Documents"}</a>
+        <a href={p("business-calculators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "कैलकुलेटर" : "Calculators"}</a>
+      </div>
+    </div>
     <div class="border-t border-forest/10 pt-2 flex justify-around text-xs font-bold text-forest">
-      <a href="/tools/" class="p-2 hover:text-leaf">All Tools</a>
-      <a href="/blog/" class="p-2 hover:text-leaf">Guides</a>
-      <a href="/developer/" class="p-2 hover:text-leaf">Developers</a>
+      <a href={p("tools")} class="p-2 hover:text-leaf">{chrome.allTools}</a>
+      <a href={p("blog")} class="p-2 hover:text-leaf">{chrome.guides}</a>
+      <a href={p("developer")} class="p-2 hover:text-leaf">{chrome.developers}</a>
+      <a href={p("about")} class="p-2 hover:text-leaf">{chrome.about}</a>
     </div>
     </div>
   </nav>
