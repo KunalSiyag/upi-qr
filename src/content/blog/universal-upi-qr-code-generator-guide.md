@@ -2,7 +2,8 @@
 title: "Universal UPI QR Generator for Bank Account Guide"
 description: "How to use a universal UPI QR code generator for any bank account. Create, customize & print multi-app payment QR codes for PhonePe, Google Pay, Paytm & BHIM."
 pubDate: 2026-07-20
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/universal-qr-wifi-vcard.jpg"
 tags: ["Universal QR", "Bank Account", "Payments", "Tutorial"]
 ---
 
@@ -122,7 +123,7 @@ When displaying a universal UPI QR code for public payments, follow NPCI complia
 ## Frequently Asked Questions
 
 ### Q1. Is a universal UPI QR code completely free to use?
-Yes. Universal UPI QR codes created with Pro UPI QR use standard NPCI open-spec protocols. There are no registration fees, monthly subscriptions, or per-scan MDR deductions. 100% of the customer's transfer settles directly into your bank account.
+Yes. Universal UPI QR codes created with Pro UPI QR use standard NPCI open-spec protocols. There are no registration fees, monthly subscriptions, or per-scan MDR deductions for bank-to-bank transfers. RuPay credit card on UPI above ₹2,000 may carry interchange fees. For standard bank-funded UPI, 100% of the customer's transfer settles directly into your bank account.
 
 ### Q2. Do static universal UPI QR codes expire?
 No. Static universal UPI QR codes encode your VPA directly into the image matrix. As long as your bank account and linked UPI VPA remain active with your bank, the printed QR code will function indefinitely without expiring.

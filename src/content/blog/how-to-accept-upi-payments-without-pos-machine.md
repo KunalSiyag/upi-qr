@@ -2,7 +2,7 @@
 title: "How to Accept UPI Payments Without a POS Machine"
 description: "Kirana stores and small shops can collect digital payments using only a UPI QR standee — no card swipe machine, rental fees, or MDR."
 pubDate: 2026-06-17
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Merchant Tips", "Shops", "Tutorial"]
 ---
 

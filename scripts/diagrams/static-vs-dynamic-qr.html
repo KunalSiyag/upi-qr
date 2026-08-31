@@ -1,0 +1,44 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page">
+  <p class="kicker">QR types</p>
+  <h1>Static vs dynamic UPI QR</h1>
+  <div class="grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card">
+      <p class="tag">Static</p>
+      <p style="font-weight:900;font-size:22px;margin:8px 0;">One print, reuse forever</p>
+      <p class="muted">Encodes pa + pn (and optional fixed am). Customer types the amount unless you baked it in. Change the VPA and you reprint. Fits counters, tables, donation boxes.</p>
+    </div>
+    <div class="card">
+      <p class="tag">Dynamic</p>
+      <p style="font-weight:900;font-size:22px;margin:8px 0;">New payload per bill</p>
+      <p class="muted">Amount and note are unique each time — invoices, tickets, delivery. A hosted dynamic code can change destination without reprinting the sticker. Needs a live mapping, not only a PNG.</p>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:16px;">Both still use NPCI <span class="mono">upi://pay</span>. A static PNG is not a payment gateway. A dynamic campaign on this site is Clerk-owned and documented in the privacy policy.</p>
+  <p class="foot">proupiqr.in/blog/static-vs-dynamic-upi-qr-code-difference/</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

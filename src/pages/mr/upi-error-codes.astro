@@ -1,0 +1,11 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LocalizedErrorPage from "../../components/LocalizedErrorPage.astro";
+import { ERROR_PAGE, errorPageSchema } from "../../data/errorI18n";
+import { siteImage } from "../../data/siteImages";
+
+const copy = ERROR_PAGE.mr;
+---
+<BaseLayout title={copy.title} description={copy.description} schema={errorPageSchema("mr")} image={siteImage("upi-payment-failed-phone").src}>
+  <LocalizedErrorPage lang="mr" />
+</BaseLayout>

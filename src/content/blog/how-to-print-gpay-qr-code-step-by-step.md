@@ -1,81 +1,82 @@
 ---
 title: "How to Print a GPay QR Code: Step-by-Step Guide"
-description: "Learn the correct way to export, size, and print your Google Pay (GPay) business QR code standee or poster for your shop checkout counter."
+description: "Export a high-resolution Google Pay QR, pick A6/A5/A4 sizes, use matte stock, and test-scan before the standee goes on the counter."
 pubDate: 2026-07-15
-author: "Pro UPI QR Team"
+updatedDate: 2026-08-27
+author: "Kunal Siyag"
+reviewedOn: 2026-08-27
+reviewIntervalDays: 180
+testedApplications: ["Google Pay", "PhonePe"]
+image: "/images/blog/print-upi-qr-sizes.jpg"
 tags: ["Google Pay", "Printing Guide", "Retail"]
 ---
 
-Accepting Google Pay (GPay) at your retail store, restaurant, or billing desk is one of the easiest ways to streamline checkouts. However, a poorly printed or low-resolution QR code standee can lead to scanning failures, frustration, and lost sales. 
+A GPay Business QR is just a UPI QR with Google’s download button around it. Print quality — not the logo — decides whether customers can scan from three feet away. Export a high-resolution file, print on **matte** 300 GSM (or vinyl), keep a white quiet zone, and test-scan from PhonePe *and* GPay before the card hits the desk.
 
-In this comprehensive guide, we will outline exactly how to export, size, choose print materials, and print your Google Pay business QR code to ensure a 100% scan rate.
+*Last reviewed 27 August 2026.*
 
----
 
-## 1. How to Export Your GPay QR Code
+<h2 id="export">1. Export a real file, not a screenshot</h2>
 
-Before you print, you need to retrieve the high-resolution source file of your GPay QR code. Do not take a low-resolution screenshot of your mobile app, as it will pixelate and blur when printed.
+**Google Pay for Business**
 
-### For Google Pay for Business Users:
-1. Open the **Google Pay for Business** app on your phone.
-2. Tap on the **QR Code** icon visible on the dashboard home screen.
-3. Tap on the **Save** or **Share** button.
-4. Choose **Save to Device** or share it to your email as a high-quality JPEG or PDF.
+1. Open the Business app → **QR Code**.
+2. Use **Save** or **Share**, not a volume-down screenshot.
+3. Prefer the PNG or PDF the app offers.
 
-### For Custom / Personal VPAs:
-If you want to customize your QR poster with custom branding, border colors, and templates before printing:
-1. Go to the [Pro UPI QR Generator](/#generator) on your browser.
-2. Enter your GPay UPI ID (VPA) and Payee Name.
-3. Select the **Google Pay** template or logo.
-4. Click **Download Poster** to save a print-ready high-resolution PNG image.
+**Compatible print from a VPA**
 
----
+If you want a branded poster, larger type, or an A4 sticker sheet:
 
-## 2. Standard QR Standee Dimensions and Sizing
+1. Open the [Google Pay QR generator](/google-pay-qr-generator/).
+2. Enter payee name and the GPay UPI ID (`name@oksbi`, `name@okhdfcbank`, …).
+3. Download **PNG** or **PDF** (print-ready raster/PDF — not a phone screenshot).
 
-When printing your GPay QR code, size matters. If the QR code is too small, customers will have to lean over the counter; if it's too large, the camera might fail to focus on it from close range.
+The official GPay download and a compatible print can share the same VPA. The compatible file is not an official Google merchant kit.
 
-Here are the recommended dimensions for various business setups:
+<h2 id="sizes">2. Sizes that actually scan</h2>
 
-| Display Location | Recommended Size (Width x Height) | Best Frame Type |
-|---|---|---|
-| **Cashier Desk / Counter** | 4.0 x 6.0 inches (A6) | Acrylic L-Standee |
-| **Dine-In Table / Menu** | 2.5 x 2.5 inches | Table tent cards or stickers |
-| **Wall Poster / Entrance** | 5.8 x 8.3 inches (A5) or A4 | Laminated poster or board |
-| **Delivery Rider Cards** | 2.1 x 3.3 inches (CR80) | ID Card badge holder |
+| Display | Size | Holder |
+| --- | --- | --- |
+| Cashier desk | 4×6 in (A6) or 5×7 in | Acrylic L-stand / T-stand |
+| Dining table | ~6–8 cm QR square | Table tent |
+| Wall / entrance | A5 or A4 | Laminated board, **matte** |
+| Rider / badge | CR80 (2.1×3.3 in) | ID holder |
 
----
+QR module size matters more than paper size: keep the **QR square at least 2.5 cm** for close range and **8 cm** if people scan from a queue. Leave a **quiet zone** of at least 4 modules (about 0.25 in) of plain light margin around the code.
 
-## 3. Selecting the Best Printing Materials
+Full standee walkthrough: [create and print a UPI QR standee](/blog/how-to-create-print-upi-qr-code-standee/).
 
-Paper type plays a critical role in scanner readability. Avoid using regular thin copier paper without lamination, as it crinkles easily and creates reflections that confuse phone cameras.
+<h2 id="materials">3. Materials</h2>
 
-### A. Laminated Cardstock (Cost-Effective)
-* **What it is:** Printed on thick paper (300+ GSM) and sealed with a matte lamination film.
-* **Why it is good:** Lamination protects the ink from moisture, grease, and fingerprints. **Matte lamination** is highly recommended over glossy lamination because it eliminates light reflections.
+- **Matte 300 GSM art card** in acrylic — default for indoor counters. Glossy lamination mirrors tube lights and fails scans.
+- **Matte vinyl sticker** — glass counters, metal cash boxes, outdoor tea stalls. See [waterproof QR stickers](/blog/how-to-print-durable-waterproof-qr-stickers/).
+- **Sunboard 3–5 mm** — wall hooks and auto dashboards.
+- **A4 sticker sheets** — parcels and extra tills. [Sticker sheet generator](/qr-sticker-generator/).
 
-### B. Acrylic Standees (Premium & Durable)
-* **What it is:** A printed card inserted into a transparent acrylic frame holder.
-* **Why it is good:** Keeps the QR code completely flat, looks highly professional, and can be easily wiped clean.
+Tell the print shop **300 DPI**, no extra contrast filters, no stretching.
 
-### C. Waterproof Vinyl Stickers (Versatile)
-* **What it is:** Adhesive-backed synthetic sheets.
-* **Why it is good:** Best for pasting directly onto counter glass, food delivery boxes, or metal cash boxes. They are completely waterproof and tear-resistant.
+<h2 id="test">4. Test protocol (do this before display)</h2>
 
----
+1. Scan with GPay and one other app (PhonePe or BHIM).
+2. Confirm payee name and VPA.
+3. Send ₹1 if you have a second account.
+4. Repeat under the actual counter lights — a code that works at home can fail under a glossy menu lamp.
 
-## Frequently Asked Questions
+If it will not scan: [QR not scanning](/blog/upi-qr-code-not-scanning-troubleshooting/).
 
-### Q1. Why is my printed Google Pay QR code not scanning?
-This is usually caused by glossy lamination reflections, print pixelation, or structural distortion. Ensure you print using a vector PDF or high-resolution PNG source, use matte paper, and verify that the QR code is not stretched horizontally or vertically.
+<h2 id="faq">Frequently asked questions</h2>
 
-### Q2. Can I use the same QR code to accept payments from PhonePe and Paytm?
-Yes. Google Pay business QR codes conform to the interoperable Bharat QR/UPI standard. Any customer using PhonePe, Paytm, BHIM, or any banking app can scan your GPay QR and transfer money successfully.
+### Q1. Why is my printed Google Pay QR not scanning?
 
-### Q3. How do I verify if my printed QR code is safe to display?
-Before placing the printed standee at your counter, scan it using 2-3 different phones. Verify that the correct payee name and UPI ID load instantly, and send a test transaction of ₹1 to confirm the funds settle in your linked bank account.
+Usually glare (glossy lamination), a screenshot upscaled for A4, or a stretched QR. Reprint from PNG/PDF on matte stock and keep the quiet zone.
 
----
+### Q2. Can PhonePe and Paytm users pay a GPay QR?
 
-## Need a Premium GPay QR Poster?
-Instead of a boring black-and-white code, use our free [Google Pay QR Generator](/google-pay-qr-generator/) to design a beautiful, high-converting Google Pay payment standee with custom colors, amounts, and download options!
+Yes. It is a standard UPI payload. Branding on the poster does not lock the rail.
+
+### Q3. How do I verify the printed code is safe?
+
+Decode it with the [UPI QR decoder](/upi-qr-decoder/) and match `pa=` to your VPA. Then do the two-app test above. Never display a code you have not scanned yourself.
+
+**[Open the Google Pay QR generator →](/google-pay-qr-generator/)**

@@ -27,11 +27,11 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     shortDef: "India's instant, 24×7 bank-to-bank payment system run by NPCI — free for everyday merchant collections.",
     body: [
       "Launched by NPCI in 2016, UPI moves money instantly between any two bank accounts using a smartphone app. Instead of sharing account numbers and IFSC codes, users identify each other with a simple UPI ID (VPA) or QR code, and transfers settle within seconds at any hour of any day.",
-      "For merchants, UPI is transformative because person-to-merchant payments carry zero MDR — no percentage is deducted from your sale, unlike card machines or payment gateways which typically charge 1–2% plus setup costs.",
+      "For merchants, UPI is transformative because standard bank-to-bank person-to-merchant payments carry zero MDR — no percentage is deducted from your sale, unlike card machines or payment gateways which typically charge 1–2% plus setup costs. Note that RuPay credit card on UPI transactions above ₹2,000 may carry an interchange fee per NPCI circulars.",
       "Every UPI payment needs two things: a valid VPA linked to a real bank account, and the payer's UPI PIN entered on their own device. No OTPs are ever shared with the payee — anyone asking for your PIN or OTP to 'receive' money is running a scam."
     ],
     faqs: [
-      { question: "Is UPI free for merchants?", answer: "Yes. NPCI mandates zero MDR on normal UPI transactions, so shops receive the full amount whether the customer pays ₹10 or ₹10,000." },
+      { question: "Is UPI free for merchants?", answer: "Bank-to-bank UPI transactions carry zero MDR — shops receive the full amount. RuPay credit card on UPI transactions above ₹2,000 may have interchange fees per NPCI guidelines." },
       { question: "Does UPI work at night and on holidays?", answer: "Yes — UPI runs 24×7×365, including bank holidays." }
     ],
     related: [
@@ -69,7 +69,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     shortDef: "The RBI-founded non-profit that owns and operates UPI, RuPay, IMPS, and other national payment rails.",
     body: [
       "Set up in 2008 by the Reserve Bank of India and the Indian Banks' Association, NPCI is the not-for-profit umbrella organisation behind nearly every domestic retail payment system in India: UPI, IMPS, RuPay cards, AePS, NETC FASTag, and the BHIM app.",
-      "NPCI writes the technical rulebook every UPI app must follow — from the upi:// deep-link standard to transaction limits and dispute timelines. When you see 'NPCI guidelines' cited in merchant documentation, it refers to this rulebook."
+      "NPCI writes the technical rulebook every UPI app must follow — from the upi:// deep-link standard to transaction limits and dispute timelines. When you see 'NPCI guidelines' cited in merchant documentation, it refers to this rulebook. Apps sometimes show a wrapper line such as “NPCI returned error”; the actual reason is a two-character code (U16, Z9, ZM) you can look up on the error resolver."
     ],
     faqs: [
       { question: "Is NPCI a government body?", answer: "It is a not-for-profit company under the RBI's umbrella rather than a government department, but it functions as the official retail-payments utility for India." },
@@ -266,13 +266,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     full: "Merchant Discount Rate",
     hindi: "मर्चेंट डिस्काउंट रेट",
     category: "Merchant & QR",
-    shortDef: "The percentage a payment provider deducts from each sale — zero for standard UPI.",
+    shortDef: "The percentage a payment provider deducts from each sale — zero for standard bank-to-bank UPI, applies to credit-card-on-UPI above ₹2,000.",
     body: [
       "MDR is the fee slice taken from a merchant on every card or digital transaction. Card networks and banks typically charge 1–3%, which quietly erodes margins on thin-margin retail.",
-      "Since January 2020, UPI and RuPay debit carry zero MDR by government mandate — the structural reason Indian merchants push customers toward QR payments. Exceptions exist (credit-card-on-UPI interchange applies on larger tickets), but for ordinary P2M UPI you keep 100% of the sale."
+      "Since January 2020, bank-to-bank UPI and RuPay debit carry zero MDR by government mandate — the structural reason Indian merchants push customers toward QR payments. RuPay credit card on UPI transactions above ₹2,000 are subject to interchange fees (typically 0.9–2% per NPCI circulars), but for ordinary bank-funded P2M UPI you keep 100% of the sale."
     ],
     faqs: [
-      { question: "So accepting UPI really costs me nothing?", answer: "Directly, yes. Indirect costs are hardware like soundboxes or optional subscription services — never a cut of the payment itself." },
+      { question: "So accepting UPI really costs me nothing?", answer: "Directly, yes for bank-to-bank UPI. RuPay credit card on UPI transactions above ₹2,000 may carry interchange — rare for kirana-level commerce. Indirect costs are hardware like soundboxes or optional subscription services — never a cut of the payment itself for standard UPI." },
       { question: "How much am I losing on card sales?", answer: "Run your monthly card volume through our savings calculator to see the annual difference versus UPI." }
     ],
     related: [

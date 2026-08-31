@@ -2,7 +2,16 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { getCollection } from "astro:content";
 import InternalLinkHub from "../../components/InternalLinkHub.astro";
-import { getGeneratorCtaForTags, getGuidesForTags } from "../../data/internalLinks";
+import { getGeneratorCtaForTags } from "../../data/internalLinks";
+import { hubForPath, relatedArticlesFromCollection } from "../../data/topicHubs";
+import {
+  formatEnIn,
+  nextReviewDate,
+  personSchema,
+  resolveAuthor,
+} from "../../data/authors";
+import ResponsiveImage from "../../components/ResponsiveImage.astro";
+import { DEFAULT_OG_IMAGE, resolveSiteImage } from "../../data/siteImages";
 
 export async function getStaticPaths() {
   const posts = await getCollection("blog");
@@ -25,26 +34,31 @@ const description = post.data.description;
 const postSlug = post.id.replace(/\.mdx?$/, "");
 const generatorCta = getGeneratorCtaForTags(post.data.tags);
 
-// Fetch related posts based on matching tags and publication date
 const posts = await getCollection("blog");
-const curatedGuides = getGuidesForTags(post.data.tags, { excludeSlug: postSlug, limit: 3 });
-const relatedPosts = posts
-  .filter((p) => p.id !== post.id)
-  .map((p) => {
-    const commonTags = p.data.tags.filter((t) => post.data.tags.includes(t)).length;
-    return { post: p, score: commonTags };
-  })
-  .sort((a, b) => b.score - a.score || b.post.data.pubDate.valueOf() - a.post.data.pubDate.valueOf())
-  .slice(0, 3)
-  .map((item) => item.post);
+const relatedPosts = relatedArticlesFromCollection(posts, {
+  excludeSlug: postSlug,
+  tags: post.data.tags,
+  hubArticleSlugs: hubForPath(`/blog/${postSlug}/`)?.articleSlugs ?? [],
+  limit: 3,
+});
 
-const postImageUrl = post.data.image 
-  ? (post.data.image.startsWith("http") ? post.data.image : new URL(post.data.image, Astro.site).toString())
-  : new URL("/images/og-image.png", Astro.site).toString();
+const catalogImage = resolveSiteImage(post.data.image);
+const postImagePath = post.data.image ?? DEFAULT_OG_IMAGE.src;
+const postImageUrl = postImagePath.startsWith("http")
+  ? postImagePath
+  : new URL(postImagePath, Astro.site).toString();
+const postImageObject = {
+  "@type": "ImageObject",
+  url: postImageUrl,
+  width: catalogImage?.width ?? 1200,
+  height: catalogImage?.height ?? 630,
+  caption: catalogImage?.caption ?? post.data.title,
+  encodingFormat: catalogImage?.mime ?? "image/jpeg",
+};
 
 const faqs: { question: string; answer: string }[] = [];
 if (post.body) {
-  const regex = /###\s+Q\d*\.\s*(.+?)\r?\n([^\n]+(?:\r?\n(?![#\s]).*)*)/g;
+  const regex = /###\s+Q\d*\.\s*(.+?)\r?\n+([^#][\s\S]*?)(?=\r?\n### |\r?\n## |\s*$)/g;
   let match;
   while ((match = regex.exec(post.body)) !== null) {
     const question = match[1].trim();
@@ -54,6 +68,36 @@ if (post.body) {
 }
 
 const postUrl = new URL(Astro.url.pathname, Astro.site).toString();
+const author = resolveAuthor(post.data.author);
+const reviewer = post.data.reviewer ? resolveAuthor(post.data.reviewer) : null;
+const reviewedOn = post.data.reviewedOn;
+const nextReview =
+  reviewedOn && post.data.reviewIntervalDays
+    ? nextReviewDate(reviewedOn, post.data.reviewIntervalDays)
+    : null;
+
+const blogPosting: Record<string, unknown> = {
+  "@type": "BlogPosting",
+  "@id": postUrl + "#blogposting",
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: post.data.pubDate.toISOString(),
+  dateModified: (post.data.updatedDate ?? post.data.pubDate).toISOString(),
+  image: postImageObject,
+  author: personSchema(author),
+  publisher: { "@id": "https://www.proupiqr.in/#organization" },
+  mainEntityOfPage: {
+    "@type": "WebPage",
+    "@id": postUrl,
+  },
+};
+
+if (reviewer && reviewer.slug !== author.slug) {
+  blogPosting.reviewedBy = personSchema(reviewer);
+}
+if (post.data.sourceUrls?.length) {
+  blogPosting.citation = post.data.sourceUrls.map((source) => source.url);
+}
 
 const graph: any[] = [
   {
@@ -65,32 +109,7 @@ const graph: any[] = [
       { "@type": "ListItem", "position": 3, "name": post.data.title, "item": postUrl }
     ]
   },
-  {
-    "@type": "BlogPosting",
-    "@id": postUrl + "#blogposting",
-    "headline": post.data.title,
-    "description": post.data.description,
-    "datePublished": post.data.pubDate.toISOString(),
-    "dateModified": (post.data.updatedDate ?? post.data.pubDate).toISOString(),
-    "image": postImageUrl,
-    "author": {
-      "@type": "Person",
-      "name": post.data.author
-    },
-    "publisher": {
-      "@type": "Organization",
-      "name": "Pro UPI QR",
-      "url": "https://www.proupiqr.in",
-      "logo": {
-        "@type": "ImageObject",
-        "url": "https://www.proupiqr.in/favicon.svg"
-      }
-    },
-    "mainEntityOfPage": {
-      "@type": "WebPage",
-      "@id": postUrl
-    }
-  }
+  blogPosting,
 ];
 
 if (faqs.length > 0) {
@@ -143,15 +162,38 @@ const alternates = [
       {/* Frontmatter Metadata */}
       <header class="border-b border-forest/10 pb-8">
         <div class="flex flex-wrap items-center gap-3 text-xs font-semibold text-forest/50">
-          <time datetime={post.data.pubDate.toISOString()}>
-            {post.data.pubDate.toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </time>
+          <span>
+            By{" "}
+            <a href={author.path} class="text-leaf hover:underline">
+              {author.name}
+            </a>
+          </span>
           <span>&bull;</span>
-          <span>By {post.data.author}</span>
+          <time datetime={post.data.pubDate.toISOString()}>
+            {formatEnIn(post.data.pubDate)}
+          </time>
+          {post.data.updatedDate && (
+            <>
+              <span>&bull;</span>
+              <time datetime={post.data.updatedDate.toISOString()}>
+                Updated {formatEnIn(post.data.updatedDate)}
+              </time>
+            </>
+          )}
+          {reviewedOn && (
+            <>
+              <span>&bull;</span>
+              <time datetime={reviewedOn.toISOString()}>
+                Reviewed {formatEnIn(reviewedOn)}
+              </time>
+            </>
+          )}
+          {nextReview && (
+            <>
+              <span>&bull;</span>
+              <span>Next review by {formatEnIn(nextReview)}</span>
+            </>
+          )}
         </div>
 
         <h1 class="mt-4 text-3xl font-black leading-tight text-forest md:text-5xl">
@@ -161,6 +203,10 @@ const alternates = [
         <p class="mt-4 text-base font-medium text-forest/72 leading-relaxed">
           {post.data.description}
         </p>
+
+        {post.data.image && (
+          <ResponsiveImage src={post.data.image} loading="eager" />
+        )}
 
         <div class="mt-6 flex flex-wrap gap-2">
           {post.data.tags.map((tag) => (
@@ -176,41 +222,63 @@ const alternates = [
         <Content />
       </div>
 
+      {(post.data.sourceUrls?.length || post.data.testedApplications?.length) && (
+        <aside class="mt-10 rounded-2xl border border-forest/10 bg-[#fffdf6] p-5 text-sm text-forest/80">
+          <h2 class="text-base font-black text-forest">Sources and testing</h2>
+          {post.data.testedApplications?.length ? (
+            <p class="mt-2">
+              Tested in: {post.data.testedApplications.join(", ")}. App menus still change — confirm inside the app before you print a batch.
+            </p>
+          ) : null}
+          {post.data.sourceUrls?.length ? (
+            <ul class="mt-3 list-disc space-y-1 pl-5">
+              {post.data.sourceUrls.map((source) => (
+                <li>
+                  <a href={source.url} class="font-semibold text-leaf hover:underline" rel="noopener noreferrer">
+                    {source.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          <p class="mt-3 text-xs text-forest/55">
+            <a href="/accuracy-policy/" class="font-semibold text-leaf hover:underline">Accuracy policy</a>
+            {" · "}
+            <a href="/corrections/" class="font-semibold text-leaf hover:underline">Corrections log</a>
+          </p>
+        </aside>
+      )}
+
       {/* Author Bio (E-E-A-T) */}
       <div class="mt-12 rounded-2xl bg-mint/30 p-6 border border-leaf/10 flex flex-col md:flex-row items-center md:items-start gap-4">
         <div class="h-14 w-14 shrink-0 rounded-full bg-forest text-white flex items-center justify-center text-xl font-black shadow-sm">
-          P
+          {author.initials}
         </div>
         <div class="text-center md:text-left">
-          <h3 class="text-lg font-black text-forest">Pro UPI QR Team</h3>
-          <p class="mt-1 text-sm text-forest/80 leading-relaxed">
-            Payment technology research team building privacy-first UPI utilities, merchant tools, and printable standees for Indian business owners.
-          </p>
-          <div class="mt-3 flex items-center justify-center md:justify-start gap-4 text-sm font-bold text-leaf">
-            <a href="/" class="hover:underline hover:text-forest">Pro UPI QR Generator</a>
-            <a href="/universal-qr-generator/" class="hover:underline hover:text-forest">Universal QR Builder</a>
+          <h3 class="text-lg font-black text-forest">
+            <a href={author.path} class="hover:text-leaf">{author.name}</a>
+          </h3>
+          <p class="text-xs font-bold uppercase tracking-wider text-leaf">{author.jobTitle}, Pro UPI QR</p>
+          <p class="mt-1 text-sm text-forest/80 leading-relaxed">{author.shortBio}</p>
+          <div class="mt-3 flex flex-wrap items-center justify-center md:justify-start gap-4 text-sm font-bold text-leaf">
+            <a href={author.path} class="hover:underline hover:text-forest">Author profile</a>
+            <a href="/editorial-policy/" class="hover:underline hover:text-forest">Editorial policy</a>
+            <a href="/about/" class="hover:underline hover:text-forest">About</a>
           </div>
         </div>
       </div>
 
       {/* Related Articles */}
-      {(curatedGuides.length > 0 || relatedPosts.length > 0) && (
+      {relatedPosts.length > 0 && (
         <div class="mt-12 border-t border-forest/10 pt-10">
           <h3 class="text-2xl font-black text-forest mb-6">Related Articles</h3>
           <div class="grid gap-6 md:grid-cols-3">
-            {(curatedGuides.length > 0
-              ? curatedGuides.map((guide) => ({
-                  href: `/blog/${guide.slug}/`,
-                  title: guide.title,
-                  description: guide.description,
-                  date: null as Date | null,
-                }))
-              : relatedPosts.map((rPost) => ({
+            {relatedPosts.map((rPost) => ({
                   href: `/blog/${rPost.id.replace(/\.mdx?$/, "")}/`,
                   title: rPost.data.title,
                   description: rPost.data.description,
                   date: rPost.data.pubDate,
-                }))
+                })
             ).map((item) => (
               <a
                 href={item.href}
@@ -396,5 +464,22 @@ const alternates = [
     box-shadow: 0 10px 32px rgba(17, 59, 44, 0.06);
     margin: 2.25rem auto;
     display: block;
+  }
+
+  .blog-content figure {
+    margin: 2.25rem 0;
+  }
+
+  .blog-content figure img {
+    margin: 0 auto 0.75rem;
+  }
+
+  .blog-content figcaption {
+    text-align: center;
+    font-size: 0.85rem;
+    color: rgba(17, 59, 44, 0.65);
+    line-height: 1.5;
+    margin: 0 auto 0.25rem;
+    max-width: 40rem;
   }
 </style>

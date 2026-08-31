@@ -1,155 +1,99 @@
 ---
-import { generators, getFeaturedGuides, generatorPath, guidePath } from "../data/internalLinks";
+import { generatorPath } from "../data/internalLinks";
+import { NAV_HUBS } from "../data/topicHubs";
+import { chromeFor } from "../data/localeChrome";
+import { detectLangFromPath, localeHref, localeHome } from "../lib/locale";
 
 const currentYear = new Date().getFullYear();
-const isHindi = Astro.url.pathname.startsWith("/hi");
-const featuredGuides = getFeaturedGuides(4);
+const lang = detectLangFromPath(Astro.url.pathname);
+const chrome = chromeFor(lang);
+const home = localeHome(lang);
+
+const flagshipTools = [
+  { href: home, label: chrome.upiQrGenerator },
+  { href: localeHref(lang, "universal-qr-generator"), label: "Universal QR" },
+  { href: localeHref(lang, "invoice-generator"), label: "Invoice PDF" },
+  { href: localeHref(lang, "upi-error-codes"), label: "UPI errors" },
+  { href: localeHref(lang, "upi-limits"), label: "Bank UPI limits" },
+  { href: localeHref(lang, "tools"), label: chrome.allTools },
+];
+
+const flagshipGenerators = [
+  { slug: "phonepe-qr-generator" as const, label: "PhonePe" },
+  { slug: "google-pay-qr-generator" as const, label: "Google Pay" },
+  { slug: "paytm-qr-generator" as const, label: "Paytm" },
+  { slug: "bhim-qr-generator" as const, label: "BHIM" },
+  { slug: "sbi-qr-generator" as const, label: "SBI" },
+];
 ---
 
-<footer class="border-t border-forest/10 bg-cream/40 px-4 py-12 md:px-6 lg:px-8">
+<footer class="border-t border-forest/10 bg-cream/40 px-4 py-10 md:px-6 lg:px-8">
   <div class="mx-auto max-w-7xl">
-    <div class="grid gap-8 md:grid-cols-2 lg:grid-cols-5">
-      {/* Brand Section */}
-      <div class="space-y-4">
-        <a href={isHindi ? "/hi/" : "/"} class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
-        <p class="text-xs leading-relaxed text-forest/70">
-          {isHindi 
-            ? "कस्टम, प्रिंट करने योग्य UPI भुगतान पोस्टर, काउंटर स्टैंडी और टेबल कार्ड बनाएं। स्थानीय व्यापारियों, फ्रीलांसरों, इवेंट आयोजकों और दान अभियानों के लिए निर्मित।"
-            : "Create customized, printable UPI payment posters, counter standees, and table cards. Built for local merchants, freelancers, event hosts, and donation campaigns."
-          }
-        </p>
+    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-4">
+      <div class="space-y-3">
+        <a href={home} class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
+        <p class="text-xs leading-relaxed text-forest/70">{chrome.brandBlurb}</p>
       </div>
 
-      {/* Quick Links */}
-      <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "उपकरण" : "Tools"}</h4>
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.topics}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href={isHindi ? "/hi/#generator" : "/#generator"} class="hover:text-leaf hover:underline">{isHindi ? "QR कोड जनरेटर" : "QR Code Generator"}</a></li>
-          <li><a href={isHindi ? "/hi/#templates" : "/#templates"} class="hover:text-leaf hover:underline">{isHindi ? "पोस्टर टेम्पलेट्स" : "Poster Templates"}</a></li>
-          <li><a href="/universal-qr-generator/" class="hover:text-leaf hover:underline">Universal QR Generator</a></li>
-          <li><a href="/gst-calculator/" class="hover:text-leaf hover:underline">GST Tax Calculator & QR</a></li>
-          <li><a href="/offer-poster-generator/" class="hover:text-leaf hover:underline">Shop Sale Poster Builder</a></li>
-          <li><a href="/whatsapp-order-generator/" class="hover:text-leaf hover:underline">WhatsApp Order Creator</a></li>
-          <li><a href="/menu-qr-generator/" class="hover:text-leaf hover:underline">Restaurant & Salon Menu QR</a></li>
-          <li><a href="/upi-error-codes/" class="hover:text-leaf hover:underline">NPCI UPI Error Code Resolver</a></li>
-          <li><a href="/margin-calculator/" class="hover:text-leaf hover:underline">Retail Profit Margin Calculator</a></li>
-          <li><a href="/digital-visiting-card/" class="hover:text-leaf hover:underline">Digital Visiting Card (vCard)</a></li>
-          <li><a href="/upi-limits/" class="hover:text-leaf hover:underline">Indian Bank UPI Limits</a></li>
-          <li><a href="/invoice-generator/" class="hover:text-leaf hover:underline">Invoice QR PDF Builder</a></li>
-          <li><a href="/receipt-generator/" class="hover:text-leaf hover:underline">Payment Receipt Generator</a></li>
-          <li><a href="/paid-stamp-generator/" class="hover:text-leaf hover:underline">Paid Stamp Generator</a></li>
-          <li><a href="/rent-receipt-generator/" class="hover:text-leaf hover:underline">Rent Receipt Generator (HRA)</a></li>
-          <li><a href="/quotation-generator/" class="hover:text-leaf hover:underline">Quotation / Estimate Generator</a></li>
-          <li><a href="/payment-reminder-generator/" class="hover:text-leaf hover:underline">Payment Reminder Messages</a></li>
-          <li><a href="/split-bill-calculator/" class="hover:text-leaf hover:underline">Split Bill Calculator with UPI</a></li>
-          <li><a href="/cash-denomination-calculator/" class="hover:text-leaf hover:underline">Cash Denomination Calculator</a></li>
-          <li><a href="/credit-note-generator/" class="hover:text-leaf hover:underline">GST Credit Note Generator</a></li>
-          <li><a href="/emi-calculator/" class="hover:text-leaf hover:underline">Loan EMI Calculator</a></li>
-          <li><a href="/gratuity-calculator/" class="hover:text-leaf hover:underline">Gratuity Calculator (15/26)</a></li>
-          <li><a href="/sip-calculator/" class="hover:text-leaf hover:underline">SIP Calculator with Inflation View</a></li>
-          <li><a href="/salary-slip-generator/" class="hover:text-leaf hover:underline">Salary Slip Generator</a></li>
-          <li><a href="/msmed-interest-calculator/" class="hover:text-leaf hover:underline">MSMED Late-Payment Interest</a></li>
-          <li><a href="/proforma-invoice-generator/" class="hover:text-leaf hover:underline">Proforma Invoice Generator</a></li>
-          <li><a href="/break-even-calculator/" class="hover:text-leaf hover:underline">Break-Even Calculator</a></li>
-          <li><a href="/treds-calculator/" class="hover:text-leaf hover:underline">TReDS Discounting Calculator</a></li>
-          <li><a href="/qr-sticker-generator/" class="hover:text-leaf hover:underline">A4 QR Sticker Sheet</a></li>
-          <li><a href="/bulk-qr/" class="hover:text-leaf hover:underline">Bulk CSV QR Generator</a></li>
-          <li><a href="/upi-calculator/" class="hover:text-leaf hover:underline">UPI MDR Savings Calculator</a></li>
-          <li><a href="/developer/" class="hover:text-leaf hover:underline">Developer Widget API</a></li>
-          <li><a href={isHindi ? "/hi/#faq" : "/#faq"} class="hover:text-leaf hover:underline">{isHindi ? "अक्सर पूछे जाने वाले प्रश्न" : "Frequently Asked Questions"}</a></li>
-          <li><a href="/blog/" class="hover:text-leaf hover:underline">{isHindi ? "ब्लॉग और गाइड (English)" : "Blog & Guides"}</a></li>
-          <li><a href="/glossary/" class="hover:text-leaf hover:underline">Payments Glossary</a></li>
+          {NAV_HUBS.map((hub) => (
+            <li>
+              <a href={localeHref(lang, hub.path.replace(/^\/|\/$/g, ""))} class="hover:text-leaf hover:underline">
+                {lang === "hi" ? hub.hiName : hub.shortName}
+              </a>
+            </li>
+          ))}
+          <li><a href={localeHref(lang, "print-templates")} class="hover:text-leaf hover:underline">{chrome.printTemplates}</a></li>
+          <li><a href={localeHref(lang, "blog")} class="hover:text-leaf hover:underline">{chrome.blog}</a></li>
         </ul>
       </div>
 
-      {/* Generator Pages */}
-      <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "जनरेटर" : "Generators"}</h4>
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.toolsCol}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
-          {generators.map((gen) => (
+          {flagshipTools.map((tool) => (
+            <li><a href={tool.href} class="hover:text-leaf hover:underline">{tool.label}</a></li>
+          ))}
+          {flagshipGenerators.map((gen) => (
             <li>
-              <a href={generatorPath(gen.slug, isHindi)} class="hover:text-leaf hover:underline">
-                {gen.label}
+              <a href={generatorPath(gen.slug, lang)} class="hover:text-leaf hover:underline">
+                {gen.label} QR
               </a>
             </li>
           ))}
         </ul>
       </div>
 
-      {/* Popular Guides */}
-      <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "लोकप्रिय गाइड" : "Popular Guides"}</h4>
+      <div class="space-y-3">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.legalCol}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
-          {featuredGuides.map((guide) => (
-            <li>
-              <a href={guidePath(guide.slug)} class="hover:text-leaf hover:underline line-clamp-2">
-                {guide.title}
-              </a>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Compliance Links */}
-      <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "अनुपालन" : "Compliance"}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href={isHindi ? "/hi/privacy/" : "/privacy/"} class="hover:text-leaf hover:underline">{isHindi ? "गोपनीयता नीति" : "Privacy Policy"}</a></li>
-          <li><a href={isHindi ? "/hi/terms/" : "/terms/"} class="hover:text-leaf hover:underline">{isHindi ? "सेवा की शर्तें" : "Terms of Service"}</a></li>
-          <li><a href={isHindi ? "/hi/disclaimer/" : "/disclaimer/"} class="hover:text-leaf hover:underline">{isHindi ? "अस्वीकरण" : "Disclaimer"}</a></li>
-        </ul>
-      </div>
-
-      {/* Support & Contact */}
-      <div class="space-y-4">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{isHindi ? "संपर्क" : "Contact"}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li>
-            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "सहायता और पूछताछ" : "Support & Inquiries"}</span>
-            <a href="mailto:support@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">support@proupiqr.in</a>
-          </li>
-          <li>
-            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "प्रतिक्रिया और सुझाव" : "Feedback & Ideas"}</span>
-            <a href="mailto:feedback@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">feedback@proupiqr.in</a>
-          </li>
-          <li>
-            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "गोपनीयता और कानूनी" : "Privacy & Legal"}</span>
-            <a href="mailto:privacy@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">privacy@proupiqr.in</a>
-          </li>
-          <li>
-            <span class="block text-[10px] text-forest/50 font-semibold uppercase">{isHindi ? "डीएमसीए / कॉपीराइट" : "DMCA & Copyright"}</span>
-            <a href="mailto:dmca@proupiqr.in" class="hover:text-leaf hover:underline font-bold text-forest">dmca@proupiqr.in</a>
-          </li>
+          <li><a href="/about/" class="hover:text-leaf hover:underline">{chrome.about}</a></li>
+          <li><a href="/authors/kunal-siyag/" class="hover:text-leaf hover:underline">{chrome.author}</a></li>
+          <li><a href="/editorial-policy/" class="hover:text-leaf hover:underline">{chrome.editorial}</a></li>
+          <li><a href="/accuracy-policy/" class="hover:text-leaf hover:underline">{chrome.accuracy}</a></li>
+          <li><a href="/corrections/" class="hover:text-leaf hover:underline">{chrome.corrections}</a></li>
+          <li><a href={localeHref(lang, "privacy")} class="hover:text-leaf hover:underline">{chrome.privacy}</a></li>
+          <li><a href={localeHref(lang, "terms")} class="hover:text-leaf hover:underline">{chrome.terms}</a></li>
+          <li><a href={localeHref(lang, "disclaimer")} class="hover:text-leaf hover:underline">{chrome.disclaimer}</a></li>
+          <li><a href="mailto:support@proupiqr.in" class="hover:text-leaf hover:underline">support@proupiqr.in</a></li>
         </ul>
       </div>
     </div>
 
-    {/* Compliance & Regulatory Disclaimer */}
-    <div class="mt-8 border-t border-forest/5 pt-6 text-[10px] leading-relaxed text-forest/60 space-y-3">
+    <div class="mt-8 border-t border-forest/5 pt-5 text-[10px] leading-relaxed text-forest/60 space-y-2">
       <p>
-        <strong>{isHindi ? "NPCI अस्वीकरण:" : "NPCI Disclaimer:"}</strong> {isHindi 
-          ? "Pro UPI QR एक मुफ्त स्वतंत्र उपयोगिता प्रदाता है और नेशनल पेमेंट्स कॉरपोरेशन ऑफ इंडिया (NPCI), BHIM या किसी भी सरकारी प्राधिकरण के साथ आधिकारिक रूप से संबद्ध, संबंधित, अधिकृत या समर्थित नहीं है। आधिकारिक NPCI वेबसाइट npci.org.in पर देखी जा सकती है।"
-          : "Pro UPI QR is a free independent utility provider and is not affiliated, associated, authorized, endorsed by, or in any way officially connected with the National Payments Corporation of India (NPCI), BHIM, or any government authorities. The official NPCI website can be found at npci.org.in."
-        }
+        <strong>NPCI:</strong> {chrome.npciDisclaimer}
       </p>
       <p>
-        <strong>{isHindi ? "ब्रांड अस्वीकरण:" : "Brand Disclaimer:"}</strong> {isHindi 
-          ? "इस वेबसाइट पर प्रदर्शित सभी ब्रांड नाम, लोगो, ट्रेडमार्क और पंजीकृत ट्रेडमार्क (Paytm, PhonePe, Google Pay, GPay सहित) उनके संबंधित स्वामियों की संपत्ति हैं। इन नामों, ट्रेडमार्क और ब्रांडों के उपयोग का अर्थ समर्थन, संबद्धता या प्रायोजन नहीं है।"
-          : "All brand names, logos, trademarks, and registered trademarks (including Paytm, PhonePe, Google Pay, GPay) displayed on this website are the property of their respective owners. Use of these names, trademarks, and brands does not imply endorsement, affiliation, or sponsorship."
-        }
-      </p>
-      <p>
-        <strong>{isHindi ? "सुरक्षा नोट:" : "Safety & Security Note:"}</strong> {isHindi 
-          ? "इस वेबसाइट पर UPI QR कोड द्वारा उत्पन्न लेनदेन सीधे मानक UPI एकीकृत भुगतान इंटरफ़ेस प्रोटोकॉल के माध्यम से संसाधित होते हैं। भुगतान सत्यापन, प्रसंस्करण और सुरक्षा पूरी तरह से ग्राहक के मोबाइल डिवाइस पर उनके चयनित बैंक/भुगतान ऐप के माध्यम से संभाली जाती है। हम भुगतान विवरण या धन को संग्रहीत, संसाधित, मध्यस्थ या ट्रैक नहीं करते हैं।"
-          : "Transactions generated by UPI QR codes on this website are processed directly through the standard UPI Unified Payments Interface protocol. Payment validation, processing, and security are handled entirely on the customer's mobile device via their chosen bank/payment app. We do not store, process, intermediate, or track payment details or funds."
-        }
+        <strong>Brands:</strong> {chrome.brands}
       </p>
     </div>
 
-    {/* Copyright Section */}
-    <div class="mt-6 flex flex-col items-center justify-between gap-4 border-t border-forest/5 pt-6 text-center text-xs text-forest/65 md:flex-row">
-      <p>&copy; {currentYear} Pro UPI QR. {isHindi ? "स्थानीय व्यवसायों और स्वतंत्र रचनाकारों के लिए निर्मित।" : "Made for local businesses and independent creators."}</p>
-      <p class="text-[10px] text-forest/50">{isHindi ? "सभी भुगतान आपके VPA प्रदाता बैंक द्वारा निर्धारित शर्तों के अधीन हैं।" : "All payments are subject to terms set by your VPA provider bank."}</p>
+    <div class="mt-5 flex flex-col items-center justify-between gap-3 border-t border-forest/5 pt-5 text-center text-xs text-forest/65 md:flex-row">
+      <p>&copy; {currentYear} Pro UPI QR. {chrome.madeFor}</p>
+      <p class="text-[10px] text-forest/50">{chrome.paymentsFollow}</p>
     </div>
   </div>
 </footer>

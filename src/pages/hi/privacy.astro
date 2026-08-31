@@ -2,7 +2,7 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 const title = "गोपनीयता नीति | Pro UPI QR";
-const description = "Pro UPI QR जनरेटर के लिए गोपनीयता नीति। हम आपकी गोपनीयता का सम्मान करते हैं और व्यक्तिगत वित्तीय डेटा या लेनदेन की जानकारी एकत्र नहीं करते हैं।";
+const description = "जानें कौन से Pro UPI QR टूल ब्राउज़र में चलते हैं, क्लाउड और checkout में क्या डेटा रखा जाता है, और उसे कब हटाया जाता है।";
 ---
 
 <BaseLayout title={title} description={description}>
@@ -11,48 +11,69 @@ const description = "Pro UPI QR जनरेटर के लिए गोपन
       <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; जनरेटर पर वापस जाएं</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">गोपनीयता नीति (Privacy Policy)</h1>
-      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 8 जून, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 28 अगस्त, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">1. परिचय</h2>
+          <h2 class="text-xl font-bold text-forest">1. दायरा</h2>
           <p>
-            Pro UPI QR ("हम," "हमारा," या "हमें") में आपका स्वागत है। हम आपकी व्यक्तिगत गोपनीयता की रक्षा के लिए प्रतिबद्ध हैं। यह गोपनीयता नीति बताती है कि हमारा वेब एप्लिकेशन कैसे संचालित होता है और हमारे डेटा व्यवहार का विवरण देती है। हमारी वेबसाइट और उपकरणों का उपयोग करके, आप इस नीति में वर्णित डेटा प्रथाओं के लिए अपनी सहमति देते हैं।
+            यह नीति बताती है कि कौन से Pro UPI QR फीचर पूरी तरह आपके ब्राउज़र में चलते हैं और कौन से वैकल्पिक account या cloud फीचर सीमित डेटा हमारे सेवा प्रदाताओं को भेजते हैं। हम UPI PIN, बैंकिंग पासवर्ड, कार्ड नंबर या OTP नहीं मांगते।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">2. भुगतान या लेनदेन डेटा का कोई संग्रह नहीं</h2>
+          <h2 class="text-xl font-bold text-forest">2. लोकल-फर्स्ट टूल</h2>
           <p>
-            Pro UPI QR एक लोकल-फर्स्ट (local-first) ब्राउज़र उपयोगिता है। <strong>हम कोई भी वित्तीय लेनदेन डेटा, बैंक खाते, UPI पिन या लेनदेन इतिहास एकत्र, संग्रहीत, संसाधित या प्रसारित नहीं करते हैं।</strong> UPI भुगतान QR कोड का निर्माण पूरी तरह से आपके वेब ब्राउज़र के भीतर क्लाइंट-साइड पर होता है। जब उपयोगकर्ता मोबाइल डिवाइस का उपयोग करके QR कोड को स्कैन करते हैं, तो लेनदेन सीधे आपके चयनित बैंक एप्लिकेशन द्वारा सुरक्षित UPI नेटवर्क के माध्यम से संसाधित होता है।
+            Static QR, printable documents, calculators, image tools और decoders सामान्यतः form data और uploaded files को आपके browser में ही process करते हैं। यह सामग्री Pro UPI QR पर upload नहीं होती। बना हुआ <code>upi://pay</code> link UPI app खोलता है; Pro UPI QR आपका UPI PIN प्राप्त या bank transaction process नहीं करता।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">3. स्थानीय ब्राउज़र स्टोरेज (ड्राफ्ट दृढ़ता)</h2>
+          <h2 class="text-xl font-bold text-forest">3. Browser Storage और वैकल्पिक Groq अनुरोध</h2>
           <p>
-            आपकी सुविधा के लिए, हम आपके फॉर्म फ़ील्ड (प्राप्तकर्ता का नाम, UPI आईडी, और लेआउट चयन) को ड्राफ्ट के रूप में सहेजने के लिए आपके ब्राउज़र के स्थानीय स्टोरेज (LocalStorage) का उपयोग करते हैं। यह आपको टैब बंद करने और बाद में बिना दोबारा टाइप किए वापस आने की अनुमति देता है। यह डेटा आपके स्थानीय डिवाइस पर रहता है और हमारे सर्वर पर कभी अपलोड नहीं किया जाता है। आप अपने ब्राउज़र कैश/स्टोरेज को साफ़ करके किसी भी समय इस ड्राफ्ट को साफ़ कर सकते हैं।
+            कई टूल draft को आपके device के localStorage में रखते हैं। Site data साफ करने पर ये draft हट जाते हैं। Menu tool में आप अपनी Groq API key देकर AI विकल्प चला सकते हैं। तब key browser storage में रहती है और menu prompt सीधे Groq को भेजा जाता है; वह हमारे server से होकर नहीं जाता और हमारे server पर store नहीं होता।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">4. कुकीज़ और विश्लेषणात्मक उपकरण</h2>
+          <h2 class="text-xl font-bold text-forest">4. Account और Dynamic QR Campaign</h2>
           <p>
-            हम ट्रैफ़िक का विश्लेषण करने और उपयोगकर्ता अनुभव को बेहतर बनाने में मदद करने के लिए अनाम, समग्र उपयोग के आंकड़े (जैसे, पेज व्यू, सत्र अवधि, डिवाइस प्रकार) एकत्र करने के लिए कुकीज़ और ट्रैकिंग तकनीकों (जैसे कि Google Analytics) का उपयोग कर सकते हैं। ये उपकरण व्यक्तिगत रूप से पहचान योग्य जानकारी एकत्र नहीं करते हैं। यदि आप चाहें तो कुकीज़ को अस्वीकार करने के लिए अपने ब्राउज़र सेटिंग्स को कॉन्फ़िगर कर सकते हैं।
+            Clerk sign-in, account identity, authentication cookies और session data संभालता है। Merchant profile में account ID, merchant name, UPI ID और secret API credential Vercel KV में रखे जाते हैं। Dynamic QR के लिए account ID, server-generated campaign ID, title, HTTPS या UPI destination, category, optional expiry, pause status और कुल mobile/desktop scan counts store होते हैं। QR खोलने वाले व्यक्ति को destination मिलना आवश्यक है। Campaign service individual scan history या सटीक location store नहीं करती।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">5. विज्ञापन (Google AdSense)</h2>
+          <h2 class="text-xl font-bold text-forest">5. Checkout और Payment-Response Data</h2>
           <p>
-            हम अपनी मुफ्त उपयोगिता को वित्तपोषित करने के लिए Google AdSense के माध्यम से तीसरे पक्ष के विज्ञापन प्रदर्शित कर सकते हैं। Google AdSense इस साइट और इंटरनेट पर अन्य साइटों पर उपयोगकर्ताओं की यात्राओं के आधार पर विज्ञापन देने के लिए कुकीज़ (जैसे DoubleClick कुकी) का उपयोग करता है। उपयोगकर्ता Google की विज्ञापन सेटिंग्स पर जाकर व्यक्तिगत विज्ञापनों से बाहर निकल सकते हैं।
+            Merchant checkout में merchant name और UPI ID, order reference, paise में amount, सुरक्षित return URL, status और customer द्वारा जमा transaction reference रखा जाता है। यह reference merchant की पुष्टि तक pending रहता है। Checkout 24 घंटे में expire होता है। अलग signed payment-response API order status, transaction reference, amount और provider को Vercel KV में 90 दिन तक रख सकती है।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">6. हमसे संपर्क करें</h2>
+          <h2 class="text-xl font-bold text-forest">6. Hosting, Security और Technical Logs</h2>
           <p>
-            यदि इस गोपनीयता नीति के संबंध में आपके कोई प्रश्न या प्रतिक्रिया है, तो कृपया हमसे <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a> पर बेझिझक संपर्क करें।
+            Vercel site और server functions host करता है और अपनी privacy terms के अनुसार IP address, user agent, timestamp और error log जैसी सामान्य request information process कर सकता है। Abuse रोकने के लिए हम थोड़े समय वाले hashed request fingerprints उपयोग करते हैं; rate-limit key अपनी निर्धारित window के बाद expire हो जाती हैं।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">7. Data Retention और Deletion</h2>
+          <p>
+            Dynamic campaign owner द्वारा delete किए जाने तक या abuse के कारण हटाए जाने तक रहती है। Checkout 24 घंटे और signed payment response 90 दिन में expire होते हैं। Merchant settings account active रहने तक रहती हैं। Account या merchant profile हटाने के लिए अपने account वाले email address से हमें लिखें।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">8. Analytics, Advertising और बाहरी लिंक</h2>
+          <p>
+            Google Analytics या Google AdSense नहीं चलता। Vercel Speed Insights cookie-free Core Web Vitals (LCP, INP, CLS) मापता है, फ़ॉर्म सामग्री नहीं। Vercel Web Analytics page views और नामित product events (QR generate, PNG/PDF export, share, copy, tool error) रिकॉर्ड करता है। इनमें केवल action नाम और छोटा tool slug होता है — VPA, payee नाम, राशि, invoice text या uploaded file नहीं। UPI apps या affiliate links Pro UPI QR से बाहर जाते हैं।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">9. संपर्क और Data Requests</h2>
+          <p>
+            Privacy, access, correction या deletion request के लिए <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a> पर संपर्क करें। UPI PIN, OTP या banking password कभी email न करें।
           </p>
         </section>
       </div>

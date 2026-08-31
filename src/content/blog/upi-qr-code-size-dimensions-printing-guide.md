@@ -2,7 +2,8 @@
 title: "UPI QR Code Printing Size & Dimensions Guide"
 description: "Minimum QR print sizes, standee dimensions, and scan-distance rules so customers can pay from 3–6 feet at your shop counter."
 pubDate: 2026-06-14
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/print-size-chart.png"
 tags: ["Printing Guide", "Merchant Tips", "Tutorial"]
 ---
 
@@ -61,4 +62,9 @@ If scans fail, increase QR size before reprinting — do not rely on customers t
 
 **[Download a print-ready UPI standee &rarr;](/)** or try our [Free Universal QR Generator](/universal-qr-generator/) for non-payment links.
 
-Related: [Create and print a shop standee](/blog/how-to-create-print-upi-qr-code-standee/) · [QR not scanning fixes](/blog/upi-qr-code-not-scanning-troubleshooting/)
+Related: [Printable template gallery](/print-templates/) · [Create and print a shop standee](/blog/how-to-create-print-upi-qr-code-standee/) · [QR not scanning fixes](/blog/upi-qr-code-not-scanning-troubleshooting/)
+
+<figure>
+  <img src="/images/diagrams/scan-distance-chart.png" alt="Proof-scan UPI QR from 1 ft, 3 ft, and 5 ft" width="1200" height="630" loading="lazy" />
+  <figcaption>Print one proof and scan from 1 ft, 3 ft, and 5 ft before you laminate a batch.</figcaption>
+</figure>

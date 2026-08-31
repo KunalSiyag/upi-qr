@@ -2,7 +2,7 @@
 title: "UPI QR for Delivery Riders: Replace Cash-on-Delivery with Scan-to-Pay"
 description: "Food delivery, courier, and hyperlocal riders can collect payments via UPI QR on phone or dashboard card instead of cash handling."
 pubDate: 2026-06-29
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Delivery", "Merchant Tips", "Tutorial"]
 ---
 

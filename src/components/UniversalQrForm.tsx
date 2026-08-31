@@ -1,7 +1,7 @@
-import { toPng } from "html-to-image";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { downloadDataUrl, notifyExportError } from "../lib/export-image";
+import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
+import { trackProductEvent } from "../lib/productEvents";
 
 // Our brand-aligned types
 const typeList = [
@@ -214,6 +214,7 @@ export function UniversalQrForm() {
         setError("");
       } catch (e) {
         setError("Failed to generate QR");
+        trackProductEvent("tool_error", "universal-qr");
       }
     };
     render();
@@ -255,6 +256,7 @@ export function UniversalQrForm() {
   async function downloadPng() {
     if (!canvasRef.current) return;
     downloadDataUrl(canvasRef.current.toDataURL("image/png"), "qr-code.png");
+    trackProductEvent("export_png", "universal-qr");
   }
 
   async function downloadStyledCard() {
@@ -292,16 +294,18 @@ export function UniversalQrForm() {
       clone.remove();
 
       downloadDataUrl(data, "qr-styled.png");
+      trackProductEvent("export_png", "universal-qr");
     } catch (err) {
       console.error("Failed to download styled card:", err);
+      notifyExportError("PNG export failed — please retry.");
+      trackProductEvent("tool_error", "universal-qr");
     }
   }
 
   async function copyPayload() {
     if (!payload) return;
     await navigator.clipboard.writeText(payload);
-    // simple feedback
-    const orig = document.activeElement;
+    trackProductEvent("copy", "universal-qr");
     alert("Copied to clipboard");
   }
 

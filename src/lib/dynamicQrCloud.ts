@@ -14,86 +14,95 @@ export interface CloudLinkData {
   destinationUrl: string;
   createdAt: string;
   scans: number;
+  mobileScans?: number;
+  desktopScans?: number;
   lastScanned?: string;
   category?: "payment" | "menu" | "social" | "store" | "event" | "other";
   expiryDate?: string;
   isPaused?: boolean;
-  fallbackUrl?: string;
+  version?: number;
   utmSource?: string;
   utmMedium?: string;
   utmCampaign?: string;
   scansByDevice?: { mobile: number; desktop: number };
   recentScans?: ScanLogEvent[];
-  /** Stored only in the campaign owner's browser; never included in a QR URL. */
+  /** Legacy capability used once to claim an older anonymous campaign. */
   manageToken?: string;
 }
 
-const LOCAL_KEY = "pro_upi_dynamic_links";
-const api = (path: string, init?: RequestInit) => fetch(`/api/dynamic${path}`, init);
+export interface CloudApiResult<T> {
+  ok: boolean;
+  status: number;
+  data?: T;
+  error?: string;
+}
 
-function storeLocal(link: CloudLinkData): void {
-  try {
-    const existing: CloudLinkData[] = JSON.parse(localStorage.getItem(LOCAL_KEY) || "[]");
-    const index = existing.findIndex((item) => item.id === link.id);
-    if (index >= 0) existing[index] = { ...existing[index], ...link };
-    else existing.unshift(link);
-    localStorage.setItem(LOCAL_KEY, JSON.stringify(existing));
-  } catch {}
+const api = (path: string, init?: RequestInit) => fetch(path ? `/api/dynamic${path}` : "/api/dynamic/", init);
+
+async function result<T>(response: Response): Promise<CloudApiResult<T>> {
+  const body = await response.json().catch(() => ({}));
+  return response.ok
+    ? { ok: true, status: response.status, data: body as T }
+    : { ok: false, status: response.status, error: typeof body.error === "string" ? body.error : "Request failed." };
 }
 
 export async function getGlobalScanCount(id: string): Promise<{ scans: number; mobileScans: number; desktopScans: number }> {
   try {
-    const response = await api(`/${encodeURIComponent(id)}?mode=stats`);
+    const response = await api(`/${encodeURIComponent(id)}/?mode=stats`);
     if (!response.ok) return { scans: 0, mobileScans: 0, desktopScans: 0 };
     return await response.json();
   } catch { return { scans: 0, mobileScans: 0, desktopScans: 0 }; }
 }
 
-export async function syncDestinationToCloud(id: string, destinationUrl: string, metadata?: Partial<CloudLinkData>): Promise<boolean> {
-  if (!metadata?.manageToken) return false;
+export async function listCloudLinks(): Promise<CloudApiResult<{ campaigns: CloudLinkData[]; cacheKey: string }>> {
   try {
-    const response = await api(`/${encodeURIComponent(id)}`, {
+    return result<{ campaigns: CloudLinkData[]; cacheKey: string }>(await api(""));
+  } catch {
+    return { ok: false, status: 0, error: "Could not reach the dynamic QR service." };
+  }
+}
+
+export async function updateCloudCampaign(
+  id: string,
+  changes: Partial<Pick<CloudLinkData, "destinationUrl" | "title" | "category" | "isPaused">> & { expiryDate?: string | null },
+  legacyManageToken?: string,
+): Promise<CloudApiResult<{ campaign: CloudLinkData }>> {
+  try {
+    return result<{ campaign: CloudLinkData }>(await api(`/${encodeURIComponent(id)}/`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ manageToken: metadata.manageToken, destinationUrl, title: metadata.title, category: metadata.category, expiryDate: metadata.expiryDate, isPaused: metadata.isPaused }),
-    });
-    return response.ok;
-  } catch { return false; }
+      body: JSON.stringify({ ...changes, manageToken: legacyManageToken }),
+    }));
+  } catch {
+    return { ok: false, status: 0, error: "Could not reach the dynamic QR service." };
+  }
 }
 
-export async function getCloudDestination(id: string): Promise<{
-  destinationUrl: string; title?: string; scans?: number; mobileScans?: number; desktopScans?: number;
-} | null> {
+export async function syncLinkToCloud(
+  link: Pick<CloudLinkData, "title" | "destinationUrl" | "category" | "expiryDate">,
+): Promise<CloudApiResult<{ campaign: CloudLinkData }>> {
   try {
-    const response = await api(`/${encodeURIComponent(id)}?mode=details`);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return { destinationUrl: data.campaign.destinationUrl, title: data.campaign.title, scans: data.scans, mobileScans: data.mobileScans, desktopScans: data.desktopScans };
-  } catch { return null; }
-}
-
-export async function recordScanInCloud(id: string, _device: "mobile" | "desktop") {
-  try {
-    const response = await api(`/${encodeURIComponent(id)}`);
-    if (!response.ok) return null;
-    const data = await response.json();
-    return { destinationUrl: data.destinationUrl, title: data.title };
-  } catch { return null; }
-}
-
-export async function syncLinkToCloud(link: CloudLinkData): Promise<CloudLinkData | null> {
-  try {
-    const response = await api("", {
+    return await result<{ campaign: CloudLinkData }>(await api("", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: link.id, title: link.title, destinationUrl: link.destinationUrl, category: link.category, expiryDate: link.expiryDate }),
+      body: JSON.stringify(link),
+    }));
+  } catch {
+    return { ok: false, status: 0, error: "Could not reach the dynamic QR service." };
+  }
+}
+
+export async function deleteLinkFromCloud(id: string, legacyManageToken?: string): Promise<CloudApiResult<never>> {
+  try {
+    const response = await api(`/${encodeURIComponent(id)}/`, {
+      method: "DELETE",
+      headers: legacyManageToken ? { "X-Campaign-Manage-Token": legacyManageToken } : undefined,
     });
-    if (!response.ok) return null;
-    const data = await response.json();
-    const saved = { ...link, ...data.campaign, scans: link.scans, scansByDevice: link.scansByDevice, recentScans: link.recentScans } as CloudLinkData;
-    storeLocal(saved);
-    return saved;
-  } catch { return null; }
+    if (response.status === 204) return { ok: true, status: 204 };
+    return result<never>(response);
+  } catch {
+    return { ok: false, status: 0, error: "Could not reach the dynamic QR service." };
+  }
 }
 
 export function exportAnalyticsToCsv(link: CloudLinkData): void {

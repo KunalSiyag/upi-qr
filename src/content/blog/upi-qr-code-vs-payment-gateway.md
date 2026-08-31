@@ -2,7 +2,8 @@
 title: "UPI QR Code vs Payment Gateway for Business"
 description: "An in-depth comparison of free static UPI QR codes and paid payment gateways (like Razorpay, Cashfree, or Paytm Business) for small merchants and online creators."
 pubDate: 2026-06-10
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/kirana-upi-standee.jpg"
 tags: ["Merchant Tips", "Finance", "Comparison"]
 ---
 
@@ -34,7 +35,6 @@ Here is a high-level look at how static UPI QR codes compare to paid merchant ga
 
 For small stores, micro-merchants, freelancers, and local service providers, static UPI QR codes are often the most profitable starting point.
 
-![A secure mobile payment illustration scanning a QR code](/images/blog/mobile-payment-concept.png)
 
 ### 1. No Platform Commissions (Keep 100% of Revenue)
 Payment gateways charge a standard MDR (Merchant Discount Rate) of **2% + GST** on domestic transactions. If your business collects ₹1,000, you pay ₹23 to the gateway. If you collect ₹1,00,000 monthly, you lose ₹2,300. 

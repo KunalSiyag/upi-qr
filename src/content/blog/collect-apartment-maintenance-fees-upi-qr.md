@@ -2,7 +2,7 @@
 title: "How to Collect Apartment Maintenance Fees via UPI QR Code"
 description: "A guide for apartment owners associations (AOA) to collect monthly maintenance fees using free, zero-commission UPI QR codes."
 pubDate: 2026-05-28
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Apartment", "Community", "Tutorial"]
 ---
 

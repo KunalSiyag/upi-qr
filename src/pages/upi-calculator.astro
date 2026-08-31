@@ -31,7 +31,7 @@ const faqSchema = {
       "name": "Is UPI transaction MDR fee zero for merchants in India?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Yes. Under Ministry of Finance and RBI mandates, standard P2M (Person-to-Merchant) UPI payments initiated via bank account transfers incur 0% Merchant Discount Rate (MDR) for small and large merchants."
+        "text": "Yes. Under Ministry of Finance and RBI mandates, standard P2M (Person-to-Merchant) UPI payments funded by bank accounts incur 0% Merchant Discount Rate (MDR) for small and large merchants. RuPay credit card on UPI transactions above ₹2,000 may carry interchange fees."
       }
     },
     {
@@ -39,7 +39,7 @@ const faqSchema = {
       "name": "What is the MDR fee for RuPay Credit Cards on UPI?",
       "acceptedAnswer": {
         "@type": "Answer",
-        "text": "Transactions below ₹2,000 made via RuPay credit cards on UPI are completely fee-free (0% MDR). For transactions exceeding ₹2,000, standard MDR is capped at 0.90% to 1.50% depending on merchant turnover."
+        "text": "Transactions below ₹2,000 made via RuPay credit cards on UPI are completely fee-free (0% MDR). For transactions exceeding ₹2,000, interchange fees as per NPCI circulars (up to 2% depending on merchant category) apply and are borne by the merchant."
       }
     },
     {
@@ -73,13 +73,13 @@ const faqSchema = {
           UPI Transaction Fee & MDR Savings Calculator
         </h1>
         <p class="mt-4 sm:mt-6 text-base sm:text-lg leading-relaxed text-forest/75">
-          See exactly how much revenue your store, Kirana shop, or freelancing business saves by offering zero-MDR UPI payment QR codes instead of paying 2.36% card gateway fees.
+          See exactly how much revenue your store, Kirana shop, or freelancing business saves by offering bank-to-bank UPI payment QR codes (zero MDR) instead of paying 2.36% card gateway fees.
         </p>
       </div>
 
       {/* Interactive Calculator Console */}
       <div class="mt-8 sm:mt-12 w-full min-w-0">
-        <UpiCalculator client:load />
+        <UpiCalculator client:visible />
       </div>
 
       {/* Educational Guide */}

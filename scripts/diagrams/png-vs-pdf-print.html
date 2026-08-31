@@ -1,0 +1,52 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page">
+  <p class="kicker">File format</p>
+  <h1>PNG vs PDF for a printed UPI QR</h1>
+  <div class="grid" style="grid-template-columns:1fr 1fr;">
+    <div class="card">
+      <p class="tag">PNG</p>
+      <p style="font-weight:900;font-size:22px;margin:10px 0;">Best for WhatsApp and inkjet</p>
+      <ul class="muted" style="padding-left:18px;line-height:1.7;">
+        <li>Raster pixels. Export at the physical size × 300 DPI.</li>
+        <li>Fine for home printers and chat sharing.</li>
+        <li>Do not stretch a small screenshot to A4.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <p class="tag">PDF</p>
+      <p style="font-weight:900;font-size:22px;margin:10px 0;">Safer print-shop master</p>
+      <ul class="muted" style="padding-left:18px;line-height:1.7;">
+        <li>Keeps page size (A4 / A5) without resampling.</li>
+        <li>Better when a shop will reprint later.</li>
+        <li>Still test-scan the first proof copy.</li>
+      </ul>
+    </div>
+  </div>
+  <p class="muted" style="margin-top:18px;">Pro UPI QR does not claim SVG or WebAssembly print engines. Use PNG or PDF from the browser download, then print at 300 DPI on matte stock.</p>
+  <p class="foot">proupiqr.in/blog/upi-qr-png-vs-pdf-print-quality-guide/</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

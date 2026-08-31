@@ -2,7 +2,7 @@
 title: "RBI & NPCI Merchant UPI QR Display Guidelines for Indian Shops"
 description: "What Indian merchants should know about UPI QR display, soundbox usage, MDR rules, and customer transparency — in plain language."
 pubDate: 2026-06-25
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Compliance", "Merchant Tips", "Reference"]
 ---
 

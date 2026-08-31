@@ -1,0 +1,119 @@
+---
+import TrustPage from "../components/TrustPage.astro";
+import { DEFAULT_AUTHOR } from "../data/authors";
+
+const title = "About Pro UPI QR - Independent UPI Tools | Pro UPI QR";
+const description =
+  "Pro UPI QR is an independent, local-first UPI QR and merchant-tools site founded by Kunal Siyag. Not NPCI, not a bank, not a payment gateway.";
+const pageUrl = "https://www.proupiqr.in/about/";
+
+const faqs = [
+  {
+    question: "Is Pro UPI QR an official NPCI or PhonePe product?",
+    answer:
+      "No. It is an independent web utility. It is not affiliated with NPCI, BHIM, PhonePe, Google Pay, Paytm, or any bank. Official merchant QR, KYC, and soundboxes still come from those apps or your bank.",
+  },
+  {
+    question: "Who writes the guides?",
+    answer:
+      "Kunal Siyag, the founder. There is no separate unnamed research desk. Sources, review dates, and corrections are listed on the article and on the corrections log.",
+  },
+  {
+    question: "Do you hold customer money or UPI PINs?",
+    answer:
+      "No. Static tools stay in the browser. Actual UPI payments happen in the payer’s bank app. Optional dynamic QR and checkout features store only the limited records described in the privacy policy.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "AboutPage",
+      "@id": `${pageUrl}#page`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": "https://www.proupiqr.in/#website" },
+      about: { "@id": "https://www.proupiqr.in/#organization" },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "About", item: pageUrl },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+---
+
+<TrustPage title={title} description={description} h1="About Pro UPI QR" eyebrow="Who we are" lastUpdated="28 August 2026" schema={schema}>
+  <span slot="crumb" class="text-forest font-bold" aria-current="page">About</span>
+
+  <section>
+    <h2>What this site is</h2>
+    <p>
+      Pro UPI QR is a free set of merchant tools for Indian shops, freelancers, and donation counters. The core product is a standard NPCI <code>upi://pay</code> QR you can print as a standee or sticker. Around that sit invoices, receipts, calculators, an error-code resolver, and setup guides.
+    </p>
+    <p>
+      Static generators, documents, and calculators run in your browser. Optional account-backed features — dynamic redirects, hosted checkout, signed payment-status records — are labelled, rate-limited, and described in the <a href="/privacy/">privacy policy</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>What this site is not</h2>
+    <ul>
+      <li>Not NPCI, BHIM, or a government service.</li>
+      <li>Not PhonePe, Google Pay, Paytm, or any bank.</li>
+      <li>Not a payment aggregator, escrow, or wallet. We do not hold funds or UPI PINs.</li>
+      <li>Not a substitute for a CA, lawyer, or your bank’s current circular.</li>
+    </ul>
+    <p>
+      A QR printed here is a <strong>compatible</strong> UPI QR for the VPA you type. An official PhonePe Business or Google Pay for Business QR — with that app’s KYC, dashboard, and soundbox pairing — still comes from that app. The <a href="/merchant-setup/">merchant setup hub</a> keeps that distinction in one place.
+    </p>
+  </section>
+
+  <section>
+    <h2>Who runs it</h2>
+    <p>
+      <a href={DEFAULT_AUTHOR.path}>{DEFAULT_AUTHOR.name}</a> founded Pro UPI QR and writes the guides. There is no hidden editorial board. Contact, GitHub, and the full bio are on the <a href="/authors/">authors</a> page.
+    </p>
+  </section>
+
+  <section>
+    <h2>How we treat facts</h2>
+    <p>
+      Bank limits, MDR, refund TAT, and MSMED interest are sourced and dated. When we get one wrong, it goes on the <a href="/corrections/">corrections log</a>. The rules are in the <a href="/editorial-policy/">editorial policy</a> and <a href="/accuracy-policy/">accuracy policy</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Contact</h2>
+    <ul>
+      <li>Support: <a href="mailto:support@proupiqr.in">support@proupiqr.in</a></li>
+      <li>Corrections and feedback: <a href="mailto:feedback@proupiqr.in">feedback@proupiqr.in</a></li>
+      <li>Privacy: <a href="mailto:privacy@proupiqr.in">privacy@proupiqr.in</a></li>
+      <li>Abuse / phishing: <a href="mailto:abuse@proupiqr.in">abuse@proupiqr.in</a></li>
+    </ul>
+  </section>
+
+  <section id="faq">
+    <h2>Frequently asked questions</h2>
+    {faqs.map((faq) => (
+      <div>
+        <h3>{faq.question}</h3>
+        <p>{faq.answer}</p>
+      </div>
+    ))}
+  </section>
+</TrustPage>

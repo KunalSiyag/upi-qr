@@ -5,7 +5,7 @@ import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
 const title = "Dynamic QR Code Generator & Redirect Link Manager | Pro UPI QR";
-const description = "Create dynamic QR codes with editable destination URLs and payment links. Update target destinations anytime without reprinting physical posters.";
+const description = "Create account-managed dynamic QR codes with editable HTTPS or UPI destinations, protected redirect IDs, and aggregate scan counts.";
 
 const schema = {
   "@context": "https://schema.org",
@@ -33,12 +33,12 @@ const schema = {
         </div>
         <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">Dynamic QR Code Generator</h1>
         <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
-          Generate dynamic short QR codes where you can update the destination URL or UPI ID anytime in your browser without reprinting physical posters or standees.
+          Create a protected redirect QR, then update its HTTPS or UPI destination without reprinting. A free account is required because the destination and aggregate scan counts are stored securely. External websites are shown on a confirmation screen before visitors continue.
         </p>
       </div>
 
       <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <DynamicQrGenerator client:load />
+        <DynamicQrGenerator client:visible />
       </div>
 
       <AffiliateProducts />

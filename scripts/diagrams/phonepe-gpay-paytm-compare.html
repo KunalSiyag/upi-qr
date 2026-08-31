@@ -1,0 +1,41 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page" style="padding:28px 36px;">
+  <p class="kicker">Merchant extras, not the rail</p>
+  <h1 style="font-size:30px;margin-bottom:14px;">PhonePe vs Google Pay vs Paytm for a shop QR</h1>
+  <div class="card" style="padding:8px 4px 4px;">
+    <table>
+      <tr><th></th><th>PhonePe Business</th><th>GPay for Business</th><th>Paytm for Business</th><th>Compatible print here</th></tr>
+      <tr><td>Who can pay</td><td>Any UPI app</td><td>Any UPI app</td><td>Any UPI app</td><td>Any UPI app</td></tr>
+      <tr><td>What you print</td><td>Official merchant QR after KYC</td><td>Official merchant QR after KYC</td><td>Official merchant QR after KYC</td><td>Your existing VPA as upi://pay</td></tr>
+      <tr><td>Dashboard / soundbox</td><td>In-app extras, rented box</td><td>In-app extras, phone alerts</td><td>In-app extras, rented box</td><td>None — use bank SMS / passbook</td></tr>
+      <tr><td>Bank-to-bank MDR</td><td colspan="4">0% on standard UPI. RuPay credit-card UPI above ₹2,000 may carry interchange.</td></tr>
+    </table>
+  </div>
+  <p class="muted" style="margin-top:12px;">UPI is interoperable. Competing apps sell merchant extras around the same rail. Confirm current schemes inside each app.</p>
+  <p class="foot">proupiqr.in/phonepe-vs-paytm-vs-gpay/</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

@@ -2,7 +2,7 @@
 title: "How to Change UPI ID on a Printed QR Standee (Bank Switch Guide)"
 description: "Switched banks or got a new VPA? Learn how to retire old UPI QR standees, regenerate codes, and avoid payments going to the wrong account."
 pubDate: 2026-06-22
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Tutorial", "Banking", "Merchant Tips"]
 ---
 

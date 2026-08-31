@@ -2,7 +2,7 @@
 title: "UPI Lite vs. Standard UPI: Which is Best for Daily Micro-Payments?"
 description: "An analysis of UPI Lite, highlighting how it works, transaction limits, and why it is ideal for small daily payments under ₹500."
 pubDate: 2026-05-31
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["UPI Lite", "Micro-payments", "Banking"]
 ---
 

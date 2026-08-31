@@ -3,7 +3,9 @@ import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-ima
 
 const draftKey = "proupiqr-msmed-draft";
 const EXPORT_TIMEOUT_MS = 20000;
-const RATE_PCT = 15;
+const RBI_BANK_RATE_PCT = 6.5;
+const RATE_PCT = Math.round(RBI_BANK_RATE_PCT * 3 * 10) / 10;
+const LAST_REVIEWED = "2026-08-27";
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -72,7 +74,7 @@ export function MsmedInterestCalculator() {
 
     const simpleInterest = P * (RATE_PCT / 100) * (overdueDays / 365);
 
-    // MSMED Facilitation Councils commonly award monthly-compounded interest.
+    // Monthly compounding is used as the default calculation approach.
     const months = overdueDays / 30;
     const compoundInterest = P * (Math.pow(1 + RATE_PCT / 1200, months) - 1);
 
@@ -142,7 +144,7 @@ export function MsmedInterestCalculator() {
       `Principal: ${money(calc.P)} · Bill date: ${billDate}\n` +
       `Due date: ${calc.dueDate} (${creditDays} day terms)\n` +
       `Overdue: ${calc.overdueDays} days\n` +
-      `Interest @15% p.a.: ${money(calc.interest)}\n` +
+      `Interest @${RATE_PCT}% p.a. (3× RBI bank rate): ${money(calc.interest)}\n` +
       `Total claimable: ${money(calc.total)}\n` +
       `(Section 16, MSMED Act — MSE Facilitation Council jurisdiction)`;
     navigator.clipboard?.writeText(text).catch(() => undefined);
@@ -163,7 +165,7 @@ export function MsmedInterestCalculator() {
         </div>
 
         <p className="mt-3 rounded-2xl bg-mint px-4 py-2.5 text-xs leading-5 font-semibold text-forest/75">
-          Under Section 16 of the MSMED Act, registered micro/small suppliers are entitled to <strong>15% per year</strong> interest when buyers pay later than the agreed terms (maximum 45 days). MSE Facilitation Councils routinely award this — keep bills and reminders handy.
+          Under Section 16 of the MSMED Act, 2006, registered micro/small suppliers are entitled to interest at <strong>three times the RBI bank rate</strong> ({RBI_BANK_RATE_PCT}% × 3 = {RATE_PCT}% p.a.) when buyers pay later than the agreed credit period. If no agreement exists or the period exceeds 45 days, the Act deems the maximum credit period as 45 days before interest begins accruing.
         </p>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -172,7 +174,7 @@ export function MsmedInterestCalculator() {
           <label className="text-sm font-bold text-forest">Invoice number<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Bill amount ₹<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Bill date<input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Agreed credit days<input type="number" min={0} max={180} value={creditDays} onChange={(e) => setCreditDays(Math.max(0, Math.min(180, Number(e.target.value) || 0)))} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /><span className="mt-1 block text-[11px] font-semibold text-forest/55">{calc.statutoryNote ? "⚠ Above 45 days — the Act caps deemed terms at 45." : "Within the 45-day statutory cap."}</span></label>
+          <label className="text-sm font-bold text-forest">Agreed credit days<input type="number" min={0} max={180} value={creditDays} onChange={(e) => setCreditDays(Math.max(0, Math.min(180, Number(e.target.value) || 0)))} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /><span className="mt-1 block text-[11px] font-semibold text-forest/55">{calc.statutoryNote ? "⚠ Above 45 days — the Act deems the maximum credit period as 45 days before interest starts." : "Within 45 days — interest begins after agreed credit days."}</span></label>
           <label className="text-sm font-bold text-forest sm:col-span-2">Payment received on (leave empty if still unpaid)<input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
@@ -194,7 +196,7 @@ export function MsmedInterestCalculator() {
             {supplierName && <p className="text-xs font-semibold text-forest/60">Supplier: {supplierName}</p>}
             {buyerName && <p className="text-xs font-semibold text-forest/60">Buyer: {buyerName}</p>}
           </div>
-          <span className="rounded-lg border-2 border-red-500 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-red-600">15% p.a.</span>
+          <span className="rounded-lg border-2 border-red-500 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-red-600">{RATE_PCT}% p.a.</span>
         </header>
 
         <section className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
@@ -213,8 +215,9 @@ export function MsmedInterestCalculator() {
         </section>
 
         <footer className="mt-4 space-y-2 text-[11px] leading-5 text-forest/60">
-          <p><strong className="text-forest">Basis:</strong> Section 16, Micro, Small and Medium Enterprises Development Act, 2006 — interest at three times the RBI bank rate (15% under current rates) with compounded monthly rests as awarded by MSE Facilitation Councils.</p>
-          <p>This statement supports negotiation and MSE FC filing. It is not a legal notice; consult the SAMADHAAN portal or your counsel for enforcement.</p>
+          <p><strong className="text-forest">Basis:</strong> Section 16, Micro, Small and Medium Enterprises Development Act, 2006 — interest at three times the RBI bank rate ({RBI_BANK_RATE_PCT}% × 3 = {RATE_PCT}% p.a. at current rates).</p>
+          <p><strong className="text-forest">Sources:</strong> <a href="https://msme.gov.in" class="underline hover:text-leaf" target="_blank" rel="noopener">msme.gov.in</a> · <a href="https://samadhaan.msme.gov.in" class="underline hover:text-leaf" target="_blank" rel="noopener">SAMADHAAN portal</a> · <a href="https://rbi.org.in" class="underline hover:text-leaf" target="_blank" rel="noopener">rbi.org.in</a> for current bank rate.</p>
+          <p>This statement supports negotiation and MSE FC filing. It is not a legal notice; consult the SAMADHAAN portal or your counsel for enforcement. Last reviewed {LAST_REVIEWED}.</p>
         </footer>
       </article>
     </div>

@@ -56,11 +56,29 @@ const generatorSlug = slug as GeneratorSlug;
 const resolvedPreset = tool ? undefined : (presetType ?? getPresetFromSlug(generatorSlug));
 
 const localeCopy = tool ? getLocalizedToolCopy(tool, "te") : null;
-const description = localeCopy ? localeCopy.description : `${intro} 100% ఉచితం మరియు తక్షణ డౌన్‌లోడ్.`;
-const pageTitle = localeCopy ? localeCopy.title : `${title} | Pro UPI QR (Telugu)`;
+const description = localeCopy
+  ? localeCopy.description
+  : `${intro} 100% ఉచితం; తక్షణ డౌన్‌లోడ్.`;
+const pageTitle = localeCopy ? localeCopy.title : `${title} | Pro UPI QR`;
+const pageUrl = new URL(Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`, Astro.site).toString();
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: localeCopy?.name ?? title,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "te-IN",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+    },
+  ],
+};
 ---
 
-<BaseLayout title={pageTitle} description={description}>
+<BaseLayout title={pageTitle} description={description} schema={schema}>
   {tool ? (
     <LocalizedToolPage lang="te" tool={tool} />
   ) : (
@@ -73,11 +91,11 @@ const pageTitle = localeCopy ? localeCopy.title : `${title} | Pro UPI QR (Telugu
       <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72 md:text-base">{intro}</p>
 
       <div class="mt-8">
-        <GeneratorForm client:load presetType={resolvedPreset} />
+        <GeneratorForm client:visible presetType={resolvedPreset} lang="te" />
       </div>
 
       <AffiliateProducts />
-      <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} />
+      <InternalLinkHub variant="both" currentGenerator={generatorSlug} presetType={resolvedPreset} lang="te" />
     </div>
   </main>
   )}

@@ -2,7 +2,7 @@
 title: "How to Collect Event Registration Fees Using a UPI QR Code"
 description: "Learn how event organizers, college clubs, and communities can use commission-free UPI QR codes to collect registrations and ticket payments."
 pubDate: 2026-06-02
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Events", "Fundraising", "Tutorial"]
 ---
 

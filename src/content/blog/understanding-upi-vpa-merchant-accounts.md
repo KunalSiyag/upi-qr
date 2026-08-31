@@ -2,7 +2,7 @@
 title: "Understanding UPI VPA: Personal vs. Merchant Accounts Explained"
 description: "A complete guide explaining what a Virtual Payment Address (VPA) is, how UPI IDs work, and the differences between personal and merchant UPI accounts."
 pubDate: 2026-06-10
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Banking", "Merchant Tips", "Security"]
 ---
 

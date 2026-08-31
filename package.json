@@ -6,9 +6,11 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "postbuild": "python3 scripts/seo_health_check.py && python3 index_now.py || true",
+    "postbuild": "npm run seo:check && npm run security:check && (python3 index_now.py || true)",
     "preview": "astro preview",
-    "seo:check": "python3 scripts/seo_health_check.py",
+    "seo:check": "python3 scripts/seo_health_check.py && python3 scripts/index_integrity_check.py .vercel/output/static && python3 scripts/image_mime_check.py && python3 scripts/perf_budget_check.py",
+    "gsc:report": "python3 scripts/gsc_search_report.py",
+    "security:check": "node --experimental-strip-types scripts/security-regression.test.mjs",
     "submit:sitemap": "node scripts/submit-to-search-engines.mjs",
     "submit:rss": "node scripts/ping-aggregators.mjs",
     "warmup:crawlers": "node scripts/warmup-crawlers.mjs",
@@ -19,6 +21,12 @@
   "overrides": {
     "@astrojs/tailwind": {
       "astro": "$astro"
+    },
+    "@vercel/routing-utils": {
+      "path-to-regexp": "6.3.0"
+    },
+    "@clerk/astro": {
+      "nanoid": "5.1.6"
     }
   },
   "dependencies": {
@@ -26,18 +34,17 @@
     "@astrojs/tailwind": "^6.0.2",
     "@astrojs/vercel": "^11.0.4",
     "@clerk/astro": "^4.0.6",
+    "@vercel/analytics": "^2.0.1",
     "@vercel/kv": "^3.0.0",
+    "@vercel/speed-insights": "^2.0.0",
     "astro": "^7.1.6",
     "html-to-image": "^1.11.11",
     "jspdf": "^4.2.1",
+    "jsqr": "^1.4.0",
     "jszip": "^3.10.1",
     "qrcode": "^1.5.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwindcss": "^3.4.17",
-    "uuid": "^14.0.1"
-  },
-  "devDependencies": {
-    "@types/uuid": "^10.0.0"
+    "tailwindcss": "^3.4.17"
   }
 }

@@ -2,7 +2,7 @@
 title: "UPI QR Code for Tuition & Coaching Center Fees"
 description: "Coaching institutes can collect monthly fees, admission charges, and batch payments using UPI QR posters on notice boards and WhatsApp groups."
 pubDate: 2026-06-20
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Education", "Billing", "Tutorial"]
 ---
 

@@ -1,0 +1,49 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page">
+  <p class="kicker">Print guide</p>
+  <h1>UPI QR print sizes and scan distance</h1>
+  <div class="grid" style="grid-template-columns: 1.25fr 0.75fr;">
+    <div class="card">
+      <table>
+        <tr><th>Use</th><th>Minimum QR</th><th>Recommended</th></tr>
+        <tr><td>Handheld, close scan</td><td>2 cm × 2 cm</td><td>3 cm × 3 cm</td></tr>
+        <tr><td>Counter standee</td><td>3 cm × 3 cm</td><td>4–5 cm</td></tr>
+        <tr><td>Wall / donation, 4–6 ft</td><td>5 cm × 5 cm</td><td>8–15 cm</td></tr>
+        <tr><td>A6 table tent (4×6 in)</td><td>1.5 in QR</td><td>2 in QR</td></tr>
+        <tr><td>A5 / 5×7 counter card</td><td>2 in QR</td><td>2.5 in QR</td></tr>
+        <tr><td>A4 poster (210×297 mm)</td><td>3 in QR</td><td>3–4 in QR</td></tr>
+      </table>
+    </div>
+    <div class="card">
+      <p style="font-weight:900;margin-bottom:10px;">Rule of thumb</p>
+      <p class="muted">Scan distance ÷ 10 ≈ minimum QR width in inches. A 5-foot counter needs about a <strong>2-inch (5 cm)</strong> QR. Print at <strong>300 DPI</strong> on <strong>matte</strong> stock. NPCI does not mandate one global print size.</p>
+      <p class="tag" style="margin-top:14px;">Quiet zone: keep a white border</p>
+    </div>
+  </div>
+  <p class="foot">proupiqr.in/print-templates/</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

@@ -2,7 +2,8 @@
 title: "UPI International: Countries Where You Can Pay via UPI QR Codes"
 description: "A guide listing the foreign countries that have integrated with NPCI, allowing Indian travelers to pay merchants abroad using UPI QR."
 pubDate: 2026-05-25
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/international-upi-travel.jpg"
 tags: ["UPI International", "Travel", "Reference"]
 ---
 

@@ -1,0 +1,167 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { getCollection } from "astro:content";
+import {
+  TOPIC_HUB_BY_ID,
+  articlesForHub,
+  type TopicHubId,
+} from "../data/topicHubs";
+import { ogImageForPath } from "../data/siteImages";
+
+interface Props {
+  hubId: TopicHubId;
+}
+
+const { hubId } = Astro.props;
+const hub = TOPIC_HUB_BY_ID[hubId];
+const posts = await getCollection("blog");
+const articles = articlesForHub(hub, posts);
+const relatedHubs = hub.relatedHubIds.map((id) => TOPIC_HUB_BY_ID[id]);
+
+const site = "https://www.proupiqr.in";
+const pageUrl = `${site}${hub.path}`;
+const inventory = [
+  ...hub.groups.flatMap((group) => group.tools),
+  ...articles.map((post) => ({
+    href: `/blog/${post.id.replace(/\.mdx?$/, "")}/`,
+    name: post.data.title,
+  })),
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "@id": `${pageUrl}#page`,
+      name: hub.title,
+      description: hub.description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": `${site}/#website` },
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: inventory.length,
+        itemListElement: inventory.map((item, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: item.name,
+          url: item.href.startsWith("http") ? item.href : `${site}${item.href}`,
+        })),
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${site}/` },
+        { "@type": "ListItem", position: 2, name: "All Tools", item: `${site}/tools/` },
+        { "@type": "ListItem", position: 3, name: hub.shortName, item: pageUrl },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: hub.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+---
+
+<BaseLayout title={hub.title} description={hub.description} schema={schema} image={ogImageForPath(hub.path).src}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">{hub.shortName}</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+          {hub.eyebrow}
+        </p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">
+          {hub.h1}
+        </h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">{hub.intro}</p>
+      </div>
+    </section>
+
+    {hub.groups.map((group) => (
+      <section class="px-4 py-8 md:px-6 lg:px-8">
+        <div class="mx-auto max-w-7xl">
+          <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">{group.heading}</h2>
+          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {group.tools.map((tool) => (
+              <a
+                href={tool.href}
+                class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(17,59,44,0.12)]"
+              >
+                <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{tool.name}</h3>
+                <p class="mt-2 flex-1 text-xs leading-6 text-forest/70">{tool.description}</p>
+                <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf opacity-80 group-hover:opacity-100">Open →</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    ))}
+
+    {articles.length > 0 && (
+      <section class="px-4 py-8 md:px-6 lg:px-8">
+        <div class="mx-auto max-w-7xl">
+          <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Guides in this topic</h2>
+          <p class="mt-1 text-sm font-semibold text-forest/65">From the article collection, not a hand-picked subset.</p>
+          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {articles.map((post) => (
+              <a
+                href={`/blog/${post.id.replace(/\.mdx?$/, "")}/`}
+                class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5"
+              >
+                <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">{post.data.title}</h3>
+                <p class="mt-2 flex-1 text-xs leading-6 text-forest/70 line-clamp-3">{post.data.description}</p>
+                <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf">Read guide →</span>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+    )}
+
+    <section class="px-4 py-8 md:px-6 lg:px-8" id="faq">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Frequently asked questions</h2>
+        <div class="mt-5 grid gap-4 md:grid-cols-2">
+          {hub.faqs.map((faq) => (
+            <div class="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-2">
+              <h3 class="text-sm font-black text-forest">{faq.question}</h3>
+              <p class="text-xs text-forest/75 leading-relaxed">{faq.answer}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Related topics</h2>
+        <div class="mt-5 grid gap-4 sm:grid-cols-3">
+          {relatedHubs.map((related) => (
+            <a
+              href={related.path}
+              class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 transition hover:border-leaf/40"
+            >
+              <h3 class="text-base font-black text-forest">{related.shortName}</h3>
+              <p class="mt-2 text-xs leading-6 text-forest/70">{related.blurb}</p>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

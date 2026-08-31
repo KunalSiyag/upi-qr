@@ -1,0 +1,81 @@
+---
+import TrustPage from "../components/TrustPage.astro";
+
+const title = "How We Check UPI Facts and Numbers | Pro UPI QR";
+const description =
+  "Pro UPI QR accuracy rules: integer paise, NPCI and RBI citations, RuPay CC UPI vs bank UPI, last-reviewed dates, and how to report a wrong figure.";
+const pageUrl = "https://www.proupiqr.in/accuracy-policy/";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#page`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": "https://www.proupiqr.in/#website" },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Accuracy policy", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<TrustPage title={title} description={description} h1="Accuracy policy" eyebrow="Trust" lastUpdated="28 August 2026" schema={schema}>
+  <span slot="crumb" class="text-forest font-bold" aria-current="page">Accuracy policy</span>
+
+  <section>
+    <h2>Money math</h2>
+    <p>
+      Calculators work in integer paise so rupee rounding does not drift. EMI, SIP, GST, and MSMED outputs are checked against known values before a tool ships (for example, a ₹10 lakh loan at 9% for 20 years is about ₹8,997 EMI). If a live Bank Rate or GST slab changes, the page should say so and date the review.
+    </p>
+  </section>
+
+  <section>
+    <h2>Primary sources</h2>
+    <ul>
+      <li><strong>NPCI</strong> for UPI interoperability, reason-code families, and MDR / interchange notes that apply across PSPs.</li>
+      <li><strong>RBI</strong> for TAT on failed credits (circular DPSS.CO.PD No.629/02.01.014/2019-20: P2P T+1, P2M T+5, ₹100/day compensation) and for the Bank Rate used in MSMED interest.</li>
+      <li><strong>Bank and app pages</strong> for per-bank daily limits, PhonePe/GPay Business KYC menus, and soundbox rents — always as “as of [date]” because they move without a public changelog.</li>
+    </ul>
+    <p>
+      App wrapper text such as “NPCI returned error” is not treated as a single code. We look up the two-character reason (U16, Z9, ZM) on the <a href="/upi-error-codes/">error resolver</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>UPI MDR</h2>
+    <p>
+      Standard bank-to-bank UPI has <strong>0% MDR</strong>. RuPay credit card on UPI above ₹2,000 may carry interchange. Those two sentences must not be collapsed into “UPI is always free for the merchant.”
+    </p>
+  </section>
+
+  <section>
+    <h2>What we test</h2>
+    <p>
+      Generated QRs are test-scanned in major UPI apps when a print or generator guide is updated. We do not publish mocked PhonePe or GPay UI. Where a field is recorded, <code>testedApplications</code> on the article lists the apps used. Menu labels still change; the page should say to confirm inside the app.
+    </p>
+  </section>
+
+  <section>
+    <h2>Review cadence</h2>
+    <p>
+      Priority financial pages (limits, error codes, MSMED, MDR) should be reviewed at least every 180 days, or sooner after a circular. The article header shows published, updated, and last-reviewed dates when those fields exist. A missing date means we have not yet backfilled that article — it is not a claim of perpetual accuracy.
+    </p>
+  </section>
+
+  <section>
+    <h2>Report an error</h2>
+    <p>
+      Email <a href="mailto:feedback@proupiqr.in">feedback@proupiqr.in</a> with the URL and the official source. Confirmed mistakes are corrected on the page and added to the <a href="/corrections/">corrections log</a>.
+    </p>
+  </section>
+</TrustPage>

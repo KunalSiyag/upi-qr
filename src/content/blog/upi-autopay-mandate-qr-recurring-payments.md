@@ -2,7 +2,7 @@
 title: "UPI AutoPay Mandate QR: Recurring Rent, Subscriptions & EMIs Explained"
 description: "How UPI AutoPay mandates differ from shop QR standees, and when gyms, landlords, and SaaS sellers should use recurring UPI instead."
 pubDate: 2026-06-27
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["UPI AutoPay", "Billing", "Reference"]
 ---
 

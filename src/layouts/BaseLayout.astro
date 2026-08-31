@@ -2,62 +2,100 @@
 import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import HeaderNav from "../components/HeaderNav.astro";
-import FooterKeywordMatrix from "../components/FooterKeywordMatrix.astro";
+import TopicHubNav from "../components/TopicHubNav.astro";
+import Analytics from "@vercel/analytics/astro";
+import SpeedInsights from "@vercel/speed-insights/astro";
 import { routeExistsInLang } from "../data/validRoutes";
+import { DEFAULT_OG_IMAGE, ogMimeFromSrc, resolveSiteImage } from "../data/siteImages";
 
 interface Props {
   title: string;
   description: string;
   canonical?: string;
-  schema?: Record<string, unknown>;
+  schema?: Record<string, unknown> | Record<string, unknown>[];
   image?: string;
   noindex?: boolean;
   alternates?: { lang: string; url: string }[];
+  preloadImage?: { href: string; type?: string };
 }
 
-const { title, description, canonical, schema, image, noindex = false, alternates } = Astro.props;
+const { title, description, canonical, schema, image, noindex = false, alternates, preloadImage } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
-const defaultOgImage = "/images/og-image.png";
-const ogImageUrl = image 
+const defaultOgImage = DEFAULT_OG_IMAGE.src;
+const ogImageUrl = image
   ? (image.startsWith("http") ? image : new URL(image, Astro.site).toString())
   : new URL(defaultOgImage, Astro.site).toString();
+const ogPath = ogImageUrl.startsWith("http") ? new URL(ogImageUrl).pathname : ogImageUrl;
+const ogResolved = resolveSiteImage(ogPath);
+const ogImageType = ogResolved?.mime ?? ogMimeFromSrc(ogPath);
+const ogImageWidth = ogResolved?.width ?? 1200;
+const ogImageHeight = ogResolved?.height ?? 630;
 
 const baseUrl = Astro.site ? Astro.site.toString().replace(/\/$/, "") : "https://www.proupiqr.in";
 const rawPath = Astro.url.pathname;
-const cleanPath = rawPath.replace(/^\/(hi|ta|te|mr)(\/|$)/, "/");
+const cleanPath = rawPath.replace(/^\/(hi|ta|te|mr|es|pt|fr|de|id)(\/|$)/, "/");
 const currentSlug = cleanPath.replace(/^\/|\/$/g, "");
 
-const currentLang = rawPath.startsWith("/hi")
-  ? "hi"
-  : rawPath.startsWith("/ta")
-  ? "ta"
-  : rawPath.startsWith("/te")
-  ? "te"
-  : rawPath.startsWith("/mr")
-  ? "mr"
-  : "en";
+const localeMatch = rawPath.match(/^\/(hi|ta|te|mr|es|pt|fr|de|id)(?:\/|$)/);
+const currentLang = localeMatch?.[1] ?? "en";
 
 const englishUrl = `${baseUrl}/${currentSlug ? currentSlug + "/" : ""}`;
 const hindiUrl = `${baseUrl}/hi/${currentSlug ? currentSlug + "/" : ""}`;
 const tamilUrl = `${baseUrl}/ta/${currentSlug ? currentSlug + "/" : ""}`;
 const teluguUrl = `${baseUrl}/te/${currentSlug ? currentSlug + "/" : ""}`;
 const marathiUrl = `${baseUrl}/mr/${currentSlug ? currentSlug + "/" : ""}`;
+const spanishUrl = `${baseUrl}/es/${currentSlug ? currentSlug + "/" : ""}`;
+const portugueseUrl = `${baseUrl}/pt/${currentSlug ? currentSlug + "/" : ""}`;
+const frenchUrl = `${baseUrl}/fr/${currentSlug ? currentSlug + "/" : ""}`;
+const germanUrl = `${baseUrl}/de/${currentSlug ? currentSlug + "/" : ""}`;
+const indonesianUrl = `${baseUrl}/id/${currentSlug ? currentSlug + "/" : ""}`;
 const isHindi = currentLang === "hi";
-const rssPath = currentLang === "en" ? "/rss.xml" : `/${currentLang}/rss.xml`;
+const rssPath = currentLang === "en" ? "/rss.xml" : currentLang === "hi" ? "/hi/rss.xml" : null;
 
 const hasEnglish = routeExistsInLang(currentSlug, "en");
 const hasHindi = routeExistsInLang(currentSlug, "hi");
 const hasTamil = routeExistsInLang(currentSlug, "ta");
 const hasTelugu = routeExistsInLang(currentSlug, "te");
 const hasMarathi = routeExistsInLang(currentSlug, "mr");
+const hasSpanish = routeExistsInLang(currentSlug, "es");
+const hasPortuguese = routeExistsInLang(currentSlug, "pt");
+const hasFrench = routeExistsInLang(currentSlug, "fr");
+const hasGerman = routeExistsInLang(currentSlug, "de");
+const hasIndonesian = routeExistsInLang(currentSlug, "id");
 
+const ogLocaleMap: Record<string, string> = {
+  en: "en_IN",
+  hi: "hi_IN",
+  ta: "ta_IN",
+  te: "te_IN",
+  mr: "mr_IN",
+  es: "es_ES",
+  pt: "pt_BR",
+  fr: "fr_FR",
+  de: "de_DE",
+  id: "id_ID",
+};
+const ogLocale = ogLocaleMap[currentLang] ?? "en_IN";
+
+function containsSchemaType(value: unknown, type: string): boolean {
+  if (Array.isArray(value)) return value.some((item) => containsSchemaType(item, type));
+  if (!value || typeof value !== "object") return false;
+
+  const object = value as Record<string, unknown>;
+  if (object["@type"] === type) return true;
+  return Object.values(object).some((item) => containsSchemaType(item, type));
+}
+
+const hasCustomBreadcrumb = containsSchemaType(schema, "BreadcrumbList");
+const localePrefix = currentLang === "en" ? "" : `/${currentLang}`;
+const localizedHomeUrl = `${baseUrl}${localePrefix}/`;
 const breadcrumbItems = [
-  { "@type": "ListItem", "position": 1, "name": "Home", "item": baseUrl }
+  { "@type": "ListItem", "position": 1, "name": "Home", "item": localizedHomeUrl }
 ];
 if (cleanPath !== "/") {
   const parts = cleanPath.split("/").filter(Boolean);
-  let curPath = baseUrl;
+  let curPath = `${baseUrl}${localePrefix}`;
   parts.forEach((part, index) => {
     curPath += `/${part}`;
     const name = part.replace(/-/g, " ").replace(/\b\w/g, l => l.toUpperCase());
@@ -65,7 +103,7 @@ if (cleanPath !== "/") {
       "@type": "ListItem",
       "position": index + 2,
       "name": name,
-      "item": curPath
+      "item": `${curPath}/`
     });
   });
 }
@@ -81,6 +119,15 @@ if (cleanPath !== "/") {
     <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="dns-prefetch" href="https://api.indexnow.org" />
+    {preloadImage && (
+      <link
+        rel="preload"
+        as="image"
+        href={preloadImage.href}
+        type={preloadImage.type}
+        fetchpriority="high"
+      />
+    )}
     <link rel="preload" as="image" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
@@ -95,6 +142,11 @@ if (cleanPath !== "/") {
           {hasTamil && <link rel="alternate" hreflang="ta" href={tamilUrl} />}
           {hasTelugu && <link rel="alternate" hreflang="te" href={teluguUrl} />}
           {hasMarathi && <link rel="alternate" hreflang="mr" href={marathiUrl} />}
+          {hasSpanish && <link rel="alternate" hreflang="es" href={spanishUrl} />}
+          {hasPortuguese && <link rel="alternate" hreflang="pt" href={portugueseUrl} />}
+          {hasFrench && <link rel="alternate" hreflang="fr" href={frenchUrl} />}
+          {hasGerman && <link rel="alternate" hreflang="de" href={germanUrl} />}
+          {hasIndonesian && <link rel="alternate" hreflang="id" href={indonesianUrl} />}
           {hasEnglish && <link rel="alternate" hreflang="x-default" href={englishUrl} />}
         </>
       )}
@@ -106,18 +158,21 @@ if (cleanPath !== "/") {
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonicalUrl} />
     <meta property="og:site_name" content="Pro UPI QR" />
-    <meta property="og:locale" content={currentLang === "en" ? "en_IN" : `${currentLang}_IN`} />
+    <meta property="og:locale" content={ogLocale} />
     <meta property="og:image" content={ogImageUrl} />
-    <meta property="og:image:type" content="image/png" />
-    <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />
+    <meta property="og:image:type" content={ogImageType} />
+    <meta property="og:image:width" content={String(ogImageWidth)} />
+    <meta property="og:image:height" content={String(ogImageHeight)} />
+    {ogResolved?.alt && <meta property="og:image:alt" content={ogResolved.alt} />}
 
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:site" content="@proupiqr" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImageUrl} />
-    <link rel="alternate" type="application/rss+xml" title="Pro UPI QR Blog & Guides RSS Feed" href={rssPath} />
+    {rssPath && (
+      <link rel="alternate" type="application/rss+xml" title="Pro UPI QR Blog & Guides RSS Feed" href={rssPath} />
+    )}
     <link rel="alternate" type="text/plain" href="/llm.txt" title="LLM Context & API Specs" />
 
     <!-- Organization & Entity Rich Snippet -->
@@ -134,10 +189,13 @@ if (cleanPath !== "/") {
         "https://x.com/proupiqr",
         "https://www.producthunt.com/products/pro-upi-qr"
       ],
+      "publishingPrinciples": "https://www.proupiqr.in/editorial-policy/",
+      "ethicsPolicy": "https://www.proupiqr.in/accuracy-policy/",
       "founder": {
         "@type": "Person",
+        "@id": "https://www.proupiqr.in/authors/kunal-siyag/#person",
         "name": "Kunal Siyag",
-        "url": "https://github.com/KunalSiyag"
+        "url": "https://www.proupiqr.in/authors/kunal-siyag/"
       }
     })} />
 
@@ -147,16 +205,17 @@ if (cleanPath !== "/") {
       "@id": "https://www.proupiqr.in/#website",
       "name": "Pro UPI QR",
       "url": "https://www.proupiqr.in/",
-      "inLanguage": ["en-IN", "hi-IN"],
+      "inLanguage": ["en-IN", "hi-IN", "ta-IN", "te-IN", "mr-IN"],
       "publisher": { "@id": "https://www.proupiqr.in/#organization" }
     })} />
 
-    <!-- Breadcrumb Rich Snippet -->
-    <script type="application/ld+json" set:html={JSON.stringify({
-      "@context": "https://schema.org",
-      "@type": "BreadcrumbList",
-      "itemListElement": breadcrumbItems
-    })} />
+    {!hasCustomBreadcrumb && (
+      <script type="application/ld+json" set:html={JSON.stringify({
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": breadcrumbItems
+      })} />
+    )}
 
     {schema && (
       <script type="application/ld+json" set:html={JSON.stringify(schema)} />
@@ -179,7 +238,9 @@ if (cleanPath !== "/") {
     <div class="flex-1 overflow-x-hidden pt-24 md:pt-28">
       <slot />
     </div>
-    <FooterKeywordMatrix isHindi={isHindi} />
+    <TopicHubNav />
     <Footer />
+    <Analytics />
+    <SpeedInsights />
   </body>
 </html>

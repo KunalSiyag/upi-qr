@@ -2,7 +2,8 @@
 title: "How to Generate a Universal QR Code for Free (No Signup, No Expiry)"
 description: "Step-by-step tutorial on how to generate free universal static QR codes for links, bank accounts, PDFs, WiFi, contacts & apps without account registration."
 pubDate: 2026-07-20
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/universal-qr-wifi-vcard.jpg"
 tags: ["Universal QR", "Tutorial", "Free QR"]
 ---
 

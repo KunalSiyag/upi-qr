@@ -174,10 +174,18 @@ export const REGIONAL_SLUGS = new Set([
   ...localizedToolSlugs,
 ]);
 
+export const INTERNATIONAL_SLUGS = new Set([
+  "",
+  "tools",
+  "universal-qr-generator",
+  ...localizedToolSlugs,
+]);
+
 export function routeExistsInLang(slug: string, lang: string): boolean {
   const cleanSlug = slug.replace(/^\/|\/$/g, "");
   if (lang === "en") return ENGLISH_SLUGS.has(cleanSlug);
   if (lang === "hi") return HINDI_SLUGS.has(cleanSlug);
   if (lang === "ta" || lang === "te" || lang === "mr") return REGIONAL_SLUGS.has(cleanSlug);
+  if (lang === "es" || lang === "pt" || lang === "fr" || lang === "de" || lang === "id") return INTERNATIONAL_SLUGS.has(cleanSlug);
   return false;
 }

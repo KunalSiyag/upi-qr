@@ -4,9 +4,9 @@ import { UniversalQrForm } from "../components/UniversalQrForm";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
 
-const title = "Free QR Code Generator Without Watermark (Instant SVG & PNG Export)";
+const title = "Free QR Code Generator Without Watermark (Instant PNG Export)";
 const description =
-  "Generate 100% free QR codes with zero watermarks, no signups, and unlimited downloads. Export print-ready vector SVG, PNG, and PDF QR codes for commercial use.";
+  "Generate 100% free QR codes with zero watermarks, no signups, and unlimited downloads. Export high-resolution PNG and print-ready PDF QR codes for commercial use.";
 
 const faqs = [
   {
@@ -15,14 +15,29 @@ const faqs = [
       "Yes, completely free. Unlike other commercial QR generators that place hidden logos or force subscriptions after a trial period, Pro UPI QR generates clean, unwatermarked vector QR codes with zero ads or expiry."
   },
   {
+    question: "Do I need to sign up or enter my email address to create a QR code?",
+    answer:
+      "No! You can generate unlimited payment QR code posters instantly without signing up, registering, or revealing personal data. All QR codes are generated 100% locally inside your web browser using HTML5 Canvas and JavaScript APIs."
+  },
+  {
+    question: "Is my data or payment information stored on your servers?",
+    answer:
+      "Zero server tracking. Our tools generate everything client-side in your browser. We never see, store, or transmit your UPI ID, payment details, or uploaded images to any server."
+  },
+  {
     question: "Do these free unwatermarked QR codes ever expire?",
     answer:
       "No! Standard static QR codes encode your data or UPI VPA directly into the matrix code points. They work permanently and never expire."
   },
   {
-    question: "Can I download vector SVG and print-ready PDF files for commercial printing?",
+    question: "Can I download high-resolution PNG and print-ready PDF files for commercial printing?",
     answer:
-      "Yes. You can export ultra high-resolution PNG, vector SVG, and A4 sticker PDF files directly to your device without creating an account."
+      "Yes. You can export high-resolution PNG images and A4 sticker PDF files directly to your device without creating an account."
+  },
+  {
+    question: "Which payment apps are supported by the generated QR code?",
+    answer:
+      "All NPCI compliant payment apps in India are supported, including PhonePe, Google Pay (GPay), Paytm, BHIM UPI, WhatsApp Pay, and all Indian mobile banking apps."
   }
 ];
 
@@ -41,7 +56,7 @@ const schema = {
         "0% Watermark",
         "No Account Signup Required",
         "Unlimited Commercial Use",
-        "Instant SVG Vector Export"
+        "Instant High-Resolution PNG Export"
       ],
       "offers": {
         "@type": "Offer",
@@ -76,7 +91,7 @@ const schema = {
         Free QR Code Generator Without Watermark
       </h1>
       <p class="mt-3 text-base text-forest/75 leading-relaxed">
-        Generate clean, high-resolution QR codes for payments, URLs, WiFi, and vCards. Download crisp vector SVG and PNG files with <strong>zero watermarks, zero fees, and no account registration</strong>.
+        Generate clean, high-resolution QR codes for payments, URLs, WiFi, and vCards. Download crisp PNG images and print-ready PDFs with <strong>zero watermarks, zero fees, and no account registration</strong>.
       </p>
     </section>
 

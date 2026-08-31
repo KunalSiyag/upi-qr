@@ -1,68 +1,71 @@
 import type { APIRoute } from "astro";
-import { getMerchantByUserId, createMerchant } from "../../../lib/kv";
-import { v4 as uuidv4 } from "uuid";
+import { randomBytes } from "node:crypto";
+import { getMerchantByUserId, createMerchant, createMerchantIfAbsent } from "../../../lib/kv";
+import { authenticatedUserId, isTrustedMutation, jsonResponse, readJsonObject, RequestBodyError, validMerchantName, validVpa } from "../../../lib/apiSecurity";
+import { consumeRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
 export const prerender = false;
 
-export const GET: APIRoute = async ({ request, locals }) => {
-  // @ts-ignore - locals.auth() is added by clerk middleware
-  const auth = locals.auth?.();
-  if (!auth?.userId) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+function publicMerchant(merchant: Awaited<ReturnType<typeof getMerchantByUserId>>) {
+  if (!merchant) return null;
+  return { id: merchant.id, name: merchant.name, apiKey: merchant.apiKey, vpa: merchant.vpa };
+}
+
+export const GET: APIRoute = async ({ locals }) => {
+  const userId = authenticatedUserId(locals);
+  if (!userId) return jsonResponse({ error: "Authentication required." }, 401);
+
+  try {
+    const rateLimit = await consumeRateLimit("merchant-profile-read", userId, 120, 3600);
+    if (!rateLimit.allowed) return jsonResponse({ error: "Too many requests." }, 429, rateLimitHeaders(rateLimit));
+
+    let merchant = await getMerchantByUserId(userId);
+    if (!merchant) {
+      merchant = {
+        id: `m_${randomBytes(12).toString("hex")}`,
+        name: "Merchant",
+        apiKey: `puqi_live_${randomBytes(24).toString("hex")}`,
+        clerkUserId: userId,
+      };
+      merchant = await createMerchantIfAbsent(merchant);
+    }
+
+    return jsonResponse({ merchant: publicMerchant(merchant) });
+  } catch {
+    return jsonResponse({ error: "Merchant profile service is unavailable." }, 503);
   }
-
-  let merchant = await getMerchantByUserId(auth.userId);
-
-  // If this is a new user, auto-generate a merchant profile and API key for them
-  if (!merchant) {
-    const newApiKey = `puqi_live_${uuidv4().replace(/-/g, "")}`;
-    merchant = {
-      id: `m_${uuidv4().split("-")[0]}`,
-      name: "Merchant",
-      apiKey: newApiKey,
-      clerkUserId: auth.userId,
-    };
-    await createMerchant(merchant);
-  }
-
-  // Hide secret keys before sending to frontend
-  const safeMerchant = {
-    ...merchant,
-    razorpayKeySecret: merchant.razorpayKeySecret ? "********" : undefined,
-  };
-
-  return new Response(JSON.stringify({ merchant: safeMerchant }), { status: 200 });
 };
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
-  // @ts-ignore
-  const auth = locals.auth?.();
-  if (!auth?.userId) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
-  const merchant = await getMerchantByUserId(auth.userId);
-  if (!merchant) {
-    return new Response(JSON.stringify({ error: "Merchant not found" }), { status: 404 });
-  }
-
-  let body: { vpa?: string; webhookUrl?: string };
+  const userId = authenticatedUserId(locals);
+  if (!userId) return jsonResponse({ error: "Authentication required." }, 401);
+  if (!isTrustedMutation(request)) return jsonResponse({ error: "Cross-site request rejected." }, 403);
+  let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "Invalid JSON body" }), { status: 400 });
+    body = await readJsonObject(request, 4096);
+  } catch (error) {
+    if (error instanceof RequestBodyError) return jsonResponse({ error: error.message }, error.status);
+    return jsonResponse({ error: "Invalid JSON body." }, 400);
   }
 
-  // Update allowed fields
-  if (body.vpa !== undefined) merchant.vpa = body.vpa;
-  if (body.webhookUrl !== undefined) merchant.webhookUrl = body.webhookUrl;
+  const name = typeof body.name === "string" ? body.name.trim() : undefined;
+  const vpa = typeof body.vpa === "string" ? body.vpa.trim() : undefined;
+  if (name === undefined && vpa === undefined) return jsonResponse({ error: "Provide a merchant name or UPI ID to update." }, 400);
+  if (name !== undefined && !validMerchantName(name)) return jsonResponse({ error: "Merchant name must be 2-80 characters." }, 400);
+  if (vpa !== undefined && !validVpa(vpa)) return jsonResponse({ error: "Provide a valid UPI ID." }, 400);
 
-  await createMerchant(merchant);
+  try {
+    const rateLimit = await consumeRateLimit("merchant-profile-write", userId, 30, 3600);
+    if (!rateLimit.allowed) return jsonResponse({ error: "Too many updates." }, 429, rateLimitHeaders(rateLimit));
 
-  const safeMerchant = {
-    ...merchant,
-    razorpayKeySecret: merchant.razorpayKeySecret ? "********" : undefined,
-  };
+    const merchant = await getMerchantByUserId(userId);
+    if (!merchant) return jsonResponse({ error: "Merchant not found." }, 404);
 
-  return new Response(JSON.stringify({ merchant: safeMerchant }), { status: 200 });
+    if (name !== undefined) merchant.name = name;
+    if (vpa !== undefined) merchant.vpa = vpa;
+    await createMerchant(merchant);
+    return jsonResponse({ merchant: publicMerchant(merchant) });
+  } catch {
+    return jsonResponse({ error: "Merchant profile service is unavailable." }, 503);
+  }
 };

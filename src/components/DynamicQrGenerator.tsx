@@ -1,14 +1,44 @@
-import React, { useState, useEffect, useId } from "react";
+import React, { useState, useEffect, useId, useRef } from "react";
 import QRCode from "qrcode";
 import {
+  deleteLinkFromCloud,
   getGlobalScanCount,
-  getCloudDestination,
+  listCloudLinks,
   syncLinkToCloud,
-  syncDestinationToCloud,
+  updateCloudCampaign,
   exportAnalyticsToCsv,
   type CloudLinkData,
-  type ScanLogEvent,
 } from "../lib/dynamicQrCloud";
+
+const LEGACY_LOCAL_KEY = "pro_upi_dynamic_links";
+
+function readStoredLinks(key: string): CloudLinkData[] {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    if (!Array.isArray(value)) return [];
+    return value.filter((link) => link
+      && typeof link.id === "string"
+      && typeof link.title === "string"
+      && typeof link.destinationUrl === "string");
+  } catch {
+    return [];
+  }
+}
+
+function mergeCloudCampaign(local: CloudLinkData | undefined, cloud: CloudLinkData): CloudLinkData {
+  return {
+    ...local,
+    ...cloud,
+    expiryDate: cloud.expiryDate,
+    manageToken: undefined,
+    scans: cloud.scans ?? local?.scans ?? 0,
+    scansByDevice: {
+      mobile: cloud.mobileScans ?? cloud.scansByDevice?.mobile ?? local?.scansByDevice?.mobile ?? 0,
+      desktop: cloud.desktopScans ?? cloud.scansByDevice?.desktop ?? local?.scansByDevice?.desktop ?? 0,
+    },
+    recentScans: local?.recentScans,
+  };
+}
 
 export function DynamicQrGenerator() {
   const [links, setLinks] = useState<CloudLinkData[]>([]);
@@ -16,18 +46,20 @@ export function DynamicQrGenerator() {
   const [destination, setDestination] = useState("https://www.proupiqr.in/");
   const [category, setCategory] = useState<"payment" | "menu" | "social" | "store" | "event" | "other">("store");
   const [expiryDate, setExpiryDate] = useState("");
-  const [fallbackUrl, setFallbackUrl] = useState("");
   const [utmSource, setUtmSource] = useState("");
   const [utmMedium, setUtmMedium] = useState("");
   const [utmCampaign, setUtmCampaign] = useState("");
-  const [whatsappPhone, setWhatsappPhone] = useState("");
-  const [whatsappApiKey, setWhatsappApiKey] = useState("");
 
   const [activeLink, setActiveLink] = useState<CloudLinkData | null>(null);
   const [qrUrl, setQrUrl] = useState("");
   const [copied, setCopied] = useState(false);
-  const [copiedShareable, setCopiedShareable] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [accountStatus, setAccountStatus] = useState<"checking" | "signed-in" | "signed-out" | "unavailable">("checking");
+  const [cloudError, setCloudError] = useState("");
+  const [localStorageKey, setLocalStorageKey] = useState<string | null>(null);
+  const [legacyLinks, setLegacyLinks] = useState<CloudLinkData[]>([]);
+  const [isClaimingLegacy, setIsClaimingLegacy] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategoryFilter, setSelectedCategoryFilter] = useState<string>("all");
   const [sortBy, setSortBy] = useState<"scans" | "newest" | "title">("scans");
@@ -39,92 +71,54 @@ export function DynamicQrGenerator() {
 
   const titleId = useId();
   const destinationId = useId();
+  const selectedLinkId = useRef<string | null>(null);
+  const creatingRef = useRef(false);
 
-  // The destination is retained in the public link as a resilient fallback.
-  // The cloud record can override it after an edit, but a QR must still work
-  // when a browser blocks the third-party KV request or the service is down.
-  const getRedirectUrl = (link: Pick<CloudLinkData, "id" | "destinationUrl">) =>
-    `https://www.proupiqr.in/r/?id=${encodeURIComponent(link.id)}&url=${encodeURIComponent(link.destinationUrl)}`;
+  const getRedirectUrl = (link: Pick<CloudLinkData, "id">) =>
+    `https://www.proupiqr.in/r/?id=${encodeURIComponent(link.id)}`;
+  const isLinkExpired = (link: Pick<CloudLinkData, "expiryDate">) => Boolean(
+    link.expiryDate && new Date(`${link.expiryDate}T23:59:59.999Z`).valueOf() < Date.now()
+  );
 
   // Load saved links from localStorage on mount & sync cloud metrics
   const loadLinksAndSync = async () => {
+    setIsRefreshing(true);
     try {
-      const saved = localStorage.getItem("pro_upi_dynamic_links");
-      let parsed: CloudLinkData[] = saved ? JSON.parse(saved) : [];
+      const legacy = readStoredLinks(LEGACY_LOCAL_KEY);
+      setLegacyLinks(legacy);
+      let parsed: CloudLinkData[] = [];
 
-      // Check if URL search query param specifies a shareable campaign ID ?id=xxxx
-      const urlParams = new URLSearchParams(window.location.search);
-      const urlId = urlParams.get("id") || urlParams.get("key");
-
-      if (urlId) {
-        // Fetch cloud data for this specific shared campaign
-        const cloudData = await getCloudDestination(urlId);
-        if (cloudData) {
-          const existingIndex = parsed.findIndex((l) => l.id === urlId);
-          const sharedLink: CloudLinkData = {
-            id: urlId,
-            title: cloudData.title || `Campaign #${urlId}`,
-            destinationUrl: cloudData.destinationUrl,
-            createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-            scans: 0,
-            whatsappPhone: cloudData.whatsappPhone,
-            whatsappApiKey: cloudData.whatsappApiKey,
-          };
-
-          if (existingIndex >= 0) {
-            parsed[existingIndex] = { ...parsed[existingIndex], ...sharedLink };
-          } else {
-            parsed.unshift(sharedLink);
-          }
-        }
+      const cloudResult = await listCloudLinks();
+      if (cloudResult.ok && cloudResult.data) {
+        const accountKey = `${LEGACY_LOCAL_KEY}:${cloudResult.data.cacheKey}`;
+        const cached = readStoredLinks(accountKey);
+        const localById = new Map(cached.map((link) => [link.id, link]));
+        parsed = cloudResult.data.campaigns.map((link) => mergeCloudCampaign(localById.get(link.id), link));
+        setLocalStorageKey(accountKey);
+        try { localStorage.setItem(accountKey, JSON.stringify(parsed)); } catch {}
+        setAccountStatus("signed-in");
+        setCloudError("");
+      } else {
+        setLocalStorageKey(null);
+        setAccountStatus(cloudResult.status === 401 ? "signed-out" : "unavailable");
+        setCloudError(cloudResult.error || "Cloud campaigns are unavailable.");
       }
 
-      // One-time migration for campaigns created by the former browser/KVDB
-      // implementation. The owner opens this page once, receives a private
-      // management token, and their already-printed /r/?id= QR keeps working.
-      const migrated = await Promise.all(
-        parsed.map(async (link) => link.manageToken ? link : (await syncLinkToCloud(link)) || link)
-      );
-      parsed = migrated;
       setLinks(parsed);
 
       if (parsed.length > 0) {
-        const initialTarget = urlId ? parsed.find((l) => l.id === urlId) || parsed[0] : parsed[0];
-        selectLink(initialTarget);
+        selectLink(parsed[0]);
+      } else {
+        selectedLinkId.current = null;
+        setActiveLink(null);
+        setQrUrl("");
       }
 
-      // Fetch global cloud metrics for all links
-      setIsRefreshing(true);
-      const updated = await Promise.all(
-        parsed.map(async (link) => {
-          const metrics = await getGlobalScanCount(link.id);
-          const totalScans = Math.max(link.scans || 0, metrics.scans);
-          const mobileScans = Math.max(link.scansByDevice?.mobile || 0, metrics.mobileScans);
-          const desktopScans = Math.max(link.scansByDevice?.desktop || 0, metrics.desktopScans);
-
-          const recentLogs: ScanLogEvent[] =
-            link.recentScans && link.recentScans.length > 0
-              ? link.recentScans
-              : totalScans > 0
-              ? [
-                  { id: "s-1", timestamp: "Just now", device: "mobile", browser: "Mobile Scanner", status: "Success" },
-                ]
-              : [];
-
-          return {
-            ...link,
-            scans: totalScans,
-            scansByDevice: { mobile: mobileScans, desktop: desktopScans },
-            recentScans: recentLogs,
-          };
-        })
-      );
-
-      setLinks(updated);
-      localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
       setIsRefreshing(false);
     } catch (e) {
       console.error("Failed to load dynamic links", e);
+      setAccountStatus("unavailable");
+      setCloudError("Cloud campaigns are unavailable.");
       setIsRefreshing(false);
     }
   };
@@ -135,99 +129,142 @@ export function DynamicQrGenerator() {
 
   const saveLinksToStorage = (updated: CloudLinkData[]) => {
     setLinks(updated);
-    try {
-      localStorage.setItem("pro_upi_dynamic_links", JSON.stringify(updated));
-    } catch (e) {
-      console.error("Failed to save dynamic links", e);
+    if (localStorageKey) {
+      try {
+        localStorage.setItem(localStorageKey, JSON.stringify(updated));
+      } catch (e) {
+        console.error("Failed to save dynamic links", e);
+      }
     }
+  };
+
+  const applyServerCampaign = (campaign: CloudLinkData) => {
+    setLinks((currentLinks) => {
+      const updated = currentLinks.map((current) => {
+        if (current.id !== campaign.id) return current;
+        if ((current.version || 0) > (campaign.version || 0)) return current;
+        return mergeCloudCampaign(current, campaign);
+      });
+      if (localStorageKey) {
+        try { localStorage.setItem(localStorageKey, JSON.stringify(updated)); } catch {}
+      }
+      return updated;
+    });
+    setActiveLink((current) => {
+      if (!current || current.id !== campaign.id || selectedLinkId.current !== campaign.id) return current;
+      if ((current.version || 0) > (campaign.version || 0)) return current;
+      return mergeCloudCampaign(current, campaign);
+    });
+  };
+
+  const claimLegacyCampaigns = async () => {
+    const claimable = legacyLinks.filter((link) => link.manageToken);
+    if (!claimable.length) return;
+    setIsClaimingLegacy(true);
+    const claimedIds = new Set<string>();
+    for (const link of claimable) {
+      const result = await updateCloudCampaign(link.id, {}, link.manageToken);
+      if (result.ok) claimedIds.add(link.id);
+    }
+    const remaining = legacyLinks.filter((link) => !claimedIds.has(link.id));
+    localStorage.setItem(LEGACY_LOCAL_KEY, JSON.stringify(remaining));
+    setLegacyLinks(remaining);
+    setIsClaimingLegacy(false);
+    await loadLinksAndSync();
   };
 
   // Build final URL with UTM parameters if supplied
   const buildFinalDestination = () => {
-    let finalUrl = destination.trim();
-    if (!finalUrl) return "";
+    const input = destination.trim();
+    if (!input) return "";
+    if (/^upi:\/\/pay\?/i.test(input)) return input;
     try {
-      const urlObj = new URL(finalUrl.startsWith("http") ? finalUrl : `https://${finalUrl}`);
+      const hasScheme = /^[a-z][a-z0-9+.-]*:/i.test(input);
+      const urlObj = new URL(/^https:\/\//i.test(input) || hasScheme ? input : `https://${input}`);
+      if (urlObj.protocol !== "https:") return input;
       if (utmSource) urlObj.searchParams.set("utm_source", utmSource);
       if (utmMedium) urlObj.searchParams.set("utm_medium", utmMedium);
       if (utmCampaign) urlObj.searchParams.set("utm_campaign", utmCampaign);
       return urlObj.toString();
-    } catch (e) {
-      return finalUrl;
+    } catch {
+      return input;
     }
   };
 
   const createDynamicLink = async () => {
+    if (creatingRef.current) return;
     const finalDest = buildFinalDestination();
     if (!finalDest) return;
+    creatingRef.current = true;
+    setIsCreating(true);
 
-    const getRandomId = () => {
-      if (typeof window !== "undefined" && window.crypto && window.crypto.getRandomValues) {
-        const arr = new Uint8Array(8);
-        window.crypto.getRandomValues(arr);
-        return Array.from(arr, (b) => b.toString(36).padStart(2, "0")).join("").substring(0, 12);
-      }
-      return Math.random().toString(36).substring(2, 8);
-    };
-
-    const id = getRandomId();
-    const newLink: CloudLinkData = {
-      id,
+    const newLink = {
       title: title.trim() || "Untitled Dynamic QR",
       destinationUrl: finalDest,
-      createdAt: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
-      scans: 0,
       category,
       expiryDate: expiryDate || undefined,
-      fallbackUrl: fallbackUrl.trim() || undefined,
+    };
+
+    const result = await syncLinkToCloud(newLink);
+    if (!result.ok || !result.data?.campaign) {
+      if (result.status === 401) setAccountStatus("signed-out");
+      setCloudError(result.error || "We could not create the dynamic QR.");
+      creatingRef.current = false;
+      setIsCreating(false);
+      return;
+    }
+    const savedLink: CloudLinkData = {
+      ...result.data.campaign,
+      scans: 0,
+      scansByDevice: { mobile: 0, desktop: 0 },
+      recentScans: [],
       utmSource: utmSource.trim() || undefined,
       utmMedium: utmMedium.trim() || undefined,
       utmCampaign: utmCampaign.trim() || undefined,
-      whatsappPhone: whatsappPhone.trim() || undefined,
-      whatsappApiKey: whatsappApiKey.trim() || undefined,
-      isPaused: false,
-      scansByDevice: { mobile: 0, desktop: 0 },
-      recentScans: [],
     };
-
-    const savedLink = await syncLinkToCloud(newLink);
-    if (!savedLink) {
-      alert("We could not create the dynamic QR. Please try again in a moment.");
-      return;
-    }
-    const updated = [savedLink, ...links];
-    saveLinksToStorage(updated);
+    setAccountStatus("signed-in");
+    setCloudError("");
+    setLinks((currentLinks) => {
+      const updated = [savedLink, ...currentLinks];
+      if (localStorageKey) {
+        try { localStorage.setItem(localStorageKey, JSON.stringify(updated)); } catch {}
+      }
+      return updated;
+    });
+    creatingRef.current = false;
+    setIsCreating(false);
     selectLink(savedLink);
   };
 
   const selectLink = async (link: CloudLinkData) => {
+    selectedLinkId.current = link.id;
     setActiveLink(link);
+    setQrUrl("");
     setEditingDestination(link.destinationUrl);
     setDestUpdateSuccess(false);
 
-    // Fetch fresh cloud scan count
-    const metrics = await getGlobalScanCount(link.id);
-    if (metrics.scans > (link.scans || 0)) {
-      const updatedLink = {
-        ...link,
-        scans: metrics.scans,
-        scansByDevice: { mobile: metrics.mobileScans, desktop: metrics.desktopScans },
-      };
-      setActiveLink(updatedLink);
-    }
-
-    // Construct the public redirect routing link
     const redirectUrl = getRedirectUrl(link);
-
     try {
-      const url = await QRCode.toDataURL(redirectUrl, {
-        width: 480,
-        margin: 2,
-        color: {
-          dark: "#113b2c",
-          light: "#ffffff",
-        },
-      });
+      const [metrics, url] = await Promise.all([
+        getGlobalScanCount(link.id),
+        QRCode.toDataURL(redirectUrl, {
+          width: 480,
+          margin: 2,
+          color: { dark: "#113b2c", light: "#ffffff" },
+        }),
+      ]);
+      if (selectedLinkId.current !== link.id) return;
+
+      setActiveLink((current) => current?.id === link.id
+        ? {
+            ...current,
+            scans: Math.max(current.scans || 0, metrics.scans),
+            scansByDevice: {
+              mobile: Math.max(current.scansByDevice?.mobile || 0, metrics.mobileScans),
+              desktop: Math.max(current.scansByDevice?.desktop || 0, metrics.desktopScans),
+            },
+          }
+        : current);
       setQrUrl(url);
     } catch (err) {
       console.error("Failed to generate QR code", err);
@@ -238,44 +275,62 @@ export function DynamicQrGenerator() {
     if (!activeLink || !editingDestination.trim()) return;
     setIsUpdatingDest(true);
 
-    const success = await syncDestinationToCloud(activeLink.id, editingDestination.trim(), activeLink);
+    const campaignId = activeLink.id;
+    const result = await updateCloudCampaign(
+      campaignId,
+      { destinationUrl: editingDestination.trim() },
+      activeLink.manageToken,
+    );
 
-    if (!success) {
+    if (!result.ok || !result.data?.campaign) {
       setIsUpdatingDest(false);
-      alert("The destination could not be updated. This QR may be a legacy campaign; create a new dynamic QR to manage it in Vercel KV.");
+      if (result.status === 401) setAccountStatus("signed-out");
+      setCloudError(result.error || "The destination could not be updated.");
       return;
     }
-    const updated = links.map((l) =>
-      l.id === activeLink.id ? { ...l, destinationUrl: editingDestination.trim() } : l
-    );
-    saveLinksToStorage(updated);
-    setActiveLink({ ...activeLink, destinationUrl: editingDestination.trim() });
+    applyServerCampaign(result.data.campaign);
     setIsUpdatingDest(false);
-    setDestUpdateSuccess(true);
-    setTimeout(() => setDestUpdateSuccess(false), 3000);
+    setCloudError("");
+    if (selectedLinkId.current === campaignId) {
+      setEditingDestination(result.data.campaign.destinationUrl);
+      setDestUpdateSuccess(true);
+      setTimeout(() => setDestUpdateSuccess(false), 3000);
+    }
   };
 
   const togglePauseLink = async (id: string) => {
     const current = links.find((link) => link.id === id);
     if (!current) return;
-    const next = { ...current, isPaused: !current.isPaused };
-    const success = await syncDestinationToCloud(id, current.destinationUrl, next);
-    if (!success) {
-      alert("This campaign could not be updated. Create a new Vercel KV dynamic QR to manage it.");
+    const expired = isLinkExpired(current);
+    const result = await updateCloudCampaign(
+      id,
+      expired ? { isPaused: false, expiryDate: null } : { isPaused: !current.isPaused },
+      current.manageToken,
+    );
+    if (!result.ok || !result.data?.campaign) {
+      if (result.status === 401) setAccountStatus("signed-out");
+      setCloudError(result.error || "This campaign could not be updated.");
       return;
     }
-    const updated = links.map((l) => (l.id === id ? next : l));
-    saveLinksToStorage(updated);
-    if (activeLink?.id === id) {
-      setActiveLink({ ...activeLink, isPaused: !activeLink.isPaused });
-    }
+    applyServerCampaign(result.data.campaign);
+    setCloudError("");
   };
 
-  const deleteLink = (id: string) => {
+  const deleteLink = async (id: string) => {
+    if (!window.confirm("Delete this cloud campaign? Printed QR codes for it will stop working.")) return;
+    const localLink = links.find((link) => link.id === id);
+    const result = await deleteLinkFromCloud(id, localLink?.manageToken);
+    if (!result.ok) {
+      if (result.status === 401) setAccountStatus("signed-out");
+      setCloudError(result.error || "This campaign could not be deleted.");
+      return;
+    }
     const updated = links.filter((l) => l.id !== id);
     saveLinksToStorage(updated);
     if (activeLink?.id === id) {
+      selectedLinkId.current = updated[0]?.id || null;
       setActiveLink(updated.length > 0 ? updated[0] : null);
+      if (updated.length === 0) setQrUrl("");
       if (updated.length > 0) selectLink(updated[0]);
     }
   };
@@ -286,14 +341,6 @@ export function DynamicQrGenerator() {
     navigator.clipboard.writeText(redirectUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
-  };
-
-  const copyShareableAnalyticsUrl = () => {
-    if (!activeLink) return;
-    const shareableUrl = `https://www.proupiqr.in/dynamic-qr-generator/?id=${activeLink.id}`;
-    navigator.clipboard.writeText(shareableUrl);
-    setCopiedShareable(true);
-    setTimeout(() => setCopiedShareable(false), 2000);
   };
 
   // Filter and sort links
@@ -315,7 +362,7 @@ export function DynamicQrGenerator() {
   const totalScansAll = links.reduce((sum, l) => sum + (l.scans || 0), 0);
   const totalMobileScans = links.reduce((sum, l) => sum + (l.scansByDevice?.mobile || 0), 0);
   const totalDesktopScans = links.reduce((sum, l) => sum + (l.scansByDevice?.desktop || 0), 0);
-  const activeCampaigns = links.filter((l) => !l.isPaused).length;
+  const activeCampaigns = links.filter((l) => !l.isPaused && !isLinkExpired(l)).length;
 
   const activeMobilePct = activeLink
     ? Math.round(
@@ -327,6 +374,31 @@ export function DynamicQrGenerator() {
 
   return (
     <div className="space-y-8">
+      <div className={`rounded-2xl border p-4 text-sm ${accountStatus === "signed-out" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-leaf/20 bg-mint/40 text-forest"}`}>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="font-black">Dynamic redirects require a free account</p>
+            <p className="mt-1 text-xs leading-5 opacity-80">Campaign destinations and aggregate scan counts are stored in Vercel KV. Public QR links contain only a server-generated campaign ID.</p>
+          </div>
+          {accountStatus === "signed-out" && (
+            <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="shrink-0 rounded-xl bg-forest px-4 py-2 text-center text-xs font-black text-white hover:bg-leaf">
+              Sign in to continue
+            </a>
+          )}
+        </div>
+        {cloudError && accountStatus !== "signed-out" && <p className="mt-2 text-xs font-bold text-red-700">{cloudError}</p>}
+        {accountStatus === "signed-in" && legacyLinks.length > 0 && (
+          <div className="mt-3 border-t border-forest/10 pt-3 text-xs">
+            <p>{legacyLinks.filter((link) => link.manageToken).length} legacy browser campaign(s) may be eligible to claim into this account. Records without a management token stay hidden and should be recreated before reprinting.</p>
+            {legacyLinks.some((link) => link.manageToken) && (
+              <button type="button" onClick={claimLegacyCampaigns} disabled={isClaimingLegacy} className="mt-2 rounded-lg border border-forest/20 bg-white px-3 py-2 font-black text-forest hover:bg-mint disabled:opacity-60">
+                {isClaimingLegacy ? "Claiming..." : "Claim Legacy Campaigns"}
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
       {/* Overview Analytics Bar */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm">
@@ -453,72 +525,23 @@ export function DynamicQrGenerator() {
               </div>
             </div>
 
-            {/* Optional Free WhatsApp Notification Alert Config */}
-            <details className="text-xs text-forest/70">
-              <summary className="cursor-pointer font-bold text-leaf hover:underline py-1 flex items-center gap-1">
-                <span>+ Setup Free Instant WhatsApp Scan Alerts</span>
-              </summary>
-              <div className="mt-3 space-y-3 pt-2 border-t border-forest/10 bg-mint/30 p-3.5 rounded-xl border border-leaf/15">
-                <div>
-                  <h4 className="font-bold text-forest text-xs flex items-center gap-1">
-                    <span>How to get your Free WhatsApp API Key (10-Second Setup):</span>
-                  </h4>
-                  <ol className="mt-1.5 space-y-1 text-[11px] text-forest/80 list-decimal pl-4 leading-relaxed">
-                    <li>
-                      Read the official guide:{" "}
-                      <a
-                        href="https://www.callmebot.com/blog/free-api-whatsapp-messages/"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold text-leaf underline hover:text-forest"
-                      >
-                        CallMeBot Free WhatsApp API Documentation &rarr;
-                      </a>
-                    </li>
-                    <li>
-                      Save CallMeBot number to contacts or open WhatsApp, then send message:{" "}
-                      <code className="bg-white px-1.5 py-0.5 rounded font-mono text-[10px] border border-forest/15 font-bold">
-                        I allow callmebot to send me messages
-                      </code>
-                    </li>
-                    <li>You will receive a free 6-digit API key instantly in WhatsApp. Copy and paste it below!</li>
-                  </ol>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 pt-1">
-                  <div>
-                    <label className="block text-[10px] font-bold text-forest mb-0.5">WhatsApp Phone (with Country Code)</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 919876543210"
-                      value={whatsappPhone}
-                      onChange={(e) => setWhatsappPhone(e.target.value)}
-                      className="w-full rounded-lg border border-forest/20 p-2 text-[11px] bg-white"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[10px] font-bold text-forest mb-0.5">CallMeBot API Key</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. 123456"
-                      value={whatsappApiKey}
-                      onChange={(e) => setWhatsappApiKey(e.target.value)}
-                      className="w-full rounded-lg border border-forest/20 p-2 text-[11px] bg-white font-mono"
-                    />
-                  </div>
-                </div>
-              </div>
-            </details>
-
-            <button
-              onClick={createDynamicLink}
-              className="w-full rounded-xl bg-forest py-3 text-xs font-black text-white hover:bg-leaf transition-all shadow-md flex items-center justify-center gap-2"
-            >
-              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              Create Dynamic QR Code
-            </button>
+            {accountStatus === "signed-out" ? (
+              <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="flex w-full items-center justify-center rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-leaf">
+                Sign in to Create a Dynamic QR
+              </a>
+            ) : (
+              <button
+                type="button"
+                onClick={createDynamicLink}
+                disabled={accountStatus === "checking" || isCreating}
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-leaf disabled:cursor-wait disabled:opacity-60"
+              >
+                <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+                {accountStatus === "checking" ? "Checking Account..." : isCreating ? "Creating..." : "Create Dynamic QR Code"}
+              </button>
+            )}
           </div>
 
           {/* Links Directory & Search */}
@@ -597,9 +620,9 @@ export function DynamicQrGenerator() {
                             <h4 className="text-xs font-black text-forest truncate max-w-[180px]">
                               {link.title}
                             </h4>
-                            {link.isPaused && (
+                            {(link.isPaused || isLinkExpired(link)) && (
                               <span className="text-[10px] font-bold bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded">
-                                Paused
+                                {isLinkExpired(link) ? "Expired" : "Paused"}
                               </span>
                             )}
                           </div>
@@ -633,8 +656,8 @@ export function DynamicQrGenerator() {
                     <span className="font-mono text-xs font-bold text-leaf bg-leaf/10 px-2 py-0.5 rounded">
                       ID: {activeLink.id}
                     </span>
-                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${activeLink.isPaused ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
-                      {activeLink.isPaused ? "Paused" : "Live & Active"}
+                    <span className={`text-xs font-bold px-2 py-0.5 rounded ${activeLink.isPaused || isLinkExpired(activeLink) ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-800"}`}>
+                      {isLinkExpired(activeLink) ? "Expired" : activeLink.isPaused ? "Paused" : "Live & Active"}
                     </span>
                   </div>
                   <h3 className="mt-1 text-xl font-black text-forest">{activeLink.title}</h3>
@@ -642,17 +665,6 @@ export function DynamicQrGenerator() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
-                  <button
-                    onClick={copyShareableAnalyticsUrl}
-                    className="rounded-xl border border-leaf/30 bg-mint px-3 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5"
-                    title="Copy direct management link to view stats on mobile phone"
-                  >
-                    <svg className="h-4 w-4 text-leaf hover:text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" />
-                    </svg>
-                    {copiedShareable ? "Analytics Link Copied!" : "Shareable Mobile Analytics URL"}
-                  </button>
-
                   <button
                     onClick={() => exportAnalyticsToCsv(activeLink)}
                     className="rounded-xl border border-forest/20 bg-cream/40 px-3 py-2 text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all flex items-center gap-1.5"
@@ -671,11 +683,12 @@ export function DynamicQrGenerator() {
                         : "bg-amber-100 text-amber-800 hover:bg-amber-200"
                     }`}
                   >
-                    {activeLink.isPaused ? "Resume" : "Pause"}
+                    {isLinkExpired(activeLink) ? "Reactivate" : activeLink.isPaused ? "Resume" : "Pause"}
                   </button>
 
                   <button
                     onClick={() => deleteLink(activeLink.id)}
+                    aria-label="Delete dynamic QR campaign"
                     className="rounded-xl border border-red-200 bg-red-50 p-2 text-red-600 hover:bg-red-600 hover:text-white transition-all"
                   >
                     <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
@@ -796,8 +809,8 @@ export function DynamicQrGenerator() {
                 {/* Real-time Scan Event Audit Log Stream */}
                 <div className="rounded-2xl border border-forest/10 p-4 bg-white space-y-3">
                   <div className="flex items-center justify-between text-xs font-bold text-forest">
-                    <span>Recent Real-Time Activity Log</span>
-                    <span className="text-[10px] font-mono text-leaf bg-leaf/10 px-2 py-0.5 rounded">Live Stream</span>
+                    <span>Browser-Local Activity Notes</span>
+                    <span className="text-[10px] font-mono text-leaf bg-leaf/10 px-2 py-0.5 rounded">Local only</span>
                   </div>
 
                   <div className="space-y-2 text-xs divide-y divide-forest/5">
@@ -816,7 +829,7 @@ export function DynamicQrGenerator() {
                       ))
                     ) : (
                       <p className="text-xs text-forest/50 italic py-2 text-center">
-                        No scan events recorded yet. Click "Refresh Scan Metrics" above after scanning your QR code.
+                        Individual scan events are not retained. Use the aggregate mobile and desktop counts above.
                       </p>
                     )}
                   </div>

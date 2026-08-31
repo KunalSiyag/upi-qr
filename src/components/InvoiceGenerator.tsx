@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import { trackProductEvent } from "../lib/productEvents";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
@@ -240,9 +241,11 @@ export function InvoiceGenerator() {
       pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
       pdf.save(`${safeInvoiceNo()}.pdf`);
       setDownloadPdfState("idle");
+      trackProductEvent("export_pdf", "invoice");
     } catch (err) {
       console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setDownloadPdfState("error");
+      trackProductEvent("tool_error", "invoice");
     }
   }
 
@@ -293,6 +296,7 @@ export function InvoiceGenerator() {
               text: buildShareMessage()
             });
             sharedVisually = true;
+            trackProductEvent("share", "invoice");
           }
         } catch (err) {
           if ((err as DOMException)?.name === "AbortError") {

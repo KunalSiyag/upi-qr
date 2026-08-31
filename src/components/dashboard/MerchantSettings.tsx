@@ -5,7 +5,6 @@ interface Merchant {
   name: string;
   apiKey: string;
   vpa?: string;
-  webhookUrl?: string;
 }
 
 export const MerchantSettings: React.FC = () => {
@@ -17,7 +16,7 @@ export const MerchantSettings: React.FC = () => {
   const [revealKey, setRevealKey] = useState(false);
 
   const [vpa, setVpa] = useState("");
-  const [webhookUrl, setWebhookUrl] = useState("");
+  const [merchantName, setMerchantName] = useState("");
 
   useEffect(() => {
     fetchMerchant();
@@ -29,8 +28,8 @@ export const MerchantSettings: React.FC = () => {
       if (!res.ok) throw new Error("Failed to load profile");
       const data = await res.json();
       setMerchant(data.merchant);
+      setMerchantName(data.merchant.name || "");
       setVpa(data.merchant.vpa || "");
-      setWebhookUrl(data.merchant.webhookUrl || "");
     } catch (err) {
       setError("Unable to load merchant profile.");
     } finally {
@@ -48,7 +47,7 @@ export const MerchantSettings: React.FC = () => {
       const res = await fetch("/api/internal/merchant-profile", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ vpa, webhookUrl }),
+        body: JSON.stringify({ name: merchantName, ...(vpa.trim() ? { vpa } : {}) }),
       });
 
       if (!res.ok) throw new Error("Failed to save");
@@ -121,6 +120,21 @@ export const MerchantSettings: React.FC = () => {
         
         <div className="space-y-6">
           <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Merchant Display Name</label>
+            <input
+              type="text"
+              value={merchantName}
+              onChange={(e) => setMerchantName(e.target.value)}
+              minLength={2}
+              maxLength={80}
+              required
+              placeholder="e.g. Sharma General Store"
+              className="w-full sm:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+            />
+            <p className="text-xs text-gray-500 mt-1">Shown to customers on hosted checkout pages.</p>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">UPI ID (VPA)</label>
             <input 
               type="text" 
@@ -130,18 +144,6 @@ export const MerchantSettings: React.FC = () => {
               className="w-full sm:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
             />
             <p className="text-xs text-gray-500 mt-1">This is where your customer payments will be routed directly.</p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Webhook URL (Optional)</label>
-            <input 
-              type="url" 
-              value={webhookUrl}
-              onChange={(e) => setWebhookUrl(e.target.value)}
-              placeholder="https://your-server.com/webhooks/upi"
-              className="w-full sm:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
-            />
-            <p className="text-xs text-gray-500 mt-1">We will send a POST request here when a payment is successful.</p>
           </div>
 
           {error && <div className="text-sm text-red-600 bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}

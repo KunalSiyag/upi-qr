@@ -1,0 +1,43 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LocalizedToolPage from "../../components/LocalizedToolPage.astro";
+import { LOCALIZED_TOOLS, getLocalizedToolCopy } from "../../data/localizedTools";
+
+export async function getStaticPaths() {
+  return LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }));
+}
+
+const { tool } = Astro.props;
+const lang = "id";
+const localeCopy = getLocalizedToolCopy(tool, lang);
+const description = localeCopy.description;
+const pageTitle = localeCopy.title;
+const pageUrl = new URL(Astro.url.pathname.endsWith("/") ? Astro.url.pathname : `${Astro.url.pathname}/`, Astro.site).toString();
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: localeCopy.name,
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "id-ID",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "IDR" },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: localeCopy.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+---
+
+<BaseLayout title={pageTitle} description={description} schema={schema}>
+  <LocalizedToolPage lang={lang} tool={tool} />
+</BaseLayout>

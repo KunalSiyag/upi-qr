@@ -45,12 +45,22 @@ const chrome = {
   ta: { home: "முதன்மை பக்கத்திற்குத் திரும்பு", label: "இலவச வணிகக் கருவி", howTo: "எப்படி பயன்படுத்துவது", faq: "அடிக்கடி கேட்கப்படும் கேள்விகள்", privacy: "பதிவு தேவையில்லை", instant: "உடனடி முடிவுகள்", local: "உலாவியில் தனிப்பட்ட செயலாக்கம்" },
   te: { home: "ప్రధాన పేజీకి తిరిగి వెళ్లండి", label: "ఉచిత వ్యాపార సాధనం", howTo: "ఎలా ఉపయోగించాలి", faq: "తరచుగా అడిగే ప్రశ్నలు", privacy: "సైన్అప్ అవసరం లేదు", instant: "తక్షణ ఫలితాలు", local: "బ్రౌజర్‌లో ప్రైవేట్ ప్రాసెసింగ్" },
   mr: { home: "मुख्य पृष्ठावर परत जा", label: "मोफत व्यावसायिक साधन", howTo: "कसे वापरावे", faq: "नेहमी विचारले जाणारे प्रश्न", privacy: "साइनअप नाही", instant: "त्वरित निकाल", local: "ब्राउझरमध्ये खाजगी प्रक्रिया" },
+  es: { home: "Volver a la página principal", label: "Herramienta gratuita para negocios", howTo: "Cómo utilizar", faq: "Preguntas frecuentes", privacy: "Sin registro", instant: "Resultados inmediatos", local: "Procesamiento local y privado" },
+  pt: { home: "Voltar para o início", label: "Ferramenta empresarial gratuita", howTo: "Como usar", faq: "Perguntas frequentes", privacy: "Sem cadastro", instant: "Resultados instantâneos", local: "Processamento privado no navegador" },
+  fr: { home: "Retour à l'accueil", label: "Outil professionnel gratuit", howTo: "Mode d'emploi", faq: "Foire aux questions", privacy: "Sans inscription", instant: "Résultats instantanés", local: "Traitement local et privé" },
+  de: { home: "Zur Startseite zurückkehren", label: "Kostenloses Business-Tool", howTo: "Anleitung", faq: "Häufige Fragen", privacy: "Ohne Registrierung", instant: "Sofortige Ergebnisse", local: "Lokale & private Verarbeitung" },
+  id: { home: "Kembali ke beranda utama", label: "Alat bisnis & UMKM gratis", howTo: "Cara penggunaan", faq: "Pertanyaan umum", privacy: "Tanpa registrasi", instant: "Hasil instan", local: "Pemrosesan privat di browser" },
 }[lang];
 const cloudBadges = {
   hi: ["साइन इन आवश्यक", "सुरक्षित क्लाउड रीडायरेक्ट", "केवल कुल स्कैन आंकड़े"],
   ta: ["உள்நுழைவு தேவை", "பாதுகாப்பான கிளவுட் திருப்பி", "மொத்த ஸ்கேன் எண்ணிக்கை மட்டும்"],
   te: ["సైన్ ఇన్ అవసరం", "రక్షిత క్లౌడ్ రీడైరెక్ట్", "మొత్తం స్కాన్ లెక్కలు మాత్రమే"],
   mr: ["साइन इन आवश्यक", "सुरक्षित क्लाउड रीडायरेक्ट", "फक्त एकूण स्कॅन मोजणी"],
+  es: ["Inicio de sesión requerido", "Redirección en la nube segura", "Estadísticas anónimas de escaneos"],
+  pt: ["Login necessário", "Redirecionamento em nuvem seguro", "Apenas contagem de acessos"],
+  fr: ["Connexion requise", "Redirection cloud sécurisée", "Statistiques de scan uniquement"],
+  de: ["Anmeldung erforderlich", "Sichere Cloud-Weiterleitung", "Nur Scan-Zähler"],
+  id: ["Perlu masuk akun", "Pengalihan cloud aman", "Hanya statistik total scan"],
 }[lang];
 const badges = tool.component === "dynamicQr"
   ? cloudBadges

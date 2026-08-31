@@ -2,7 +2,7 @@
 title: "UPI QR Code Not Scanning? 12 Fixes for Shop Owners"
 description: "Troubleshoot blurry prints, glare, wrong VPA, app errors, and counter placement when customers cannot scan your UPI QR code."
 pubDate: 2026-06-16
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Troubleshooting", "Merchant Tips", "Tutorial"]
 ---
 

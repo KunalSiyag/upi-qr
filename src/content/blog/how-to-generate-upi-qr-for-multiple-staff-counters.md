@@ -2,7 +2,7 @@
 title: "How to Generate UPI QR Codes for Multiple Staff Counters"
 description: "Run two or more billing counters with separate UPI QRs, transaction notes, or VPAs for easier daily reconciliation."
 pubDate: 2026-06-26
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Shops", "Billing", "Tutorial"]
 ---
 

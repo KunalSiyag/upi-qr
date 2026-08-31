@@ -5,6 +5,7 @@ import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 import EmbedWidgetModal from "../components/EmbedWidgetModal.astro";
 import { getPresetFromSlug, type GeneratorSlug } from "../data/internalLinks";
+import { ogImageForPath } from "../data/siteImages";
 
 export async function getStaticPaths() {
   return [
@@ -292,15 +293,6 @@ export async function getStaticPaths() {
       }
     },
     {
-      params: { slug: "universal-upi-qr-code-generator-for-bank-account" },
-      props: {
-        title: "Universal UPI QR Generator for Bank Account",
-        headline: "Create a Universal UPI QR Code for your Bank Account",
-        presetType: "phonepe",
-        intro: "Generate payment QR codes for any bank account (SBI, HDFC, ICICI) working on PhonePe, GPay, Paytm & BHIM."
-      }
-    },
-    {
       params: { slug: "hdfc-business-qr-code-generator" },
       props: {
         title: "HDFC Business QR Code Generator",
@@ -318,13 +310,68 @@ export async function getStaticPaths() {
         intro: "Generate ICICI Bank business collection QR code standees and posters without merchant processing fees."
       }
     },
-    {
+{
       params: { slug: "doctor-clinic-upi-qr-generator" },
       props: {
         title: "Doctor & Clinic UPI Payment QR Generator",
         headline: "Create a Scan-to-Pay UPI Poster for Medical Clinics & Hospitals",
         presetType: "freelance",
-        intro: "Print a clean payment QR poster for doctor consultation desks, labs, and pharmacies."
+        intro:
+          "Print a clean payment QR poster for doctor consultation desks, labs, and pharmacies."
+      }
+    },
+    {
+      params: { slug: "tutor-qr-generator" },
+      props: {
+        title: "Tutor & Coaching Class UPI QR Generator",
+        headline: "Create Monthly Fee Collection QR Posters for Tuition & Classes",
+        presetType: "tutor",
+        intro: "Generate printable UPI payment posters for home tutors, coaching centres, and online class instructors."
+      }
+    },
+    {
+      params: { slug: "pg-hostel-qr-generator" },
+      props: {
+        title: "PG & Hostel Rent UPI QR Generator",
+        headline: "Create Monthly Rent & Mess Fee Payment QR for Paying Guest",
+        presetType: "pg",
+        intro: "Print rent collection standees and room-wise UPI QRs for PG accommodations, hostels, and shared flats."
+      }
+    },
+    {
+      params: { slug: "tiiffin-qr-generator" },
+      props: {
+        title: "Tiffin Service UPI QR Generator",
+        headline: "Create Meal Subscription Payment QRs for Tiffin & Dabba Services",
+        presetType: "tiiffin",
+        intro: "Build weekly and monthly meal-plan payment posters for home tiffin kitchens and dabba delivery."
+      }
+    },
+    {
+      params: { slug: "caterer-qr-generator" },
+      props: {
+        title: "Caterer & Banquet UPI QR Generator",
+        headline: "Create Booking & Event Payment QR Posters for Caterers",
+        presetType: "caterer",
+        intro: "Generate advance-booking and bulk-order UPI posters for party caterers, banquet halls, and food stalls."
+      }
+    },
+    {
+      params: { slug: "photographer-qr-generator" },
+      props: {
+        title: "Photographer & Studio UPI QR Generator",
+        headline: "Create Booking Fee & Invoice Payment QR for Photographers",
+        presetType: "photographer",
+        intro: "Print booking advance and final invoice payment QRs for wedding, event, and studio photographers."
+      }
+    },
+    {
+      params: { slug: "electrician-qr-generator" },
+      props: {
+        title: "Electrician & Field Service UPI QR Generator",
+        headline: "Create On-Site Payment QR Posters for Electricians & Service Pros",
+        presetType: "electrician",
+        intro: "Generate durable service-visit payment QRs for electricians, plumbers, AC mechanics, and field workers."
       }
     }
   ];
@@ -366,7 +413,7 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   paytm: {
     vpaFormats: ["mobile@paytm", "username@paytm"],
     targetAudience: "Paytm Wallet & UPI users, kirana stores, and billing desks.",
-    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for 0% MDR direct bank credit.",
+    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for direct bank credit with zero MDR on standard UPI.",
     extraFaq: {
       question: "Do I need a Paytm merchant or Soundbox to use this QR?",
       answer: "No. Paste your @paytm UPI ID, print the poster, and money settles to the linked bank account. A Soundbox is optional and is not required to accept UPI."
@@ -420,7 +467,7 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   icici: {
     vpaFormats: ["mobile@icici", "username@pockets", "username@icici"],
     targetAudience: "ICICI Bank business and savings account holders.",
-    tip: "ICICI UPI QRs offer 0% MDR charges for standard P2P and P2PM merchant transfers.",
+    tip: "ICICI UPI QRs offer 0% MDR charges for standard bank-funded P2P and P2M merchant transfers.",
     extraFaq: {
       question: "Which ICICI UPI ID should I print?",
       answer: "Use the ID visible in iMobile or any linked UPI app, typically name@icici or mobile@icici. Test-scan before you laminate the standee."
@@ -609,10 +656,64 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   donation: {
     vpaFormats: ["trustname@upi", "ngo@bankhandle"],
     targetAudience: "Temples, Non-Profit Organizations, NGOs, and Charitable Drives.",
-    tip: "NPCI levies 0% MDR on charitable donations, ensuring 100% of collected funds reach your organization.",
+    tip: "Standard UPI collections carry zero MDR for charitable donations, ensuring collected funds reach your organization without deduction.",
     extraFaq: {
       question: "Should NGOs lock a donation amount?",
       answer: "Leave it open for general fundraising. Use a fixed amount only for a published ticket, kit, or membership."
+    }
+  },
+  tutor: {
+    vpaFormats: ["teachername@upi", "coaching@bankhandle"],
+    targetAudience: "Home tutors, coaching centres, online educators, and tuition class owners.",
+    tip: "Create one QR per class group or subject with the monthly fee amount locked, and a separate open-amount QR for ad-hoc sessions.",
+    extraFaq: {
+      question: "How do I collect different fees for different classes?",
+      answer: "Generate separate QRs with fixed amounts and different notes like 'Class 10 Maths' and 'Class 12 Physics'. Students scan the right one."
+    }
+  },
+  pg: {
+    vpaFormats: ["pgname@upi", "hostel@bankhandle"],
+    targetAudience: "PG accommodations, hostels, shared flats, and co-living spaces.",
+    tip: "Print room-wise fixed-amount QRs with the room number as a note. Update the QR poster each quarter if rents change.",
+    extraFaq: {
+      question: "Can one QR work for all PG tenants or do I need room-wise QRs?",
+      answer: "Room-wise fixed-amount QRs help tenant-specific settlement. An open-amount QR works if you manually reconcile, but room-tagged QRs save time."
+    }
+  },
+  tiffin: {
+    vpaFormats: ["kitchenname@upi", "tiiffin@bankhandle"],
+    targetAudience: "Home tiffin services, dabba delivery, and meal subscription kitchens.",
+    tip: "Print separate QRs for monthly and meal-count plans. Share a low-res version in the customer WhatsApp group alongside the printed poster.",
+    extraFaq: {
+      question: "Should I take advance payments with the same tiffin QR?",
+      answer: "You can use the same VPA but add a note like 'March first-half plan'. Alternately, print one QR for 'Monthly Plan ₹2,200' and another for 'Trial Week ₹500'."
+    }
+  },
+  caterer: {
+    vpaFormats: ["caterer@upi", "banquet@bankhandle"],
+    targetAudience: "Event caterers, banquet halls, food stalls, and bulk meal suppliers.",
+    tip: "Generate a fixed-amount QR for the booking advance and a separate open-amount QR for the final settlement. Add the event date in the note field.",
+    extraFaq: {
+      question: "How do I handle a catering booking with a 50% advance?",
+      answer: "Create a 50%-amount QR with the note 'Booking advance — Diwali party 15 Nov'. On the event day, the customer pays the balance via the same VPA or a fresh balance QR."
+    }
+  },
+  photographer: {
+    vpaFormats: ["studioname@upi", "photos@bankhandle"],
+    targetAudience: "Wedding photographers, event photographers, photo studios, and freelance videographers.",
+    tip: "Print a compact QR card to carry in your camera bag. Create separate QRs for booking advances and print/frame orders.",
+    extraFaq: {
+      question: "Can I add this QR to a photography contract PDF?",
+      answer: "Yes. Embed a fixed-amount QR matching the signed contract amount directly into the PDF, and email it to the client for faster advance receipt."
+    }
+  },
+  electrician: {
+    vpaFormats: ["electrician@upi", "service@bankhandle"],
+    targetAudience: "Electricians, plumbers, AC mechanics, carpenters, and field-service providers.",
+    tip: "Laminate a small 4x3 inch QR card to carry in your toolkit. Add a fixed amount for standard visit charges and leave amount open for repair parts.",
+    extraFaq: {
+      question: "Should I print separate QRs for visit fees vs repair charges?",
+      answer: "Print one 'Visit Charge ₹200' QR for the standard call-out and keep an open-amount QR at the back of the card for parts, spares, and extra labour."
     }
   }
 };
@@ -634,7 +735,7 @@ const presetFaqs = [
   },
   {
     question: `Are there any MDR (Merchant Discount Rate) charges?`,
-    answer: `No, standard P2P and P2PM UPI transactions directly into your bank account carry 0% MDR commission under NPCI guidelines.`
+    answer: `No, standard bank-funded P2P and P2M UPI transactions directly into your bank account carry 0% MDR commission under NPCI guidelines. RuPay credit card on UPI transactions above ₹2,000 may carry interchange fees.`
   },
   {
     question: `How do I print a durable standee for my checkout counter?`,
@@ -658,7 +759,7 @@ const schema = {
       "featureList": [
         "100% Browser Local Rendering",
         "NPCI upi://pay Protocol Compliance",
-        "0% MDR Commission",
+        "0% MDR on Bank-to-Bank UPI",
         "High-Resolution PNG Poster Download"
       ],
       "softwareVersion": "2.0.0",
@@ -704,12 +805,14 @@ const schema = {
           "@type": "HowToStep",
           "position": 3,
           "name": "Customize & Export",
-          "text": "Customize background branding colors, add custom logos, and download print-ready vector SVG or PNG posters."
+          "text": "Customize background branding colors, add custom logos, and download print-ready PNG or PDF posters."
         }
       ]
     }
   ]
 };
+
+const pageImage = ogImageForPath(`/${generatorSlug}/`);
 
 const seoTitle = (() => {
   const withFree = title.toLowerCase().startsWith("free") ? title : `Free ${title}`;
@@ -718,30 +821,27 @@ const seoTitle = (() => {
 })();
 ---
 
-<BaseLayout title={seoTitle} description={description} schema={schema}>
+<BaseLayout title={seoTitle} description={description} schema={schema} image={pageImage.src}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-5xl rounded-[2rem] border border-white/75 bg-white/86 p-4 sm:p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
       
-      {/* Visual Microdata Breadcrumbs */}
+      {/* Visual breadcrumbs; BaseLayout emits the single JSON-LD breadcrumb graph. */}
       <nav aria-label="Breadcrumb" class="mb-4">
-        <ol itemscope itemtype="https://schema.org/BreadcrumbList" class="flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
-          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-2">
-            <a itemprop="item" href="/" class="hover:text-leaf transition-colors">
-              <span itemprop="name">Home</span>
+        <ol class="flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <li class="flex items-center gap-2">
+            <a href="/" class="hover:text-leaf transition-colors">
+              <span>Home</span>
             </a>
-            <meta itemprop="position" content="1" />
             <span>/</span>
           </li>
-          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="flex items-center gap-2">
-            <a itemprop="item" href="/#generators" class="hover:text-leaf transition-colors">
-              <span itemprop="name">UPI Generators</span>
+          <li class="flex items-center gap-2">
+            <a href="/#generators" class="hover:text-leaf transition-colors">
+              <span>UPI Generators</span>
             </a>
-            <meta itemprop="position" content="2" />
             <span>/</span>
           </li>
-          <li itemprop="itemListElement" itemscope itemtype="https://schema.org/ListItem" class="text-forest font-bold truncate max-w-[240px]">
-            <span itemprop="name" aria-current="page">{title}</span>
-            <meta itemprop="position" content="3" />
+          <li class="text-forest font-bold truncate max-w-[240px]">
+            <span aria-current="page">{title}</span>
           </li>
         </ol>
       </nav>
@@ -762,7 +862,7 @@ const seoTitle = (() => {
       </div>
 
       <div class="mt-8 pt-6 border-t border-forest/10">
-        <GeneratorForm client:load presetType={presetType as any} />
+        <GeneratorForm client:visible presetType={presetType as any} />
       </div>
 
       {/* Preset-Specific VPA Reference & Usage Specs */}

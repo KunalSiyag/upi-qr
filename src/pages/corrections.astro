@@ -1,0 +1,70 @@
+---
+import TrustPage from "../components/TrustPage.astro";
+import { CORRECTIONS } from "../data/corrections";
+import { formatEnIn } from "../data/authors";
+
+const title = "Corrections Log for UPI Guides | Pro UPI QR";
+const description =
+  "Public log of material corrections on Pro UPI QR: bank UPI limits, MSMED interest, RuPay MDR, error codes, and removed payment-claim endpoints.";
+const pageUrl = "https://www.proupiqr.in/corrections/";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#page`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: CORRECTIONS.length,
+        itemListElement: CORRECTIONS.map((entry, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: entry.title,
+          description: entry.summary,
+        })),
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Corrections", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<TrustPage title={title} description={description} h1="Corrections log" eyebrow="Trust" lastUpdated="28 August 2026" schema={schema}>
+  <span slot="crumb" class="text-forest font-bold" aria-current="page">Corrections</span>
+
+  <p>
+    This list is for material errors — wrong rupee limits, wrong statutory rates, invented product features, or payment claims the code did not support. Typos and layout tweaks do not belong here. Newest first.
+  </p>
+  <p>
+    Send a correction to <a href="mailto:feedback@proupiqr.in">feedback@proupiqr.in</a>. How we check figures is in the <a href="/accuracy-policy/">accuracy policy</a>.
+  </p>
+
+  {CORRECTIONS.map((entry) => (
+    <section>
+      <h2>{entry.title}</h2>
+      <p class="text-xs font-bold uppercase tracking-wider text-forest/50">{formatEnIn(new Date(`${entry.date}T00:00:00+05:30`))}</p>
+      <p>{entry.summary}</p>
+      {entry.hrefs.length > 0 && (
+        <p>
+          {entry.hrefs.map((link, index) => (
+            <>
+              {index > 0 && " · "}
+              <a href={link.href}>{link.label}</a>
+            </>
+          ))}
+        </p>
+      )}
+    </section>
+  ))}
+</TrustPage>

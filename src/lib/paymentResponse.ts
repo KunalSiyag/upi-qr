@@ -1,3 +1,5 @@
+import { parseInrToPaise, validAmountPaise, validOrderId } from "./apiSecurity";
+
 export const PAYMENT_RESPONSE_TTL_SECONDS = 60 * 60 * 24 * 90;
 
 export type PaymentStatus = "PENDING" | "SUCCESS" | "FAILED" | "CANCELLED";
@@ -6,7 +8,8 @@ export interface PaymentResponseRecord {
   orderId: string;
   status: PaymentStatus;
   transactionId?: string;
-  amount?: string;
+  amountPaise?: number;
+  amount?: string; // Legacy records may contain a decimal amount string.
   currency: "INR";
   provider?: string;
   receivedAt: string;
@@ -39,14 +42,21 @@ export function normalizePaymentResponse(payload: Record<string, unknown>): Paym
   const orderId = text(payload.orderId ?? payload.order_id ?? payload.merchantTransactionId, 128);
   const incomingStatus = text(payload.status ?? payload.paymentStatus, 32)?.toUpperCase();
   const status = incomingStatus ? STATUS_MAP[incomingStatus] : undefined;
+  const suppliedCurrency = text(payload.currency, 8)?.toUpperCase();
 
-  if (!orderId || !status) return null;
+  if (!orderId || !validOrderId(orderId) || !status || (suppliedCurrency && suppliedCurrency !== "INR")) return null;
+  const amountValue = payload.amountPaise !== undefined
+    ? payload.amountPaise
+    : payload.amount !== undefined
+      ? parseInrToPaise(payload.amount)
+      : undefined;
+  if (amountValue !== undefined && !validAmountPaise(amountValue)) return null;
 
   return {
     orderId,
     status,
     transactionId: text(payload.transactionId ?? payload.transaction_id ?? payload.utr, 128),
-    amount: text(payload.amount, 32),
+    amountPaise: amountValue as number | undefined,
     currency: "INR",
     provider: text(payload.provider, 64),
     receivedAt: new Date().toISOString(),

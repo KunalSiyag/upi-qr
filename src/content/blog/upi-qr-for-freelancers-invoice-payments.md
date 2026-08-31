@@ -2,7 +2,8 @@
 title: "UPI QR Code for Freelancers & Invoice Payments"
 description: "Consultants, designers, and freelancers can add UPI QR to invoices, proposals, and WhatsApp bills — no 2% gateway cut on bank UPI."
 pubDate: 2026-06-18
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/freelancer-invoice-laptop-qr.jpg"
 tags: ["Freelancer", "Billing", "Tutorial"]
 ---
 
@@ -16,7 +17,7 @@ Integrating a custom UPI QR code into your invoice documents, proposals, or What
 
 ## Why Freelancers Should Use UPI QR Codes
 
-* **Zero Transaction Fees:** Direct UPI-to-bank settlements carry no MDR (Merchant Discount Rate) or payment processing charges.
+* **Zero Transaction Fees:** Direct bank-to-bank UPI settlements carry no MDR (Merchant Discount Rate) or payment processing charges.
 * **Instant Cash Flow Settle:** Payment gateway settlements typically take 2-3 business days. UPI transfers settle directly in your primary bank account in real-time.
 * **Reconciliation Efficiency:** By attaching a unique transaction note or invoice reference to the QR code, matching incoming payments to specific clients in your bank statement becomes effortless.
 * **Professional Appearance:** Rather than displaying raw bank details, presenting a branded Payment Card shows clients that your billing operations are modern and frictionless.

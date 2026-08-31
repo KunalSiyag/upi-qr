@@ -105,7 +105,7 @@ export function UpiCalculator() {
         </form>
 
         <div className="mt-6 rounded-2xl border border-leaf/10 bg-mint/20 p-4 text-xs text-forest/80">
-          💡 <strong>Did you know?</strong> Direct UPI payments have <strong>0% MDR</strong> charges for standard consumer-to-merchant (P2M) transactions under RBI guidelines.
+          💡 <strong>Did you know?</strong> Bank-to-bank UPI payments have <strong>0% MDR</strong> for standard consumer-to-merchant (P2M) transactions under RBI guidelines. RuPay credit card on UPI above ₹2,000 may carry interchange.
         </div>
       </div>
 

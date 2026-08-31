@@ -1,56 +1,43 @@
-const CACHE_NAME = "proupiqr-v1";
-const ASSETS_TO_CACHE = [
-  "/",
-  "/favicon.svg",
-  "/manifest.json",
-  "/universal-qr-generator/",
-  "/gst-calculator/",
-  "/upi-limits/",
-  "/invoice-generator/",
-  "/qr-sticker-generator/",
-  "/bulk-qr/",
-  "/upi-calculator/"
-];
+const CACHE_NAME = "proupiqr-v2";
+const STATIC_DESTINATIONS = new Set(["script", "style", "image", "font"]);
 
 self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      return cache.addAll(ASSETS_TO_CACHE);
-    })
-  );
-  self.skipWaiting();
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then((cacheNames) => {
-      return Promise.all(
-        cacheNames.map((cache) => {
-          if (cache !== CACHE_NAME) {
-            return caches.delete(cache);
-          }
-        })
-      );
-    })
+    caches.keys().then((names) =>
+      Promise.all(names.filter((name) => name !== CACHE_NAME).map((name) => caches.delete(name)))
+    ).then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.method !== "GET") return;
-  
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) return;
+
+  const destination = request.destination;
+  const hashedAsset = url.pathname.startsWith("/_astro/");
+  const cacheable = hashedAsset || STATIC_DESTINATIONS.has(destination);
+
+  if (!cacheable) {
+    event.respondWith(fetch(request));
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Return cached asset, fetch update in background
-        fetch(event.request).then((networkResponse) => {
-          if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
-          }
-        }).catch(() => {/* Offline fallback */});
-        return cachedResponse;
+    caches.open(CACHE_NAME).then(async (cache) => {
+      const cached = await cache.match(request);
+      if (cached) return cached;
+      const response = await fetch(request);
+      if (response && response.status === 200) {
+        cache.put(request, response.clone());
       }
-      return fetch(event.request);
+      return response;
     })
   );
 });

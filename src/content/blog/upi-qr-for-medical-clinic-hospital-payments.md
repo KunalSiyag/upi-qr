@@ -2,7 +2,7 @@
 title: "UPI QR Code for Medical Clinics & Hospitals"
 description: "Set up UPI QR at clinic reception for OPD fees, lab charges, and pharmacy counters — with compliance and patient-trust tips."
 pubDate: 2026-06-19
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Healthcare", "Merchant Tips", "Tutorial"]
 ---
 

@@ -1,7 +1,8 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS } from "../data/validRoutes";
+import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS, INTERNATIONAL_SLUGS } from "../data/validRoutes";
 import { GLOSSARY_TERMS } from "../data/glossary";
+import { imagesForPath, resolveSiteImage, type SiteImage } from "../data/siteImages";
 
 // Programmatically generate all valid static paths for each locale
 const allStaticPaths: string[] = [
@@ -10,6 +11,11 @@ const allStaticPaths: string[] = [
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/ta/${slug}/` : "/ta/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/te/${slug}/` : "/te/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/mr/${slug}/` : "/mr/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/es/${slug}/` : "/es/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/pt/${slug}/` : "/pt/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/fr/${slug}/` : "/fr/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/de/${slug}/` : "/de/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/id/${slug}/` : "/id/")),
 ];
 
 // Deduplicate paths
@@ -28,19 +34,40 @@ function escapeXml(value: string): string {
     .replace(/'/g, "&apos;");
 }
 
-function changefreqFor(path: string): string {
-  if (path === "/" || path === "/universal-qr-generator/") return "weekly";
-  if (path.startsWith("/blog/")) return "monthly";
-  if (path.includes("/privacy") || path.includes("/terms") || path.includes("/disclaimer")) return "yearly";
-  return "monthly";
+interface SitemapImage {
+  loc: string;
+  title: string;
+  caption?: string;
 }
 
-function priorityFor(path: string): string {
-  if (path === "/") return "1.0";
-  if (path === "/universal-qr-generator/" || path === "/blog/") return "0.9";
-  if (path.startsWith("/blog/")) return "0.7";
-  if (path.startsWith("/hi/") || path.startsWith("/ta/") || path.startsWith("/te/") || path.startsWith("/mr/")) return "0.6";
-  return "0.8";
+interface SitemapEntry {
+  path: string;
+  lastmod?: string;
+  images?: SitemapImage[];
+}
+
+function absoluteAsset(src: string, baseUrl: string): string {
+  if (src.startsWith("http")) return src;
+  return `${baseUrl}${src.startsWith("/") ? "" : "/"}${src}`;
+}
+
+function fromCatalog(image: SiteImage, baseUrl: string): SitemapImage {
+  return {
+    loc: absoluteAsset(image.src, baseUrl),
+    title: image.title,
+    caption: image.caption,
+  };
+}
+
+function mergeImages(baseUrl: string, path: string, extra?: SiteImage | null): SitemapImage[] {
+  const list = imagesForPath(path).map((image) => fromCatalog(image, baseUrl));
+  if (extra) {
+    const loc = absoluteAsset(extra.src, baseUrl);
+    if (!list.some((item) => item.loc === loc)) {
+      list.unshift(fromCatalog(extra, baseUrl));
+    }
+  }
+  return list;
 }
 
 export const GET: APIRoute = async ({ site }) => {
@@ -49,52 +76,58 @@ export const GET: APIRoute = async ({ site }) => {
   const blogPosts = await getCollection("blog");
   const hindiBlogPosts = await getCollection("blogHi");
 
-  const entries = [
-    ...uniquePaths.filter((path) => !path.startsWith("/glossary/")).map((path) => ({
-      path,
-      // Recrawl signal for locale tool URLs that GSC previously logged as 404.
-      lastmod: path.startsWith("/hi/") && !path.includes("/blog/")
-        ? formatLastmod(new Date("2026-08-17T00:00:00Z"))
-        : null,
-    })),
-    ...blogPosts.map((post) => ({
-      path: `/blog/${post.id.replace(/\.mdx?$/, "")}/`,
-      lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
-      image: post.data.image
-        ? post.data.image.startsWith("http")
-          ? post.data.image
-          : `${baseUrl}${post.data.image.startsWith("/") ? "" : "/"}${post.data.image}`
-        : null,
-      title: post.data.title,
-    })),
-    // Glossary knowledge-base pages.
-    ...GLOSSARY_TERMS.map((term) => ({
-      path: `/glossary/${term.slug}/`,
-      lastmod: formatLastmod(new Date()),
-      image: null,
-      title: `${term.term} — ${term.full}`,
-    })),
-    // Indexable Hindi translations (paired with English via hreflang).
-    ...hindiBlogPosts.map((post) => ({
-      path: `/hi/blog/${post.id.replace(/\.mdx?$/, "")}/`,
-      lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
-      image: post.data.image
-        ? post.data.image.startsWith("http")
-          ? post.data.image
-          : `${baseUrl}${post.data.image.startsWith("/") ? "" : "/"}${post.data.image}`
-        : null,
-      title: post.data.title,
-    })),
+  const englishById = new Map(blogPosts.map((post) => [post.id.replace(/\.mdx?$/, ""), post]));
+
+  const entries: SitemapEntry[] = [
+    ...uniquePaths
+      .filter((path) => path === "/glossary/" || !path.startsWith("/glossary/"))
+      .map((path) => ({ path, images: mergeImages(baseUrl, path) })),
+    ...blogPosts.map((post) => {
+      const path = `/blog/${post.id.replace(/\.mdx?$/, "")}/`;
+      const extra = post.data.image ? resolveSiteImage(post.data.image) ?? {
+        id: post.id,
+        src: post.data.image,
+        width: 1200,
+        height: 630,
+        mime: "image/jpeg" as const,
+        alt: post.data.title,
+        caption: post.data.description,
+        title: post.data.title,
+      } : null;
+      return {
+        path,
+        lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
+        images: mergeImages(baseUrl, path, extra),
+      };
+    }),
+    ...GLOSSARY_TERMS.map((term) => ({ path: `/glossary/${term.slug}/` })),
+    ...hindiBlogPosts.map((post) => {
+      const slug = post.id.replace(/\.mdx?$/, "");
+      const path = `/hi/blog/${slug}/`;
+      const en = englishById.get(slug);
+      const src = post.data.image ?? en?.data.image;
+      const extra = src ? resolveSiteImage(src) ?? null : null;
+      return {
+        path,
+        lastmod: formatLastmod(post.data.updatedDate ?? post.data.pubDate),
+        images: mergeImages(baseUrl, path, extra),
+      };
+    }),
   ];
 
   const urls = entries
     .map((entry) => {
       const loc = escapeXml(`${baseUrl}${entry.path}`);
       const lastmodXml = entry.lastmod ? `<lastmod>${entry.lastmod}</lastmod>` : "";
-      const imageXml = entry.image
-        ? `<image:image><image:loc>${escapeXml(entry.image)}</image:loc><image:title>${escapeXml(entry.title || "Pro UPI QR")}</image:title></image:image>`
-        : "";
-      return `<url><loc>${loc}</loc>${lastmodXml}<changefreq>${changefreqFor(entry.path)}</changefreq><priority>${priorityFor(entry.path)}</priority>${imageXml}</url>`;
+      const imageXml = (entry.images ?? [])
+        .map((image) => {
+          const caption = image.caption
+            ? `<image:caption>${escapeXml(image.caption)}</image:caption>`
+            : "";
+          return `<image:image><image:loc>${escapeXml(image.loc)}</image:loc><image:title>${escapeXml(image.title)}</image:title>${caption}</image:image>`;
+        })
+        .join("");
+      return `<url><loc>${loc}</loc>${lastmodXml}${imageXml}</url>`;
     })
     .join("");
 
@@ -102,7 +135,7 @@ export const GET: APIRoute = async ({ site }) => {
 
   return new Response(body, {
     headers: {
-      "Content-Type": "application/xml",
+      "Content-Type": "application/xml; charset=utf-8",
     },
   });
 };

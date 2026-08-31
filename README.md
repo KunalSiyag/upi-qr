@@ -4,9 +4,9 @@ A professional, local-first, SEO-optimized UPI QR Code Generator designed for In
 
 ## Dynamic QR metrics
 
-Dynamic QR destinations and scan counts use the first-party `/api/dynamic/[id]` Vercel Function. In Vercel, create and connect a **Vercel KV** database to this project; it supplies `KV_REST_API_URL` and `KV_REST_API_TOKEN` automatically. Each scan atomically increments total and mobile/desktop counters before redirecting to the current destination.
+Dynamic QR destinations and scan counts use first-party Vercel Functions and Vercel KV. Campaign creation, listing, editing, and deletion require a Clerk account. IDs are generated on the server, public redirect URLs contain no fallback destination, and each scan atomically increments aggregate mobile/desktop counters before redirecting.
 
-For local development, copy `.env.example` to `.env` and add the KV REST credentials. Without KV credentials, the QR follows its embedded destination fallback but no authoritative metrics are recorded.
+For local development, copy `.env.example` to `.env.local` and add Clerk and KV credentials. Without KV credentials, cloud-backed dynamic redirects and checkout sessions fail closed; static browser-generated QR tools continue to work.
 
 ## Verified UPI payment responses
 
@@ -14,10 +14,11 @@ Opening a native `upi://pay` link does **not** return a verified payment result 
 
 Set these Vercel environment variables before using it:
 
-* `KV_REST_API_URL` and `KV_REST_API_TOKEN` — supplied by a connected Vercel KV database.
-* `PAYMENT_WEBHOOK_SECRET` — a long, unique secret shared only by the backend that calls the endpoint.
+* `PUBLIC_CLERK_PUBLISHABLE_KEY` and `CLERK_SECRET_KEY` - Clerk account authentication.
+* `KV_REST_API_URL` and `KV_REST_API_TOKEN` - supplied by a connected Vercel KV database.
+* `PAYMENT_WEBHOOK_SECRET` - a long, unique secret shared only by the backend that calls the endpoint.
 
-Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-upi-signature`: an HMAC-SHA256 hex digest of `METHOD.timestamp.rawBody`. Requests older than five minutes are rejected; records expire after 90 days. This secret stays on the server. It is not something the customer sees or enters.
+Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-upi-signature`. For POST, sign `POST.timestamp.rawBody`. For GET, sign `GET.timestamp.orderId=...` with query parameters sorted by name. Use globally unique order IDs within a deployment. Requests older than five minutes are rejected; records expire after 90 days and cannot be downgraded from a final successful state. This separate response store does not automatically update hosted checkout sessions.
 
 **Live Application:** [https://www.proupiqr.in](https://www.proupiqr.in)
 
@@ -25,7 +26,7 @@ Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-
 
 ## Key Features
 
-* **100% Privacy & Local Generation:** No payment data or UPI IDs are transmitted or saved on external servers. All QR code vectors are rendered entirely client-side in the browser.
+* **Local-First Generation:** Static QR, document, and calculator inputs stay in the browser. Account, dynamic redirect, checkout, and signed payment-response features use the server-backed storage described in the privacy policy.
 * **Payment-Ready Intent Matching:** Generates standard-compliant `upi://pay` deep links compatible with all major Indian banking applications (GPay, PhonePe, Paytm, BHIM, Cred).
 * **High-Resolution Poster Prints:** Downloads custom, counter-ready payment templates designed to print directly onto A4 or standee cardboards.
 * **Affiliate Product Widgets:** Integrated with Amazon affiliate product suggestions to help users discover high-quality acrylic table stands, card holders, and thermal receipt rolls.
@@ -46,10 +47,10 @@ Each request needs `x-pro-upi-timestamp` (current Unix milliseconds) and `x-pro-
 
 ## Tech Stack
 
-* **Framework:** [Astro v4](https://astro.build/) (Static Site Generation for sub-millisecond page loads and perfect Core Web Vitals).
+* **Framework:** [Astro v7](https://astro.build/) with static pages and Vercel server routes.
 * **Styling:** Tailwind CSS (responsive layouts, touch-swipe gestures, and card-deck carousels).
 * **UI Components:** React (stateful interactive generator forms).
-* **Deployment:** Pre-configured with secure HTTP response headers and Content Security Policies (CSP) via Vercel.
+* **Deployment:** Vercel adapter with HSTS, noindex controls for private routes, and server-side API validation.
 
 ---
 

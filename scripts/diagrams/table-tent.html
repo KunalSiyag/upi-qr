@@ -1,0 +1,43 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page" style="display:grid;grid-template-columns:280px 1fr;gap:36px;align-items:center;">
+  <div style="display:flex;justify-content:center;">
+    <div style="width:220px;height:319px;background:#fff;border:1px solid rgba(17,59,44,0.15);border-radius:8px;box-shadow:0 18px 40px rgba(17,59,44,0.12);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;padding:16px;">
+      <p style="font-size:11px;font-weight:900;letter-spacing:0.16em;color:#287a57;">SCAN TO PAY</p>
+      <img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="width:105.6px;height:105.6px;">
+      <p style="font-size:11px;font-weight:700;">Demo Shop</p>
+    </div>
+  </div>
+  <div>
+    <p class="kicker">Print format</p>
+    <h1 style="font-size:40px;">Table tent</h1>
+    <p style="font-size:22px;font-weight:700;margin-bottom:12px;">folded ~A6 / 4 × 6 in</p>
+    <p class="muted" style="font-size:16px;max-width:34rem;">Two-sided tent for cafe tables. Matte card stock so ceiling lights do not glare.</p>
+    <p class="tag" style="margin-top:16px;">Recommended QR 1.5–2 in</p>
+  </div>
+  <p class="foot">proupiqr.in/print-templates/</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

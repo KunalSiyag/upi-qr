@@ -1,0 +1,33 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LocalizedHomePage from "../../components/LocalizedHomePage.astro";
+import { HOME_COPY } from "../../data/homeCopy";
+
+const copy = HOME_COPY.de;
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Pro UPI QR",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/de/",
+      description: copy.description,
+      inLanguage: "de-DE",
+      offers: { "@type": "Offer", price: "0", priceCurrency: "EUR" },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: copy.faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+---
+<BaseLayout title={copy.title} description={copy.description} schema={schema}>
+  <LocalizedHomePage lang="de" />
+</BaseLayout>

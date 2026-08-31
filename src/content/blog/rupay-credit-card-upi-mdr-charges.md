@@ -2,7 +2,7 @@
 title: "RuPay Credit Card on UPI: MDR and Merchant Charges Explained"
 description: "An analysis of the Merchant Discount Rate (MDR) and transaction charges applied when accepting RuPay Credit Card payments via UPI QR."
 pubDate: 2026-05-27
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Credit Card", "MDR", "Reference"]
 ---
 

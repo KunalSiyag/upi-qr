@@ -2,7 +2,8 @@
 title: "How to Generate a UPI QR Code with a Pre-Filled Amount"
 description: "Learn how to build dynamic UPI QR codes containing preset payment amounts and notes, ideal for digital billing, tickets, and checkout counters."
 pubDate: 2026-06-03
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/upi-pay-uri-anatomy.png"
 tags: ["Dynamic QR", "Billing", "Tutorial"]
 ---
 
@@ -15,6 +16,11 @@ In this guide, we will dive deep into how pre-filled UPI QR codes work, explore 
 ---
 
 ## How it Works: The UPI URL Scheme
+
+<figure>
+  <img src="/images/diagrams/upi-pay-uri-anatomy.png" alt="upi://pay fields pa pn am cu tn" width="1200" height="630" loading="lazy" />
+  <figcaption>The <code>am</code> field locks the amount. Leave it out for an open-amount counter QR.</figcaption>
+</figure>
 
 The technology behind pre-filled amounts is based on standard URL query parameters. By appending the `am` (amount) and `tn` (transaction note) variables to your base payment schema, the scanner automatically configures the fields on the customer's phone.
 
@@ -91,4 +97,3 @@ Yes. You can leave the amount field empty and only fill in the note field. In th
 
 ## Ready to Generate Your QR?
 Stop dealing with payment reconciliation problems. Design and download your custom [UPI QR Code with Amount](/google-pay-qr-generator/) now.
-

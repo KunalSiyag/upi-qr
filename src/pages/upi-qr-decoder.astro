@@ -3,30 +3,35 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { UpiQrDecoder } from "../components/UpiQrDecoder";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
-const title = "Free Online UPI QR Code Scanner & Decoder – Extract UPI ID from Image";
+const title = "Free UPI QR Validator & Decoder – Extract & Verify UPI ID Online";
 const description =
-  "Scan or upload any UPI QR code image online to extract the UPI ID (VPA), payee name, amount & raw payment link. 100% free, browser-side & private.";
+  "Upload a UPI QR image to extract VPA, payee name, and amount — then check for missing fields, tamper clues, and invalid syntax. 100% private in-browser safety report.";
 
 const faqs = [
   {
-    question: "How do I extract a UPI ID from a QR code image?",
+    question: "What does the UPI QR safety validator check?",
     answer:
-      "Simply upload or drag & drop your QR code image (PNG, JPG, WebP) into our decoder above. You can also paste an image screenshot using Ctrl+V. Our tool decodes the QR data locally and displays the exact Virtual Payment Address (VPA) and payee details."
+      "It decodes the hidden upi://pay URI, then runs syntax and safety checks: missing mandatory VPA, invalid amount, unusual bank handles, payee name mismatches, and non-standard UPI intents. Each check returns a colour-coded warning so you can spot issues before printing or scanning."
   },
   {
     question: "Is scanning/decoding QR codes on this site secure?",
     answer:
-      "Yes, 100% secure. The decoding happens directly inside your web browser using HTML5 JavaScript. Your image is never uploaded to any external server or saved anywhere."
+      "Yes, 100% secure. The decoding and validation happen directly inside your web browser using HTML5 JavaScript. Your image is never uploaded to any external server or saved anywhere."
   },
   {
     question: "Can I extract the UPI ID from PhonePe, GPay, or Paytm QR codes?",
     answer:
-      "Yes. All standard Indian UPI QR codes — including PhonePe, Google Pay, Paytm, BHIM, SBI, HDFC, and ICICI — use a standardized upi://pay format that this decoder parses instantly."
+      "Yes. All standard Indian UPI QR codes — including PhonePe, Google Pay, Paytm, BHIM, SBI, HDFC, and ICICI — use a standardised upi://pay format that this decoder parses instantly."
+  },
+  {
+    question: "What should I do if the validator reports a suspicious QR?",
+    answer:
+      "Do not print or display a QR flagged as suspicious. Double-check the UPI ID with the payer, test with a ₹1 scan from another device, and regenerate a fresh QR using the 'Create Standee' link so you control all the fields."
   },
   {
     question: "What details can I get from a decoded UPI QR code?",
     answer:
-      "You can extract the Virtual Payment Address (VPA / UPI ID), Payee Name, Fixed Transaction Amount (if specified), Transaction Note / Remarks, and the raw payment URI string."
+      "You can extract the Virtual Payment Address (VPA / UPI ID), Payee Name, Fixed Transaction Amount, Payment Note, Merchant Category Code (MCC), and the full raw upi://pay URI string."
   }
 ];
 
@@ -36,7 +41,7 @@ const schema = {
     {
       "@type": "WebApplication",
       "@id": "https://www.proupiqr.in/upi-qr-decoder/#webapp",
-      "name": "Free Online UPI QR Code Decoder & Scanner | Pro UPI QR",
+      "name": "Free Online UPI QR Validator & Safety Decoder | Pro UPI QR",
       "applicationCategory": "BusinessApplication",
       "operatingSystem": "Any",
       "url": "https://www.proupiqr.in/upi-qr-decoder/",
@@ -50,8 +55,8 @@ const schema = {
     {
       "@type": "HowTo",
       "@id": "https://www.proupiqr.in/upi-qr-decoder/#howto",
-      "name": "How to Extract UPI ID from QR Code Image Online",
-      "description": "Extract the UPI Virtual Payment Address (VPA) and payment details from any QR code image in three simple steps.",
+      "name": "How to Validate a UPI QR Code Before Printing",
+      "description": "Upload, decode, and safety-check any UPI QR image in three steps before displaying it at a shop counter.",
       "totalTime": "PT30S",
       "step": [
         {
@@ -63,14 +68,14 @@ const schema = {
         {
           "@type": "HowToStep",
           "position": 2,
-          "name": "Automatic Local Decoding",
-          "text": "Our browser-based decoder instantly parses the hidden upi://pay URI data within milliseconds."
+          "name": "Review the Safety Report",
+          "text": "Check the colour-coded verdict. Green = looks safe. Amber = minor concern. Red = do not use without verification."
         },
         {
           "@type": "HowToStep",
           "position": 3,
-          "name": "Copy UPI ID or Print Standee",
-          "text": "Click 'Copy VPA' to copy the extracted UPI handle, or click 'Create Standee' to generate a print-ready poster."
+          "name": "Copy, Recreate, or Print",
+          "text": "Copy the extracted VPA for your records, or click 'Create Standee' to regenerate a fresh, verified print-ready poster."
         }
       ]
     },
@@ -94,59 +99,56 @@ const schema = {
   <main class="py-8">
     <section class="px-5 pb-6 text-center max-w-3xl mx-auto">
       <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-mint border border-leaf/20 text-xs font-black text-forest uppercase tracking-wider mb-3">
-        <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-        <span>100% Free & Browser-Based Utility</span>
+        <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        <span>100% Private Browser Tool</span>
       </div>
       <h1 class="text-3xl md:text-5xl font-black tracking-tight text-forest">
-        Online UPI QR Code Decoder & Scanner
+        UPI QR Validator & Safety Decoder
       </h1>
       <p class="mt-3 text-base text-forest/75 leading-relaxed">
-        Upload or paste any UPI QR code screenshot to extract the <strong>UPI ID (VPA)</strong>, Payee Name, Amount, and transaction links. Decoded locally on your device for absolute privacy.
+        Upload any UPI QR code image to <strong>extract and safety-check</strong> every hidden field — VPA, payee name, amount, and more. Get a colour-coded verdict before you print, display, or scan.
       </p>
     </section>
 
-    <!-- Interactive Decoder Tool -->
     <section class="px-4 pb-12">
-      <UpiQrDecoder client:load />
+      <UpiQrDecoder client:visible />
     </section>
 
-    <!-- Step-by-Step Info Guide -->
     <section class="max-w-4xl mx-auto px-5 pb-12">
       <div class="rounded-3xl border border-forest/10 bg-white p-6 md:p-8 shadow-sm">
-        <h2 class="text-2xl font-black text-forest">Why Use Our Free Online UPI QR Decoder?</h2>
+        <h2 class="text-2xl font-black text-forest">What the Validator Checks</h2>
         <div class="mt-6 grid gap-4 md:grid-cols-3">
+          <div class="rounded-2xl bg-cream p-5 border border-forest/10">
+            <div class="rounded-xl bg-forest/10 p-2.5 w-fit mb-3 text-forest">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            </div>
+            <h3 class="font-black text-forest text-base">Syntax Completeness</h3>
+            <p class="mt-1.5 text-xs text-forest/70 leading-relaxed">
+              Verifies the mandatory VPA (pa=) field, the upi://pay scheme, and parameter format. Flags missing or malformed fields immediately.
+            </p>
+          </div>
+          <div class="rounded-2xl bg-cream p-5 border border-forest/10">
+            <div class="rounded-xl bg-forest/10 p-2.5 w-fit mb-3 text-forest">
+              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"/></svg>
+            </div>
+            <h3 class="font-black text-forest text-base">Tamper Clues</h3>
+            <p class="mt-1.5 text-xs text-forest/70 leading-relaxed">
+              Detects unusually short bank handles, missing payee names, amounts exceeding UPI limits, and non-standard merchant category codes.
+            </p>
+          </div>
           <div class="rounded-2xl bg-cream p-5 border border-forest/10">
             <div class="rounded-xl bg-forest/10 p-2.5 w-fit mb-3 text-forest">
               <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
             </div>
-            <h3 class="font-black text-forest text-base">Instant Extraction</h3>
+            <h3 class="font-black text-forest text-base">One-Click Recreate</h3>
             <p class="mt-1.5 text-xs text-forest/70 leading-relaxed">
-              No need to type manual payment handles. Extract hidden VPAs from gallery screenshots in seconds.
-            </p>
-          </div>
-          <div class="rounded-2xl bg-cream p-5 border border-forest/10">
-            <div class="rounded-xl bg-forest/10 p-2.5 w-fit mb-3 text-forest">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-            </div>
-            <h3 class="font-black text-forest text-base">Privacy Guaranteed</h3>
-            <p class="mt-1.5 text-xs text-forest/70 leading-relaxed">
-              Decoding runs 100% locally inside your web browser. No image data is sent to external servers.
-            </p>
-          </div>
-          <div class="rounded-2xl bg-cream p-5 border border-forest/10">
-            <div class="rounded-xl bg-forest/10 p-2.5 w-fit mb-3 text-forest">
-              <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
-            </div>
-            <h3 class="font-black text-forest text-base">Re-Create Counter Posters</h3>
-            <p class="mt-1.5 text-xs text-forest/70 leading-relaxed">
-              Extract details from damaged or old QR stickers and print crisp new standee posters instantly.
+              If the decoded QR looks safe, click one button to pre-fill the standee generator with the same UPI ID and print a fresh verified poster.
             </p>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- FAQ Section -->
     <section class="max-w-4xl mx-auto px-5 pb-12">
       <h2 class="text-2xl font-black text-forest text-center mb-6">Frequently Asked Questions</h2>
       <div class="grid gap-4">
@@ -159,7 +161,6 @@ const schema = {
       </div>
     </section>
 
-    <!-- Internal Link Hub -->
     <InternalLinkHub />
   </main>
 </BaseLayout>

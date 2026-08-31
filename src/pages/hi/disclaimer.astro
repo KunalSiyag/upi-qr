@@ -11,7 +11,7 @@ const description = "Pro UPI QR के लिए कानूनी अस्व
       <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; जनरेटर पर वापस जाएं</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">कानूनी अस्वीकरण</h1>
-      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 8 जून, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 27 अगस्त, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
@@ -37,19 +37,40 @@ const description = "Pro UPI QR के लिए कानूनी अस्व
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">3. कोई वित्तीय सेवाएं प्रदान नहीं की जाती हैं</h2>
           <p>
-            Pro UPI QR <strong>लेनदेन को संसाधित नहीं करता है, धन नहीं रखता है, भुगतानों में मध्यस्थता नहीं करता है, या बैंकिंग या वित्तीय सेवाएं प्रदान नहीं करता है</strong>। हम एक स्थिर पाठ संकलन उपकरण प्रदान करते हैं। हमारे एप्लिकेशन द्वारा जनरेट किए गए QR कोड केवल उपयोगकर्ता के इनपुट मापदंडों को NPCI द्वारा परिभाषित एक मानक URI योजना (`upi://pay?...`) में संकलित करते हैं। सभी वास्तविक वित्तीय लेनदेन उपयोगकर्ता के बैंकिंग ऐप के भीतर मानक UPI चैनल के माध्यम से होते हैं।
+            Pro UPI QR <strong>धन नहीं रखता, bank transfer नहीं करता और bank, payment aggregator या payment gateway नहीं है</strong>। Static tools user input को UPI URI में रखते हैं। Hosted checkout merchant का QR और status दिखाता है, लेकिन वास्तविक धन payer के UPI app और banking providers के माध्यम से जाता है।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">4. अपने जोखिम पर उपयोग करें</h2>
+          <h2 class="text-xl font-bold text-forest">4. UTR Bank Verification नहीं है</h2>
+          <p>
+            Customer द्वारा दर्ज UTR या transaction reference यह साबित नहीं करता कि merchant को पैसा मिला। Pro UPI QR उसे pending दिखाता है। Order को paid मानने, सामान देने या refund करने से पहले merchant को bank या gateway record में settlement जांचना होगा।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Dynamic Redirect और बाहरी Sites</h2>
+          <p>
+            Account holder dynamic QR destination चुनते हैं। Pro UPI QR उन destinations का समर्थन या उनकी उपलब्धता की guarantee नहीं देता। हम format restrictions लगाते हैं और abusive campaign बंद कर सकते हैं, फिर भी scanner को आगे बढ़ने से पहले destination और payment details जांचनी चाहिए। Phishing की सूचना <a href="mailto:abuse@proupiqr.in" class="text-leaf underline font-semibold">abuse@proupiqr.in</a> पर दें।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. सामान्य जानकारी</h2>
+          <p>
+            Calculator, tax या legal summary, limits, error explanation और article सामान्य जानकारी हैं; वे financial, accounting, tax, legal या regulatory advice नहीं हैं। महत्वपूर्ण निर्णय से पहले नवीनतम official source या qualified professional से जांच करें।
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">7. अपने जोखिम पर उपयोग करें</h2>
           <p>
             हम छोटे व्यवसाय मालिकों और सामग्री रचनाकारों की सहायता के लिए यह उपकरण मुफ्त में प्रदान करते हैं। हम कोई गारंटी नहीं देते हैं कि जनरेट किए गए QR कोड निर्बाध रूप से काम करेंगे, हर डिवाइस पर सही ढंग से स्कैन करेंगे, या बिना किसी विफलता के संसाधित होंगे। उपयोगकर्ताओं को भुगतान चेकआउट काउंटरों पर प्रिंट करने या रखने से पहले एक परीक्षण स्कैन करके जनरेट किए गए QR कोड को सत्यापित करना होगा। हम किसी भी त्रुटि, लेनदेन की विफलता, या खोए हुए राजस्व के लिए कोई दायित्व स्वीकार नहीं करते हैं।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">5. डीएमसीए और कॉपीराइट उल्लंघन नोटिस</h2>
+          <h2 class="text-xl font-bold text-forest">8. डीएमसीए और कॉपीराइट उल्लंघन नोटिस</h2>
           <p>
             हम दूसरों के बौद्धिक संपदा अधिकारों का सम्मान करते हैं। यदि आप मानते हैं कि इस वेबसाइट पर प्रदर्शित कोई भी सामग्री या ट्रेडमार्क आपके कॉपीराइट या ट्रेडमार्क अधिकारों का उल्लंघन करता है, तो आप हमें <a href="mailto:dmca@proupiqr.in" class="text-leaf underline font-semibold">dmca@proupiqr.in</a> पर उल्लंघन का नोटिस या हटाने का अनुरोध भेज सकते हैं। कृपया कथित उल्लंघन का विवरण और स्वामी की ओर से कार्य करने का अपना अधिकार पत्र शामिल करें।
           </p>

@@ -12,7 +12,7 @@ interface Props {
 
 const { isHindi = false, currentPath = "/" } = Astro.props;
 
-const cleanPath = currentPath.replace(/^\/(hi|ta|te|mr)(\/|$)/, "/");
+const cleanPath = currentPath.replace(/^\/(hi|ta|te|mr|es|pt|fr|de|id)(\/|$)/, "/");
 const currentSlug = cleanPath.replace(/^\/|\/$/g, "");
 
 const languages = [
@@ -20,12 +20,17 @@ const languages = [
   { code: "hi", label: "हिन्दी", path: routeExistsInLang(currentSlug, "hi") ? (currentSlug ? `/hi/${currentSlug}/` : "/hi/") : "/hi/" },
   { code: "ta", label: "தமிழ்", path: routeExistsInLang(currentSlug, "ta") ? (currentSlug ? `/ta/${currentSlug}/` : "/ta/") : "/ta/" },
   { code: "te", label: "తెలుగు", path: routeExistsInLang(currentSlug, "te") ? (currentSlug ? `/te/${currentSlug}/` : "/te/") : "/te/" },
-  { code: "mr", label: "मराठी", path: routeExistsInLang(currentSlug, "mr") ? (currentSlug ? `/mr/${currentSlug}/` : "/mr/") : "/mr/" }
+  { code: "mr", label: "मराठी", path: routeExistsInLang(currentSlug, "mr") ? (currentSlug ? `/mr/${currentSlug}/` : "/mr/") : "/mr/" },
+  { code: "es", label: "Español", path: routeExistsInLang(currentSlug, "es") ? (currentSlug ? `/es/${currentSlug}/` : "/es/") : "/es/" },
+  { code: "pt", label: "Português", path: routeExistsInLang(currentSlug, "pt") ? (currentSlug ? `/pt/${currentSlug}/` : "/pt/") : "/pt/" },
+  { code: "fr", label: "Français", path: routeExistsInLang(currentSlug, "fr") ? (currentSlug ? `/fr/${currentSlug}/` : "/fr/") : "/fr/" },
+  { code: "de", label: "Deutsch", path: routeExistsInLang(currentSlug, "de") ? (currentSlug ? `/de/${currentSlug}/` : "/de/") : "/de/" },
+  { code: "id", label: "Bahasa Indonesia", path: routeExistsInLang(currentSlug, "id") ? (currentSlug ? `/id/${currentSlug}/` : "/id/") : "/id/" },
 ];
 
-const localeMatch = currentPath.match(/^\/(hi|ta|te|mr)(?:\/|$)/);
+const localeMatch = currentPath.match(/^\/(hi|ta|te|mr|es|pt|fr|de|id)(?:\/|$)/);
 const currentLang = localeMatch?.[1] ?? "en";
-const siteLang: SiteLang = (currentLang === "hi" || currentLang === "ta" || currentLang === "te" || currentLang === "mr") ? currentLang : "en";
+const siteLang: SiteLang = (currentLang === "hi" || currentLang === "ta" || currentLang === "te" || currentLang === "mr" || currentLang === "es" || currentLang === "pt" || currentLang === "fr" || currentLang === "de" || currentLang === "id") ? currentLang : "en";
 const chrome = chromeFor(siteLang);
 const p = (slug: string) => localeHref(siteLang, slug);
 const activeLang = languages.find((language) => language.code === currentLang) ?? languages[0];

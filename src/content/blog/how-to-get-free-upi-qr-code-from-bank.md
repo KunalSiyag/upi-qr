@@ -2,7 +2,7 @@
 title: "How to Get a Free UPI QR Code from Your Bank (SBI, HDFC, ICICI & More)"
 description: "Compare free bank-issued UPI QRs from SBI, HDFC, ICICI, and Axis with custom printable standees — pros, cons, and when to use each."
 pubDate: 2026-07-01
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Banking", "Tutorial", "Reference"]
 ---
 

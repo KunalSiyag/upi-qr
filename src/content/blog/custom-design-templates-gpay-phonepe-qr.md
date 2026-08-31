@@ -2,7 +2,8 @@
 title: "How to Customize Design Templates for Google Pay and PhonePe QRs"
 description: "Learn how to brand and style your payment standees using custom templates while ensuring compliance with scan-to-pay standards."
 pubDate: 2026-05-29
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/print-formats-overview.png"
 tags: ["Templates", "Branding", "Tutorial"]
 ---
 

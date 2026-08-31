@@ -2,7 +2,8 @@
 title: "How to Create a UPI Payment Link to Send Over WhatsApp"
 description: "A quick tutorial on generating and sharing standard UPI payment links and QR codes to request payments from customers or friends on WhatsApp."
 pubDate: 2026-06-10
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/whatsapp-upi-payment-share.jpg"
 tags: ["WhatsApp Business", "Payment Link", "Tutorial"]
 ---
 

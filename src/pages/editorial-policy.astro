@@ -1,0 +1,80 @@
+---
+import TrustPage from "../components/TrustPage.astro";
+
+const title = "Editorial Policy for UPI Guides | Pro UPI QR";
+const description =
+  "How Pro UPI QR writes UPI guides: named author, official vs compatible QR, sourced financial claims, labelled affiliates, and a public corrections log.";
+const pageUrl = "https://www.proupiqr.in/editorial-policy/";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#page`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": "https://www.proupiqr.in/#website" },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Editorial policy", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<TrustPage title={title} description={description} h1="Editorial policy" eyebrow="Trust" lastUpdated="28 August 2026" schema={schema}>
+  <span slot="crumb" class="text-forest font-bold" aria-current="page">Editorial policy</span>
+
+  <section>
+    <h2>Independence</h2>
+    <p>
+      Pro UPI QR is not paid by NPCI, PhonePe, Google, Paytm, or banks to recommend their merchant products. Guides may describe those products because merchants search for them. Official app QR, KYC, dashboards, and soundboxes are labelled as official; a printable <code>upi://pay</code> standee from this site is labelled as compatible.
+    </p>
+  </section>
+
+  <section>
+    <h2>Who writes, who reviews</h2>
+    <p>
+      <a href="/authors/kunal-siyag/">Kunal Siyag</a> writes and updates the English guides. A separate <code>reviewer</code> field is used only when someone else actually reviewed the piece. We do not invent a “research team” byline.
+    </p>
+  </section>
+
+  <section>
+    <h2>What we will not claim</h2>
+    <ul>
+      <li>That a generated QR is an official PhonePe, GPay, or bank merchant kit.</li>
+      <li>That Pro UPI QR holds funds, verifies UTRs as a bank would, or files GST for you.</li>
+      <li>SVG export, WebAssembly APIs, or other product features the code does not ship.</li>
+      <li>Zero MDR on every UPI payment. Bank-to-bank UPI is 0% MDR; RuPay credit card on UPI above ₹2,000 may carry interchange.</li>
+      <li>Fabricated screenshots of PhonePe, GPay, or bank apps.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>Affiliates and tools</h2>
+    <p>
+      Acrylic standees and similar hardware may be linked with Amazon Associate URLs. Those blocks must stay labelled as shopping links. They do not change QR generation, calculator math, or error-code meanings. Free tools stay free; we do not gate a generator behind a purchase.
+    </p>
+  </section>
+
+  <section>
+    <h2>Updates</h2>
+    <p>
+      Articles that quote bank limits, MDR, TAT, or MSMED interest should carry a visible updated or last-reviewed date. Priority pages aim for a six-month review unless a circular changes sooner. Material corrections are listed on the <a href="/corrections/">corrections log</a>. How numbers are checked is in the <a href="/accuracy-policy/">accuracy policy</a>.
+    </p>
+  </section>
+
+  <section>
+    <h2>Contact the editor</h2>
+    <p>
+      Send factual disputes to <a href="mailto:feedback@proupiqr.in">feedback@proupiqr.in</a> with the URL, the sentence, and the official source. We will reply, and if the page was wrong we will change it and log the change.
+    </p>
+  </section>
+</TrustPage>

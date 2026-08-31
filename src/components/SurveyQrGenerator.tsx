@@ -23,9 +23,11 @@ export function SurveyQrGenerator() {
   const [copied, setCopied] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState<string>("");
 
-  // Construct survey config data string / payload URL
-  const surveyId = Math.random().toString(36).substring(2, 8);
-  const surveyUrl = `${typeof window !== "undefined" ? window.location.origin : "https://www.proupiqr.in"}/r/?id=survey_${surveyId}&url=${encodeURIComponent(googleReviewUrl || "https://www.proupiqr.in/")}`;
+  let surveyUrl = "https://www.proupiqr.in/";
+  try {
+    const reviewUrl = new URL(googleReviewUrl);
+    if (reviewUrl.protocol === "https:") surveyUrl = reviewUrl.toString();
+  } catch {}
 
   // Generate QR code preview
   React.useEffect(() => {
@@ -74,7 +76,7 @@ export function SurveyQrGenerator() {
                 : "bg-cream text-forest/70 hover:bg-mint"
             }`}
           >
-            🛠️ Survey Builder
+            🛠️ Review Card Builder
           </button>
           <button
             onClick={() => setActiveTab("preview")}
@@ -84,12 +86,12 @@ export function SurveyQrGenerator() {
                 : "bg-cream text-forest/70 hover:bg-mint"
             }`}
           >
-            📱 Mobile Customer Preview
+            📱 Card Preview
           </button>
         </div>
 
         <span className="text-xs font-mono font-bold text-leaf bg-mint px-3 py-1.5 rounded-full border border-leaf/20 hidden sm:inline-block">
-          ⭐ Google Review Redirect Enabled
+          ⭐ Direct Google Review QR
         </span>
       </div>
 
@@ -99,7 +101,7 @@ export function SurveyQrGenerator() {
           <div className="md:col-span-7 space-y-6">
             <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
               <h3 className="text-lg font-black text-forest border-b border-forest/10 pb-3 flex items-center gap-2">
-                <span className="text-leaf">📋</span> Business & Survey Setup
+                <span className="text-leaf">📋</span> Business & Review Setup
               </h3>
 
               <div className="space-y-3">
@@ -118,7 +120,7 @@ export function SurveyQrGenerator() {
 
                 <div>
                   <label className="block text-xs font-black uppercase text-forest/70 mb-1">
-                    Main Survey Title / Heading
+                    Feedback Prompt / Heading
                   </label>
                   <input
                     type="text"
@@ -141,7 +143,7 @@ export function SurveyQrGenerator() {
                     className="w-full px-4 py-2.5 rounded-xl border border-forest/20 text-xs font-mono text-forest outline-none focus:border-leaf"
                   />
                   <p className="text-[11px] text-forest/60 mt-1">
-                    💡 Customers giving 5-star ratings will automatically be prompted to leave a review on Google!
+                    💡 The QR opens this HTTPS review link directly. No tracking redirect is inserted.
                   </p>
                 </div>
               </div>
@@ -199,11 +201,11 @@ export function SurveyQrGenerator() {
               )}
 
               <div className="rounded-2xl bg-mint/40 p-4 border border-leaf/20 text-left space-y-2">
-                <p className="text-xs font-black text-forest">⭐ Features Included:</p>
+                  <p className="text-xs font-black text-forest">⭐ Card Features:</p>
                 <ul className="text-[11px] text-forest/80 space-y-1">
-                  <li>✓ Mobile responsive feedback form</li>
-                  <li>✓ 1-click Google Review boost</li>
-                  <li>✓ Unlimited customer responses</li>
+                  <li>✓ Direct HTTPS review link</li>
+                  <li>✓ No redirect service or tracking ID</li>
+                  <li>✓ Works with your Google Business review page</li>
                   <li>✓ Print-ready counter standee QR</li>
                 </ul>
               </div>
@@ -214,7 +216,7 @@ export function SurveyQrGenerator() {
                   onClick={copySurveyLink}
                   className="w-full py-3 rounded-2xl bg-forest text-white text-xs font-black hover:bg-leaf transition-all shadow-md"
                 >
-                  {copied ? "✓ Survey Link Copied!" : "📋 Copy Survey URL"}
+                  {copied ? "✓ Review Link Copied!" : "📋 Copy Review URL"}
                 </button>
 
                 {qrDataUrl && (
@@ -248,9 +250,9 @@ export function SurveyQrGenerator() {
               {questions.map((q) => (
                 <div key={q.id} className="bg-cream p-4 rounded-2xl border border-forest/10 space-y-2">
                   <p className="text-xs font-bold text-forest">{q.text}</p>
-                  <div className="flex gap-2 text-2xl cursor-pointer">
+                  <div className="flex gap-2 text-2xl" aria-label="Five-star feedback illustration">
                     {"⭐⭐⭐⭐⭐".split("").map((star, i) => (
-                      <span key={i} className="hover:scale-125 transition-transform">
+                      <span key={i}>
                         {star}
                       </span>
                     ))}
@@ -261,8 +263,8 @@ export function SurveyQrGenerator() {
 
             {/* Google Review Prompt Banner */}
             <div className="rounded-2xl bg-emerald-50 border border-emerald-200 p-4 text-center space-y-2">
-              <span className="text-xs font-black text-emerald-900">Loved our service?</span>
-              <p className="text-[11px] text-emerald-700">Tap below to share your 5-star review directly on Google Maps!</p>
+              <span className="text-xs font-black text-emerald-900">Tell us about your experience</span>
+              <p className="text-[11px] text-emerald-700">Tap below to share an honest review directly on Google Maps.</p>
               <a
                 href={
                   googleReviewUrl && (googleReviewUrl.startsWith("http://") || googleReviewUrl.startsWith("https://"))

@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 const title = "Privacy Policy | Pro UPI QR";
-const description = "Privacy Policy for Pro UPI QR Generator. We value your privacy and do not collect personal financial data or transactions.";
+const description = "Learn which Pro UPI QR tools stay local, what cloud QR and checkout data is stored, retention periods, providers, and deletion options.";
 ---
 
 <BaseLayout title={title} description={description}>
@@ -11,48 +11,69 @@ const description = "Privacy Policy for Pro UPI QR Generator. We value your priv
       <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Generator</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Privacy Policy</h1>
-      <p class="mt-2 text-xs text-forest/50">Last Updated: June 8, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: August 28, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">1. Introduction</h2>
+          <h2 class="text-xl font-bold text-forest">1. Scope</h2>
           <p>
-            Welcome to Pro UPI QR ("we," "our," or "us"). We are committed to protecting your personal privacy. This Privacy Policy explains how our web application operates and details our data practices. By using our website and tools, you consent to the data practices described in this policy.
+            This policy explains which Pro UPI QR features run entirely in your browser and which optional account or cloud features send limited data to our service providers. We minimize collection and do not ask for a UPI PIN, banking password, card number, or OTP.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">2. No Payment or Transaction Data Collection</h2>
+          <h2 class="text-xl font-bold text-forest">2. Local-First Tools</h2>
           <p>
-            Pro UPI QR is a local-first browser utility. <strong>We do not collect, store, process, or transmit any financial transaction data, bank accounts, UPI PINs, or transaction histories.</strong> The generation of the UPI payment QR code happens entirely client-side inside your web browser. When users scan the QR code using a mobile device, the transaction is processed directly through the secure UPI network by your selected bank application.
+            Static QR generators, printable documents, calculators, image tools, and decoders normally process their form data and uploaded files inside your browser. That content is not uploaded to Pro UPI QR. A generated <code>upi://pay</code> link opens a UPI app; Pro UPI QR does not receive your UPI PIN or process the resulting bank transaction.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">3. Local Browser Storage (Draft Persistence)</h2>
+          <h2 class="text-xl font-bold text-forest">3. Browser Storage and Optional Groq Requests</h2>
           <p>
-            For your convenience, we utilize your browser's local storage (LocalStorage) to save your form fields (Payee name, VPA, and layout selections) as drafts. This allows you to close the tab and return later without re-typing. This data remains on your local device and is never uploaded to our servers. You can clear this draft at any time by clearing your browser cache/storage.
+            Many tools save drafts in localStorage on your device. Clearing site data removes those drafts. The menu tool can optionally call Groq directly from your browser using an API key you provide; when you use that option, the key is kept in browser storage and your menu prompt is sent directly to Groq under Groq's terms. It is not routed through or stored by our server.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">4. Cookies and Analytical Tools</h2>
+          <h2 class="text-xl font-bold text-forest">4. Accounts and Dynamic QR Campaigns</h2>
           <p>
-            We may use cookies and tracking technologies (such as Google Analytics) to gather anonymous, aggregated usage statistics (e.g., page views, session duration, device types) to help us analyze traffic and improve user experience. These tools do not collect personally identifiable information. You can configure your browser settings to refuse cookies if you prefer.
+            Clerk processes account identity, authentication cookies, and session data for sign-in and dashboard features. Merchant profiles store an account identifier, merchant name, UPI ID, and secret API credential in Vercel KV. For a dynamic QR campaign, we store the account identifier, server-generated campaign ID, title, HTTPS or UPI destination, category, optional expiry date, pause state, and aggregate mobile/desktop scan counts. The destination is disclosed when someone follows that campaign's QR. Individual scan histories and precise locations are not retained by the campaign service.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">5. Advertising (Google AdSense)</h2>
+          <h2 class="text-xl font-bold text-forest">5. Checkout and Payment-Response Data</h2>
           <p>
-            We may display third-party advertisements via Google AdSense to fund our free utility. Google AdSense uses cookies (like the DoubleClick cookie) to serve ads based on users' visits to our site and other sites on the internet. Users may opt out of personalized advertising by visiting Google's Ad Settings.
+            Merchant checkout sessions store the merchant name and UPI ID, order reference, amount in paise, safe return URL, status, and any transaction reference submitted by the customer. A submitted reference is marked pending until the merchant confirms it. Checkout sessions expire after 24 hours. The separately signed payment-response API may retain order status, transaction reference, amount, and provider for 90 days in Vercel KV.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">6. Contact Us</h2>
+          <h2 class="text-xl font-bold text-forest">6. Hosting, Security, and Technical Logs</h2>
           <p>
-            If you have any questions or feedback regarding this Privacy Policy, please feel free to reach out to us at <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a>.
+            Vercel hosts the site and server functions and may process standard request information such as IP address, user agent, timestamps, and error logs under its own privacy terms. We use short-lived hashed request fingerprints for abuse rate limits; the rate-limit keys expire with their configured windows. Clerk and Groq process data only for the features described above.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">7. Retention and Deletion</h2>
+          <p>
+            Dynamic campaigns remain until their owner deletes them or we remove them for abuse. Checkout sessions expire after 24 hours, and signed payment-response records expire after 90 days. Merchant account settings remain while the account is active. To request account or merchant-profile deletion, email us from the address associated with your account. Provider security logs follow the provider's retention policy.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">8. Analytics, Advertising, and External Links</h2>
+          <p>
+            We do not run Google Analytics or Google AdSense. Vercel Speed Insights records cookie-free Core Web Vitals (LCP, INP, CLS) for the page, not form contents. Vercel Web Analytics records page views and named product events such as QR generated, PNG/PDF export, share, copy, and tool error. Those events include only an action name and a short tool slug. They never include a VPA, payee name, amount, invoice text, or uploaded file. Links to UPI apps, affiliate merchants, or other websites leave Pro UPI QR and are governed by those services.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">9. Contact and Data Requests</h2>
+          <p>
+            For privacy questions, access requests, deletion requests, or corrections, email <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a>. Include only the information needed to locate your account; never email a UPI PIN, OTP, or banking password.
           </p>
         </section>
       </div>

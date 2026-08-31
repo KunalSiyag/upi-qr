@@ -2,7 +2,7 @@
 title: "How to Link Your Credit Card to UPI for Scanning QR Codes"
 description: "A step-by-step guide to linking RuPay Credit Cards to UPI apps and using them to pay merchants by scanning QR codes."
 pubDate: 2026-06-05
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Credit Card", "RuPay", "Tutorial"]
 ---
 

@@ -1,41 +1,70 @@
 import type { APIRoute } from "astro";
-import { createRecord, safeDestination, validId } from "../../../lib/dynamicQrStore";
+import { CampaignLimitError, createRecord, listRecords, metricsForRecords, ownerCacheId, publicRecord, safeDestination, type DynamicQrCategory } from "../../../lib/dynamicQrStore";
+import { authenticatedUserId, isTrustedMutation, jsonResponse, readJsonObject, RequestBodyError, validExpiryDate } from "../../../lib/apiSecurity";
+import { consumeRateLimit, rateLimitHeaders } from "../../../lib/rateLimit";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ request }) => {
+const CATEGORIES = new Set<DynamicQrCategory>(["payment", "menu", "social", "store", "event", "other"]);
+
+export const GET: APIRoute = async ({ locals }) => {
+  const userId = authenticatedUserId(locals);
+  if (!userId) return jsonResponse({ error: "Sign in to manage dynamic QR campaigns." }, 401);
+
+  try {
+    const rateLimit = await consumeRateLimit("dynamic-list", userId, 120, 3600);
+    if (!rateLimit.allowed) return jsonResponse({ error: "Too many requests." }, 429, rateLimitHeaders(rateLimit));
+
+    const records = await listRecords(userId);
+    const recordMetrics = await metricsForRecords(records.map((record) => record.id));
+    const campaigns = records.map((record, index) => ({ ...publicRecord(record), ...recordMetrics[index] }));
+    campaigns.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+    return jsonResponse({ campaigns, cacheKey: ownerCacheId(userId) });
+  } catch {
+    return jsonResponse({ error: "Dynamic QR service is unavailable." }, 503);
+  }
+};
+
+export const POST: APIRoute = async ({ request, locals }) => {
+  const userId = authenticatedUserId(locals);
+  if (!userId) return jsonResponse({ error: "Sign in to create dynamic QR campaigns." }, 401);
+  if (!isTrustedMutation(request)) return jsonResponse({ error: "Cross-site request rejected." }, 403);
   let body: Record<string, unknown>;
   try {
-    body = await request.json();
-  } catch {
-    return new Response(JSON.stringify({ error: "JSON body required." }), { status: 400 });
-  }
-
-  if (!body || typeof body !== "object") {
-    return new Response(JSON.stringify({ error: "JSON body required." }), { status: 400 });
-  }
-
-  if (!validId(body.id as string)) {
-    return new Response(JSON.stringify({ error: "Invalid campaign ID." }), { status: 400 });
+    body = await readJsonObject(request, 8192);
+  } catch (error) {
+    if (error instanceof RequestBodyError) return jsonResponse({ error: error.message }, error.status);
+    return jsonResponse({ error: "JSON body required." }, 400);
   }
 
   const destinationUrl = safeDestination(body.destinationUrl as string);
   if (!destinationUrl) {
-    return new Response(JSON.stringify({ error: "Use an https:// URL or a upi://pay link." }), { status: 400 });
+    return jsonResponse({ error: "Use a public https:// URL or a valid upi://pay link." }, 400);
+  }
+
+  const category = typeof body.category === "string" && CATEGORIES.has(body.category as DynamicQrCategory)
+    ? body.category as DynamicQrCategory
+    : undefined;
+  if (body.category !== undefined && category === undefined) {
+    return jsonResponse({ error: "Invalid campaign category." }, 400);
+  }
+  const expiryDate = body.expiryDate === undefined || body.expiryDate === "" ? undefined : body.expiryDate;
+  if (expiryDate !== undefined && !validExpiryDate(expiryDate)) {
+    return jsonResponse({ error: "Expiry date must be a future YYYY-MM-DD date." }, 400);
   }
 
   try {
-    const record = await createRecord({
-      id: body.id as string,
+    const rateLimit = await consumeRateLimit("dynamic-create", userId, 20, 3600);
+    if (!rateLimit.allowed) return jsonResponse({ error: "Campaign creation rate limit exceeded." }, 429, rateLimitHeaders(rateLimit));
+    const record = await createRecord(userId, {
       title: typeof body.title === "string" ? body.title.slice(0, 120) : "Dynamic QR Campaign",
       destinationUrl,
-      category: typeof body.category === "string" ? body.category.slice(0, 32) : undefined,
-      expiryDate: typeof body.expiryDate === "string" ? body.expiryDate.slice(0, 32) : undefined,
-      isPaused: false,
+      category,
+      expiryDate: expiryDate as string | undefined,
     });
-    return new Response(JSON.stringify({ campaign: record }), { status: 201 });
+    return jsonResponse({ campaign: publicRecord(record) }, 201);
   } catch (error) {
-    const isConflict = String(error).includes("already exists");
-    return new Response(JSON.stringify({ error: "Could not create dynamic QR campaign." }), { status: isConflict ? 409 : 503 });
+    if (error instanceof CampaignLimitError) return jsonResponse({ error: error.message }, 409);
+    return jsonResponse({ error: "Could not create dynamic QR campaign." }, 503);
   }
 };

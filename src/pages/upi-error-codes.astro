@@ -3,51 +3,343 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { UpiErrorCodeResolver } from "../components/UpiErrorCodeResolver";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
+import {
+  ERROR_CODE_REVIEWED_ON,
+  ERROR_CODE_SOURCES,
+  UPI_ERROR_CODES,
+} from "../data/upiErrorCodes";
+import ResponsiveImage from "../components/ResponsiveImage.astro";
+import { siteImage } from "../data/siteImages";
 
-const title = "NPCI UPI Error Code Resolver & Refund Timelines | Pro UPI QR";
-const description = "Search and troubleshoot NPCI UPI error codes (U16, U30, U28, Z5, U14). Understand why transactions fail, check auto-refund timelines, and get instant resolution steps.";
+const title = "NPCI Returned Error? UPI Code Resolver | Pro UPI QR";
+const description =
+  "NPCI returned error on GPay, PhonePe or BHIM? Decode U16, Z9, ZM and 30+ UPI codes, see bank vs NPCI vs app, and check RBI refund TAT.";
+
+const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const faqs = [
+  {
+    question: "What does “NPCI returned error” mean?",
+    answer:
+      "It is a wrapper message, not a single failure. The NPCI switch or a participating bank declined the request. Open the transaction details, note the exact reason code (often U16 for NPCI risk), copy the 12-digit UTR, and look that code up before you retry.",
+  },
+  {
+    question: "What does UPI error code U16 mean?",
+    answer:
+      "U16 is an NPCI transaction-risk (TXNRISK) decline. PhonePe documents it as a security block. It is not “bank server down”. Wait 30–60 minutes, avoid repeated retries to the same payee, and call the issuing bank if every merchant fails.",
+  },
+  {
+    question: "What does UPI error code Z9 or ZM mean?",
+    answer:
+      "Z9 means insufficient funds in the payer account. ZM means the UPI PIN (MPIN) was wrong. Neither typically debits the account. Z6 follows if PIN tries are exceeded.",
+  },
+  {
+    question: "Money was deducted but the merchant was not paid. How long is the refund?",
+    answer:
+      "RBI circular DPSS.CO.PD No.629/02.01.014/2019-20 requires auto-reversal by T+1 working day for UPI fund transfers where the beneficiary is not credited, and by T+5 working days where a merchant payment was debited but confirmation never reached the merchant. Compensation is ₹100 per day after those deadlines. Many failures reverse in minutes to a few hours; do not pay a second time while the first UTR is pending.",
+  },
+  {
+    question: "Who do I complain to — the app, the bank, or NPCI?",
+    answer:
+      "Start in the UPI app with the 12-digit UTR (Raise issue / Check status). If the TAT lapses, use bank customer care. NPCI’s UPI helpdesk is 1800-120-1740. After 30 days without resolution, file on the RBI Integrated Ombudsman portal at cms.rbi.org.in.",
+  },
+  {
+    question: "Is a green screenshot proof of payment?",
+    answer:
+      "No. Confirm the credit in your merchant ledger, bank SMS, or soundbox. Screenshot-spoof apps mimic success screens. Match the UTR, not the colour of the tile.",
+  },
+];
+
+const pageUrl = "https://www.proupiqr.in/upi-error-codes/";
 
 const schema = {
   "@context": "https://schema.org",
-  "@type": "FAQPage",
-  "mainEntity": [
+  "@graph": [
     {
-      "@type": "Question",
-      "name": "What does UPI error code U16 mean?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Error U16 means your issuing or beneficiary bank server is temporarily down or undergoing scheduled maintenance. If money was deducted, it will be automatically refunded within 24 hours."
-      }
+      "@type": "WebApplication",
+      "@id": pageUrl + "#webapp",
+      name: "NPCI UPI Error Code Resolver",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      dateModified: ERROR_CODE_REVIEWED_ON,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
     },
     {
-      "@type": "Question",
-      "name": "What does UPI error code U30 mean?",
-      "acceptedAnswer": {
-        "@type": "Answer",
-        "text": "Error U30 indicates you have exceeded your bank's daily transfer cap (usually ₹1,00,000) or maximum daily transaction limit (10-20 transactions per day)."
-      }
-    }
-  ]
+      "@type": "FAQPage",
+      "@id": pageUrl + "#faq",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+    {
+      "@type": "HowTo",
+      "@id": pageUrl + "#howto",
+      name: "How to resolve an NPCI returned error on UPI",
+      totalTime: "PT10M",
+      step: [
+        {
+          "@type": "HowToStep",
+          position: 1,
+          name: "Copy the UTR and reason code",
+          text: "Open the failed transaction in GPay, PhonePe, Paytm, BHIM, or the bank app. Note the 12-digit UTR and the exact code such as U16, Z9, or ZM.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 2,
+          name: "Check whether money left the account",
+          text: "Read the bank SMS or passbook, not only the app tile. If a debit is pending, do not retry the same bill.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 3,
+          name: "Look up the code",
+          text: "Search the code in this resolver to see whether the decline came from NPCI, the payer bank, the payee bank, the app, or the customer.",
+        },
+        {
+          "@type": "HowToStep",
+          position: 4,
+          name: "Raise a UDIR dispute if TAT lapses",
+          text: "Use in-app Raise issue first. Escalate to the bank, then NPCI 1800-120-1740, then cms.rbi.org.in after 30 days.",
+        },
+      ],
+    },
+  ],
 };
 ---
 
-<BaseLayout title={title} description={description} schema={schema}>
+<BaseLayout title={title} description={description} schema={schema} image={siteImage("upi-payment-failed-phone").src}>
   <main class="px-4 py-8 md:px-6 lg:px-8">
     <div class="mx-auto max-w-6xl space-y-8">
-      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+      <header class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
         <a href="/" class="text-xs font-bold text-leaf hover:underline">&larr; Back to Main QR Generator</a>
         <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
-          NPCI & Bank Protocol Reference
+          NPCI reason codes &amp; RBI refund TAT
         </div>
-        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">NPCI UPI Error Code Resolver</h1>
-        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
-          Troubleshoot failed transactions, understand NPCI response codes, and verify RBI-mandated auto-refund timelines.
+        <h1 class="text-3xl font-black tracking-tight text-forest text-pretty sm:text-5xl">
+          NPCI returned error? Decode the UPI code first
+        </h1>
+        <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/80">
+          “NPCI returned error” on Google Pay, PhonePe, Paytm, or BHIM is a wrapper, not a diagnosis. The NPCI switch
+          or a participating bank declined the request. Open the failed transaction, copy the exact code (U16, Z9, ZM,
+          U30…) and the 12-digit UTR, then search below. Do not retry a pending debit.
         </p>
-      </div>
+        <p class="text-xs font-semibold text-forest/55">
+          Last reviewed {reviewedLabel} · {UPI_ERROR_CODES.length} codes · Consumer VPAs; PSP labels can vary by app version
+        </p>
+        <ResponsiveImage src={siteImage("upi-payment-failed-phone").src} loading="eager" />
+      </header>
 
-      <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <UpiErrorCodeResolver client:load />
-      </div>
+      <section class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <h2 id="resolver" class="scroll-mt-28 mb-5 text-2xl font-black text-forest">Interactive code resolver</h2>
+        <UpiErrorCodeResolver client:visible />
+      </section>
+
+      <section class="rounded-[2rem] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
+        <h2 id="debit-decision-tree" class="scroll-mt-28 text-2xl font-black text-forest">Was money deducted?</h2>
+        <p class="text-sm leading-relaxed text-forest/75">
+          Trust the bank SMS or passbook over the coloured tile in the app. Pending, Failed, and Success can disagree
+          across the payer app, NPCI, and the merchant ledger for several minutes.
+        </p>
+        <ol class="grid gap-4 md:grid-cols-3 text-sm">
+          <li class="rounded-2xl bg-white/90 border border-forest/10 p-5 space-y-2">
+            <span class="text-xs font-black uppercase tracking-wider text-leaf">1. No debit SMS</span>
+            <p class="font-bold text-forest">Failed without moving money</p>
+            <p class="text-forest/75 leading-relaxed">
+              Look up the code, fix the cause (PIN, balance, limit, VPA), then retry once. Screenshot fraud still
+              happens — merchants should not release goods on a screen colour.
+            </p>
+          </li>
+          <li class="rounded-2xl bg-white/90 border border-forest/10 p-5 space-y-2">
+            <span class="text-xs font-black uppercase tracking-wider text-leaf">2. Debit SMS, merchant unpaid</span>
+            <p class="font-bold text-forest">Do not pay again</p>
+            <p class="text-forest/75 leading-relaxed">
+              Copy the UTR. Wait for auto-reversal or a late credit. Raise an in-app dispute only after you have the
+              UTR. A second payment for the same bill creates two live requests.
+            </p>
+          </li>
+          <li class="rounded-2xl bg-white/90 border border-forest/10 p-5 space-y-2">
+            <span class="text-xs font-black uppercase tracking-wider text-leaf">3. Debit SMS, merchant credited</span>
+            <p class="font-bold text-forest">The payment succeeded</p>
+            <p class="text-forest/75 leading-relaxed">
+              The app tile can lag. Match UTR to UTR. If the customer still sees Failed, they should refresh history
+              rather than refund-chase a settled credit.
+            </p>
+          </li>
+        </ol>
+      </section>
+
+      <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
+        <h2 id="bank-vs-npci-vs-app" class="scroll-mt-28 text-2xl font-black text-forest">Bank vs NPCI vs app — who actually failed?</h2>
+        <p class="text-sm leading-relaxed text-forest/75">
+          Every UPI payment hops through the payer app (TPAP), the payer’s PSP bank, the NPCI switch, the payee’s PSP,
+          and the payee bank. The reason code tells you which hop declined. Fixing the wrong hop wastes the retry.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[36rem] text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-mint text-forest">
+                <th class="border border-forest/10 px-3 py-2 font-black">If the code origin is</th>
+                <th class="border border-forest/10 px-3 py-2 font-black">Typical codes</th>
+                <th class="border border-forest/10 px-3 py-2 font-black">Who can fix it</th>
+              </tr>
+            </thead>
+            <tbody class="text-forest/80">
+              <tr>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">Customer / PIN</td>
+                <td class="border border-forest/10 px-3 py-2" translate="no">ZM, Z6, AM, ZA, Z9</td>
+                <td class="border border-forest/10 px-3 py-2">Payer: correct PIN, add funds, or approve the collect.</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">Payer's bank</td>
+                <td class="border border-forest/10 px-3 py-2" translate="no">U28, U30, U90, UT, XY, XB, YE, ZU, K1</td>
+                <td class="border border-forest/10 px-3 py-2">Wait out an outage, raise a limit, or clear a freeze with that bank.</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">NPCI switch</td>
+                <td class="border border-forest/10 px-3 py-2" translate="no">U16 (TXNRISK)</td>
+                <td class="border border-forest/10 px-3 py-2">Stop rapid retries. If it is account-wide, the issuing bank must review risk flags.</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">UPI app / PSP</td>
+                <td class="border border-forest/10 px-3 py-2" translate="no">U66, U69, U80, ZE</td>
+                <td class="border border-forest/10 px-3 py-2">Re-bind the device, send a fresh request, or try a second app on the same account.</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">Payee's bank</td>
+                <td class="border border-forest/10 px-3 py-2" translate="no">BT, Y1, YF, ZY, XI</td>
+                <td class="border border-forest/10 px-3 py-2">Merchant problem. Take the QR down until the settlement account can receive credits.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="rounded-[2rem] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
+        <h2 id="refund-timelines" class="scroll-mt-28 text-2xl font-black text-forest">RBI auto-reversal timelines</h2>
+        <p class="text-sm leading-relaxed text-forest/75">
+          NPCI often reverses a failed debit in minutes. The legally binding outer bound is the RBI harmonised TAT
+          circular of 20 September 2019. Compensation of ₹100 per day applies after the deadline without a separate
+          complaint for that delay.
+        </p>
+        <div class="overflow-x-auto">
+          <table class="w-full min-w-[32rem] text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-mint text-forest">
+                <th class="border border-forest/10 px-3 py-2 font-black">Situation</th>
+                <th class="border border-forest/10 px-3 py-2 font-black">Auto-reversal by</th>
+                <th class="border border-forest/10 px-3 py-2 font-black">Delay compensation</th>
+              </tr>
+            </thead>
+            <tbody class="text-forest/80">
+              <tr>
+                <td class="border border-forest/10 px-3 py-2">UPI fund transfer: account debited, beneficiary not credited</td>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">T+1 working day</td>
+                <td class="border border-forest/10 px-3 py-2">₹100 / day after T+1</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2">UPI merchant payment: account debited, confirmation not received at merchant</td>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">T+5 working days</td>
+                <td class="border border-forest/10 px-3 py-2">₹100 / day after T+5</td>
+              </tr>
+              <tr>
+                <td class="border border-forest/10 px-3 py-2">Successful payment to the wrong VPA</td>
+                <td class="border border-forest/10 px-3 py-2 font-semibold">Not auto-reversed</td>
+                <td class="border border-forest/10 px-3 py-2">Raise a dispute immediately; recovery needs the beneficiary bank / consent</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="text-xs text-forest/60 leading-relaxed">
+          Source:{" "}
+          <a class="font-bold text-leaf underline" href="https://www.rbi.org.in/Scripts/NotificationUser.aspx?Id=11693&Mode=0">
+            RBI DPSS.CO.PD No.629/02.01.014/2019-20
+          </a>
+          . “T” is the transaction date. UPI runs 24×7; working-day counting still follows the circular.
+        </p>
+      </section>
+
+      <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
+        <h2 id="utr-and-escalation" class="scroll-mt-28 text-2xl font-black text-forest">UTR, UDIR, and who to call</h2>
+        <p class="text-sm leading-relaxed text-forest/75">
+          The Unique Transaction Reference (UTR) is a 12-digit id on every UPI attempt. Some apps label it UPI
+          transaction ID or RRN. You cannot file a useful complaint without it.
+        </p>
+        <ol class="space-y-3 text-sm text-forest/80 list-decimal pl-5">
+          <li>
+            <strong class="text-forest">In the app (first):</strong> transaction → Raise issue / Check status / Help.
+            This opens NPCI’s Unified Dispute and Issue Resolution (UDIR) path through the TPAP.
+          </li>
+          <li>
+            <strong class="text-forest">Issuing bank:</strong> quote the UTR, amount, date-time, payer VPA, and payee VPA.
+            Ask whether the debit is still held, reversed, or posted.
+          </li>
+          <li>
+            <strong class="text-forest">NPCI:</strong> UPI helpdesk 1800-120-1740. Use this when the app and bank bounce
+            you between each other.
+          </li>
+          <li>
+            <strong class="text-forest">RBI Integrated Ombudsman:</strong>{" "}
+            <a class="font-bold text-leaf underline" href="https://cms.rbi.org.in">cms.rbi.org.in</a>
+            {" "}if the entity does not resolve the complaint within 30 days (or you reject the reply). Keep screenshots
+            of the UTR and every ticket number.
+          </li>
+        </ol>
+        <p class="text-sm leading-relaxed text-forest/75">
+          Related:{" "}
+          <a class="font-bold text-leaf underline" href="/blog/how-to-resolve-upi-pending-transaction-issues/">
+            pending transaction walkthrough
+          </a>
+          {" "}·{" "}
+          <a class="font-bold text-leaf underline" href="/upi-limits/">
+            bank-wise UPI limits
+          </a>
+          {" "}·{" "}
+          <a class="font-bold text-leaf underline" href="/upi-qr-decoder/">
+            decode a printed QR before you trust it
+          </a>.
+        </p>
+      </section>
+
+      <section class="rounded-[2rem] bg-mint/30 border border-leaf/10 p-6 md:p-8 space-y-3">
+        <h2 id="sources" class="scroll-mt-28 text-xl font-black text-forest">Sources &amp; method</h2>
+        <p class="text-sm leading-relaxed text-forest/75">
+          Code meanings follow PSP documentation that publishes NPCI reason codes. Where two tables disagree on a
+          letter (for example U28 as “PSP not available” vs “bank technical issue”), both labels are shown on the card.
+          Older blog posts that mapped U16 to “bank down”, U30 to “daily limit”, U14 to “wrong PIN”, or U66 to “VPA
+          missing” were incorrect against these tables and have been replaced.
+        </p>
+        <ul class="text-sm space-y-1">
+          {ERROR_CODE_SOURCES.map((source) => (
+            <li>
+              <a class="font-bold text-leaf underline" href={source.href}>{source.label}</a>
+            </li>
+          ))}
+        </ul>
+        <p class="text-xs text-forest/55">
+          App copy changes without notice. If your bank shows a code that is not here, treat the bank’s own description
+          as authoritative and keep the UTR.
+        </p>
+      </section>
+
+      <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+        <h2 id="faq" class="scroll-mt-28 text-2xl font-black text-forest">Frequently asked questions</h2>
+        <dl class="space-y-4">
+          {faqs.map((faq) => (
+            <div class="rounded-2xl border border-forest/10 bg-[#fffdf6] p-5">
+              <dt class="font-black text-forest">{faq.question}</dt>
+              <dd class="mt-2 text-sm leading-relaxed text-forest/75">{faq.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </section>
 
       <AffiliateProducts />
       <InternalLinkHub />

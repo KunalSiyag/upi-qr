@@ -1,0 +1,94 @@
+---
+import { resolveSiteImage, stemFromSrc } from "../data/siteImages";
+
+interface Props {
+  src: string;
+  alt?: string;
+  caption?: string;
+  title?: string;
+  width?: number;
+  height?: number;
+  loading?: "lazy" | "eager";
+  sizes?: string;
+  class?: string;
+  figure?: boolean;
+}
+
+const {
+  src,
+  loading = "lazy",
+  sizes = "(max-width: 768px) 100vw, 800px",
+  figure = true,
+} = Astro.props;
+
+const catalog = resolveSiteImage(src);
+const alt = Astro.props.alt ?? catalog?.alt ?? "";
+const caption = Astro.props.caption ?? catalog?.caption;
+const title = Astro.props.title ?? catalog?.title;
+const width = Astro.props.width ?? catalog?.width ?? 1200;
+const height = Astro.props.height ?? catalog?.height ?? 630;
+const stem = stemFromSrc(src);
+const hasVariants = Boolean(catalog);
+const className = Astro.props.class ?? "h-auto w-full rounded-[1.25rem] border border-forest/10 object-cover";
+---
+
+{
+  figure ? (
+    <figure class="my-6">
+      <picture>
+        {hasVariants && (
+          <source
+            type="image/avif"
+            srcset={`${stem}-480.avif 480w, ${stem}-800.avif 800w, ${stem}.avif 1200w`}
+            sizes={sizes}
+          />
+        )}
+        {hasVariants && (
+          <source
+            type="image/webp"
+            srcset={`${stem}-480.webp 480w, ${stem}-800.webp 800w, ${stem}.webp 1200w`}
+            sizes={sizes}
+          />
+        )}
+        <img
+          src={src}
+          alt={alt}
+          title={title}
+          width={width}
+          height={height}
+          loading={loading}
+          decoding={loading === "eager" ? "sync" : "async"}
+          class={className}
+        />
+      </picture>
+      {caption && <figcaption class="mx-auto mt-3 max-w-xl text-center text-sm leading-6 text-forest/65">{caption}</figcaption>}
+    </figure>
+  ) : (
+    <picture>
+      {hasVariants && (
+        <source
+          type="image/avif"
+          srcset={`${stem}-480.avif 480w, ${stem}-800.avif 800w, ${stem}.avif 1200w`}
+          sizes={sizes}
+        />
+      )}
+      {hasVariants && (
+        <source
+          type="image/webp"
+          srcset={`${stem}-480.webp 480w, ${stem}-800.webp 800w, ${stem}.webp 1200w`}
+          sizes={sizes}
+        />
+      )}
+      <img
+        src={src}
+        alt={alt}
+        title={title}
+        width={width}
+        height={height}
+        loading={loading}
+        decoding={loading === "eager" ? "sync" : "async"}
+        class={className}
+      />
+    </picture>
+  )
+}

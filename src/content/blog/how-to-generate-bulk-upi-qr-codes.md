@@ -2,7 +2,7 @@
 title: "How to Generate Bulk UPI QR Codes for Invoices"
 description: "A technical guide showing how developers and businesses can generate bulk UPI QR codes programmatically for utility bills and invoice collections."
 pubDate: 2026-05-26
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Bulk QR", "Developer", "Tutorial"]
 ---
 

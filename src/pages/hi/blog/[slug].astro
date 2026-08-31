@@ -1,73 +1,75 @@
 ---
 import { getCollection, render } from "astro:content";
 import BaseLayout from "../../../layouts/BaseLayout.astro";
+import { formatHiIn, personSchema, resolveAuthor } from "../../../data/authors";
+import ResponsiveImage from "../../../components/ResponsiveImage.astro";
+import { DEFAULT_OG_IMAGE, resolveSiteImage } from "../../../data/siteImages";
 
 export async function getStaticPaths() {
-  const [englishPosts, hindiPosts] = await Promise.all([getCollection("blog"), getCollection("blogHi")]);
-  const hindiBySlug = new Map(hindiPosts.map((p) => [p.id.replace(/\.mdx?$/, ""), p]));
-  return englishPosts.map((enPost) => {
-    const slug = enPost.id.replace(/\.mdx?$/, "");
-    return {
-      params: { slug },
-      props: { hindiPost: hindiBySlug.get(slug) ?? null }
-    };
-  });
+  const hindiPosts = await getCollection("blogHi");
+  return hindiPosts.map((hindiPost) => ({
+    params: { slug: hindiPost.id.replace(/\.mdx?$/, "") },
+    props: { hindiPost }
+  }));
 }
 
 const { hindiPost } = Astro.props;
-const slug = Astro.params.slug;
+const slug = hindiPost.id.replace(/\.mdx?$/, "");
 const target = `/blog/${slug}/`;
 const enUrl = new URL(target, Astro.site).toString();
-
-let Content: any = null;
-let hiUrl = "";
-let alternates: { lang: string; url: string }[] = [];
-let schema: Record<string, unknown> | undefined;
-let formattedDate = "";
-
-if (hindiPost) {
-  const rendered = await render(hindiPost);
-  Content = rendered.Content;
-  hiUrl = new URL(`/hi/blog/${slug}/`, Astro.site).toString();
-  alternates = [
-    { lang: "hi", url: hiUrl },
-    { lang: "en", url: enUrl },
-    { lang: "x-default", url: enUrl }
-  ];
-  const postImageUrl = new URL("/images/og-image.png", Astro.site).toString();
-  schema = {
-    "@context": "https://schema.org",
-    "@graph": [
-      {
-        "@type": "BreadcrumbList",
-        itemListElement: [
-          { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/hi/" },
-          { "@type": "ListItem", position: 2, name: "ब्लॉग", item: "https://www.proupiqr.in/hi/blog/" },
-          { "@type": "ListItem", position: 3, name: hindiPost.data.title, item: hiUrl }
-        ]
+const { Content } = await render(hindiPost);
+const hiUrl = new URL(`/hi/blog/${slug}/`, Astro.site).toString();
+const alternates = [
+  { lang: "hi", url: hiUrl },
+  { lang: "en", url: enUrl },
+  { lang: "x-default", url: enUrl }
+];
+const englishPosts = await getCollection("blog");
+const englishMatch = englishPosts.find((item) => item.id.replace(/\.mdx?$/, "") === slug);
+const imagePath = hindiPost.data.image ?? englishMatch?.data.image ?? DEFAULT_OG_IMAGE.src;
+const catalogImage = resolveSiteImage(imagePath);
+const postImageUrl = imagePath.startsWith("http")
+  ? imagePath
+  : new URL(imagePath, Astro.site).toString();
+const author = resolveAuthor(hindiPost.data.author);
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/hi/" },
+        { "@type": "ListItem", position: 2, name: "ब्लॉग", item: "https://www.proupiqr.in/hi/blog/" },
+        { "@type": "ListItem", position: 3, name: hindiPost.data.title, item: hiUrl }
+      ]
+    },
+    {
+      "@type": "BlogPosting",
+      headline: hindiPost.data.title,
+      description: hindiPost.data.description,
+      inLanguage: "hi-IN",
+      datePublished: hindiPost.data.pubDate.toISOString(),
+      dateModified: (hindiPost.data.updatedDate ?? hindiPost.data.pubDate).toISOString(),
+      image: {
+        "@type": "ImageObject",
+        url: postImageUrl,
+        width: catalogImage?.width ?? 1200,
+        height: catalogImage?.height ?? 630,
+        caption: catalogImage?.caption ?? hindiPost.data.title,
+        encodingFormat: catalogImage?.mime ?? "image/jpeg",
       },
-      {
-        "@type": "BlogPosting",
-        headline: hindiPost.data.title,
-        description: hindiPost.data.description,
-        inLanguage: "hi-IN",
-        datePublished: hindiPost.data.pubDate.toISOString(),
-        dateModified: (hindiPost.data.updatedDate ?? hindiPost.data.pubDate).toISOString(),
-        image: postImageUrl,
-        author: { "@type": "Organization", name: hindiPost.data.author },
-        publisher: { "@type": "Organization", name: "Pro UPI QR", url: "https://www.proupiqr.in" },
-        mainEntityOfPage: hiUrl
-      }
-    ]
-  };
-  formattedDate = new Intl.DateTimeFormat("hi-IN", { day: "numeric", month: "long", year: "numeric" }).format(hindiPost.data.pubDate);
-}
+      author: personSchema(author),
+      publisher: { "@id": "https://www.proupiqr.in/#organization" },
+      mainEntityOfPage: hiUrl
+    }
+  ]
+};
+const formattedDate = formatHiIn(hindiPost.data.pubDate);
 ---
 
-{hindiPost ? (
-  <BaseLayout title={hindiPost.data.title} description={hindiPost.data.description} canonical={hiUrl} alternates={alternates} schema={schema}>
-    <main class="px-4 py-12 md:px-6 lg:px-8">
-      <article class="mx-auto max-w-3xl">
+<BaseLayout title={hindiPost.data.title} description={hindiPost.data.description} canonical={hiUrl} alternates={alternates} schema={schema} image={imagePath}>
+  <main class="px-4 py-12 md:px-6 lg:px-8">
+    <article class="mx-auto max-w-3xl">
         <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
           <a href="/hi/" class="hover:text-leaf transition-colors">होम</a>
           <span>/</span>
@@ -80,11 +82,21 @@ if (hindiPost) {
         <h1 class="mt-4 text-3xl font-black leading-tight tracking-tight text-forest md:text-5xl">{hindiPost.data.title}</h1>
         <p class="mt-4 text-lg leading-8 text-forest/75">{hindiPost.data.description}</p>
         <div class="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-forest/10 pb-6 text-xs font-semibold text-forest/55">
-          <span>{hindiPost.data.author}</span>
+          <a href={author.path} class="text-leaf hover:underline">{author.hindiName}</a>
           <span>·</span>
           <time datetime={hindiPost.data.pubDate.toISOString()}>{formattedDate}</time>
+          {hindiPost.data.updatedDate && (
+            <>
+              <span>·</span>
+              <time datetime={hindiPost.data.updatedDate.toISOString()}>
+                अपडेट {formatHiIn(hindiPost.data.updatedDate)}
+              </time>
+            </>
+          )}
           <a href={target} class="ml-auto rounded-full bg-mint px-3 py-1.5 text-[11px] font-bold text-forest hover:bg-leaf hover:text-white transition">Read in English →</a>
         </div>
+
+        {imagePath && <ResponsiveImage src={imagePath} loading="eager" />}
 
         <div class="prose-hi mt-8 space-y-5 text-base leading-8 text-forest/85 [&_h2]:mt-10 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:text-forest [&_h3]:mt-7 [&_h3]:text-lg [&_h3]:font-black [&_h3]:text-forest [&_ul]:space-y-2 [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:space-y-2 [&_ol]:pl-5 [&_table]:w-full [&_table]:overflow-hidden [&_table]:rounded-xl [&_table]:border [&_table]:border-forest/10 [&_table]:text-sm [&_th]:bg-mint [&_th]:p-3 [&_th]:text-left [&_td]:border-t [&_td]:border-forest/10 [&_td]:p-3 [&_blockquote]:my-5 [&_blockquote]:rounded-r-2xl [&_blockquote]:border-l-4 [&_blockquote]:border-leaf/50 [&_blockquote]:bg-cream [&_blockquote]:p-4 [&_a]:font-bold [&_a]:text-leaf [&_a:hover]:underline [&_strong]:text-forest">
           <Content />
@@ -98,20 +110,6 @@ if (hindiPost) {
             <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">सभी टूल्स देखें</a>
           </div>
         </section>
-      </article>
-    </main>
-  </BaseLayout>
-) : (
-  <html lang="en">
-    <head>
-      <meta charset="utf-8" />
-      <meta http-equiv="refresh" content={`0;url=${target}`} />
-      <link rel="canonical" href={enUrl} />
-      <meta name="robots" content="noindex, follow" />
-      <title>Redirecting to article…</title>
-    </head>
-    <body>
-      <p><a href={target}>Continue to article &rarr;</a></p>
-    </body>
-  </html>
-)}
+    </article>
+  </main>
+</BaseLayout>

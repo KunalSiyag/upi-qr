@@ -2,7 +2,8 @@
 title: "Paytm vs PhonePe vs Google Pay: Best QR for Your Shop"
 description: "Compare Paytm, PhonePe, and Google Pay business QR codes on charges, limits, and soundbox costs. Learn why a universal QR might be your best choice."
 pubDate: 2026-06-23
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/phonepe-gpay-paytm-compare.png"
 tags: ["Comparison", "Merchant Tips", "Reference"]
 ---
 
@@ -16,7 +17,7 @@ In this comprehensive guide, we compare Paytm, PhonePe, and Google Pay merchant 
 
 If you are looking for a quick decision:
 * **Interoperability:** Every standard UPI QR code is fully interoperable. A single QR can accept payments from GPay, PhonePe, Paytm, BHIM, and 80+ banking apps.
-* **Transaction Fees:** UPI transactions from a bank account or pre-paid wallet (up to ₹2,000) have **0% MDR (Zero fees)**.
+* **Transaction Fees:** Bank-to-bank UPI transactions have **0% MDR (Zero fees)** at any amount. RuPay credit card on UPI has 0% MDR under ₹2,000; interchange applies above ₹2,000 per NPCI circulars.
 * **Best for Storefront Visibility:** Google Pay is excellent for local SEO, placing your shop on Google Maps.
 * **Best for Audio Alerts:** PhonePe and Paytm are neck-and-neck with soundbox offerings, though PhonePe features lower rental schemes in many regions.
 
@@ -91,7 +92,7 @@ If you prefer brand-aligned color schemes, you can use our free preset generator
 ## Frequently Asked Questions
 
 ### Q1. Is there any commission or charge on UPI QR code payments?
-No. For standard UPI transactions funded by bank accounts or UPI wallets, there is 0% Merchant Discount Rate (MDR). Both you and the customer pay ₹0 fees. For Rupay credit card payments via UPI, MDR is 0% for transactions up to ₹2,000.
+No. For standard UPI transactions funded by bank accounts, there is 0% Merchant Discount Rate (MDR). Both you and the customer pay ₹0 fees. For RuPay credit card payments via UPI, MDR is 0% for transactions up to ₹2,000; interchange applies above ₹2,000 per NPCI guidelines.
 
 ### Q2. Can a customer scan a PhonePe QR using the GPay app?
 Yes, absolutely. Since all these apps comply with the NPCI interoperability framework, a PhonePe merchant QR can be scanned by Google Pay, Paytm, BHIM, or any bank UPI app.

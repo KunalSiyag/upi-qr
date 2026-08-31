@@ -1,0 +1,40 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  width?: number;
+  height?: number;
+  loading?: "lazy" | "eager";
+  fetchpriority?: "high" | "low" | "auto";
+  class?: string;
+  sizes?: string;
+}
+
+const {
+  src,
+  alt,
+  width = 340,
+  height = 240,
+  loading = "lazy",
+  fetchpriority = "auto",
+  sizes = "(max-width: 768px) 80vw, 340px",
+} = Astro.props;
+
+const stem = src.replace(/\.[^.]+$/, "");
+const className = Astro.props.class ?? "h-auto w-full object-cover object-top";
+---
+
+<picture>
+  <source type="image/avif" srcset={`${stem}-480.avif 480w`} sizes={sizes} />
+  <source type="image/webp" srcset={`${stem}-480.webp 480w`} sizes={sizes} />
+  <img
+    src={src}
+    alt={alt}
+    width={width}
+    height={height}
+    loading={loading}
+    decoding={loading === "eager" ? "sync" : "async"}
+    fetchpriority={fetchpriority}
+    class={className}
+  />
+</picture>

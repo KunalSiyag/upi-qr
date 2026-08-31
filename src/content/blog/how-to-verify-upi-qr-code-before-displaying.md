@@ -2,7 +2,8 @@
 title: "How to Verify a UPI QR Code Before Displaying at Your Shop"
 description: "A 5-minute merchant checklist to confirm your UPI QR payee name, VPA, and print quality before customers start paying."
 pubDate: 2026-06-15
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/scan-distance-chart.png"
 tags: ["Security", "Merchant Tips", "Tutorial"]
 ---
 

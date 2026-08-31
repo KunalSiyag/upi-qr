@@ -1,4 +1,7 @@
-export type SupportedToolLanguage = "hi" | "ta" | "te" | "mr";
+import { INTERNATIONAL_TOOL_COPY, type InternationalLang } from "./internationalTranslations";
+
+export type RegionalToolLanguage = "hi" | "ta" | "te" | "mr";
+export type SupportedToolLanguage = RegionalToolLanguage | InternationalLang;
 
 export type LocalizedToolCopy = {
   name: string;
@@ -28,8 +31,10 @@ function tool(
   slug: string,
   name: string,
   component: LocalizedTool["component"],
-  copy: Record<SupportedToolLanguage, LocalizedToolCopy>
+  regionalCopy: Record<RegionalToolLanguage, LocalizedToolCopy>
 ): LocalizedTool {
+  const intlCopy = INTERNATIONAL_TOOL_COPY[slug];
+  const copy = { ...regionalCopy, ...intlCopy } as Record<SupportedToolLanguage, LocalizedToolCopy>;
   return { slug, name, component, copy };
 }
 

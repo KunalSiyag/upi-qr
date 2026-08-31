@@ -1,0 +1,78 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { AUTHORS } from "../../data/authors";
+
+const title = "Authors and Reviewers | Pro UPI QR";
+const description =
+  "Who writes Pro UPI QR guides: Kunal Siyag, founder. Named bylines, review dates, and a public corrections log — not an unnamed research team.";
+const pageUrl = "https://www.proupiqr.in/authors/";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      mainEntity: {
+        "@type": "ItemList",
+        numberOfItems: AUTHORS.length,
+        itemListElement: AUTHORS.map((author, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: author.name,
+          url: `https://www.proupiqr.in${author.path}`,
+        })),
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Authors", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Authors</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">People</p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Who writes these guides</h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
+          Pro UPI QR is a one-founder site. Bylines name a person. If that changes, this page will list the new author instead of hiding behind “the team.”
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {AUTHORS.map((author) => (
+          <a
+            href={author.path}
+            class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-6 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40"
+          >
+            <div class="flex h-14 w-14 items-center justify-center rounded-full bg-forest text-lg font-black text-white">
+              {author.initials}
+            </div>
+            <h2 class="mt-4 text-xl font-black text-forest group-hover:text-leaf">{author.name}</h2>
+            <p class="mt-1 text-xs font-bold uppercase tracking-wider text-leaf">{author.jobTitle}</p>
+            <p class="mt-3 flex-1 text-sm leading-7 text-forest/70">{author.shortBio}</p>
+            <span class="mt-4 text-[11px] font-black uppercase tracking-wider text-leaf">View profile →</span>
+          </a>
+        ))}
+      </div>
+    </section>
+  </main>
+</BaseLayout>

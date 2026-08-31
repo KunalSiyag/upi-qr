@@ -2,7 +2,8 @@
 title: "UPI QR Code for Restaurants & Cloud Kitchen Payments"
 description: "Use table tent QRs, delivery bag stickers, and fixed-price menu QRs for dine-in, takeaway, and cloud kitchen orders in India."
 pubDate: 2026-06-24
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/restaurant-table-tent-qr.jpg"
 tags: ["Restaurant", "Shops", "Tutorial"]
 ---
 

@@ -1,107 +1,123 @@
 ---
-import BaseLayout from "../layouts/BaseLayout.astro";
+export const prerender = false;
 
-const requestedUrl = Astro.url.searchParams.get("url") || Astro.url.searchParams.get("u") || "/";
-const initialUrl = /^(https?:\/\/|upi:\/\/)/i.test(requestedUrl) ? requestedUrl : "/";
-const qrId = Astro.url.searchParams.get("id") || "";
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { isExpired, readRecord, recordScan, safeDestination, validId } from "../lib/dynamicQrStore";
+import { requestFingerprint } from "../lib/apiSecurity";
+import { consumeRateLimit } from "../lib/rateLimit";
+
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("Content-Security-Policy", "base-uri 'none'; frame-ancestors 'none'");
+Astro.response.headers.set("Referrer-Policy", "no-referrer");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+
+const id = Astro.url.searchParams.get("id");
+let message = "This dynamic QR link is invalid or no longer available.";
+let status = 404;
+let resolvedDestination: string | null = null;
+let destinationHost = "";
+
+if (validId(id)) {
+  try {
+    const resolverLimit = await consumeRateLimit("dynamic-resolve", requestFingerprint(Astro.request), 600, 60);
+    if (!resolverLimit.allowed) {
+      message = "The redirect service is receiving too many requests. Please try again shortly.";
+      status = 429;
+    }
+
+    const campaign = status === 429 ? null : await readRecord(id);
+    if (campaign?.isPaused) {
+      message = "This dynamic QR campaign is paused by its owner.";
+      status = 410;
+    } else if (campaign && isExpired(campaign)) {
+      message = "This dynamic QR campaign has expired.";
+      status = 410;
+    } else if (campaign) {
+      const destinationUrl = safeDestination(campaign.destinationUrl);
+      if (destinationUrl) {
+        const rateLimit = await consumeRateLimit("dynamic-scan", `${id}:${requestFingerprint(Astro.request)}`, 300, 60);
+        if (!rateLimit.allowed) {
+          message = "This QR is receiving too many requests. Please try again shortly.";
+          status = 429;
+        } else {
+          const userAgent = Astro.request.headers.get("user-agent") || "";
+          const device = /Android|iPhone|iPad|iPod|IEMobile/i.test(userAgent) ? "mobile" : "desktop";
+          await recordScan(id, device);
+          if (destinationUrl.startsWith("upi:")) {
+            return new Response(null, {
+              status: 302,
+              headers: {
+                "Cache-Control": "no-store",
+                "Location": destinationUrl,
+                "Referrer-Policy": "no-referrer",
+                "X-Robots-Tag": "noindex, nofollow",
+              },
+            });
+          }
+
+          const destination = new URL(destinationUrl);
+          const isFirstParty = destination.hostname === "proupiqr.in" || destination.hostname.endsWith(".proupiqr.in");
+          if (isFirstParty) {
+            return new Response(null, {
+              status: 302,
+              headers: {
+                "Cache-Control": "no-store",
+                "Location": destinationUrl,
+                "Referrer-Policy": "no-referrer",
+                "X-Robots-Tag": "noindex, nofollow",
+              },
+            });
+          }
+
+          resolvedDestination = destinationUrl;
+          destinationHost = destination.hostname;
+          message = "This QR points to an external website. Check the hostname before continuing.";
+          status = 200;
+        }
+      } else {
+        message = "This campaign has an invalid destination and was blocked.";
+        status = 410;
+      }
+    }
+  } catch {
+    message = "The dynamic QR service is temporarily unavailable.";
+    status = 503;
+  }
+}
+
+Astro.response.status = status;
+Astro.response.statusText = status === 200
+  ? "OK"
+  : status === 410
+  ? "Gone"
+  : status === 429
+    ? "Too Many Requests"
+    : status === 503
+      ? "Service Unavailable"
+      : "Not Found";
 ---
 
-<BaseLayout title="Redirecting..." description="Dynamic QR Link Redirect Manager" noindex={true}>
-  <div class="min-h-[65vh] flex items-center justify-center p-6 text-center">
-    <div class="max-w-md w-full rounded-3xl border border-forest/10 bg-white p-8 shadow-xl space-y-5">
-      <div class="mx-auto w-16 h-16 rounded-2xl bg-mint border border-leaf/20 flex items-center justify-center text-leaf font-black animate-pulse shadow-sm">
-        <svg class="h-8 w-8 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
-      </div>
+<BaseLayout title={resolvedDestination ? "Confirm External QR Destination | Pro UPI QR" : "Dynamic QR Link Unavailable | Pro UPI QR"} description="Review or troubleshoot a protected Pro UPI QR dynamic destination." noindex={true}>
+  <main class="flex min-h-[65vh] items-center justify-center p-6 text-center">
+    <div class="w-full max-w-md space-y-5 rounded-3xl border border-forest/10 bg-white p-8 shadow-xl">
+      <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-amber-200 bg-amber-50 text-2xl font-black text-amber-800">!</div>
       <div>
-        <h1 class="text-xl font-black text-forest">Connecting to Destination</h1>
-        <p class="text-xs text-forest/60 mt-1">Dynamic QR Router • Secure Cloud Sync</p>
+        <h1 class="text-xl font-black text-forest">{resolvedDestination ? "You Are Leaving Pro UPI QR" : "Dynamic Link Unavailable"}</h1>
+        <p class="mt-2 text-sm leading-6 text-forest/65">{message}</p>
       </div>
-
-      <div id="target-display" class="text-xs font-mono text-forest/80 break-all bg-cream p-3.5 rounded-2xl border border-forest/10 shadow-inner">
-        {initialUrl}
-      </div>
-
-      <a id="direct-link" href={initialUrl} class="inline-flex items-center justify-center w-full rounded-2xl bg-forest px-6 py-3 text-xs font-black text-mint hover:bg-leaf transition-all shadow-md">
-        Click here if not redirected automatically →
-      </a>
+      {resolvedDestination ? (
+        <>
+          <div class="break-all rounded-2xl border border-forest/10 bg-cream p-4 text-sm font-black text-forest">{destinationHost}</div>
+          <a href={resolvedDestination} rel="nofollow noopener noreferrer" referrerpolicy="no-referrer" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-leaf">
+            Continue to {destinationHost}
+          </a>
+          <a href="/" class="block text-xs font-bold text-leaf hover:underline">Cancel and return to Pro UPI QR</a>
+        </>
+      ) : (
+        <a href="/" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-leaf">
+          Open Pro UPI QR
+        </a>
+      )}
     </div>
-  </div>
-
-  <script is:inline>
-    (function() {
-      var params = new URLSearchParams(window.location.search);
-      var id = params.get('id');
-      var target = params.get('url') || params.get('u') || '/';
-
-      function isSafeDestination(value) {
-        return /^(https?:\/\/|upi:\/\/)/i.test(value || '');
-      }
-
-      if (!isSafeDestination(target)) target = '/';
-
-      var isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      var deviceType = isMobile ? 'mobile' : 'desktop';
-
-      async function processRedirect() {
-        if (id) {
-          // The first-party API reads Vercel KV server-side, so this works on
-          // every scanner's device—not just the browser that created the QR.
-          try {
-            var response = await fetch('/api/dynamic/' + encodeURIComponent(id));
-            if (response.ok) {
-              var data = await response.json();
-              if (isSafeDestination(data.destinationUrl)) target = data.destinationUrl;
-            }
-          } catch (e) {
-            // Network failure — silently use the fallback URL from the query string
-          }
-        }
-
-        // Update local storage scan counts (works regardless of cloud sync)
-        if (id) {
-          try {
-            var saved = localStorage.getItem('pro_upi_dynamic_links');
-            if (saved) {
-              var links = JSON.parse(saved);
-              var now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-              var dateStr = new Date().toLocaleDateString();
-              var updated = links.map(function(l) {
-                if (l.id === id) {
-                  var currentScans = (l.scans || 0) + 1;
-                  var deviceStats = l.scansByDevice || { mobile: 0, desktop: 0 };
-                  if (isMobile) deviceStats.mobile = (deviceStats.mobile || 0) + 1;
-                  else deviceStats.desktop = (deviceStats.desktop || 0) + 1;
-
-                  var recentScans = l.recentScans || [];
-                  recentScans.unshift({ id: 's-' + Date.now(), timestamp: dateStr + ' at ' + now, device: deviceType, status: 'Success' });
-                  if (recentScans.length > 20) recentScans.pop();
-
-                  return Object.assign({}, l, {
-                    scans: currentScans,
-                    lastScanned: dateStr + ' at ' + now,
-                    scansByDevice: deviceStats,
-                    recentScans: recentScans
-                  });
-                }
-                return l;
-              });
-              localStorage.setItem('pro_upi_dynamic_links', JSON.stringify(updated));
-            }
-          } catch (e) {}
-        }
-
-        // Perform instant redirection
-        if (target) {
-          var displayEl = document.getElementById('target-display');
-          var linkEl = document.getElementById('direct-link');
-          if (displayEl) displayEl.textContent = target;
-          if (linkEl) linkEl.href = target;
-
-          window.location.replace(target);
-        }
-      }
-
-      processRedirect();
-    })();
-  </script>
+  </main>
 </BaseLayout>

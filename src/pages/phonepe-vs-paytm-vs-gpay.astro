@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ResponsiveImage from "../components/ResponsiveImage.astro";
 
 const title = "PhonePe vs Paytm vs Google Pay for Business QR - Compared | Pro UPI QR";
 const description = "PhonePe, Paytm, or GPay for your shop's QR? Truth: UPI is interoperable — compare merchant features instead: soundboxes, dashboards, settlement, and loans.";
@@ -15,7 +16,7 @@ const faqs = [
   },
   {
     question: "Do any of them charge commission on UPI payments?",
-    answer: "No. NPCI mandates zero MDR on standard UPI transactions across all apps — you receive the full amount whether the customer pays via PhonePe, Paytm, GPay, BHIM, or any other UPI app."
+    answer: "NPCI mandates zero MDR on standard bank-to-bank UPI transactions across all apps — you receive the full amount whether the customer pays via PhonePe, Paytm, GPay, BHIM, or any other UPI app. RuPay credit card on UPI transactions above ₹2,000 may incur interchange fees per NPCI guidelines."
   },
   {
     question: "Can I have QR codes from multiple apps at my counter?",
@@ -63,7 +64,7 @@ const rows = [
 ];
 ---
 
-<BaseLayout title={title} description={description} schema={schema}>
+<BaseLayout title={title} description={description} schema={schema} image="/images/diagrams/phonepe-gpay-paytm-compare.png">
   <main>
     <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
       <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
@@ -78,6 +79,9 @@ const rows = [
         <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Honest comparison</p>
         <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">PhonePe vs Paytm vs Google Pay for your shop's QR</h1>
         <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">The uncomfortable truth first: for accepting payments, the choice barely matters — UPI is interoperable, so one QR works everywhere. The real differences live in merchant extras like soundboxes and dashboards. Here is the full picture.</p>
+        <div class="mt-8 max-w-5xl">
+          <ResponsiveImage src="/images/diagrams/phonepe-gpay-paytm-compare.png" loading="eager" />
+        </div>
       </div>
     </section>
 

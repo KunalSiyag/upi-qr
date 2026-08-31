@@ -2,7 +2,8 @@
 title: "How Merchants Can Prevent UPI QR Code Tampering and Fraud"
 description: "Critical security steps for physical shop owners to protect their payment QR standees from tampering and unauthorized replacements."
 pubDate: 2026-05-24
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/qr-tampering-overlay-sticker.jpg"
 tags: ["Security", "Merchant Tips", "Safety"]
 ---
 

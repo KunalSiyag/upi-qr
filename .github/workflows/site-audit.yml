@@ -49,33 +49,20 @@ jobs:
       - name: SEO health check (titles, descriptions, schema)
         run: python3 scripts/seo_health_check.py
 
+      - name: Image MIME and 1200x630 check
+        run: python3 scripts/image_mime_check.py
+
+      - name: Performance budget (no eager jsPDF, CSS count)
+        run: python3 scripts/perf_budget_check.py
+
       - name: Broken link audit (all internal hrefs/srcs)
         run: python3 scripts/link_audit.py dist/client --fail-on-broken
 
-      - name: Sitemap sanity (every URL exists in build)
-        run: |
-          python3 - <<'EOF'
-          import re, os
-          xml = open(".vercel/output/static/sitemap.xml").read()
-          locs = re.findall(r"<loc>([^<]+)</loc>", xml)
-          root = ".vercel/output/static"
-          missing = []
-          for loc in locs:
-              p = loc.replace("https://www.proupiqr.in", "")
-              if p == "/":
-                  ok = os.path.isfile(f"{root}/index.html")
-              else:
-                  ok = os.path.isfile(os.path.join(root, p.strip("/"), "index.html"))
-              if not ok:
-                  missing.append(loc)
-          print(f"[sitemap] {len(locs)} URLs checked")
-          if missing:
-              print("[sitemap] MISSING FROM BUILD:")
-              for m in missing:
-                  print(" ", m)
-              raise SystemExit(1)
-          print("[sitemap] OK")
-          EOF
+      - name: Index integrity (sitemap, language, hreflang, breadcrumbs)
+        run: python3 scripts/index_integrity_check.py .vercel/output/static
+
+      - name: Security regression checks
+        run: npm run security:check
 
       - name: RSS validity
         run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"

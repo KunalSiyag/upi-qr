@@ -2,7 +2,7 @@
 title: "How to Create a UPI QR Code Without a Business Account"
 description: "Yes, you can accept UPI payments with a personal UPI ID. Learn limits, risks, and when to upgrade to a merchant VPA for shops and freelancers."
 pubDate: 2026-06-13
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Tutorial", "Merchant Tips", "Banking"]
 ---
 

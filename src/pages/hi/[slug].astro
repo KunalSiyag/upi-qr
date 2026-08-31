@@ -311,21 +311,66 @@ export async function getStaticPaths() {
       }
     },
     {
-      params: { slug: "universal-upi-qr-code-generator-for-bank-account" },
-      props: {
-        title: "बैंक खाते के लिए यूनिवर्सल UPI QR जनरेटर",
-        headline: "अपने बैंक खाते के लिए यूनिवर्सल UPI QR बनाएं",
-        presetType: "phonepe",
-        intro: "SBI, HDFC, ICICI सहित किसी भी बैंक खाते के लिए एक QR बनाएं जो PhonePe, GPay, Paytm और BHIM पर चले।"
-      }
-    },
-    {
       params: { slug: "doctor-clinic-upi-qr-generator" },
       props: {
         title: "डॉक्टर और क्लिनिक UPI QR जनरेटर",
         headline: "क्लिनिक और अस्पताल के लिए स्कैन-टू-पे पोस्टर बनाएं",
         presetType: "freelance",
         intro: "परामर्श डेस्क, लैब और फार्मेसी के लिए साफ भुगतान QR पोस्टर प्रिंट करें।"
+      }
+    },
+    {
+      params: { slug: "tutor-qr-generator" },
+      props: {
+        title: "ट्यूटर और कोचिंग UPI QR जनरेटर",
+        headline: "ट्यूशन और कोचिंग क्लासेस के लिए मासिक फीस QR पोस्टर बनाएं",
+        presetType: "tutor",
+        intro: "होम ट्यूटर्स, कोचिंग सेंटर्स और ऑनलाइन क्लास इंस्ट्रक्टरों के लिए प्रिंट करने योग्य UPI भुगतान पोस्टर बनाएं।"
+      }
+    },
+    {
+      params: { slug: "pg-hostel-qr-generator" },
+      props: {
+        title: "PG और हॉस्टल रेंट UPI QR जनरेटर",
+        headline: "पेइंग गेस्ट और हॉस्टल के लिए किराया व मेस फीस QR बनाएं",
+        presetType: "pg",
+        intro: "PG अकॉमोडेशन, हॉस्टल और शेयर्ड फ्लैट्स के लिए कमरा-वार UPI QR पोस्टर प्रिंट करें।"
+      }
+    },
+    {
+      params: { slug: "tiiffin-qr-generator" },
+      props: {
+        title: "टिफिन सर्विस UPI QR जनरेटर",
+        headline: "टिफिन और डब्बा सर्विस के लिए मील सब्सक्रिप्शन भुगतान QR बनाएं",
+        presetType: "tiiffin",
+        intro: "होम टिफिन किचन और डब्बा डिलीवरी के लिए वीकली और मंथली मील प्लान भुगतान पोस्टर बनाएं।"
+      }
+    },
+    {
+      params: { slug: "caterer-qr-generator" },
+      props: {
+        title: "कैटरर और बैंक्वेट UPI QR जनरेटर",
+        headline: "कैटरर्स के लिए बुकिंग और इवेंट भुगतान QR पोस्टर बनाएं",
+        presetType: "caterer",
+        intro: "पार्टी कैटरर्स, बैंक्वेट हॉल और फूड स्टॉल के लिए एडवांस बुकिंग और बल्क ऑर्डर UPI पोस्टर बनाएं।"
+      }
+    },
+    {
+      params: { slug: "photographer-qr-generator" },
+      props: {
+        title: "फोटोग्राफर और स्टूडियो UPI QR जनरेटर",
+        headline: "फोटोग्राफर्स के लिए बुकिंग फीस और इनवॉइस भुगतान QR बनाएं",
+        presetType: "photographer",
+        intro: "वेडिंग, इवेंट और स्टूडियो फोटोग्राफर्स के लिए बुकिंग एडवांस और फाइनल इनवॉइस भुगतान QR प्रिंट करें।"
+      }
+    },
+    {
+      params: { slug: "electrician-qr-generator" },
+      props: {
+        title: "इलेक्ट्रीशियन और फील्ड सर्विस UPI QR जनरेटर",
+        headline: "इलेक्ट्रीशियन और सर्विस प्रोज के लिए ऑन-साइट भुगतान QR बनाएं",
+        presetType: "electrician",
+        intro: "इलेक्ट्रीशियन, प्लंबर, AC मैकेनिक और फील्ड वर्कर्स के लिए टिकाऊ सर्विस-विजिट भुगतान QR बनाएं।"
       }
     },
     ...LOCALIZED_TOOLS.map((tool) => ({ params: { slug: tool.slug }, props: { tool } }))
@@ -423,7 +468,7 @@ const schema = {
 
       <div class="mt-12 pt-8 border-t border-forest/10">
         <h2 class="text-2xl font-black text-forest mb-6">कस्टमाइज़ और जनरेट करें</h2>
-        <GeneratorForm client:load presetType={presetType as any} lang="hi" />
+        <GeneratorForm client:visible presetType={presetType as any} lang="hi" />
       </div>
 
       <AffiliateProducts />
@@ -432,7 +477,7 @@ const schema = {
         variant="both"
         currentGenerator={generatorSlug}
         presetType={resolvedPreset}
-        isHindi
+        lang="hi"
       />
     </div>
   </main>

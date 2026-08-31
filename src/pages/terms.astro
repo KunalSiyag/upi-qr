@@ -11,7 +11,7 @@ const description = "Terms of Service for Pro UPI QR. Use our free tool to gener
       <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Generator</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Terms of Service</h1>
-      <p class="mt-2 text-xs text-forest/50">Last Updated: June 8, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: August 27, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
@@ -24,40 +24,68 @@ const description = "Terms of Service for Pro UPI QR. Use our free tool to gener
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">2. Description of Service</h2>
           <p>
-            Pro UPI QR provides a free browser-based tool to compile standard Unified Payments Interface (UPI) parameters (VPA ID, payee name, amount, note) into standardized QR codes and custom designed poster standees. The Service is offered strictly as-is for convenience and educational purposes.
+            Pro UPI QR provides local browser tools for QR codes, documents, and calculators, plus optional account-backed dynamic redirects, merchant checkout sessions, and signed payment-status storage. Cloud features may require Clerk authentication and Vercel KV. The Service is provided for utility and informational purposes.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">3. User Responsibility & VPA Accuracy</h2>
+          <h2 class="text-xl font-bold text-forest">3. Accounts and Credentials</h2>
+          <p>
+            You are responsible for activity under your account and for keeping Clerk sessions, merchant API keys, legacy management tokens, and webhook secrets confidential. Do not place secret credentials in browser code, QR destinations, public repositories, or support messages. Notify us promptly if you believe a credential has been exposed.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. Acceptable Use</h2>
+          <p>
+            You must not use dynamic redirects, checkout pages, QR codes, or APIs for phishing, impersonation, malware, credential collection, deceptive payment requests, illegal goods or services, harassment, or attempts to bypass rate limits and access controls. We may pause or remove campaigns and accounts that create security, legal, or domain-reputation risk.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Payment Status and Customer References</h2>
+          <p>
+            Pro UPI QR is not a payment gateway and does not independently verify bank settlement. A customer-submitted UTR or reference is only an unverified claim. A hosted checkout is marked paid only after its merchant confirms receipt through the checkout API. The separately signed payment-response API stores provider results but does not automatically change hosted checkout status. Users must check bank or gateway records before delivering goods, issuing refunds, or treating an order as paid.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. User Responsibility and VPA Accuracy</h2>
           <p>
             You are solely responsible for ensuring the accuracy of the Payee Name, UPI ID (Virtual Payment Address/VPA), Amount, and Note that you input into the generator. <strong>We are not responsible for transactions sent to incorrect, misspelled, or fraudulent UPI addresses.</strong> You must verify the QR code scans and displays correct merchant info prior to publishing, printing, or placing it in a commercial environment.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">4. Disclaimer of Warranties</h2>
+          <h2 class="text-xl font-bold text-forest">7. Third-Party Destinations</h2>
+          <p>
+            Dynamic QR destinations and external links are supplied by users. Their inclusion does not mean Pro UPI QR owns, reviews, or endorses the destination. Campaign owners must maintain a lawful public HTTPS or valid UPI destination. Report abusive links to <a href="mailto:abuse@proupiqr.in" class="text-leaf underline font-semibold">abuse@proupiqr.in</a>.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">8. Disclaimer of Warranties</h2>
           <p>
             The Service is provided "as is" and "as available" without any warranty of any kind, express or implied. We do not guarantee that the generated QR codes will scan correctly on all devices or with all mobile banking software. We disclaim any liability for failed payments, transaction timeouts, banking system downtime, or financial loss of any kind arising from the use of QR codes built on this website.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">5. Limitations of Liability</h2>
+          <h2 class="text-xl font-bold text-forest">9. Limitations of Liability</h2>
           <p>
             In no event shall Pro UPI QR, its developers, or affiliates be liable for any direct, indirect, incidental, special, consequential, or exemplary damages, including but not limited to damages for loss of profits, goodwill, use, data, or other intangible losses resulting from the use or inability to use this service.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">6. Modifications to Terms</h2>
+          <h2 class="text-xl font-bold text-forest">10. Modifications and Termination</h2>
           <p>
-            We reserve the right to modify or replace these terms at any time. Your continued use of the website following any changes constitutes acceptance of those new terms.
+            We may change, suspend, or discontinue features and may restrict abusive accounts or campaigns. We may update these terms by publishing a new date on this page. Continued use after an update constitutes acceptance of the revised terms.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">7. Contact Information</h2>
+          <h2 class="text-xl font-bold text-forest">11. Contact Information</h2>
           <p>
             For any queries regarding these Terms of Service, please contact us at <a href="mailto:support@proupiqr.in" class="text-leaf underline font-semibold">support@proupiqr.in</a>.
           </p>

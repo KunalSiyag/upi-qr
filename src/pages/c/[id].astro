@@ -1,36 +1,62 @@
 ---
 export const prerender = false;
-import { getCheckoutSession, getMerchantByKey, type Merchant } from '../../lib/kv';
+import "../../styles/global.css";
+import { getCheckoutSession, submitCheckoutUtr } from '../../lib/kv';
+import { formatPaise, isTrustedMutation, readLimitedText, requestFingerprint, safePublicHttpsUrl, validCheckoutSessionId, validUtr, validVpa } from '../../lib/apiSecurity';
+import { consumeRateLimit } from '../../lib/rateLimit';
 import QRCode from 'qrcode';
-import { kv } from '@vercel/kv'; // We need this just to fetch the merchant since we only store merchantId in session
+
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+Astro.response.headers.set("Referrer-Policy", "no-referrer");
+Astro.response.headers.set("X-Frame-Options", "DENY");
 
 const { id } = Astro.params;
 
-if (!id) {
-  return Astro.redirect('/404');
+if (!validCheckoutSessionId(id)) {
+  return new Response("Invalid checkout session.", {
+    status: 404,
+    headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow" }
+  });
 }
 
-const session = await getCheckoutSession(id);
+let session: Awaited<ReturnType<typeof getCheckoutSession>>;
+try {
+  session = await getCheckoutSession(id);
+} catch {
+  return new Response("Checkout service is temporarily unavailable.", {
+    status: 503,
+    headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow" }
+  });
+}
 
 if (!session) {
-  return new Response("Checkout session not found or expired.", { status: 404 });
+  return new Response("Checkout session not found or expired.", {
+    status: 404,
+    headers: { "X-Robots-Tag": "noindex, nofollow" }
+  });
 }
 
-// Fetch merchant details (we need their VPA)
-// For a production app, we would query the merchant by ID. Since our KV only supports lookup by API key right now, 
-// let's do a scan or assume we have a way. Actually, let's just create a helper to get Merchant by ID.
-// Wait, we didn't index by merchant ID! Let's temporarily just use the test merchant for the UI or fetch all keys.
-// To fix this properly, let's just get the vpa. Wait, if the session has order_id, we just need the VPA to generate the QR.
-// Let's assume we can fetch the merchant. For the MVP, I'll retrieve it via a scan, or we can just update createCheckoutSession to store the VPA in the session!
-// Let's just mock the VPA if we can't find it to avoid blocking the UI, but ideally the session should store `merchantVpa`.
+const amountPaise = session.amountPaise ?? (typeof session.amount === "number" ? Math.round(session.amount * 100) : 0);
+const storedMerchantVpa = session.merchantVpa || "";
+const merchantVpa = validVpa(storedMerchantVpa) ? storedMerchantVpa : null;
+const merchantName = session.merchantName?.trim().slice(0, 80) || "Merchant";
+if (!merchantVpa || amountPaise <= 0) {
+  return new Response("This legacy checkout session is unavailable. Ask the merchant to create a new session.", {
+    status: 410,
+    headers: { "Cache-Control": "no-store", "Referrer-Policy": "no-referrer", "X-Robots-Tag": "noindex, nofollow" }
+  });
+}
 
-// Workaround: We'll just hardcode a fallback VPA for the demo if we can't lookup the merchant by ID easily in KV.
-let vpa = "merchant@bank";
-let merchantName = "Merchant";
-
-// Let's generate the UPI intent link
-// Format: upi://pay?pa=VPA&pn=NAME&tr=ORDER_ID&am=AMOUNT&cu=INR
-const upiIntent = `upi://pay?pa=${vpa}&pn=${encodeURIComponent(merchantName)}&tr=${session.orderId}&am=${session.amount}&cu=${session.currency}`;
+const upiParams = new URLSearchParams({
+  pa: merchantVpa,
+  pn: merchantName,
+  tr: session.orderId,
+  am: formatPaise(amountPaise),
+  cu: "INR",
+});
+const upiIntent = `upi://pay?${upiParams.toString()}`;
 
 // Generate QR Code data URL
 let qrDataUrl = "";
@@ -40,37 +66,45 @@ try {
   console.error("QR Gen Error", err);
 }
 
-// Handle UTR form submission (POST request to this same route)
 let submissionError = "";
 if (Astro.request.method === 'POST') {
   try {
-    const data = await Astro.request.formData();
-    const utr = data.get('utr')?.toString().trim();
-    
-    if (utr && utr.length >= 10) {
-      // Internal API call or direct update
-      // For this MVP, we'll hit our internal endpoint or just do it here
-      const submitReq = await fetch(new URL('/api/internal/submit-utr', Astro.url.origin), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ sessionId: session.id, utr })
-      });
-      
-      if (submitReq.ok) {
-        // Redirect to success or reload
-        return Astro.redirect(`/c/${session.id}?success=true`);
-      } else {
-        submissionError = "Failed to submit UTR. Please try again.";
-      }
+    if (!isTrustedMutation(Astro.request)) {
+      submissionError = "Cross-site submission rejected. Reload this checkout page and try again.";
     } else {
-      submissionError = "Please enter a valid 12-digit UTR.";
+      const rateLimit = await consumeRateLimit(
+        "checkout-utr-claim",
+        `${session.id}:${requestFingerprint(Astro.request)}`,
+        5,
+        900,
+      );
+      if (!rateLimit.allowed) {
+        submissionError = "Too many reference submissions. Try again in 15 minutes.";
+      }
     }
-  } catch (error) {
-    submissionError = "An error occurred.";
+
+    if (!submissionError) {
+    const rawBody = await readLimitedText(Astro.request, 1024);
+    const utr = new URLSearchParams(rawBody).get('utr')?.trim();
+
+    if (utr && validUtr(utr)) {
+      const updated = await submitCheckoutUtr(session.id, utr);
+      if (updated) return Astro.redirect(`/c/${session.id}/`, 303);
+      submissionError = "This checkout can no longer accept a payment reference.";
+    } else {
+      submissionError = "Enter the 10-35 character transaction reference shown by your UPI app.";
+    }
+    }
+  } catch {
+    submissionError = "The reference could not be submitted. Please try again.";
   }
 }
 
-const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('success') === 'true';
+const showSuccess = session.status === 'paid';
+const showPending = session.status === 'verification_pending';
+const showFailed = session.status === 'failed';
+const redirectUrl = safePublicHttpsUrl(session.redirectUrl);
+const redirectHost = redirectUrl ? new URL(redirectUrl).hostname : "";
 
 ---
 
@@ -78,19 +112,16 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
     <title>Checkout | Pro UPI QR</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    {showSuccess && session.redirectUrl && (
-      <meta http-equiv="refresh" content={`3;url=${session.redirectUrl}`} />
-    )}
   </head>
-  <body class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans">
+  <body data-checkout-session-id={session.id} data-checkout-status={session.status} class="bg-slate-50 min-h-screen flex items-center justify-center p-4 font-sans">
     <div class="max-w-md w-full bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100">
       
       <div class="bg-indigo-600 p-6 text-center">
         <h1 class="text-white text-xl font-bold opacity-90">{merchantName}</h1>
         <div class="mt-2 text-indigo-100 text-sm">Order: {session.orderId}</div>
-        <div class="text-4xl font-extrabold text-white mt-3">₹{session.amount.toFixed(2)}</div>
+        <div class="text-4xl font-extrabold text-white mt-3">₹{formatPaise(amountPaise)}</div>
       </div>
 
       <div class="p-6">
@@ -101,9 +132,26 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h2 class="text-2xl font-bold text-slate-800">Payment Verified!</h2>
-            <p class="text-slate-500 mt-2">Redirecting you back to the merchant...</p>
-            <a href={session.redirectUrl} class="mt-6 inline-block text-indigo-600 font-medium hover:underline">Click here if not redirected</a>
+            <h2 class="text-2xl font-bold text-slate-800">Payment Confirmed</h2>
+            <p class="text-slate-500 mt-2">The merchant marked this checkout as paid.</p>
+            {redirectUrl && (
+              <div class="mt-6 space-y-2">
+                <p class="text-xs text-slate-500">Check the destination before leaving: <strong>{redirectHost}</strong></p>
+                <a href={redirectUrl} rel="nofollow noopener noreferrer" referrerpolicy="no-referrer" class="inline-block text-indigo-600 font-medium hover:underline">Continue to {redirectHost}</a>
+              </div>
+            )}
+          </div>
+        ) : showPending ? (
+          <div class="text-center py-8">
+            <div class="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-amber-100 mb-4 text-2xl">...</div>
+            <h2 class="text-2xl font-bold text-slate-800">Reference Submitted</h2>
+            <p class="text-slate-500 mt-2">The merchant must check their bank statement before marking this payment as paid.</p>
+            <p class="mt-4 rounded-xl bg-amber-50 p-3 text-xs font-semibold text-amber-900">A submitted UTR is not proof that money was received.</p>
+          </div>
+        ) : showFailed ? (
+          <div class="text-center py-8">
+            <h2 class="text-2xl font-bold text-slate-800">Payment Not Confirmed</h2>
+            <p class="text-slate-500 mt-2">Contact the merchant if you believe this status is incorrect.</p>
           </div>
         ) : (
           <div class="space-y-6">
@@ -112,6 +160,8 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
               <div class="inline-block p-2 rounded-xl border-2 border-slate-100 bg-white shadow-sm">
                 <img src={qrDataUrl} alt="UPI QR Code" class="w-48 h-48 mx-auto" />
               </div>
+              <p class="mt-3 text-xs text-slate-500">Payee UPI ID: <strong class="font-mono text-slate-700">{merchantVpa}</strong></p>
+              <p class="mt-1 text-xs text-slate-500">Confirm the payee name and amount in your UPI app before entering your PIN.</p>
             </div>
 
             <!-- Mobile Intent Links -->
@@ -127,10 +177,10 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
               </a>
             </div>
 
-            <!-- Manual UTR Verification Form -->
+            <!-- A UTR submission is an unverified customer claim. -->
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mt-6">
               <h3 class="font-semibold text-slate-800 text-sm mb-2">Already paid?</h3>
-              <p class="text-xs text-slate-500 mb-3">Enter the 12-digit UTR or Reference Number from your bank app to confirm.</p>
+              <p class="text-xs text-slate-500 mb-3">Submit the UTR or reference from your UPI app. The merchant will verify it against their bank statement.</p>
               
               {submissionError && <div class="text-red-500 text-xs mb-2 font-medium">{submissionError}</div>}
               
@@ -142,9 +192,12 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
                   class="flex-1 text-sm rounded-lg border-slate-300 border px-3 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
                   required
                   minlength="10"
+                  maxlength="35"
+                  pattern="[A-Za-z0-9]{10,35}"
+                  autocomplete="off"
                 />
                 <button type="submit" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-indigo-700 transition-colors whitespace-nowrap">
-                  Verify UTR
+                  Submit Reference
                 </button>
               </form>
             </div>
@@ -155,10 +208,11 @@ const showSuccess = session.status === 'paid' || Astro.url.searchParams.get('suc
       <div class="bg-slate-50 p-4 text-center border-t border-slate-100">
         <div class="text-xs text-slate-400 font-medium flex items-center justify-center gap-1">
           <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-          Secured by Pro UPI QR
+          Payment status is confirmed only by the merchant
         </div>
       </div>
 
     </div>
+    <script src="/checkout-status.js" defer></script>
   </body>
 </html>

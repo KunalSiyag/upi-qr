@@ -1,84 +1,82 @@
 ---
 title: "Create & Print UPI QR Code Standee for Your Shop"
-description: "A step-by-step guide for local business owners to design, generate, and print high-quality Scan & Pay UPI QR codes and table standees for their billing counters."
+description: "Design, size, and print a matte UPI QR standee for the billing counter — A6/A5 sizes, 300 DPI, quiet zone, and a two-app test-scan checklist."
 pubDate: 2026-06-10
-author: "Pro UPI QR Team"
+updatedDate: 2026-08-27
+author: "Kunal Siyag"
+reviewedOn: 2026-08-27
+reviewIntervalDays: 180
+testedApplications: ["PhonePe", "Google Pay", "Paytm"]
+image: "/images/blog/kirana-upi-standee.jpg"
 tags: ["Shops", "Printing Guide", "Tutorial"]
 ---
 
-Accepting payments at a retail counter requires two things: speed and trust. In India, Unified Payments Interface (UPI) has become the dominant checkout choice for customers. While standard bank-provided QR codes work, they are often plain, small, or cluttered. 
+A counter standee is a printed UPI QR held upright at scan height. Generate the code from your VPA, print on **matte** 300 GSM at 300 DPI, keep a white quiet zone, and test-scan from two apps before it sits on the desk. One interoperable QR is enough — customers pay from PhonePe, GPay, Paytm, or BHIM.
 
-Creating a customized, professional payment standee helps your shop stand out, establishes merchant trust, and reduces payment processing friction. 
+*Last reviewed 27 August 2026.*
 
-![A custom Pro UPI QR code standee on a retail shop billing counter](/images/blog/shop-standee-guide.png)
 
-In this guide, we will walk you through how to generate, format, and print a retail-ready UPI QR code standee for your billing counter.
+<h2 id="why-standee">Why a standee beats a taped screenshot</h2>
 
----
+1. **Scan distance.** An upright A6 card is readable from 3–5 feet. A phone screenshot taped to a jar is not.
+2. **Name in large type.** The payee name on the poster should match the name the app will show. Mismatches cause abandoned checkouts.
+3. **One code, every app.** A standard `upi://pay` QR is not locked to PhonePe or GPay. See [PhonePe vs Paytm vs GPay](/phonepe-vs-paytm-vs-gpay/).
+4. **Replaceable.** Acrylic T-stands let you swap the insert when the VPA changes. [Changing a UPI ID on a printed standee](/blog/how-to-change-upi-id-on-printed-qr-standee/).
 
-## Why Customize Your Shop QR Standee?
+<h2 id="generate">Step 1 — Generate the QR</h2>
 
-Many merchants use default QR stickers pasted on cardboard. While functional, custom standees offer distinct advantages:
+1. Open the [Pro UPI QR generator](/).
+2. Enter **payee name** exactly as the bank registered it.
+3. Enter **UPI ID / VPA**.
+4. Leave amount blank for a general shop desk. Lock an amount only for a fixed SKU or ticket — [fixed-amount QR](/blog/how-to-generate-upi-qr-with-amount/).
+5. Download **PNG** or **PDF**.
 
-1. **Better Visibility:** A well-designed, upright standee is easier to scan from a distance of 3–5 feet.
-2. **Branding Opportunities:** Adding your merchant/shop name and official UPI credentials in a large, legible font reassures customers that they are paying the correct account.
-3. **Multi-App Compatibility:** A standard UPI QR code conforms to NPCI guidelines, meaning a single standee will work seamlessly with [Google Pay](/google-pay-qr-generator/), [PhonePe](/phonepe-qr-generator/), [Paytm](/paytm-qr-generator/), BHIM, and any mobile banking app.
-4. **Professional Look:** High-quality standees elevate the overall look of your cash counter.
+App-branded templates: [PhonePe](/phonepe-qr-generator/) · [Google Pay](/google-pay-qr-generator/) · [BHIM](/bhim-qr-generator/). Branding is decoration; the payload is the same.
 
----
+<h2 id="template">Step 2 — Pick a layout</h2>
 
-## Step 1: Generate Your Base UPI QR Code
+- **Shop payment standee** — kirana, pharmacy, hardware.
+- **Restaurant table tent** — compact vertical insert.
+- **Cab / dashboard card** — high contrast for mixed light.
 
-To generate a payment-ready QR code, you need a **Virtual Payment Address (VPA)**, commonly known as a UPI ID (e.g., `shopname@okaxis` or `merchant@ybl`).
+Preview, then export. Do not screenshot the browser window.
 
-1. Go to the [Pro UPI QR Generator](/).
-2. Enter your **Payee Name** (the name registered with your bank account).
-3. Enter your **UPI ID / VPA**.
-4. *(Optional)* If you want to create a static payment desk, leave the amount empty. If you are billing a specific product, you can enter a preset amount.
-5. Click **Generate UPI QR**.
+<h2 id="sizes">Step 3 — Print size and material</h2>
 
----
+| Standee | Size | Material |
+| --- | --- | --- |
+| Acrylic table tent | 4×6 in (A6) or 5×7 in | 300 GSM matte art card inside acrylic |
+| Counter sunboard | A5 or A4 | 3 mm or 5 mm PVC |
+| Vinyl sticker on glass | Custom | Matte vinyl; see [waterproof stickers](/blog/how-to-print-durable-waterproof-qr-stickers/) |
 
-## Step 2: Choose the Right Template
+Default recommendation: **A6 or 5×7 matte insert in acrylic**. Wipeable, replaceable, hard to knock over.
 
-Pro UPI QR offers several design templates depending on your business type:
+Tell the shop: **300 DPI**, no stretching, **matte not glossy**, keep the QR’s white margin (quiet zone ≥ 0.25 in).
 
-* **Shop Payment Standee:** Best for general kirana shops, grocery stores, and pharmacies. Features a clean border and "Scan & Pay" callout.
-* **Restaurant Table QR:** A vertical, compact template ideal for acrylic table tents in cafes, bakeries, or food trucks.
-* **Cab / Taxi Dashboard Card:** High-contrast design optimized for drivers to place on auto-rickshaw screens or cab dashboards.
+<figure>
+  <img src="/images/blog/print-upi-qr-sizes.jpg" alt="Print shop counter showing several UPI QR sizes from sticker to A4 sheet" width="1200" height="630" loading="lazy" />
+  <figcaption>One VPA, several physical sizes. Match the QR square to the scan distance, not only the paper size.</figcaption>
+</figure>
 
-Select your template from the preview deck, inspect the layout, and click **Download PNG** to save the high-resolution image to your device.
+<h2 id="test">Step 4 — Test, then display</h2>
 
----
+1. Scan with two apps.
+2. Confirm payee name and VPA — or decode with the [QR decoder](/upi-qr-decoder/).
+3. Test under the real counter lights.
+4. Tape or frame the standee so a stranger cannot swap the sticker. [Tamper checklist](/blog/prevent-upi-qr-code-tampering-frauds/).
 
-## Step 3: Select the Right Print Size
+<h2 id="faq">Frequently asked questions</h2>
 
-Before printing, you need to decide on the physical structure of your standee. The most common commercial standards are:
+### Q1. Do I need a merchant account to print a standee?
 
-| Standee Type | Standard Dimensions (Inches) | Best Material |
-| :--- | :--- | :--- |
-| **Acrylic Table Tent** | 4" x 6" (A6) or 5" x 7" | 300 GSM Art Card (inserted inside acrylic) |
-| **Counter Sunboard** | 6" x 8" (A5) or 8" x 11" (A4) | 3mm or 5mm Sunboard PVC |
-| **Laminated Sticker** | Custom | Glossy Vinyl Sticker Paper |
+No. A personal VPA works for a compatible print. A PhonePe or GPay Business account adds dashboard and official kits; it is not required for the QR to scan. [QR without a business account](/blog/how-to-create-upi-qr-without-business-account/).
 
-For billing counters, we recommend an **A6 (4" x 6") Acrylic Holder**. It is sturdy, easily wipeable, and cards can be replaced if your UPI ID changes.
+### Q2. What size should the QR square be?
 
----
+At least 2.5 cm on a table tent; about 8 cm if people scan from a queue. Paper size can be larger than the QR; do not stretch the code to fill the card.
 
-## Step 4: Printing Tips for Maximum Scanability
+### Q3. Glossy or matte?
 
-To ensure customer phones can scan your QR code instantly, even in low-light conditions:
+Matte. Glossy film reflects tube lights and phone torches. That is the most common “it scanned on the computer but not in the shop” failure.
 
-* **Use High DPI:** Print at **300 DPI** or higher. Low-resolution prints create fuzzy pixels, making it difficult for camera lenses to resolve the code.
-* **Choose Matte Finish over Glossy:** Glossy lamination reflects overhead lights, creating glares that block camera scanners. Matte lamination or matte paper is ideal.
-* **Test Before Displaying:** Always scan the printed standee with your own phone (using Google Pay or PhonePe) before placing it on the counter. Make sure the payee name is correct and no transaction is initiated unless intended. For outdoor or high-traffic counters, read our guide on [printing durable waterproof QR stickers](/blog/how-to-print-durable-waterproof-qr-stickers/).
-
----
-
-## Conclusion
-
-A clean, legible payment standee shows customers that your business is modern, trustworthy, and organized. By spending a few minutes printing a professional standee, you ensure a smoother billing experience for your customers.
-
-**[Create your custom standee code on Pro UPI QR now &rarr;](/)**
-
-Related guides: [Generate UPI QR with a fixed amount](/blog/how-to-generate-upi-qr-with-amount/) · [Custom GPay & PhonePe templates](/blog/custom-design-templates-gpay-phonepe-qr/) · [Is it safe to scan a UPI QR?](/blog/is-it-safe-to-scan-upi-qr-code/)
+**[Generate a print-ready standee →](/)**

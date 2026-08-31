@@ -2,9 +2,9 @@
 title: "How to Integrate UPI QR Code in HTML/JS Website (Simple Guide)"
 description: "Learn how to accept zero-fee UPI payments on your website by integrating a dynamic UPI QR code generator using plain HTML, CSS, and JavaScript."
 pubDate: 2026-06-12
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Integration", "Web Development", "HTML"]
-image: "/images/blog/integrate-upi-qr-html.png"
+image: "/images/blog/html-website-upi-qr.jpg"
 ---
 
 With rising payment gateway charges and setup delays, many static websites, local store pages, and freelance portfolios want a simpler way to accept payments. Since UPI (Unified Payments Interface) is completely free and commission-free, displaying a UPI QR code on your website is an excellent alternative to complex integrations.

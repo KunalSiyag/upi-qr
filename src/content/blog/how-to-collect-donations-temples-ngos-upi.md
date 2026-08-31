@@ -2,7 +2,8 @@
 title: "Collect Donations via UPI QR for Temples & NGOs"
 description: "A comprehensive guide on setting up a secure, commission-free UPI QR code for religious institutions, charities, and community fundraising campaigns."
 pubDate: 2026-06-10
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/temple-donation-upi-box.jpg"
 tags: ["Donations", "NGOs", "Fundraising"]
 ---
 
@@ -10,7 +11,6 @@ For non-profit organizations, temple trusts, and community organizers, collectin
 
 Today, Unified Payments Interface (UPI) has changed the landscape. With a simple scan, donors can transfer funds instantly from their bank account to yours. Best of all, standard UPI-to-UPI transactions are **completely commission-free**, ensuring 100% of the donation goes directly to your cause.
 
-![A donation box with a custom printed Scan to Pay card](/images/blog/donation-box-guide.png)
 
 In this guide, we will cover how to set up, print, and securely display a UPI QR code for donation collection.
 

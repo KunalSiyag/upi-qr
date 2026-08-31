@@ -2,7 +2,7 @@
 title: "UPI QR Code for Salon, Spa & Beauty Parlour Payments"
 description: "Collect service payments at salon reception with UPI QR — tips for combo packages, stylists, and GST billing in India."
 pubDate: 2026-06-30
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Salon", "Shops", "Tutorial"]
 ---
 

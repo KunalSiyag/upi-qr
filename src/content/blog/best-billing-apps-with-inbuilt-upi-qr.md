@@ -2,7 +2,7 @@
 title: "Best Billing and ERP Apps with Inbuilt UPI QR Code Printing"
 description: "A comparison of the top retail billing software in India that supports printing dynamic UPI QR codes on invoice receipts."
 pubDate: 2026-05-23
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Billing Apps", "ERP", "Reference"]
 ---
 

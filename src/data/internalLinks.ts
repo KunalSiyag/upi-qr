@@ -1,4 +1,5 @@
 import { routeExistsInLang } from "./validRoutes";
+import type { SiteLang } from "../lib/locale";
 
 export type GeneratorSlug =
   | "phonepe-qr-generator"
@@ -32,10 +33,15 @@ export type GeneratorSlug =
   | "parking-qr-generator"
   | "temple-qr-generator"
   | "sbi-business-qr-code-generator"
-  | "universal-upi-qr-code-generator-for-bank-account"
   | "hdfc-business-qr-code-generator"
   | "icici-business-qr-code-generator"
-  | "doctor-clinic-upi-qr-generator";
+  | "doctor-clinic-upi-qr-generator"
+  | "tutor-qr-generator"
+  | "pg-hostel-qr-generator"
+  | "tiiffin-qr-generator"
+  | "caterer-qr-generator"
+  | "photographer-qr-generator"
+  | "electrician-qr-generator";
 
 export type PresetType =
   | "phonepe"
@@ -67,7 +73,13 @@ export type PresetType =
   | "gym"
   | "salon"
   | "parking"
-  | "temple";
+  | "temple"
+  | "tutor"
+  | "pg"
+  | "tiiffin"
+  | "caterer"
+  | "photographer"
+  | "electrician";
 
 export interface GeneratorLink {
   slug: GeneratorSlug;
@@ -337,14 +349,6 @@ export const generators: GeneratorLink[] = [
     accent: "#00a2e8",
   },
   {
-    slug: "universal-upi-qr-code-generator-for-bank-account",
-    presetType: "phonepe",
-    label: "Universal UPI QR Code Generator for Bank Account",
-    shortLabel: "Bank UPI QR",
-    description: "Link any Indian bank account to a free universal payment QR code.",
-    accent: "#10b981",
-  },
-  {
     slug: "hdfc-business-qr-code-generator",
     presetType: "hdfc",
     label: "HDFC Business QR Code Generator",
@@ -367,6 +371,54 @@ export const generators: GeneratorLink[] = [
     shortLabel: "Doctor QR",
     description: "Generate payment QR codes for clinics, hospitals, and consultation desks.",
     accent: "#0284c7",
+  },
+  {
+    slug: "tutor-qr-generator",
+    presetType: "tutor",
+    label: "Tutor & Coaching Class UPI QR Generator",
+    shortLabel: "Tutor QR",
+    description: "Create fee-collection QR posters for tuition teachers, coaching centres, and home tutors.",
+    accent: "#7c3aed",
+  },
+  {
+    slug: "pg-hostel-qr-generator",
+    presetType: "pg",
+    label: "PG & Hostel Rent UPI QR Generator",
+    shortLabel: "PG / Hostel QR",
+    description: "Generate monthly rent and mess fee QR standees for PGs, hostels, and paying guest accommodations.",
+    accent: "#0d9488",
+  },
+  {
+    slug: "tiiffin-qr-generator",
+    presetType: "tiiffin",
+    label: "Tiffin Service UPI QR Generator",
+    shortLabel: "Tiffin QR",
+    description: "Build daily meal-subscription payment posters for tiffin services and home kitchens.",
+    accent: "#f43f5e",
+  },
+  {
+    slug: "caterer-qr-generator",
+    presetType: "caterer",
+    label: "Caterer UPI QR Generator",
+    shortLabel: "Caterer QR",
+    description: "Create event-order and catering payment posters for party caterers and banquet halls.",
+    accent: "#b45309",
+  },
+  {
+    slug: "photographer-qr-generator",
+    presetType: "photographer",
+    label: "Photographer & Studio UPI QR Generator",
+    shortLabel: "Photographer QR",
+    description: "Generate booking-advance and invoice payment QRs for photographers and photo studios.",
+    accent: "#db2777",
+  },
+  {
+    slug: "electrician-qr-generator",
+    presetType: "electrician",
+    label: "Electrician UPI QR Generator",
+    shortLabel: "Electrician QR",
+    description: "Build on-site payment QR posters for electricians, plumbers, and field-service providers.",
+    accent: "#ca8a04",
   },
 ];
 
@@ -444,6 +496,14 @@ export const guides: GuideLink[] = [
     featured: true,
   },
   {
+    slug: "how-to-generate-bhim-upi-qr-code",
+    title: "How to Generate a BHIM UPI QR Code",
+    description: "Download the official BHIM QR or print a compatible @upi standee.",
+    presetTypes: ["bhim"],
+    tags: ["BHIM", "Setup Guide", "Payments"],
+    featured: true,
+  },
+  {
     slug: "how-to-collect-donations-temples-ngos-upi",
     title: "Collect Donations with UPI QR for Temples & NGOs",
     description: "Set up secure, commission-free donation QR codes for charities.",
@@ -478,9 +538,41 @@ export const guides: GuideLink[] = [
   {
     slug: "phonepe-business-qr-code-activation",
     title: "PhonePe Business QR Activation Guide",
-    description: "Activate your PhonePe merchant account and download your QR.",
+    description: "KYC, virtual vs physical QR, free standee ordering, and official vs compatible prints.",
     presetTypes: ["phonepe"],
     tags: ["PhonePe", "Merchant Setup", "Business"],
+    featured: true,
+  },
+  {
+    slug: "how-to-print-gpay-qr-code-step-by-step",
+    title: "How to Print a GPay QR Code",
+    description: "Export, size, matte print, and test-scan a Google Pay counter QR.",
+    presetTypes: ["gpay"],
+    tags: ["Google Pay", "Printing Guide", "Retail"],
+    featured: true,
+  },
+  {
+    slug: "how-upi-soundboxes-work-and-their-safety",
+    title: "How UPI Soundboxes Work",
+    description: "Why the box cannot steal OTPs, and when a free phone alert is enough.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Soundbox", "Security", "Hardware"],
+    featured: true,
+  },
+  {
+    slug: "setup-soundbox-announcements-for-shop-free",
+    title: "Free UPI Voice Alerts on Your Phone",
+    description: "Turn on PhonePe and GPay Business voice announcements without renting a box.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Audio Alerts", "Merchant Tips", "Tutorial"],
+  },
+  {
+    slug: "how-to-resolve-upi-pending-transaction-issues",
+    title: "UPI Pending After Debit",
+    description: "Copy the UTR, do not retry, and use RBI T+1/T+5 reversal windows.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Troubleshooting", "Banking", "Safety"],
+    featured: true,
   },
   {
     slug: "is-it-safe-to-scan-upi-qr-code",
@@ -637,6 +729,20 @@ export const guides: GuideLink[] = [
     presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
     tags: ["MSME", "Government Schemes", "Finance", "Billing"],
   },
+  {
+    slug: "upi-qr-for-freelancers-invoice-payments",
+    title: "UPI QR for Freelancer Invoices",
+    description: "Add scan-to-pay QR to invoices without payment gateway fees.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Freelancer", "Billing", "Tutorial"],
+  },
+  {
+    slug: "upi-qr-code-for-restaurant-cloud-kitchen",
+    title: "UPI QR for Restaurants & Cloud Kitchens",
+    description: "Table tents, menu QRs, and WhatsApp order payments.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Restaurant", "Shops", "Tutorial"],
+  },
 ];
 
 const tagToPreset: Record<string, PresetType> = {
@@ -654,8 +760,9 @@ const tagToPreset: Record<string, PresetType> = {
   ICICI: "icici",
 };
 
-export function generatorPath(slug: GeneratorSlug, isHindi = false): string {
-  if (isHindi && routeExistsInLang(slug, "hi")) return `/hi/${slug}/`;
+export function generatorPath(slug: GeneratorSlug, lang: SiteLang | boolean = "en"): string {
+  const resolved: SiteLang = typeof lang === "boolean" ? (lang ? "hi" : "en") : lang;
+  if (resolved !== "en" && routeExistsInLang(slug, resolved)) return `/${resolved}/${slug}/`;
   return `/${slug}/`;
 }
 
@@ -663,8 +770,48 @@ export function guidePath(slug: string): string {
   return `/blog/${slug}/`;
 }
 
+const APP_PRESETS: PresetType[] = ["phonepe", "gpay", "paytm", "bhim", "whatsapp", "amazon"];
+const BANK_PRESETS: PresetType[] = [
+  "sbi",
+  "hdfc",
+  "icici",
+  "axis",
+  "kotak",
+  "pnb",
+  "canara",
+  "bob",
+  "indusind",
+  "union",
+  "idfc",
+  "idbi",
+  "yes",
+  "rbl",
+  "central",
+];
+
+export function generatorFamily(preset: PresetType): "app" | "bank" | "shop" {
+  if (APP_PRESETS.includes(preset)) return "app";
+  if (BANK_PRESETS.includes(preset)) return "bank";
+  return "shop";
+}
+
+export function getRelatedGenerators(currentSlug?: GeneratorSlug, limit = 4): GeneratorLink[] {
+  if (!currentSlug) return [];
+  const current = generators.find((g) => g.slug === currentSlug);
+  if (!current) return [];
+  const family = generatorFamily(current.presetType);
+  const same = generators.filter(
+    (g) => g.slug !== currentSlug && generatorFamily(g.presetType) === family
+  );
+  if (same.length >= limit) return same.slice(0, limit);
+  const rest = generators.filter(
+    (g) => g.slug !== currentSlug && generatorFamily(g.presetType) !== family
+  );
+  return [...same, ...rest].slice(0, limit);
+}
+
 export function getOtherGenerators(currentSlug?: GeneratorSlug): GeneratorLink[] {
-  return generators.filter((g) => g.slug !== currentSlug);
+  return getRelatedGenerators(currentSlug, 4);
 }
 
 export function getGuidesForPreset(

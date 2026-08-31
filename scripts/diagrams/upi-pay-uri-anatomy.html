@@ -1,0 +1,45 @@
+<!doctype html>
+<html><head><meta charset="utf-8">
+<style>
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Regular.ttf'); font-weight: 400; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-SemiBold.ttf'); font-weight: 600; }
+@font-face { font-family: Inter; src: url('file:///home/kunalsiyag/.local/share/fonts/extras/ttf/Inter-Black.ttf'); font-weight: 900; }
+@font-face { font-family: Mono; src: url('file:///usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf'); font-weight: 400; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 1200px; height: 630px; overflow: hidden; background: #fffaf1; color: #113b2c; font-family: Inter, sans-serif; }
+.page { width: 1200px; height: 630px; padding: 36px 40px; background: linear-gradient(180deg, #fffaf1 0%, #f4efe0 100%); }
+.kicker { font-size: 13px; font-weight: 900; letter-spacing: 0.22em; text-transform: uppercase; color: #287a57; }
+h1 { font-size: 34px; font-weight: 900; letter-spacing: -0.03em; margin: 8px 0 22px; }
+.grid { display: grid; gap: 14px; }
+.card { background: #fff; border: 1px solid rgba(17,59,44,0.1); border-radius: 18px; padding: 16px 18px; }
+.muted { color: rgba(17,59,44,0.68); font-size: 14px; line-height: 1.45; }
+.tag { display: inline-block; background: #dff6e7; color: #113b2c; font-size: 12px; font-weight: 700; border-radius: 999px; padding: 4px 10px; }
+table { width: 100%; border-collapse: collapse; font-size: 15px; }
+th, td { text-align: left; padding: 9px 10px; border-bottom: 1px solid rgba(17,59,44,0.1); }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: #287a57; }
+.mono { font-family: Mono, monospace; font-size: 15px; }
+.qr { width: 132px; height: 132px; background: #fff; border-radius: 12px; }
+.foot { position: absolute; bottom: 22px; right: 40px; font-size: 12px; font-weight: 600; color: rgba(17,59,44,0.5); }
+</style></head><body>
+
+<div class="page">
+  <p class="kicker">UPI payload</p>
+  <h1>What a UPI QR actually encodes</h1>
+  <div class="grid" style="grid-template-columns: 160px 1fr; align-items:center;">
+    <img class="qr" src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="Demo UPI QR">
+    <div class="card mono" style="font-size:18px;line-height:1.7;">
+      upi://pay?<span style="color:#287a57">pa</span>=demo@upi&amp;<span style="color:#287a57">pn</span>=Demo Shop&amp;<span style="color:#287a57">am</span>=250.00&amp;<span style="color:#287a57">cu</span>=INR&amp;<span style="color:#287a57">tn</span>=Bill
+    </div>
+  </div>
+  <div class="grid" style="grid-template-columns:repeat(5,1fr);margin-top:18px;">
+    <div class="card"><p style="font-weight:900;">pa</p><p class="muted">Payee VPA / UPI ID</p></div>
+    <div class="card"><p style="font-weight:900;">pn</p><p class="muted">Payee display name</p></div>
+    <div class="card"><p style="font-weight:900;">am</p><p class="muted">Optional amount</p></div>
+    <div class="card"><p style="font-weight:900;">cu</p><p class="muted">Currency, usually INR</p></div>
+    <div class="card"><p style="font-weight:900;">tn</p><p class="muted">Optional note</p></div>
+  </div>
+  <p class="muted" style="margin-top:14px;">Demo payload only — not a live VPA. Any UPI app that reads <span class="mono">upi://pay</span> can open it. Official merchant kits from PhonePe or GPay are separate products.</p>
+  <p class="foot">proupiqr.in</p>
+</div>
+<img src="file:///home/kunalsiyag/Projects/upi-qr/scripts/diagrams/demo-qr.png" alt="" style="display:none">
+</body></html>

@@ -1,0 +1,10 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import LocalizedToolsHub from "../../components/LocalizedToolsHub.astro";
+import { chromeFor } from "../../data/localeChrome";
+
+const chrome = chromeFor("hi");
+---
+<BaseLayout title={chrome.toolsHubTitle} description={chrome.toolsHubDescription}>
+  <LocalizedToolsHub lang="hi" />
+</BaseLayout>

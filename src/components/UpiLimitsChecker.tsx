@@ -157,6 +157,9 @@ const LIMITS_DATA: BankLimit[] = [
   }
 ];
 
+const LAST_REVIEWED = "2026-08-27";
+const SOURCE_NOTE = "Based on NPCI circulars and individual bank disclosures. Confirm against your bank's latest website.";
+
 export function UpiLimitsChecker() {
   const [query, setQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "bank" | "app">("all");
@@ -270,6 +273,10 @@ export function UpiLimitsChecker() {
           </table>
         </div>
       </div>
+
+      <p className="text-center text-[11px] text-forest/50 mt-4">
+        Limits reviewed {LAST_REVIEWED}. {SOURCE_NOTE}
+      </p>
     </div>
   );
 }

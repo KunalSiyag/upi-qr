@@ -1,14 +1,18 @@
 ---
 title: "Paytm Business QR & Soundbox: Setup and Monthly Charges Explained"
-description: "An analysis of Paytm Business account setups, QR code options, and the monthly rental fees associated with Paytm Soundbox voice alerts."
+description: "Paytm Business QR setup plus Soundbox rental ranges. Confirm current fees in the app — published rents change by city and scheme."
 pubDate: 2026-06-08
-author: "Pro UPI QR Team"
+updatedDate: 2026-08-27
+author: "Kunal Siyag"
+image: "/images/blog/upi-soundbox-tea-stall.jpg"
 tags: ["Paytm", "Soundbox", "Fees"]
 ---
 
 Paytm pioneered mobile QR code payments in India. For retail stores, their signature blue QR codes and the audio 'Soundbox' are standard counter fixtures. 
 
-If you are considering getting a Paytm QR code or Soundbox for your shop, it is important to understand the associated setup steps and monthly recurring charges.
+If you are considering a Paytm QR or Soundbox, separate the free QR from the paid speaker. Confirm today’s rent inside Paytm for Business — published numbers go stale.
+
+*Last reviewed 27 August 2026.*
 
 ---
 
@@ -22,10 +26,11 @@ To accept payments via Paytm, you must register on the **Paytm for Business** ap
 
 The Paytm Soundbox is a SIM-enabled speaker that announces payment confirmations in real-time (e.g., *"Paytm par sau rupaye prapt hue"*). 
 
-While the basic QR code is free, the Soundbox has ongoing costs:
-* **One-time Activation Fee:** Usually ranges between ₹199 to ₹299.
-* **Monthly Rental Charges:** Typically between ₹99 to ₹125 per month, depending on the model (basic, card machine combo, or pocket size).
-* **MDR on Non-UPI payments:** While UPI is free, accepting payments via Paytm Wallet or Corporate Credit Cards on the merchant terminal may attract fees of 1.5% to 2% + GST.
+While the basic QR code is free, the Soundbox is a paid add-on. Treat the figures below as **historical published ranges**, not a live quote — open Paytm for Business and read the offer for your pincode.
+
+* **One-time activation (historical range):** about ₹199–₹299.
+* **Monthly rental (historical range):** about ₹99–₹125 depending on model (basic, card-machine combo, or pocket size).
+* **MDR on non-UPI:** bank-to-bank UPI is 0% MDR. Paytm Wallet, corporate cards, and RuPay credit card on UPI above ₹2,000 may carry fees. Confirm on the settlement report, not on a sales flyer.
 
 ---
 

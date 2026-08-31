@@ -2,9 +2,9 @@
 title: "How to Receive International UPI Payments: A Step-by-Step Guide"
 description: "Find out how merchants, NRIs, and tourists can accept and make international payments through UPI in countries like UAE, Singapore, Nepal, France, and more."
 pubDate: 2026-06-12
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["International", "Payments", "Guide"]
-image: "/images/blog/receive-international-upi.png"
+image: "/images/blog/international-upi-travel.jpg"
 ---
 
 The Unified Payments Interface (UPI) has revolutionized how people pay in India. Today, UPI is going global. The National Payments Corporation of India (NPCI) and its international arm, NIPL, have actively partnered with central banks and financial agencies worldwide to enable cross-border UPI payments.

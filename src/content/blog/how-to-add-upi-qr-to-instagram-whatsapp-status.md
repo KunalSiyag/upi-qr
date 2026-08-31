@@ -2,7 +2,8 @@
 title: "How to Add UPI QR to Instagram & WhatsApp Status"
 description: "Step-by-step guide to share your payment QR code on Instagram bio, WhatsApp Status, and social media for instant money collection."
 pubDate: 2026-06-21
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/blog/whatsapp-upi-payment-share.jpg"
 tags: ["WhatsApp Business", "Social Media", "Tutorial"]
 ---
 

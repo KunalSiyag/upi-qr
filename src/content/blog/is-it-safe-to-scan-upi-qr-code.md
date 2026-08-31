@@ -2,7 +2,7 @@
 title: "Is it Safe to Scan UPI QR Codes? How to Avoid Scams"
 description: "Essential security guidelines for consumers and merchants to prevent falling victim to UPI QR code skimming and payment frauds."
 pubDate: 2026-06-06
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
 tags: ["Security", "Scam Prevention", "Safety"]
 ---
 

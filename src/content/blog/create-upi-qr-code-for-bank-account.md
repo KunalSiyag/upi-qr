@@ -2,11 +2,18 @@
 title: "UPI QR Code Generator for Bank Account Payments"
 description: "Learn how to use a universal QR code generator for your bank account. Connect SBI, HDFC, ICICI or personal VPA and receive PhonePe, GPay & Paytm payments directly."
 pubDate: 2026-07-20
-author: "Pro UPI QR Team"
+updatedDate: 2026-08-27
+author: "Kunal Siyag"
+reviewedOn: 2026-08-27
+reviewIntervalDays: 180
+testedApplications: ["PhonePe", "Google Pay", "Paytm"]
+image: "/images/blog/bank-account-upi-qr-desk.jpg"
 tags: ["Bank Account", "Universal QR", "Payments", "Tutorial"]
 ---
 
 Accepting direct bank transfers from customers, clients, or students by manually sharing an 11-digit IFSC code and 16-digit account number is slow, error-prone, and outdated. A single typo in an account number can delay payments or trigger failed transfers.
+
+*Last reviewed 27 August 2026.*
 
 The modern alternative is using a **universal QR code generator for bank account collections**. 
 
@@ -28,7 +35,7 @@ A **universal UPI QR code generator** bypasses app lock-in by using the open **N
 | **App Compatibility** | ✅ All UPI Apps (PhonePe, GPay, Paytm, BHIM) | N/A (Netbanking only) | ❌ Restricted or branded to 1 app |
 | **Error Risk** | 0% (VPA hardcoded in QR) | High (Typo in IFSC or account number) | 0% |
 | **Setup Cost** | ₹0 (Free browser generation) | ₹0 | Often requires merchant KYC / hardware fees |
-| **MDR Charges** | 0% (Zero commission) | 0% | 0% |
+| **MDR Charges** | 0% on bank-to-bank UPI; RuPay CC UPI above ₹2,000 may carry interchange | 0% | Same UPI MDR rules |
 
 ---
 

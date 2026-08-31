@@ -30,7 +30,10 @@ export default defineConfig({
     }
   },
   adapter: vercel(),
-  integrations: [react(), tailwind(), clerk()],
+  integrations: [react(), tailwind({ applyBaseStyles: false }), clerk()],
+  build: {
+    inlineStylesheets: "auto"
+  },
   vite: {
     plugins: [stripDeprecatedEsbuildOptions()]
   }

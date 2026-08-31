@@ -2,7 +2,8 @@
 title: "Static vs Dynamic UPI QR Code: What's the Difference?"
 description: "Understand static and dynamic UPI QR codes, when to use each for shops and billing, and how pre-filled amount QRs reduce payment errors."
 pubDate: 2026-06-12
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/static-vs-dynamic-qr.png"
 tags: ["Tutorial", "Dynamic QR", "Merchant Tips"]
 ---
 

@@ -1,8 +1,8 @@
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
-import { downloadDataUrl, notifyExportError } from "../lib/export-image";
+import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
+import { trackProductEvent } from "../lib/productEvents";
+import { GENERATOR_COPY, TEMPLATE_COPY, type GeneratorLang } from "../data/generatorI18n";
 
 const presetLogos = {
   phonepe: "/phonepe.png", // Or SVG/PNG asset if added, default high quality SVG fallback
@@ -239,119 +239,6 @@ function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
 
-const translations = {
-  en: {
-    simpleQr: "Simple QR",
-    advancedPoster: "Advanced Poster",
-    payeeName: "Payee name",
-    payeePlaceholder: "Shree Ganesh Store",
-    upiId: "UPI ID",
-    upiIdPlaceholder: "ganeshstore@oksbi",
-    qrLogoBadge: "QR Logo Badge",
-    none: "None",
-    gpay: "GPay",
-    phonepe: "PhonePe",
-    bhim: "BHIM",
-    paytm: "Paytm",
-    custom: "Custom",
-    uploadCustomLogo: "Upload Custom Logo",
-    posterTemplateStyle: "Poster template style",
-    addAmountNote: "💰 Add Amount & Note (Optional)",
-    hide: "Hide ▲",
-    configure: "Configure ▼",
-    amount: "Amount",
-    amountPlaceholder: "250",
-    amountHelper: "{t.amountHelper}",
-    note: "Note / Message",
-    notePlaceholder: "June tuition fee",
-    customizeDesign: "🎨 Customize Design (Logos & Covers)",
-    themePreset: "Theme Color Preset",
-    default: "Default Green",
-    mintyFresh: "Minty Fresh",
-    goldenSun: "Golden Sun",
-    midnightRed: "Midnight Red",
-    customColors: "Custom Colors",
-    bgColor: "Background Color",
-    accentColor: "Accent Color",
-    textColor: "Text Color",
-    generateUpiQr: "Generate UPI QR",
-    exploreTemplates: "Explore templates",
-    enterDetailsClick: "Enter details & click Generate",
-    instantScanToPay: "Your instant scan-to-pay QR code will appear here.",
-    downloadQrCode: "Download QR Code",
-    copyUpiLink: "Copy UPI link",
-    copied: "Copied",
-    copyFailed: "Copy failed",
-    preparingPoster: "Preparing poster...",
-    downloadPoster: "Download poster",
-    draftAutoSaves: "Draft auto-saves in this browser so you can come back and keep editing.",
-    enterNameError: "Enter the name that should appear on the payment QR.",
-    enterUpiIdError: "Enter a valid UPI ID (e.g. name@bank).",
-    invalidUpiIdError: "Please enter a valid UPI ID (e.g. name@bank).",
-    qrPreview: "QR Preview",
-    simpleScanQr: "Simple Scan QR",
-    standardFormat: "Standard format",
-    templatePreview: "Template preview",
-    yourBusinessName: "Your business name",
-    yourNameBank: "yourname@bank"
-  },
-  hi: {
-    simpleQr: "साधारण QR",
-    advancedPoster: "एडवांस्ड पोस्टर",
-    payeeName: "प्राप्तकर्ता का नाम",
-    payeePlaceholder: "श्री गणेश स्टोर",
-    upiId: "UPI आईडी",
-    upiIdPlaceholder: "ganeshstore@oksbi",
-    qrLogoBadge: "QR लोगो बैज",
-    none: "कोई नहीं",
-    gpay: "GPay",
-    phonepe: "PhonePe",
-    bhim: "BHIM",
-    paytm: "Paytm",
-    custom: "कस्टम",
-    uploadCustomLogo: "कस्टम लोगो अपलोड करें",
-    posterTemplateStyle: "पोस्टर टेम्पलेट स्टाइल",
-    addAmountNote: "💰 राशि और संदेश जोड़ें (वैकल्पिक)",
-    hide: "छिपाएं ▲",
-    configure: "सेट करें ▼",
-    amount: "राशि (रुपये)",
-    amountPlaceholder: "250",
-    amountHelper: "निश्चित राशि तभी दर्ज करें जब आप फीस, इवेंट या तय कीमत के लिए बिलिंग करना चाहते हैं।",
-    note: "संदेश / नोट",
-    notePlaceholder: "जून की ट्यूशन फीस",
-    customizeDesign: "🎨 डिज़ाइन बदलें (लोगो और कवर्स)",
-    themePreset: "थीम कलर प्रीसेट",
-    default: "डिफ़ॉल्ट हरा",
-    mintyFresh: "ताज़ा पुदीना",
-    goldenSun: "सुनहरा सूरज",
-    midnightRed: "आधी रात का लाल",
-    customColors: "कस्टम रंग",
-    bgColor: "पृष्ठभूमि (Background) रंग",
-    accentColor: "मुख्य (Accent) रंग",
-    textColor: "टेक्स्ट का रंग",
-    generateUpiQr: "UPI QR जनरेट करें",
-    exploreTemplates: "टेम्पलेट्स देखें",
-    enterDetailsClick: "विवरण दर्ज करें और जनरेट पर क्लिक करें",
-    instantScanToPay: "आपका तुरंत स्कैन-टू-पे QR कोड यहाँ दिखाई देगा।",
-    downloadQrCode: "QR कोड डाउनलोड करें",
-    copyUpiLink: "UPI लिंक कॉपी करें",
-    copied: "कॉपी हो गया",
-    copyFailed: "कॉपी करने में विफल",
-    preparingPoster: "पोस्टर तैयार हो रहा है...",
-    downloadPoster: "पोस्टर डाउनलोड करें",
-    draftAutoSaves: "ड्राफ्ट इस ब्राउज़र में ऑटो-सेव होता है ताकि आप वापस आकर बदलाव कर सकें।",
-    enterNameError: "वह नाम दर्ज करें जो भुगतान QR पर दिखाई देना चाहिए।",
-    enterUpiIdError: "एक वैध UPI आईडी दर्ज करें (जैसे name@bank)।",
-    invalidUpiIdError: "कृपया एक वैध UPI आईडी दर्ज करें (जैसे name@bank)।",
-    qrPreview: "QR पूर्वावलोकन",
-    simpleScanQr: "साधारण स्कैन QR",
-    standardFormat: "मानक प्रारूप",
-    templatePreview: "टेम्पलेट पूर्वावलोकन",
-    yourBusinessName: "आपके व्यवसाय का नाम",
-    yourNameBank: "yourname@bank"
-  }
-};
-
 export interface GeneratorFormProps {
   presetType?:
     | "phonepe"
@@ -364,12 +251,12 @@ export interface GeneratorFormProps {
     | "sbi"
     | "hdfc"
     | "icici";
-  lang?: "en" | "hi";
+  lang?: GeneratorLang;
   fullScreen?: boolean;
 }
 
 export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: GeneratorFormProps = {}) {
-  const t = translations[lang];
+  const t = GENERATOR_COPY[lang] ?? GENERATOR_COPY.en;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const posterRef = useRef<HTMLDivElement | null>(null);
   const [form, setForm] = useState<FormState>({
@@ -399,6 +286,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
   const [posterState, setPosterState] = useState<"idle" | "busy" | "done" | "error">("idle");
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateId>("shop-standee");
+  const localizedTemplates = useMemo(() => {
+    const pack = TEMPLATE_COPY[lang] ?? TEMPLATE_COPY.en;
+    return templateDefinitions.map((definition) => ({ ...definition, ...pack[definition.id] }));
+  }, [lang]);
+  const sampleSuffix = { en: " (Sample)", hi: " (नमूना)", ta: " (மாதிரி)", te: " (నమూనా)", mr: " (नमुना)" }[lang];
 
   const [showOptionalFields, setShowOptionalFields] = useState(false);
   const [showBrandingFields, setShowBrandingFields] = useState(false);
@@ -488,7 +380,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
   }, [form]);
 
   const activeTemplate =
-    templateDefinitions.find((template) => template.id === selectedTemplate) ?? templateDefinitions[0];
+    localizedTemplates.find((template) => template.id === selectedTemplate) ?? localizedTemplates[0];
 
   const posterHeightClass = fullScreen ? 'min-h-[380px]' : 'min-h-[460px]';
 
@@ -578,9 +470,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     try {
       await renderQr(form);
       setGenerated(true);
+      trackProductEvent("qr_generated", "upi-qr");
     } catch {
       setError("Something went wrong while generating the QR. Please try again.");
       setPosterState("error");
+      trackProductEvent("tool_error", "upi-qr");
     }
   }
 
@@ -652,6 +546,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
     downloadDataUrl(canvasRef.current.toDataURL("image/png"), `${safeName || "upi-qr"}.png`);
+    trackProductEvent("export_png", "upi-qr");
   }
 
   async function copyUpiLink() {
@@ -671,9 +566,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       }
 
       setCopyState("copied");
+      trackProductEvent("copy", "upi-qr");
       window.setTimeout(() => setCopyState("idle"), 1800);
     } catch {
       setCopyState("error");
+      trackProductEvent("tool_error", "upi-qr");
     }
   }
 
@@ -740,9 +637,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           .replace(/^-|-$/g, "");
       downloadDataUrl(dataUrl, `${safeName || "upi-template"}-${activeTemplate.id}.png`);
       setDownloadState("idle");
+      trackProductEvent("export_png", "upi-qr");
     } catch (err) {
       console.error("Download failed:", err);
       setDownloadState("error");
+      trackProductEvent("tool_error", "upi-qr");
     }
   }
 
@@ -804,6 +703,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       const pdfWidthMm = 360 * pxToMm;   // ≈ 95.3 mm
       const pdfHeightMm = targetHeight * pxToMm;
 
+      const { jsPDF } = await import("jspdf");
       const pdf = new jsPDF({
         orientation: pdfWidthMm < pdfHeightMm ? 'portrait' : 'landscape',
         unit: 'mm',
@@ -819,9 +719,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
 
       pdf.save(`${safeName || 'upi-invoice'}-${activeTemplate.id}.pdf`);
       setPdfDownloadState("idle");
+      trackProductEvent("export_pdf", "upi-qr");
     } catch (err) {
       console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfDownloadState("error");
+      trackProductEvent("tool_error", "upi-qr");
     }
   }
 
@@ -890,12 +792,12 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           <img src={qrDataUrl} alt="Generated UPI QR code" className="mx-auto w-full max-w-[210px] rounded-2xl bg-white" />
         ) : (
           <div className="mx-auto aspect-square w-full max-w-[210px] rounded-2xl border-2 border-dashed border-forest/20 bg-[#fffaf1] flex items-center justify-center">
-            <span className="text-xs text-forest/40 font-semibold">QR Code Container</span>
+            <span className="text-xs text-forest/40 font-semibold">{t.qrPreview}</span>
           </div>
         )}
         {!generated && (
           <p className="mx-auto mt-3 max-w-[15rem] text-[11px] leading-relaxed text-forest/60">
-            Fill details, click Generate to activate this QR code.
+            {t.enterDetailsClick}
           </p>
         )}
       </div>
@@ -950,7 +852,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                       className="mt-1 text-xs font-bold text-leaf/50 bg-mint/30 inline-block px-3 py-0.5 rounded-full border border-dashed border-leaf/25"
                       style={isCustomTheme ? { color: `${form.customTextColor}60`, backgroundColor: `${form.customTextColor}06`, borderColor: `${form.customTextColor}25` } : {}}
                     >
-                      {activeTemplate.customFieldPlaceholder} (Sample)
+                      {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </p>
                   ) : null}
                 </div>
@@ -1033,7 +935,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                       className="text-xs text-white/50 font-semibold mt-1 bg-white/5 inline-block px-3 py-0.5 rounded-full border border-dashed border-white/20"
                       style={isCustomTheme ? { color: `${form.customTextColor}60`, backgroundColor: `${form.customTextColor}06`, borderColor: `${form.customTextColor}20` } : {}}
                     >
-                      {activeTemplate.customFieldPlaceholder} (Sample)
+                      {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </p>
                   ) : null}
                 </div>
@@ -1115,7 +1017,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                       className="bg-forest/20 text-forest/40 text-xs font-black px-2.5 py-1 rounded-md border border-dashed border-forest/20"
                       style={isCustomTheme ? { color: `${form.customTextColor}50`, backgroundColor: `${form.customTextColor}10`, borderColor: `${form.customTextColor}25` } : {}}
                     >
-                      {activeTemplate.customFieldPlaceholder} (Sample)
+                      {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </span>
                   ) : null}
                 </div>
@@ -1205,7 +1107,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
                     <p className="text-xs font-bold text-leaf/50 mt-1 italic" style={textSubColorStyle}>
-                      💼 {activeTemplate.customFieldPlaceholder} (Sample)
+                      💼 {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </p>
                   ) : null}
                 </div>
@@ -1267,7 +1169,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
                     <p className="text-xs font-bold text-pink-300/50 mt-1.5 truncate max-w-[150px] italic" style={textSubColorStyle}>
-                      📅 {activeTemplate.customFieldPlaceholder} (Sample)
+                      📅 {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </p>
                   ) : null}
                 </div>
@@ -1356,7 +1258,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                     </p>
                   ) : activeTemplate.customFieldPlaceholder ? (
                     <p className="text-xs font-bold text-sky-600/50 mt-1 italic" style={textSubColorStyle}>
-                      📚 {activeTemplate.customFieldPlaceholder} (Sample)
+                      📚 {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </p>
                   ) : null}
                 </div>
@@ -1450,7 +1352,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                       className="border border-[#eab308]/30 text-[#eab308]/40 text-xs font-black px-2.5 py-0.5 rounded border-dashed"
                       style={isCustomTheme ? { borderColor: `${form.customTextColor}20`, color: `${form.customTextColor}50` } : {}}
                     >
-                      {activeTemplate.customFieldPlaceholder} (Sample)
+                      {activeTemplate.customFieldPlaceholder}{sampleSuffix}
                     </span>
                   ) : null}
                 </div>
@@ -1501,7 +1403,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
             </div>
 
             <div className="mt-4 text-center relative z-10">
-              <p className="text-[9px] font-bold uppercase tracking-wider text-[#eab308]/60" style={textSubColorStyle}>Thank you for riding safe!</p>
+              <p className="text-[9px] font-bold uppercase tracking-wider text-[#eab308]/60" style={textSubColorStyle}>{t.thankYouRide}</p>
             </div>
           </div>
         );
@@ -1534,7 +1436,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
 
               <div className="mt-4 space-y-2.5 text-xs text-neutral-800" style={textColorStyle}>
                 <div className="flex justify-between border-b border-neutral-100 pb-1.5" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
-                  <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Payee Name:</span>
+                  <span className="font-semibold text-neutral-500" style={textSubColorStyle}>{t.payeeNameLabel}</span>
                   <span className="font-bold text-neutral-900 truncate max-w-[150px]" style={textColorStyle}>{payeeLabel}</span>
                 </div>
                 
@@ -1546,7 +1448,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                 ) : activeTemplate.customFieldPlaceholder ? (
                   <div className="flex justify-between border-b border-neutral-100 pb-1.5 opacity-50" style={isCustomTheme ? { borderColor: `${form.customTextColor}10` } : {}}>
                     <span className="font-semibold text-neutral-500" style={textSubColorStyle}>Reference:</span>
-                    <span className="font-bold text-neutral-900 italic truncate max-w-[150px]" style={textSubColorStyle}>{activeTemplate.customFieldPlaceholder} (Sample)</span>
+                    <span className="font-bold text-neutral-900 italic truncate max-w-[150px]" style={textSubColorStyle}>{activeTemplate.customFieldPlaceholder}{sampleSuffix}</span>
                   </div>
                 ) : null}
 
@@ -1720,7 +1622,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                 onChange={(e) => setSelectedTemplate(e.target.value as TemplateId)}
                 className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm font-bold text-forest outline-none ring-0 transition focus:border-leaf"
               >
-                {templateDefinitions.map((template) => (
+                {localizedTemplates.map((template) => (
                   <option key={template.id} value={template.id}>
                     {template.name} ({template.kicker})
                   </option>
@@ -1896,7 +1798,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
               className="rounded-full border border-forest/20 bg-white px-3 py-1.5 text-xs font-black text-forest transition hover:bg-mint hover:text-leaf"
               aria-expanded={showBrandingFields}
             >
-              🎨 Customize
+              {t.customize}
             </button>
           </div>
 
@@ -1931,7 +1833,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
                 disabled={!generated || pdfDownloadState === "busy"}
                 className="rounded-full bg-[#4f46e5] px-4 py-2 text-xs font-bold text-white transition hover:bg-[#4338ca] disabled:opacity-50"
               >
-                {pdfDownloadState === "busy" ? "Preparing PDF…" : "⬇ Download PDF"}
+                {pdfDownloadState === "busy" ? t.preparingPdf : t.downloadPdf}
               </button>
               <button
                 type="button"
@@ -1948,14 +1850,14 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
             <div className="mt-3 space-y-4 rounded-2xl border border-forest/10 bg-white p-4 text-left text-xs shadow-sm">
               <div className="flex items-center justify-between gap-3">
                 <div>
-                  <p className="text-sm font-black text-forest">Customize design</p>
-                  <p className="mt-1 text-[11px] leading-5 text-forest/60">Logo, cover image, QR logo size, and brand colors update the poster preview instantly.</p>
+                  <p className="text-sm font-black text-forest">{t.customizeDesign}</p>
+                  <p className="mt-1 text-[11px] leading-5 text-forest/60">{t.customizeHint}</p>
                 </div>
-                <button type="button" onClick={() => setShowBrandingFields(false)} className="rounded-full bg-cream px-3 py-1 text-[11px] font-bold text-forest">Close</button>
+                <button type="button" onClick={() => setShowBrandingFields(false)} className="rounded-full bg-cream px-3 py-1 text-[11px] font-bold text-forest">{t.close}</button>
               </div>
 
               <div>
-                <p className="mb-2 font-bold text-forest">Logo badge</p>
+                <p className="mb-2 font-bold text-forest">{t.logoBadge}</p>
                 <div className="flex flex-wrap gap-1.5">
                   {(["none", "phonepe", "paytm", "gpay", "bhim", "whatsapp", "amazon", "sbi", "hdfc", "icici", "custom"] as const).map((type) => (
                     <button

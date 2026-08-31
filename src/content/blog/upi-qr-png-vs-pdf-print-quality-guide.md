@@ -2,7 +2,8 @@
 title: "UPI QR PNG vs PDF vs SVG: Best File Format for Printing"
 description: "Choose the right download format for cyber café prints, professional press, and WhatsApp sharing without blurry or unscannable QRs."
 pubDate: 2026-06-28
-author: "Pro UPI QR Team"
+author: "Kunal Siyag"
+image: "/images/diagrams/png-vs-pdf-print.png"
 tags: ["Printing Guide", "Tutorial", "Reference"]
 ---
 
