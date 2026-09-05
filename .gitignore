@@ -10,6 +10,9 @@ docs/
 .agents/
 *.md
 !README.md
+# Blog/content markdown must be committed — otherwise CI builds
+# without the posts and link_audit fails on inbound hrefs.
+!src/content/**/*.md
 
 # Sensitive Credentials & Keys
 service_account.json
