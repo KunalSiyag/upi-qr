@@ -37,6 +37,14 @@ export function StickerSheetGenerator() {
   const payeeId = useId();
   const upiIdId = useId();
   const amountId = useId();
+  const typeId = useId();
+  const amountColorId = useId();
+  const urlId = useId();
+  const textId = useId();
+  const wifiSsidId = useId();
+  const wifiPassId = useId();
+  const layoutId = useId();
+  const logoId = useId();
 
   const rawQrPayload = useMemo(() => {
     if (qrContentType === "url") {
@@ -154,16 +162,17 @@ export function StickerSheetGenerator() {
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] w-full min-w-0">
       {/* Form Controls */}
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
-        <h3 className="text-xl font-black text-forest">A4 Sticker Sheet Generator</h3>
+        <h2 className="text-xl font-black text-forest">A4 Sticker Sheet Generator</h2>
         <p className="mt-1 text-xs text-forest/60">Generate print-ready sticker sheets with logos centered right inside the QR code matrix.</p>
 
         <form className="mt-6 space-y-4">
           <div className="grid gap-1 min-w-0">
-            <span className="text-xs font-bold text-forest">QR Data Type</span>
+            <label htmlFor={typeId} className="text-xs font-bold text-forest">QR Data Type</label>
             <select
+              id={typeId}
               value={qrContentType}
               onChange={(e) => setQrContentType(e.target.value as any)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
             >
               <option value="upi">💳 UPI Payment QR</option>
               <option value="url">🔗 Website / Link QR</option>
@@ -211,12 +220,13 @@ export function StickerSheetGenerator() {
                   />
                 </div>
                 <div className="grid gap-1 min-w-0">
-                  <label className="text-xs font-bold text-forest">QR Dark Color</label>
+                  <label htmlFor={amountColorId} className="text-xs font-bold text-forest">QR Dark Color</label>
                   <input
+                    id={amountColorId}
                     type="color"
                     value={accentColor}
                     onChange={(e) => setAccentColor(e.target.value)}
-                    className="w-full h-[38px] rounded-xl border border-forest/10 bg-cream/30 p-1 cursor-pointer"
+                    className="w-full h-[38px] rounded-xl border border-forest/10 bg-cream/30 p-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-leaf"
                   />
                 </div>
               </div>
@@ -225,9 +235,10 @@ export function StickerSheetGenerator() {
 
           {qrContentType === "url" && (
             <div className="grid gap-1 min-w-0">
-              <label className="text-xs font-bold text-forest">Target Website URL</label>
+              <label htmlFor={urlId} className="text-xs font-bold text-forest">Target Website URL</label>
               <input
-                type="text"
+                id={urlId}
+                type="url"
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
                 className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
@@ -238,8 +249,9 @@ export function StickerSheetGenerator() {
 
           {qrContentType === "text" && (
             <div className="grid gap-1 min-w-0">
-              <label className="text-xs font-bold text-forest">QR Text Content</label>
+              <label htmlFor={textId} className="text-xs font-bold text-forest">QR Text Content</label>
               <textarea
+                id={textId}
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
                 rows={2}
@@ -252,8 +264,9 @@ export function StickerSheetGenerator() {
           {qrContentType === "wifi" && (
             <div className="grid gap-2 min-w-0 sm:grid-cols-2">
               <div className="grid gap-1 min-w-0">
-                <label className="text-xs font-bold text-forest">WiFi Network Name (SSID)</label>
+                <label htmlFor={wifiSsidId} className="text-xs font-bold text-forest">WiFi Network Name (SSID)</label>
                 <input
+                  id={wifiSsidId}
                   type="text"
                   value={wifiSsid}
                   onChange={(e) => setWifiSsid(e.target.value)}
@@ -261,9 +274,11 @@ export function StickerSheetGenerator() {
                 />
               </div>
               <div className="grid gap-1 min-w-0">
-                <label className="text-xs font-bold text-forest">WiFi Password</label>
+                <label htmlFor={wifiPassId} className="text-xs font-bold text-forest">WiFi Password</label>
                 <input
+                  id={wifiPassId}
                   type="password"
+                  autoComplete="off"
                   value={wifiPass}
                   onChange={(e) => setWifiPass(e.target.value)}
                   className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
@@ -273,8 +288,9 @@ export function StickerSheetGenerator() {
           )}
 
           <div className="grid gap-1 min-w-0">
-            <span className="text-xs font-bold text-forest">Sticker Grid Layout</span>
+            <label htmlFor={layoutId} className="text-xs font-bold text-forest">Sticker Grid Layout</label>
             <select
+              id={layoutId}
               value={layout}
               onChange={(e) => setLayout(e.target.value as LayoutGrid)}
               className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf font-bold"
@@ -286,8 +302,9 @@ export function StickerSheetGenerator() {
           </div>
 
           <div className="grid gap-1 min-w-0">
-            <span className="text-xs font-bold text-forest">QR Center Logo Overlay</span>
+            <label htmlFor={logoId} className="text-xs font-bold text-forest">QR Center Logo Overlay</label>
             <select
+              id={logoId}
               value={logo}
               onChange={(e) => setLogo(e.target.value as any)}
               className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf font-bold"
@@ -330,7 +347,7 @@ export function StickerSheetGenerator() {
 
       {/* Live A4 Preview Container */}
       <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 shadow-sm w-full min-w-0">
-        <h4 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/50">A4 Printable Page Preview</h4>
+        <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/50">A4 Printable Page Preview</h3>
         
         {/* Scaled A4 Sheet Container */}
         <div className="w-full max-w-[420px] aspect-[1/1.414] bg-white border border-black/10 shadow-2xl rounded-xl p-3 overflow-hidden relative">

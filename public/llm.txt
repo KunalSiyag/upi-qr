@@ -20,6 +20,7 @@ It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) 
   - Custom Executive Minimal Card
 - **Universal Non-Payment QR Generator**: Supports static QR creation for URLs, PDFs, vCard contact cards, WiFi auto-connect credentials, SMS, Email, and App Store links.
 - **Invoice PDF Generator**: Embedded UPI QR code builder inside GST-compliant digital invoices for freelancers and billing counters.
+- **Counter hardware guides**: `/products/` covers acrylic standees, table tents, waterproof stickers, thermal printers, outdoor sunboard, and cab clips. Each page is a buying guide with sizes and a generator link. Amazon Associate links are labelled; hardware is optional and generators stay free.
 - **Localized tools**: Hindi, Tamil, Telugu, and Marathi homepages plus PhonePe, Google Pay, UPI error resolver, and `/tools/` hubs. Form labels, validation, and Hindi poster/error-card copy follow the page language. Hindi RSS is at `/hi/rss.xml`.
 
 ## Technical Specifications & Product Benchmarks

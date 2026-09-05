@@ -34,12 +34,40 @@
         {
           "key": "Permissions-Policy",
           "value": "camera=(), geolocation=(), microphone=()"
+        },
+        {
+          "key": "Referrer-Policy",
+          "value": "strict-origin-when-cross-origin"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin-allow-popups"
+        },
+        {
+          "key": "Cross-Origin-Resource-Policy",
+          "value": "same-origin"
+        }
+      ]
+    },
+    {
+      "source": "/((?!embed).*)",
+      "headers": [
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'unsafe-inline' https://*.clerk.accounts.dev https://clerk.com https://*.clerk.com https://va.vercel-scripts.com https://vitals.vercel-insights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https://*.clerk.accounts.dev https://api.clerk.com https://clerk.com https://*.clerk.com https://va.vercel-scripts.com https://vitals.vercel-insights.com https://api.indexnow.org; frame-src 'self' https://*.clerk.accounts.dev https://clerk.com https://*.clerk.com; object-src 'none'; base-uri 'none'; form-action 'self' https://*.clerk.accounts.dev; frame-ancestors 'self'; upgrade-insecure-requests"
         }
       ]
     },
     {
       "source": "/embed/:path*",
-      "headers": [{ "key": "X-Robots-Tag", "value": "noindex, nofollow" }]
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors *" }
+      ]
     },
     {
       "source": "/sign-in/:path*",

@@ -95,7 +95,7 @@ const faqSchema = {
   <main class="px-3 sm:px-4 py-8 sm:py-12 md:py-16 w-full min-w-0">
     <div class="mx-auto max-w-6xl rounded-[2rem] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
       {/* Breadcrumb Nav */}
-      <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
+      <nav aria-label="Breadcrumb" class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
         <a href="/" class="hover:underline">Home</a>
         <span>/</span>
         <span class="text-forest">A4 Sticker Sheet Generator</span>
@@ -130,21 +130,21 @@ const faqSchema = {
         
         <div class="mt-8 grid gap-6 sm:grid-cols-3">
           <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
-            <h3 class="text-base font-black text-forest">🏪 Shop Counters & Registers</h3>
+            <h3 class="text-base font-black text-forest">Shop counters and registers</h3>
             <p class="mt-2 text-xs leading-relaxed text-forest/70">
               Paste stickers directly onto POS machines, counter edges, and cash drawers for instant customer scanning.
             </p>
           </div>
 
           <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
-            <h3 class="text-base font-black text-forest">📦 Delivery & Packaging Boxes</h3>
+            <h3 class="text-base font-black text-forest">Delivery and packaging boxes</h3>
             <p class="mt-2 text-xs leading-relaxed text-forest/70">
               Attach small QR stickers to takeaway bags and parcel boxes to collect Pay-on-Delivery (COD) payments seamlessly.
             </p>
           </div>
 
           <div class="rounded-2xl border border-forest/10 bg-mint/20 p-5">
-            <h3 class="text-base font-black text-forest">🪑 Restaurant & Cafe Tables</h3>
+            <h3 class="text-base font-black text-forest">Restaurant and cafe tables</h3>
             <p class="mt-2 text-xs leading-relaxed text-forest/70">
               Affix durable table stickers so diners can scan and clear their food bill right from their table.
             </p>
@@ -157,12 +157,13 @@ const faqSchema = {
         </h2>
         <div class="mt-6 overflow-x-auto rounded-2xl border border-forest/10 bg-white shadow-sm">
           <table class="w-full text-left border-collapse text-xs min-w-[500px]">
+            <caption class="sr-only">A4 UPI QR sticker grid sizes, uses, and paper stock</caption>
             <thead>
               <tr class="border-b border-forest/10 bg-cream/30 text-forest font-bold">
-                <th class="p-4">Sticker Grid</th>
-                <th class="p-4">Sticker Dimensions</th>
-                <th class="p-4">Best Used For</th>
-                <th class="p-4">Recommended Paper</th>
+                <th scope="col" class="p-4">Sticker Grid</th>
+                <th scope="col" class="p-4">Sticker Dimensions</th>
+                <th scope="col" class="p-4">Best Used For</th>
+                <th scope="col" class="p-4">Recommended Paper</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-forest/5 text-forest/80">

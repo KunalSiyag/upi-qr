@@ -103,4 +103,18 @@ assert.doesNotMatch(dynamicApi, /id:\s*body\.id/);
 const surveyTool = readFileSync(join(projectRoot, "src/components/SurveyQrGenerator.tsx"), "utf8");
 assert.doesNotMatch(surveyTool, /\/r\/\?[^\n]*url=/);
 
+const vercelConfig = readFileSync(join(projectRoot, "vercel.json"), "utf8");
+assert.match(vercelConfig, /X-Frame-Options/);
+assert.match(vercelConfig, /Cross-Origin-Opener-Policy/);
+assert.match(vercelConfig, /Content-Security-Policy/);
+assert.match(vercelConfig, /frame-ancestors 'self'/);
+assert.doesNotMatch(vercelConfig, /medium\.com/i);
+
+const syndicate = readFileSync(join(projectRoot, "scripts/syndicate-satellites.mjs"), "utf8");
+assert.match(syndicate, /NEVER_SYNDICATE_SLUGS/);
+assert.match(syndicate, /a4-bulk-upi-qr-sticker-sheet/);
+assert.match(syndicate, /zero-mdr-merchant-upi-qr-2026/);
+assert.match(syndicate, /Medium banned/);
+assert.doesNotMatch(syndicate, /publishToMedium|MEDIUM_CONFIG/);
+
 console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths passed");

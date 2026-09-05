@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 /**
  * Automated RSS Directory Pinger
- * Sends XML-RPC pings to Ping-O-Matic, Blo.gs, Weblogs, and FeedBurner.
+ * Sends XML-RPC pings to Ping-O-Matic only.
+ * Do not ping Medium — the Medium account is banned for duplicate syndication.
  * 
  * Usage:
  *   node scripts/ping-aggregators.mjs

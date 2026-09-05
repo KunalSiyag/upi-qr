@@ -1,0 +1,222 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import ResponsiveImage from "../../components/ResponsiveImage.astro";
+import { PRODUCT_CATEGORIES, PRODUCT_HUB, PRODUCTS } from "../../data/products";
+import { siteImage } from "../../data/siteImages";
+
+const title = PRODUCT_HUB.seoTitle;
+const description = PRODUCT_HUB.seoDescription;
+const pageUrl = "https://www.proupiqr.in/products/";
+const og = siteImage("upi-qr-hardware-products");
+const lastReviewed = "3 September 2026";
+
+const faqs = [
+  {
+    question: "Do I need to buy hardware to use Pro UPI QR?",
+    answer:
+      "No. The generators, invoices, and calculators stay free. Hardware pages are optional buying guides for acrylic standees, stickers, and printers. Amazon Associate links are labelled and do not change QR math.",
+  },
+  {
+    question: "What size UPI QR should I print for a shop counter?",
+    answer:
+      "Keep the QR module itself at least 2.5–3 cm on the short side for arm’s-length checkout. Table tents can be 1.5–2 in. Outdoor boards need 5 cm or more. NPCI does not mandate one global print size.",
+  },
+  {
+    question: "Are these official PhonePe or Google Pay standees?",
+    answer:
+      "No. Inserts generated here encode a standard upi://pay VPA. Official merchant kits, KYC dashboards, and rented soundboxes still come from PhonePe Business, Google Pay for Business, Paytm, or your bank.",
+  },
+  {
+    question: "Can I change the UPI ID after I buy a standee?",
+    answer:
+      "Reuse the acrylic, wood, or clip. Reprint the insert, or use a dynamic QR whose destination you can edit. Always test-scan from PhonePe and GPay after a VPA change.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "CollectionPage",
+      "@id": `${pageUrl}#page`,
+      name: "UPI QR standees, stickers, printers, and counter hardware",
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": "https://www.proupiqr.in/#website" },
+      primaryImageOfPage: {
+        "@type": "ImageObject",
+        url: `https://www.proupiqr.in${og.src}`,
+        width: og.width,
+        height: og.height,
+        caption: og.caption,
+      },
+      mainEntity: {
+        "@type": "ItemList",
+        name: "UPI QR hardware for Indian shops",
+        numberOfItems: PRODUCTS.length,
+        itemListElement: PRODUCTS.map((product, index) => ({
+          "@type": "ListItem",
+          position: index + 1,
+          name: product.name,
+          url: `https://www.proupiqr.in/products/${product.slug}/`,
+        })),
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Print UPI QR", item: "https://www.proupiqr.in/print-upi-qr/" },
+        { "@type": "ListItem", position: 3, name: "Hardware", item: pageUrl },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+
+const alternates = [
+  { lang: "en", url: pageUrl },
+  { lang: "x-default", url: pageUrl },
+];
+---
+
+<BaseLayout title={title} description={description} schema={schema} image={og.src} alternates={alternates}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/print-upi-qr/" class="hover:text-leaf transition-colors">Print UPI QR</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Hardware</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+          Physical display
+        </p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">
+          {PRODUCT_HUB.h1}
+        </h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
+          {PRODUCT_HUB.intro}
+        </p>
+        <p class="mt-3 text-xs font-semibold text-forest/50">Last reviewed {lastReviewed} · prices change on Amazon</p>
+        <nav aria-label="Hardware categories" class="mt-6 flex flex-wrap gap-2">
+          {PRODUCT_CATEGORIES.map((category) => (
+            <a
+              href={`#${category.id}`}
+              class="rounded-full border border-forest/15 bg-white px-4 py-1.5 text-xs font-bold text-forest transition hover:border-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
+            >
+              {category.label}
+            </a>
+          ))}
+        </nav>
+      </div>
+    </section>
+
+    <section class="px-4 pb-4 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <ResponsiveImage src={og.src} loading="eager" />
+      </div>
+    </section>
+
+    {PRODUCT_CATEGORIES.map((category) => {
+      const items = PRODUCTS.filter((product) => product.category === category.id);
+      if (!items.length) return null;
+      return (
+        <section id={category.id} class="scroll-mt-28 px-4 py-8 md:px-6 lg:px-8">
+          <div class="mx-auto max-w-7xl">
+            <h2 class="text-xl font-black tracking-tight text-forest md:text-2xl">{category.label}</h2>
+            <p class="mt-1 text-sm font-semibold text-forest/65">{category.blurb}</p>
+            <div class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {items.map((product) => (
+                <article class="flex flex-col rounded-[1.75rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+                  <a href={`/products/${product.slug}/`} class="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf rounded-2xl">
+                    <div class="relative flex h-48 items-center justify-center overflow-hidden rounded-2xl border border-forest/5 bg-cream p-4">
+                      <picture>
+                        <source type="image/avif" srcset={product.imgSrc.replace(".png", "-480.avif")} />
+                        <source type="image/webp" srcset={product.imgSrc.replace(".png", "-480.webp")} />
+                        <img
+                          src={product.imgSrc}
+                          alt={product.imgAlt}
+                          width={product.imgWidth}
+                          height={product.imgHeight}
+                          loading="lazy"
+                          decoding="async"
+                          class="max-h-full max-w-full object-contain"
+                        />
+                      </picture>
+                      <span class="absolute right-3 top-3 rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-forest">
+                        {product.tag}
+                      </span>
+                    </div>
+                    <h3 class="mt-4 text-lg font-black text-forest group-hover:text-leaf">{product.name}</h3>
+                    <p class="mt-2 text-sm leading-6 text-forest/72">{product.intro}</p>
+                  </a>
+                  <div class="mt-4 flex items-center justify-between border-t border-forest/5 pt-4">
+                    <span class="text-sm font-bold text-forest">{product.priceEst}</span>
+                    <a
+                      href={`/products/${product.slug}/`}
+                      class="text-sm font-black text-leaf hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
+                    >
+                      Buying guide →
+                    </a>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+      );
+    })}
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-forest/10 bg-[#fffdf6] p-6 md:p-8">
+        <h2 class="text-2xl font-black text-forest">How to choose hardware</h2>
+        <div class="mt-5 grid gap-4 md:grid-cols-3 text-sm leading-7 text-forest/75">
+          <p>
+            <strong class="text-forest">Start with an A6 acrylic T-stand</strong> if customers scan at the billing desk. Print a matte insert from the
+            <a class="font-semibold text-leaf hover:underline" href="/">UPI generator</a>.
+          </p>
+          <p>
+            <strong class="text-forest">Add vinyl stickers</strong> for glass, tiffins, and parcels. Use the
+            <a class="font-semibold text-leaf hover:underline" href="/qr-sticker-generator/">A4 sticker sheet tool</a>
+            {" "}or buy pre-cut waterproof labels for wet counters.
+          </p>
+          <p>
+            <strong class="text-forest">Printers and speakers are extras.</strong> A thermal printer issues slips; a speaker repeats phone alerts. Neither replaces a printed QR. Official soundboxes still come from PhonePe or Paytm.
+          </p>
+        </div>
+        <p class="mt-5 text-sm leading-7 text-forest/75">
+          Size chart, PNG vs PDF, and laminate notes live on
+          <a class="font-semibold text-leaf hover:underline" href="/print-templates/">printable templates</a>
+          {" "}and the
+          <a class="font-semibold text-leaf hover:underline" href="/blog/upi-qr-code-size-dimensions-printing-guide/">print size guide</a>.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 pb-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="text-2xl font-black text-forest">FAQ</h2>
+        <dl class="mt-6 grid gap-4 md:grid-cols-2">
+          {faqs.map((faq) => (
+            <div class="rounded-2xl border border-forest/10 bg-white p-5">
+              <dt class="font-black text-forest">{faq.question}</dt>
+              <dd class="mt-2 text-sm leading-7 text-forest/75">{faq.answer}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

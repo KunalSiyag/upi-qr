@@ -194,6 +194,13 @@ export const SITE_IMAGES: SiteImage[] = [
     "A rented soundbox is optional. PhonePe and GPay Business apps can speak alerts on the phone.",
     "UPI QR and speaker at a tea stall"
   ),
+  jpeg(
+    "upi-qr-hardware-products",
+    "upi-qr-hardware-products",
+    "Kirana billing counter with acrylic standee, wooden QR holder, table tent, vinyl stickers, speaker, and thermal printer",
+    "Pair a free printable UPI QR with an acrylic standee, sticker, or printer. Hardware is optional; generators stay free.",
+    "UPI QR hardware on a kirana counter"
+  ),
   png(
     "print-size-chart",
     "/images/diagrams/print-size-chart.png",
@@ -337,6 +344,19 @@ const PATH_IMAGE_IDS: Record<string, string[]> = {
     "sticker-sheet-layouts",
   ],
   "/print-upi-qr/": ["print-formats-overview", "print-size-chart", "kirana-upi-standee"],
+  "/products/": ["upi-qr-hardware-products", "kirana-upi-standee", "upi-qr-sticker-sheet"],
+  "/products/acrylic-qr-standee/": ["kirana-upi-standee"],
+  "/products/wooden-qr-holder/": ["upi-qr-hardware-products"],
+  "/products/bluetooth-thermal-printer/": ["upi-qr-hardware-products"],
+  "/products/waterproof-qr-stickers/": ["upi-qr-sticker-sheet", "sticker-sheet-layouts"],
+  "/products/table-tent-qr-holder/": ["format-table-tent"],
+  "/products/thermal-paper-rolls/": ["upi-qr-hardware-products"],
+  "/products/a5-acrylic-t-stand/": ["format-a5-counter-card"],
+  "/products/magnetic-qr-sticker/": ["upi-qr-sticker-sheet"],
+  "/products/payment-alert-speaker/": ["upi-soundbox-tea-stall"],
+  "/products/a4-wall-poster-frame/": ["format-a4-standee"],
+  "/products/cab-dashboard-qr-holder/": ["format-counter-card"],
+  "/products/outdoor-sunboard-standee/": ["print-formats-overview"],
   "/upi-error-codes/": ["upi-payment-failed-phone"],
   "/upi-errors-and-limits/": ["upi-payment-failed-phone"],
   "/universal-qr-generator/": ["universal-qr-wifi-vcard"],

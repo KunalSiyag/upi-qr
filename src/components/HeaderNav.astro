@@ -403,6 +403,10 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
             <div class="text-xs font-bold text-forest">{isHindi ? "प्रिंट टेम्पलेट" : "Printable templates"}</div>
             <div class="text-[10px] text-forest/60">{isHindi ? "A4, A5, 5×7, टेबल टेंट" : "A4, A5, 5×7, table tents"}</div>
           </a>
+          <a href="/products/" class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "स्टैंडी और प्रिंटर" : "Standees & printers"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "एक्रिलिक, स्टीकर, थर्मल प्रिंटर" : "Acrylic, stickers, thermal printers"}</div>
+          </a>
           <a href={p("upi-errors-and-limits")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
             <div class="text-xs font-bold text-forest">{isHindi ? "एरर, लिमिट, सुरक्षा" : "Errors, limits, safety"}</div>
             <div class="text-[10px] text-forest/60">{isHindi ? "NPCI कोड और रिफंड TAT" : "NPCI codes and refund TAT"}</div>
@@ -525,6 +529,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
         <a href={p("merchant-setup")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "मर्चेंट सेटअप" : "Merchant setup"}</a>
         <a href={p("print-upi-qr")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट / स्टैंडी" : "Print / standees"}</a>
         <a href={p("print-templates")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट टेम्पलेट" : "Print templates"}</a>
+        <a href="/products/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "हार्डवेयर" : "Hardware"}</a>
         <a href={p("upi-errors-and-limits")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "एरर / लिमिट" : "Errors / limits"}</a>
         <a href={p("merchant-documents")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "दस्तावेज़" : "Documents"}</a>
         <a href={p("business-calculators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "कैलकुलेटर" : "Calculators"}</a>

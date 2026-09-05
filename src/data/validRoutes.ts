@@ -1,4 +1,5 @@
 import { GLOSSARY_SLUGS } from "./glossary";
+import { PRODUCT_ROUTE_SLUGS } from "./products";
 
 export const ENGLISH_SLUGS = new Set(["glossary",
   "",
@@ -106,6 +107,7 @@ export const ENGLISH_SLUGS = new Set(["glossary",
   "corrections",
   "blog",
   ...GLOSSARY_SLUGS,
+  ...PRODUCT_ROUTE_SLUGS,
 ]);
 
 import { localizedToolSlugs } from "./localizedTools";

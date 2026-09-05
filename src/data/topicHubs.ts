@@ -307,6 +307,17 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/digital-visiting-card/", name: "Digital visiting card", description: "Shareable vCard plus UPI when print is not the medium." },
         ],
       },
+      {
+        heading: "Display hardware",
+        tools: [
+          { href: "/products/", name: "UPI QR hardware shop", description: "Standees, stickers, printers, speakers, and outdoor boards with buying guides." },
+          { href: "/products/acrylic-qr-standee/", name: "A6 acrylic standee", description: "Default checkout T-stand. Print a matte A6 insert and test-scan." },
+          { href: "/products/waterproof-qr-stickers/", name: "Waterproof QR stickers", description: "Matte vinyl for glass, tiffins, and parcels." },
+          { href: "/products/table-tent-qr-holder/", name: "Restaurant table tent", description: "Two-sided cafe tents with a 1.5–2 inch QR." },
+          { href: "/products/bluetooth-thermal-printer/", name: "80 mm thermal printer", description: "Bluetooth receipts for riders and kirana slips — not a standee." },
+          { href: "/products/a5-acrylic-t-stand/", name: "A5 T-stand", description: "Larger acrylic for donation desks and 5-foot scan distance." },
+        ],
+      },
     ],
     articleSlugs: [
       "how-to-create-print-upi-qr-code-standee",

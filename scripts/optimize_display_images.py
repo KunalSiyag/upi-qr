@@ -13,6 +13,15 @@ PRODUCTS = [
     ("product-acrylic.png", 520),
     ("product-printer.png", 640),
     ("product-wooden.png", 520),
+    ("product-waterproof-stickers.png", 520),
+    ("product-table-tent.png", 520),
+    ("product-thermal-rolls.png", 520),
+    ("product-a5-stand.png", 520),
+    ("product-magnetic-sticker.png", 520),
+    ("product-payment-speaker.png", 520),
+    ("product-a4-frame.png", 520),
+    ("product-cab-holder.png", 520),
+    ("product-sunboard.png", 520),
 ]
 
 
