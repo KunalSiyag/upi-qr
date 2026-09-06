@@ -1,6 +1,6 @@
 ---
-title: "How to Activate and Get a PhonePe Business QR Code"
-description: "Activate PhonePe Business QR: KYC, virtual vs physical standee, free ordering, and how an official merchant QR differs from a compatible UPI QR."
+title: "How to Activate PhonePe Business QR Code (Free Standee Setup)"
+description: "Step-by-step guide to activate PhonePe Business QR: complete KYC, order free shop standee stickers, and accept payments with zero setup fees."
 pubDate: 2026-06-09
 updatedDate: 2026-08-27
 author: "Kunal Siyag"

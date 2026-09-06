@@ -8,9 +8,9 @@ import { guidePath } from "../data/internalLinks";
 import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
 import { ogImageForPath } from "../data/siteImages";
 
-const title = "Free UPI QR Code Generator | PhonePe, GPay, Paytm";
+const title = "Free UPI QR Code Generator - Print Standee & Sticker";
 const description =
-  "Create a free UPI QR code for your shop or bank account. Print PhonePe, Google Pay, Paytm and BHIM posters with no signup and no watermark.";
+  "Generate a free UPI QR code for your shop or bank account. Download and print PhonePe, GPay, and Paytm counter standees with no signup and no watermark.";
 
 const faqs = [
   {
@@ -204,6 +204,8 @@ const merchantTools = [
   { title: "All Merchant Tools", href: "/tools/", copy: "Browse every QR generator, billing tool, calculator, and guide in one hub.", status: "20+ tools" },
   { title: "Purchase Order Generator", href: "/purchase-order-generator/", copy: "Formal POs with buyer/supplier GSTINs, delivery terms, and line items.", status: "New" },
   { title: "Cash Memo Generator", href: "/cash-memo-generator/", copy: "Simple retail billing slips for kirana shops and walk-in counter sales.", status: "New" },
+  { title: "Influencer Contract Generator", href: "/influencer-contract-generator/", copy: "Brand collaboration agreements with deliverables, ASCI rules, and advance UPI QR.", status: "New" },
+  { title: "Freelance Contract Generator", href: "/freelance-contract-generator/", copy: "Service agreements with milestone deliverables, IP ownership, and revision limits.", status: "New" },
   { title: "MSME Receivables Tracker", href: "/msme-receivables/", copy: "Invoice aging buckets, 45-day due alerts, and Section 16 demand letters with interest.", status: "New" },
   { title: "Developer API", href: "/developer/", copy: "Embed UPI QR widgets, payment links, and authenticated checkout sessions.", status: "Live now" }
 ];
@@ -428,6 +430,15 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
                 </svg>
                 100% Privacy: Generated locally in your browser. We never collect, transmit, or store your payment details.
               </span>
+            </div>
+            <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-leaf/20 bg-mint/60 p-3.5 sm:px-4">
+              <div class="flex items-center gap-2.5">
+                <span class="inline-flex h-6 items-center rounded-md bg-forest px-2 text-[10px] font-black uppercase tracking-wider text-white">Dynamic</span>
+                <span class="text-xs font-bold text-forest">Need to update payment links later or track daily customer scans?</span>
+              </div>
+              <a href="/dynamic-qr-generator/" class="inline-flex items-center gap-1.5 text-xs font-black text-leaf hover:text-forest transition-colors">
+                Create Dynamic QR &rarr;
+              </a>
             </div>
           </div>
           <GeneratorForm client:visible />

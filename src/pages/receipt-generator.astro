@@ -2,7 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { ReceiptGenerator } from "../components/ReceiptGenerator";
 
-const title = "Free Payment Receipt Generator with UPI QR & Paid Stamp | Pro UPI QR";
+const title = "Free Payment Receipt Generator with UPI QR & PAID Stamp";
 const description = "Create a professional payment receipt PDF with PAID stamp and UPI QR in seconds. Ideal for shops, freelancers, tutors, and landlords. Browser-only, no signup.";
 
 const faqs = [
@@ -100,11 +100,12 @@ const schema = {
       <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
         <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Complete the billing loop</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight md:text-5xl">Invoice → Payment → Paid receipt.</h2>
-        <div class="mt-8 grid gap-4 md:grid-cols-3">
+        <div class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           {[
             ["UPI Invoice Generator", "Bill first. Create GST-ready invoice PDFs with an embedded payment QR.", "/invoice-generator/", "Open invoice tool"],
             ["Paid Stamp Generator", "Already have a printed or photographed bill? Upload it and stamp it PAID.", "/paid-stamp-generator/", "Open stamp tool"],
-            ["UPI QR Generator", "Print a permanent counter QR standee for walk-in customers.", "/", "Create counter QR"]
+            ["UPI QR Generator", "Print a permanent counter QR standee for walk-in customers.", "/", "Create counter QR"],
+            ["QR Sticker Sheet", "Print 8-to-a-page peelable QR stickers for counters and packaging.", "/qr-sticker-generator/", "Print sticker sheet"]
           ].map(([heading, copy, href, cta]) => (
             <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
               <h3 class="text-xl font-black">{heading}</h3>

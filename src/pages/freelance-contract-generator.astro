@@ -1,0 +1,154 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { FreelanceContractGenerator } from "../components/FreelanceContractGenerator";
+
+const title = "Freelance Contract Generator - SOW & Service Agreement";
+const description = "Create a professional freelance contract PDF with milestone deliverables, IP ownership, revision limits, and advance UPI QR. Free, no login required.";
+
+const faqs = [
+  {
+    question: "Why do freelancers need a formal written service agreement?",
+    answer: "A written freelance contract prevents scope creep, sets strict milestone payment deadlines, outlines revision limits, and clarifies intellectual property ownership. It protects you from clients withholding payments or demanding endless free changes."
+  },
+  {
+    question: "When does intellectual property (IP) transfer to the client?",
+    answer: "Our contract template stipulates that intellectual property (IP) rights transfer to the client ONLY upon 100% full and final payment. If a client defaults on payment, they have no legal right to use your code, designs, or creative deliverables."
+  },
+  {
+    question: "How do revision limits protect freelancers from scope creep?",
+    answer: "The contract includes up to 2 rounds of revisions per milestone. Any additional revisions, feature changes, or out-of-scope requests are billed separately at agreed hourly rates, ensuring you are fairly compensated for extra work."
+  },
+  {
+    question: "What is a kill fee in a freelance agreement?",
+    answer: "A kill fee is a pre-agreed cancellation fee paid to the freelancer if the client abruptly terminates the project before completion. Under this contract, the client pays for all work performed to date plus a 25% kill fee on the remaining balance."
+  },
+  {
+    question: "Are freelance contracts enforceable in India?",
+    answer: "Yes. Under the Indian Contract Act 1872, an offer, acceptance, lawful consideration, and mutual consent form a valid legal contract. Moreover, if you are registered under the MSME / Udyam portal, Section 16 of the MSMED Act entitles you to statutory compound interest on overdue invoices."
+  },
+  {
+    question: "Does Pro UPI QR store my client or project contracts?",
+    answer: "No. The generator runs completely client-side in your web browser. All project milestones, client information, and payment details are stored locally on your device in localStorage and never sent to our servers."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Freelance Contract Generator by Pro UPI QR",
+      applicationCategory: "BusinessApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/freelance-contract-generator/",
+      description,
+      featureList: [
+        "Freelance service agreement and statement of work",
+        "Milestone payment schedule with due dates and pricing",
+        "Scope creep prevention with pre-set revision limits",
+        "Conditional intellectual property transfer clause",
+        "Advance deposit UPI QR code integration",
+        "Instant PDF and PNG legal contract export"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to create a freelance service contract",
+      description: "Generate a legally binding freelance agreement with milestone deliverables and advance UPI deposit in minutes.",
+      step: [
+        { "@type": "HowToStep", name: "Enter client and freelancer business information" },
+        { "@type": "HowToStep", name: "Outline project milestones, scope, and target completion dates" },
+        { "@type": "HowToStep", name: "Specify advance deposit, revision limits, and kill fees" },
+        { "@type": "HowToStep", name: "Export agreement as PDF or copy contract text" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a><span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a><span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Freelance Contract</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+            Freelancer & Agency Protection
+          </p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">
+            Free Freelance Contract Generator
+          </h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
+            Create professional freelance service agreements with milestone deliverables, strict revision caps, intellectual property protection, and advance UPI payment QR codes. 100% private, no signup.
+          </p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#contract-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">
+              Generate Agreement Now
+            </a>
+            <a href="#faqs" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">
+              Legal FAQ & Terms &darr;
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="contract-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <FreelanceContractGenerator client:visible />
+      </div>
+    </section>
+
+    <section id="faqs" class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Freelance contract questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+        <h2 class="text-2xl font-black tracking-tight md:text-3xl">Complete your independent contractor stack.</h2>
+        <p class="mx-auto mt-3 max-w-xl text-sm leading-7 text-white/72">
+          From freelance contracts and proforma estimates to milestone invoices and payment receipts — run your consulting business with confidence.
+        </p>
+        <div class="mt-6 flex flex-wrap justify-center gap-3">
+          <a href="/influencer-contract-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">
+            Influencer Contract &rarr;
+          </a>
+          <a href="/invoice-generator/" class="rounded-full bg-white/15 px-5 py-2.5 text-sm font-bold hover:bg-white/25 transition">
+            Invoice PDF
+          </a>
+          <a href="/quotation-generator/" class="rounded-full bg-white/15 px-5 py-2.5 text-sm font-bold hover:bg-white/25 transition">
+            Quotation Generator
+          </a>
+          <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">
+            All tools
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

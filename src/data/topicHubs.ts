@@ -463,6 +463,13 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/whatsapp-order-generator/", name: "WhatsApp order creator", description: "Chat-based orders with a pay link attached." },
         ],
       },
+      {
+        heading: "Contracts & client agreements",
+        tools: [
+          { href: "/influencer-contract-generator/", name: "Influencer contract generator", description: "Brand collaboration agreements with deliverables, ASCI compliance, exclusivity, and advance UPI QR." },
+          { href: "/freelance-contract-generator/", name: "Freelance contract generator", description: "Service agreements with milestone deliverables, IP rights, revision limits, and kill fees." },
+        ],
+      },
     ],
     articleSlugs: [
       "how-to-stamp-paid-on-invoice-bill-photo",

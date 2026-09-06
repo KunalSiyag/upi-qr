@@ -1,6 +1,6 @@
 ---
-title: "How to Set Up Free Voice Announcements for UPI Payments"
-description: "Turn on free UPI voice alerts in PhonePe Business and Google Pay for Business, and know when a paid soundbox is actually worth it."
+title: "How to Get Free UPI Voice Alerts on Phone (Save ₹125/mo Rent)"
+description: "Turn on free UPI voice announcements in PhonePe and GPay Business apps. Save ₹125/month on soundbox rent using your existing smartphone speaker."
 pubDate: 2026-05-22
 updatedDate: 2026-08-27
 author: "Kunal Siyag"

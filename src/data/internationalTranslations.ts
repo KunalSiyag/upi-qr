@@ -1997,5 +1997,119 @@ export const INTERNATIONAL_TOOL_COPY: Record<string, Record<InternationalLang, L
         { question: "Apakah surat penagihan bisa disesuaikan?", answer: "Bisa, teks surat dapat diedit sesuai tingkat keakraban atau formalitas." }
       ]
     }
+  },
+  "influencer-contract-generator": {
+    es: {
+      name: "Generador de Contrato para Influencers",
+      title: "Generador de Contratos para Influencers y Creadores PDF",
+      description: "Crea un contrato profesional para influencers y marcas en PDF. Incluye entregables, derechos de uso, cláusulas de exclusividad y pagos anticipados.",
+      intro: "Formaliza acuerdos de colaboración entre marcas y creadores de contenido con términos claros de exclusividad y entregables.",
+      steps: ["Introduce los datos de la marca y del creador", "Añade los entregables, plataformas y tarifas", "Descarga el contrato legal en formato PDF"],
+      faqs: [
+        { question: "¿Protege los derechos de autor del contenido?", answer: "Sí, define claramente los periodos de licencia y el uso publicitario permitido." },
+        { question: "¿Se almacenan los datos de mi campaña?", answer: "No, todo se genera de forma privada y local en tu navegador." }
+      ]
+    },
+    pt: {
+      name: "Gerador de Contrato para Influenciadores",
+      title: "Gerador de Contrato para Influenciadores e Marcas PDF",
+      description: "Gere contratos profissionais para influenciadores e marcas em PDF. Inclui tabela de entregas, direitos de imagem, exclusividade e pagamento adiantado.",
+      intro: "Formalize acordos comerciais entre marcas e influenciadores digitais com cláusulas de exclusividade e prazos de entrega.",
+      steps: ["Preencha os dados da marca e do influenciador", "Defina as entregas (Reels, posts) e valores", "Baixe o contrato legal assinado em PDF"],
+      faqs: [
+        { question: "O contrato prevê exclusividade de nicho?", answer: "Sim, você pode estipular períodos em que o criador não promoverá concorrentes." },
+        { question: "Os valores e dados são enviados a um servidor?", answer: "Não, todo o processo ocorre localmente no navegador." }
+      ]
+    },
+    fr: {
+      name: "Générateur de Contrat Influenceur",
+      title: "Générateur de Contrat Influenceur et Partenariat PDF",
+      description: "Créez un contrat d'influenceur professionnel en PDF. Définissez les livrables, droits de diffusion, clauses d'exclusivité et calendrier des paiements.",
+      intro: "Établissez des contrats de partenariat clairs et sécurisés entre annonceurs et créateurs de contenu sur les réseaux sociaux.",
+      steps: ["Renseignez les coordonnées des deux parties", "Ajoutez les livrables prévus et la rémunération", "Téléchargez le contrat complet au format PDF"],
+      faqs: [
+        { question: "Le contrat inclut-il les droits à l'image ?", answer: "Oui, il encadre l'utilisation et la réutilisation des créations sur les canaux de la marque." },
+        { question: "Mes données contractuelles sont-elles privées ?", answer: "Absolument, la génération s'exécute entièrement dans votre navigateur." }
+      ]
+    },
+    de: {
+      name: "Influencer-Vertrag Generator",
+      title: "Influencer-Vertrag Generator für Marken und Creator",
+      description: "Erstellen Sie professionelle Influencer-Verträge als PDF. Mit Leistungsübersicht, Bildrechten, Exklusivität und Zahlungsplan. Kostenlos im Browser.",
+      intro: "Schließen Sie transparente Kooperationsvereinbarungen zwischen werbetreibenden Marken und Content Creators ab.",
+      steps: ["Angaben zu Marke und Creator eintragen", "Leistungen, Deadlines und Honorar festlegen", "Rechtskonformen Vertrag als PDF herunterladen"],
+      faqs: [
+        { question: "Werden Nutzungsrechte für Werbeanzeigen geregelt?", answer: "Ja, Laufzeit und Art der Verwertungsrechte lassen sich verbindlich festhalten." },
+        { question: "Werden persönliche Daten gespeichert?", answer: "Nein, alle Angaben verbleiben ausschließlich lokal auf Ihrem Endgerät." }
+      ]
+    },
+    id: {
+      name: "Generator Kontrak Influencer",
+      title: "Generator Kontrak Influencer & Perjanjian Endorsement",
+      description: "Buat surat perjanjian kerja sama influencer dan endorsement format PDF. Lengkap dengan daftar postingan, hak cipta materi, dan termin pembayaran.",
+      intro: "Buat perjanjian kerja sama influencer marketing resmi dengan kejelasan jadwal tayang konten dan pembagian hak cipta.",
+      steps: ["Isi identitas pihak brand dan influencer", "Tentukan daftar konten (Reels/Video) dan biaya", "Unduh berkas kontrak kerja sama format PDF"],
+      faqs: [
+        { question: "Apakah mengatur hak tayang iklan berbayar?", answer: "Ya, Anda dapat menentukan durasi hak promosi atas materi konten yang dibuat." },
+        { question: "Apakah data kesepakatan tersimpan di server?", answer: "Tidak, seluruh pembuatan kontrak diproses di browser tanpa simpan ke server." }
+      ]
+    }
+  },
+  "freelance-contract-generator": {
+    es: {
+      name: "Generador de Contrato Freelance",
+      title: "Generador de Contrato Freelance y Prestación de Servicios",
+      description: "Crea un contrato freelance profesional para servicios y proyectos en PDF. Define hitos de pago, propiedad intelectual, revisiones y anticipos.",
+      intro: "Protege tu trabajo independiente con contratos de prestación de servicios que definen entregas, revisiones y calendarios de pago.",
+      steps: ["Introduce los datos del profesional y del cliente", "Añade los hitos del proyecto y honorarios", "Descarga el contrato de servicios en PDF"],
+      faqs: [
+        { question: "¿Cuándo se ceden los derechos de propiedad intelectual?", answer: "Los derechos se transfieren únicamente cuando el cliente liquida el 100% del pago acordado." },
+        { question: "¿Qué sucede si el cliente cancela el proyecto?", answer: "El contrato estipula el cobro del trabajo realizado más una penalización por cancelación." }
+      ]
+    },
+    pt: {
+      name: "Gerador de Contrato Freelancer",
+      title: "Gerador de Contrato Freelancer e Prestação de Serviços",
+      description: "Gere um contrato de prestação de serviços para freelancers em PDF. Defina marcos de pagamento, propriedade intelectual e limites de alterações.",
+      intro: "Garanta a segurança jurídica dos seus projetos freelance com contratos formais de escopo, prazos e condições financeiras.",
+      steps: ["Insira as informações do freelancer e do cliente", "Defina as etapas do projeto, prazos e valores", "Exporte o contrato completo em formato PDF"],
+      faqs: [
+        { question: "Quando os direitos autorais são transferidos?", answer: "A transferência ocorre exclusivamente após a quitação integral do valor acordado." },
+        { question: "Como evitar pedidos infinitos de alterações?", answer: "O contrato estabelece o limite de até 2 rodadas de revisões por entrega." }
+      ]
+    },
+    fr: {
+      name: "Générateur de Contrat Freelance",
+      title: "Générateur de Contrat Freelance et Prestation de Service",
+      description: "Créez un contrat freelance professionnel en PDF. Encadrez les livrables par étapes, la propriété intellectuelle, le nombre de retouches et acomptes.",
+      intro: "Sécurisez vos missions en freelance grâce à un contrat de prestation clair fixant les livrables, jalons et droits d'auteur.",
+      steps: ["Indiquez les coordonnées du prestataire et du client", "Détaillez les jalons du projet et les tarifs", "Téléchargez l'accord de prestation en PDF"],
+      faqs: [
+        { question: "Quand la propriété intellectuelle est-elle cédée ?", answer: "La cession n'est effective qu'après encaissement de l'intégralité du paiement final." },
+        { question: "Existe-t-il une indemnité de résiliation anticipée ?", answer: "Oui, le client doit régler les tâches effectuées ainsi qu'une indemnité forfaitaire." }
+      ]
+    },
+    de: {
+      name: "Freelancer-Vertrag Generator",
+      title: "Freelancer-Vertrag Generator für Dienstleistungen PDF",
+      description: "Erstellen Sie professionelle Freelancer-Dienstverträge als PDF. Mit Meilenstein-Zahlungen, Urheberrechten, Korrekturschleifen und Stornogebühren.",
+      intro: "Regeln Sie Freiberufler-Aufträge rechtssicher mit klaren Vereinbarungen zu Leistungsumfang, Deadlines und Zahlungszielen.",
+      steps: ["Kontaktdaten von Auftragnehmer und Kunde eingeben", "Projektphasen, Termine und Vergütung definieren", "Dienstleistungsvertrag als PDF generieren"],
+      faqs: [
+        { question: "Wann gehen die Urheberrechte an den Kunden über?", answer: "Die Nutzungsrechte gehen erst nach vollständiger Bezahlung der Abschlussrechnung über." },
+        { question: "Wie werden Korrekturschleifen begrenzt?", answer: "Es sind maximal zwei Korrekturrunden pro Meilenstein ohne Aufpreis vereinbart." }
+      ]
+    },
+    id: {
+      name: "Generator Kontrak Freelance",
+      title: "Generator Kontrak Freelance & Perjanjian Jasa Kerja",
+      description: "Buat surat perjanjian kerja lepas atau freelance kontrak jasa format PDF. Lengkap dengan termin pembayaran, batasan revisi, dan hak kekayaan intelektual.",
+      intro: "Amankan pekerjaan lepas Anda dengan surat kontrak kerja profesional yang mengatur ruang lingkup, jadwal, dan termin pembayaran.",
+      steps: ["Masukkan data identitas freelancer dan klien", "Tentukan tahapan proyek, tenggat waktu, dan tarif", "Unduh berkas kontrak layanan dalam format PDF"],
+      faqs: [
+        { question: "Kapan hak cipta karya berpindah ke klien?", answer: "Hak milik intelektual baru beralih setelah seluruh pembayaran lunas 100%." },
+        { question: "Apakah ada batasan revisi?", answer: "Ya, kontrak menetapkan maksimal 2 putaran revisi per termin untuk mencegah revisi tanpa henti." }
+      ]
+    }
   }
 };

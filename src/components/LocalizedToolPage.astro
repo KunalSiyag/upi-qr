@@ -33,6 +33,8 @@ import { UpiLinkGenerator } from "./UpiLinkGenerator";
 import { SurveyQrGenerator } from "./SurveyQrGenerator";
 import { MerchantReconciliation } from "./MerchantReconciliation";
 import { MsmeReceivables } from "./MsmeReceivables";
+import { InfluencerContractGenerator } from "./InfluencerContractGenerator";
+import { FreelanceContractGenerator } from "./FreelanceContractGenerator";
 import InternalLinkHub from "./InternalLinkHub.astro";
 import type { LocalizedTool, SupportedToolLanguage } from "../data/localizedTools";
 import { getLocalizedToolCopy } from "../data/localizedTools";
@@ -111,6 +113,8 @@ const path = `/${lang}/${tool.slug}/`;
         {tool.component === "survey" && <SurveyQrGenerator client:visible />}
         {tool.component === "merchantRecon" && <MerchantReconciliation client:visible />}
         {tool.component === "msmeReceivables" && <MsmeReceivables client:visible />}
+        {tool.component === "influencerContract" && <InfluencerContractGenerator client:visible />}
+        {tool.component === "freelanceContract" && <FreelanceContractGenerator client:visible />}
         {tool.component === "default" && <GeneratorForm client:visible lang={lang} />}
       </section>
       {locale.steps.length > 0 && (
