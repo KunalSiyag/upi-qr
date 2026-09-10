@@ -10,6 +10,7 @@ export type ChromeCopy = {
   guides: string;
   developers: string;
   about: string;
+  reviews: string;
   printTemplates: string;
   blog: string;
   toolsCol: string;
@@ -54,6 +55,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Guides",
     developers: "Developers",
     about: "About",
+    reviews: "Reviews",
     printTemplates: "Print templates",
     blog: "Blog",
     toolsCol: "Tools",
@@ -99,6 +101,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "गाइड",
     developers: "डेवलपर्स",
     about: "हमारे बारे में",
+    reviews: "समीक्षाएँ",
     printTemplates: "प्रिंट टेम्पलेट",
     blog: "ब्लॉग",
     toolsCol: "उपकरण",
@@ -144,6 +147,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "வழிகாட்டிகள்",
     developers: "டெவலப்பர்கள்",
     about: "எங்களைப் பற்றி",
+    reviews: "மதிப்புரைகள்",
     printTemplates: "அச்சு வார்ப்புருக்கள்",
     blog: "வலைப்பதிவு",
     toolsCol: "கருவிகள்",
@@ -189,6 +193,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "గైడ్‌లు",
     developers: "డెవలపర్‌లు",
     about: "మా గురించి",
+    reviews: "రివ్యూలు",
     printTemplates: "ప్రింట్ టెంప్లేట్లు",
     blog: "బ్లాగ్",
     toolsCol: "సాధనాలు",
@@ -234,6 +239,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "मार्गदर्शक",
     developers: "डेव्हलपर",
     about: "आमच्याबद्दल",
+    reviews: "पुनरावलोकने",
     printTemplates: "प्रिंट टेम्पलेट",
     blog: "ब्लॉग",
     toolsCol: "साधने",
@@ -279,6 +285,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Guías",
     developers: "Desarrolladores",
     about: "Acerca de",
+    reviews: "Reseñas",
     printTemplates: "Plantillas de impresión",
     blog: "Blog",
     toolsCol: "Herramientas",
@@ -324,6 +331,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Guias",
     developers: "Desenvolvedores",
     about: "Sobre",
+    reviews: "Avaliações",
     printTemplates: "Modelos de impressão",
     blog: "Blog",
     toolsCol: "Ferramentas",
@@ -369,6 +377,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Guides",
     developers: "Développeurs",
     about: "À propos",
+    reviews: "Avis",
     printTemplates: "Modèles d'impression",
     blog: "Blog",
     toolsCol: "Outils",
@@ -414,6 +423,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Ratgeber",
     developers: "Entwickler",
     about: "Über uns",
+    reviews: "Bewertungen",
     printTemplates: "Druckvorlagen",
     blog: "Blog",
     toolsCol: "Tools",
@@ -459,6 +469,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     guides: "Panduan",
     developers: "Pengembang",
     about: "Tentang",
+    reviews: "Ulasan",
     printTemplates: "Templat Cetak",
     blog: "Blog",
     toolsCol: "Alat",

@@ -1,0 +1,61 @@
+---
+import StarRating from "./StarRating.astro";
+import {
+  PRODUCT_HUNT_URL,
+  aggregateFromTestimonials,
+  formatRatingLabel,
+} from "../data/reviews";
+
+interface Props {
+  compact?: boolean;
+}
+
+const { compact = false } = Astro.props;
+const agg = aggregateFromTestimonials();
+---
+
+<div class="mt-6 flex flex-col gap-3">
+  <div class="flex flex-wrap items-center gap-2">
+    {agg ? (
+      <a
+        href="/reviews/"
+        class="inline-flex items-center gap-2 rounded-full border border-sun/30 bg-sun/10 px-3 py-1.5 text-xs font-bold text-forest transition hover:bg-sun/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+      >
+        <StarRating value={agg.ratingValue} size="sm" label={formatRatingLabel(agg)} />
+        <span class="tabular-nums">{formatRatingLabel(agg)}</span>
+      </a>
+    ) : (
+      <a
+        href="/reviews/#write"
+        class="inline-flex items-center gap-2 rounded-full border border-sun/30 bg-sun/10 px-3 py-1.5 text-xs font-bold text-forest transition hover:bg-sun/20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+      >
+        <svg class="h-4 w-4 text-sun" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+          <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+        </svg>
+        <span>Rate this tool</span>
+      </a>
+    )}
+    <a
+      href={`${PRODUCT_HUNT_URL}?utm_source=proupiqr&utm_medium=badge&utm_campaign=social-proof`}
+      rel="noopener noreferrer"
+      class="inline-flex items-center gap-2 rounded-full border border-[#da552f]/25 bg-[#da552f]/8 px-3 py-1.5 text-xs font-bold text-[#b33c1c] transition hover:bg-[#da552f] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+    >
+      <span class="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-[#da552f] text-[9px] font-black text-white" aria-hidden="true">P</span>
+      On Product Hunt
+    </a>
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-leaf/15 bg-mint px-3 py-1.5 text-xs font-bold text-forest">
+      Free · no signup
+    </span>
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-forest/10 bg-white/80 px-3 py-1.5 text-xs font-bold text-forest">
+      Local in-browser QR
+    </span>
+    <span class="inline-flex items-center gap-1.5 rounded-full border border-forest/10 bg-white/80 px-3 py-1.5 text-xs font-bold text-forest">
+      20+ merchant tools
+    </span>
+  </div>
+  {!compact && !agg && (
+    <p class="text-xs leading-5 text-forest/60">
+      Public ratings live on Product Hunt. Named shop quotes appear here after we confirm them.
+    </p>
+  )}
+</div>

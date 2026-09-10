@@ -1,0 +1,191 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import SocialProofBar from "../components/SocialProofBar.astro";
+import Testimonials from "../components/Testimonials.astro";
+import { ReviewForm } from "../components/ReviewForm";
+import {
+  GITHUB_URL,
+  PRODUCT_HUNT_URL,
+  PRODUCT_HUNT_REVIEWS_URL,
+  REVIEW_EMAIL,
+  REVIEW_PLATFORMS,
+  TESTIMONIALS,
+  softwareApplicationSchema,
+} from "../data/reviews";
+
+const title = "Pro UPI QR Reviews and Ratings | Product Hunt";
+const description =
+  "Merchant ratings for Pro UPI QR. Leave a Product Hunt review or send shop feedback. Free UPI QR standees, no signup, generated in your browser.";
+const pageUrl = "https://www.proupiqr.in/reviews/";
+
+const faqs = [
+  {
+    question: "Where can I rate Pro UPI QR?",
+    answer:
+      "Leave a public review on Product Hunt, or email a named shop quote to feedback@proupiqr.in. Published quotes appear on this page with the star rating you sent.",
+  },
+  {
+    question: "Will Google show star ratings for Pro UPI QR?",
+    answer:
+      "Only after named reviews exist on this page. We do not publish placeholder scores. Until then, Product Hunt is the public rating surface.",
+  },
+  {
+    question: "Is a startup-directory email a review?",
+    answer:
+      "No. Outreach from directories asking us to submit the product is advertising, not merchant feedback. We do not list those sites as reviews or follow their submit links.",
+  },
+  {
+    question: "Is Pro UPI QR on Product Hunt?",
+    answer:
+      "Yes. Pro UPI QR is listed on Product Hunt with a public reviews tab. Upvotes and reviews there are independent of this website.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": `${pageUrl}#page`,
+      name: title,
+      description,
+      url: pageUrl,
+      inLanguage: "en-IN",
+      isPartOf: { "@id": "https://www.proupiqr.in/#website" },
+      about: { "@id": "https://www.proupiqr.in/#application" },
+      primaryImageOfPage: "https://www.proupiqr.in/images/og-image.jpg",
+    },
+    softwareApplicationSchema({ url: "https://www.proupiqr.in/", description }),
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Reviews", item: pageUrl },
+      ],
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span>/</span>
+          <span class="font-bold text-forest" aria-current="page">Reviews</span>
+        </nav>
+        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+          Ratings &amp; reviews
+        </p>
+        <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">
+          Rate the free UPI QR generator.
+        </h1>
+        <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
+          Leave a public Product Hunt review, or email a named shop quote. Quotes go on this page after we confirm them — we do not invent merchant names to fill a grid.
+        </p>
+        <SocialProofBar compact />
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a
+            href={`${PRODUCT_HUNT_REVIEWS_URL}?utm_source=proupiqr&utm_medium=site&utm_campaign=reviews-hero`}
+            rel="noopener noreferrer"
+            class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
+          >
+            Leave a Product Hunt review
+          </a>
+          <a
+            href="#write"
+            class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white"
+          >
+            Send a shop quote
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-7xl gap-4 md:grid-cols-2">
+        {REVIEW_PLATFORMS.map((platform) => (
+          <article class="rounded-[1.75rem] border border-white/75 bg-white/86 p-6">
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-leaf">
+              {platform.kind === "reviews" ? "Third-party reviews" : "Source & issues"}
+            </p>
+            <h2 class="mt-2 text-2xl font-black text-forest">{platform.name}</h2>
+            <p class="mt-3 text-sm leading-7 text-forest/72">{platform.blurb}</p>
+            <a
+              href={platform.href}
+              rel="noopener noreferrer"
+              class="mt-5 inline-flex text-sm font-bold text-leaf underline hover:text-forest"
+            >
+              {platform.cta} →
+            </a>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    {TESTIMONIALS.length > 0 && <Testimonials heading="Named merchant quotes" />}
+
+    <section id="write" class="scroll-mt-28 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:items-start">
+        <div>
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Write a review</p>
+          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">
+            Be the first named review on this page.
+          </h2>
+          <p class="mt-4 text-base leading-7 text-forest/72">
+            The form opens your mail app addressed to <a href={`mailto:${REVIEW_EMAIL}`} class="font-semibold text-leaf underline">{REVIEW_EMAIL}</a>. Nothing is uploaded. We reply before a quote goes live.
+          </p>
+          <ul class="mt-5 space-y-2 text-sm leading-6 text-forest/75">
+            <li>Use the name you are willing to show — first name plus city is enough.</li>
+            <li>Say what you generated (standee, sticker sheet, invoice QR) and which app scanned it.</li>
+            <li>Prefer a public Product Hunt review if you want the rating off our site entirely.</li>
+          </ul>
+        </div>
+        <ReviewForm client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl rounded-[1.75rem] border border-white/75 bg-white/86 p-6 md:p-8">
+        <h2 class="text-2xl font-black text-forest">What we will not list as a review</h2>
+        <p class="mt-3 max-w-3xl text-sm leading-7 text-forest/72">
+          Cold emails from startup directories, “submit your tool” newsletters, and paid listing pitches are not merchant ratings. Linking those pages as social proof is a ranking risk, not a shortcut. Independent listings we stand behind today:
+        </p>
+        <ul class="mt-4 space-y-2 text-sm font-semibold text-forest">
+          <li>
+            <a href={PRODUCT_HUNT_URL} rel="noopener noreferrer" class="text-leaf underline hover:text-forest">Product Hunt — Pro UPI QR</a>
+          </li>
+          <li>
+            <a href={GITHUB_URL} rel="noopener noreferrer" class="text-leaf underline hover:text-forest">GitHub — KunalSiyag/upi-qr</a>
+          </li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Questions about ratings</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

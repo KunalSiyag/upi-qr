@@ -30,6 +30,10 @@ const presets = [
         <a href="#generator" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">{copy.ctaGenerate}</a>
         <a href={localeHref(lang, "tools")} class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">{copy.ctaTemplates}</a>
       </div>
+      <p class="mt-5 text-xs leading-5 text-forest/60">
+        <a href="/reviews/" class="font-semibold text-leaf underline hover:text-forest">Reviews</a>
+        · Product Hunt · Free, no signup
+      </p>
       <p class="mt-8 text-xs font-bold text-forest/70 uppercase tracking-wider">{copy.presetsLabel}</p>
       <div class="mt-3 flex flex-wrap justify-center gap-2.5">
         {presets.map((preset) => (

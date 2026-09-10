@@ -3,10 +3,14 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import TemplateThumb from "../components/TemplateThumb.astro";
+import SocialProofBar from "../components/SocialProofBar.astro";
+import Testimonials from "../components/Testimonials.astro";
+import ReviewInvite from "../components/ReviewInvite.astro";
 import { getCollection } from "astro:content";
 import { guidePath } from "../data/internalLinks";
 import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
 import { ogImageForPath } from "../data/siteImages";
+import { softwareApplicationSchema } from "../data/reviews";
 
 const title = "Free UPI QR Code Generator - Print Standee & Sticker";
 const description =
@@ -54,26 +58,19 @@ const faqs = [
     question: "Can I create a UPI QR code for my SBI, HDFC or ICICI bank account?",
     answer:
       "Yes. Enter the UPI ID from your bank app (for example name@sbi or mobile@okhdfcbank). The same poster works in PhonePe, Google Pay, Paytm and BHIM."
+  },
+  {
+    question: "Where can I read Pro UPI QR reviews and ratings?",
+    answer:
+      "Public ratings live on Product Hunt. Named merchant quotes, when we have them, are on the Pro UPI QR reviews page. We do not invent star scores for search snippets.",
+    answerLink: { href: "/reviews/", label: "Pro UPI QR reviews page" }
   }
 ];
 
 const schema = {
   "@context": "https://schema.org",
   "@graph": [
-    {
-      "@type": "WebApplication",
-      name: "Pro UPI QR",
-      applicationCategory: "BusinessApplication",
-      operatingSystem: "Any",
-      url: "https://www.proupiqr.in/",
-      image: "https://www.proupiqr.in/images/og-image.jpg",
-      description,
-      offers: {
-        "@type": "Offer",
-        price: "0",
-        priceCurrency: "INR"
-      }
-    },
+    softwareApplicationSchema({ url: "https://www.proupiqr.in/", description }),
     {
       "@type": "FAQPage",
       mainEntity: faqs.map((faq) => ({
@@ -237,6 +234,7 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
             <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
               Create UPI QR code with amount instantly. Our universal UPI QR code generator creates secure payment posters for PhonePe, Google Pay, and Paytm without login or signup.
             </p>
+            <SocialProofBar compact />
 
             <div class="mt-8 flex flex-wrap gap-3">
               <a
@@ -650,6 +648,9 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
         </div>
       </div>
     </section>
+
+    <Testimonials heading="Merchant reviews of Pro UPI QR" />
+    <ReviewInvite />
 
     <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
