@@ -11,7 +11,7 @@ image: "/images/blog/bank-account-upi-qr-desk.jpg"
 tags: ["Bank Account", "Universal QR", "Payments", "Tutorial"]
 ---
 
-Accepting direct bank transfers from customers, clients, or students by manually sharing an 11-digit IFSC code and 16-digit account number is slow, error-prone, and outdated. A single typo in an account number can delay payments or trigger failed transfers.
+Accepting direct bank transfers from customers, clients, or students by manually sharing an 11-digit IFSC code and 16-digit account number is slow, error-prone, and outdated. A single typo in an account number can delay payments or trigger failed transfers. You also cannot encode that account number into a UPI QR — the matrix needs a VPA. See [QR from bank account number](/blog/generate-qr-from-bank-account-number/).
 
 *Last reviewed 27 August 2026.*
 

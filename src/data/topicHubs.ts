@@ -59,12 +59,12 @@ export interface NavHub {
 }
 
 export const FEATURED_GUIDE_SLUGS = [
+  "npci-upi-qr-code-generator-explained",
+  "extract-upi-id-from-qr-code",
   "phonepe-business-qr-code-activation",
-  "how-to-print-gpay-qr-code-step-by-step",
-  "how-to-create-print-upi-qr-code-standee",
-  "how-to-resolve-upi-pending-transaction-issues",
   "create-upi-qr-code-for-bank-account",
-  "printable-upi-qr-sticker-sheet-guide",
+  "how-to-create-print-upi-qr-code-standee",
+  "phonepe-qr-sticker-print-free-vs-order",
 ] as const;
 
 const WEAK_TAGS = new Set([
@@ -153,7 +153,7 @@ export const TOPIC_HUBS: TopicHub[] = [
         heading: "Other QR tools",
         tools: [
           { href: "/", name: "UPI standee generator", description: "Classic scan-to-pay poster with printable templates." },
-          { href: "/universal-qr-generator/", name: "Universal QR generator", description: "URL, WiFi, vCard, PDF, SMS, and other static QR types." },
+          { href: "/universal-qr-generator/", name: "Universal QR generator", description: "Free QR codes: UPI Pay, URL, WiFi, vCard, WhatsApp, PDF, and other static types." },
           { href: "/free-qr-generator-without-watermark/", name: "Watermark-free QR generator", description: "Download PNG or PDF posters with no signup and no watermark." },
           { href: "/bulk-qr/", name: "Bulk CSV QR generator", description: "Hundreds of labelled QRs from a spreadsheet as ZIP or PDF." },
           { href: "/dynamic-qr-generator/", name: "Dynamic QR & link shortener", description: "Editable destinations with optional scan analytics." },
@@ -179,6 +179,11 @@ export const TOPIC_HUBS: TopicHub[] = [
       "how-to-change-upi-id-on-printed-qr-standee",
       "how-to-create-whatsapp-payment-link-upi",
       "how-to-link-credit-card-to-upi-qr",
+      "npci-upi-qr-code-generator-explained",
+      "generate-qr-from-bank-account-number",
+      "sbi-upi-qr-code-generator-guide",
+      "extract-upi-id-from-qr-code",
+      "free-upi-api-without-gateway",
     ],
     relatedHubIds: ["merchant-setup", "print-upi-qr", "upi-errors-and-limits"],
     faqs: [
@@ -255,6 +260,9 @@ export const TOPIC_HUBS: TopicHub[] = [
       "how-to-add-upi-qr-to-instagram-whatsapp-status",
       "upi-qr-code-vs-payment-gateway",
       "how-to-create-whatsapp-payment-link-upi",
+      "p2m-meaning-in-banking-upi",
+      "phonepe-qr-sticker-print-free-vs-order",
+      "sbi-upi-qr-code-generator-guide",
     ],
     relatedHubIds: ["upi-qr-generators", "print-upi-qr", "upi-errors-and-limits"],
     faqs: [
@@ -328,6 +336,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       "custom-design-templates-gpay-phonepe-qr",
       "upi-qr-png-vs-pdf-print-quality-guide",
       "how-to-change-upi-id-on-printed-qr-standee",
+      "phonepe-qr-sticker-print-free-vs-order",
     ],
     relatedHubIds: ["upi-qr-generators", "merchant-setup", "upi-errors-and-limits"],
     faqs: [
@@ -392,6 +401,9 @@ export const TOPIC_HUBS: TopicHub[] = [
       "upi-international-countries-list-guide",
       "upi-lite-vs-upi-pay-small-transactions",
       "upi-autopay-mandate-qr-recurring-payments",
+      "p2m-meaning-in-banking-upi",
+      "extract-upi-id-from-qr-code",
+      "npci-upi-qr-code-generator-explained",
     ],
     relatedHubIds: ["merchant-setup", "upi-qr-generators", "business-calculators"],
     faqs: [
@@ -479,6 +491,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       "upi-qr-for-freelancers-invoice-payments",
       "treds-invoice-discounting-msme-guide",
       "best-billing-apps-with-inbuilt-upi-qr",
+      "upi-payment-receipt-generator-guide",
     ],
     relatedHubIds: ["business-calculators", "upi-qr-generators", "merchant-setup"],
     faqs: [
@@ -594,7 +607,7 @@ export const DEVELOPER_NAV_HUB: NavHub = {
   id: "developer",
   path: "/developer/",
   shortName: "Developer integrations",
-  blurb: "Embed widgets, payment links, and authenticated checkout sessions.",
+  blurb: "Free iframe embed and upi://pay links. Hosted checkout if you need an API key.",
   hiName: "डेवलपर API",
   hiBlurb: "एम्बेड विजेट, पेमेंट लिंक और चेकआउट सेशन।",
 };

@@ -47,7 +47,7 @@ Because static QR codes encode data directly into the graphic, **they require no
 Generating your universal QR code takes less than a minute using **Pro UPI QR**:
 
 ### Step 1: Open the Free Universal Editor
-Navigate to the [Universal QR Code Generator](/universal-qr-generator/).
+Navigate to the [Universal QR Code Generator](/universal-qr-generator/). For a bank-account payment QR, open the [UPI Pay tab](/universal-qr-generator/?type=upi#editor). For a printed shop standee, use the [UPI poster generator](/#generator).
 
 ### Step 2: Choose Your QR Type
 Select your intended content format from the top selector:

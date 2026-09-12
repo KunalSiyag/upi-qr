@@ -76,8 +76,8 @@ export function UpiPayButton() {
     <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1.1fr_0.9fr] w-full min-w-0">
       {/* Configurator Card */}
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
-        <h3 className="text-xl font-black text-forest">Widget Configurator</h3>
-        <p className="mt-1 text-xs text-forest/60">Customize your payment widget parameters and get instant embed code below.</p>
+        <h3 className="text-xl font-black text-forest">Widget configurator</h3>
+        <p className="mt-1 text-xs text-forest/60">No API key. The iframe loads <code className="font-mono">/embed/</code> with your VPA. Copy the snippet or the URL.</p>
 
         <form className="mt-6 grid gap-4 sm:grid-cols-2 w-full min-w-0">
           <label className="grid gap-1 min-w-0">
@@ -206,8 +206,24 @@ export function UpiPayButton() {
           />
         </div>
         <p className="mt-4 text-[10px] text-center text-forest/50 max-w-xs leading-relaxed">
-          Scanning this QR code from any standard UPI app (GPay, PhonePe, Paytm, BHIM) will request ₹{form.am || "any amount"} to {form.pn}.
+          Scan from PhonePe, GPay, Paytm, or BHIM. Amount {form.am ? `₹${form.am}` : "open"} to {form.pn}. This preview does not confirm a bank credit.
         </p>
+        <div className="mt-3 flex flex-wrap justify-center gap-2">
+          <button
+            type="button"
+            onClick={() => copyToClipboard(embedUrl)}
+            className="rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
+          >
+            {copied ? "Copied" : "Copy embed URL"}
+          </button>
+          <button
+            type="button"
+            onClick={() => copyToClipboard(rawUpiLink)}
+            className="rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
+          >
+            Copy upi://pay link
+          </button>
+        </div>
       </div>
     </div>
   );

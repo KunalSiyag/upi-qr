@@ -34,3 +34,14 @@
 - Prevent UPI QR Code Tampering & Frauds
 - Is It Safe to Scan a UPI QR Code?
 - How to Verify a UPI QR Code Before Displaying
+- Extract UPI ID From a QR Code (decoder cluster)
+
+## GSC gap cluster (2026-09)
+- NPCI UPI QR code generator explained (`npci qr code generator` ~1,190 impressions)
+- QR from bank account number (IFSC/account misconception cluster)
+- SBI QR code generator for bank account
+- PhonePe QR sticker: print free vs order online
+- UPI payment receipt generator (PhonePe/GPay/Paytm receipt queries)
+- P2M meaning in banking and UPI
+- Free UPI API without a payment gateway
+- Hindi: बिना बिजनेस अकाउंट मर्चेंट QR कैसे बनाएं

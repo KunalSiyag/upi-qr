@@ -61,6 +61,8 @@ No. Pro UPI QR does not charge MDR. Bank-to-bank UPI is 0% MDR; RuPay credit car
 
 **[Print an A4 sticker sheet →](/qr-sticker-generator/)**
 
+Related: [PhonePe sticker — print free or order](/blog/phonepe-qr-sticker-print-free-vs-order/) · [Waterproof vinyl](/blog/how-to-print-durable-waterproof-qr-stickers/)
+
 <figure>
   <img src="/images/diagrams/sticker-sheet-layouts.png" alt="A4 sticker sheet layouts 4-up 6-up 12-up" width="1200" height="630" loading="lazy" />
   <figcaption>4-up, 6-up, and 12-up on A4. Generate the sheet, then cut or kiss-cut.</figcaption>

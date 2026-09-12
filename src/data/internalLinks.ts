@@ -426,7 +426,7 @@ export const generators: GeneratorLink[] = [
 export const universalQrLink = {
   href: "/universal-qr-generator/",
   label: "Universal QR Generator",
-  description: "Free editor for URL, PDF, Contact, App, SMS, WiFi and more with 13 templates.",
+  description: "Free QR code generator for URL, PDF, contact, WhatsApp, WiFi, and UPI with 13 templates.",
 };
 
 
@@ -742,6 +742,65 @@ export const guides: GuideLink[] = [
     description: "Table tents, menu QRs, and WhatsApp order payments.",
     presetTypes: ["phonepe", "gpay", "paytm"],
     tags: ["Restaurant", "Shops", "Tutorial"],
+  },
+  {
+    slug: "npci-upi-qr-code-generator-explained",
+    title: "NPCI UPI QR Code Generator Explained",
+    description: "NPCI has no public shop QR generator. Create a compliant upi://pay QR for every member app.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim", "sbi"],
+    tags: ["NPCI", "Universal QR", "BHIM", "Tutorial"],
+    featured: true,
+  },
+  {
+    slug: "extract-upi-id-from-qr-code",
+    title: "Extract UPI ID From a QR Code Online",
+    description: "Decode a UPI QR in the browser to read VPA, payee name, and amount.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Security", "Tutorial", "Merchant Tips"],
+    featured: true,
+  },
+  {
+    slug: "upi-payment-receipt-generator-guide",
+    title: "UPI Payment Receipt Generator for Shops",
+    description: "Issue a real receipt after a UPI credit. Not a fake PhonePe or GPay screenshot.",
+    presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
+    tags: ["Billing", "Tutorial", "Merchant Tips"],
+  },
+  {
+    slug: "phonepe-qr-sticker-print-free-vs-order",
+    title: "PhonePe QR Sticker: Print Free or Order",
+    description: "Print a compatible UPI sticker today, or order PhonePe Business’s official sticker after KYC.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["PhonePe", "Printing", "Merchant Setup"],
+    featured: true,
+  },
+  {
+    slug: "p2m-meaning-in-banking-upi",
+    title: "P2M Meaning in Banking and UPI Payments",
+    description: "P2M vs P2P: refund TAT, MDR, and when a shop needs a merchant VPA.",
+    presetTypes: ["phonepe", "gpay", "paytm", "bhim"],
+    tags: ["Banking", "Merchant Setup", "Reference"],
+  },
+  {
+    slug: "generate-qr-from-bank-account-number",
+    title: "QR Code From Bank Account Number",
+    description: "UPI QR encodes a VPA, not IFSC plus account number. Find the UPI ID, then print.",
+    presetTypes: ["sbi", "hdfc", "icici"],
+    tags: ["Bank Account", "Universal QR", "Tutorial", "SBI"],
+  },
+  {
+    slug: "sbi-upi-qr-code-generator-guide",
+    title: "SBI QR Code Generator for Bank Account",
+    description: "Personal YONO QR vs SBI business merchant QR, and a printable standee for every UPI app.",
+    presetTypes: ["sbi"],
+    tags: ["SBI", "Bank Account", "Tutorial"],
+  },
+  {
+    slug: "free-upi-api-without-gateway",
+    title: "Free UPI API Without a Payment Gateway",
+    description: "Use the free upi://pay URI. NPCI switch APIs stay with banks and PSPs.",
+    presetTypes: ["phonepe", "gpay", "paytm"],
+    tags: ["Developers", "Tutorial", "Universal QR"],
   },
 ];
 

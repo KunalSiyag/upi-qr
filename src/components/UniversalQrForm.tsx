@@ -2,19 +2,21 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { buildUpiUri } from "../lib/upi-uri";
 
-// Our brand-aligned types
 const typeList = [
+  { key: "upi", label: "UPI Pay", icon: "₹", heading: "UPI payment (any app)" },
   { key: "url", label: "URL", icon: "🔗", heading: "Website or Link" },
-  { key: "pdf", label: "PDF", icon: "📄", heading: "PDF Document" },
-  { key: "multiurl", label: "Multi-Link", icon: "📚", heading: "Multiple Links" },
+  { key: "whatsapp", label: "WhatsApp", icon: "💬", heading: "WhatsApp chat" },
+  { key: "wifi", label: "WiFi", icon: "📶", heading: "WiFi Network" },
   { key: "contact", label: "Contact", icon: "👤", heading: "Contact Card (vCard)" },
-  { key: "text", label: "Text", icon: "📝", heading: "Plain Text" },
-  { key: "app", label: "App", icon: "📱", heading: "App Store Link" },
+  { key: "pdf", label: "PDF", icon: "📄", heading: "PDF Document" },
+  { key: "phone", label: "Phone", icon: "📞", heading: "Phone Number" },
   { key: "sms", label: "SMS", icon: "💬", heading: "Text Message" },
   { key: "email", label: "Email", icon: "✉️", heading: "Email Message" },
-  { key: "phone", label: "Phone", icon: "📞", heading: "Phone Number" },
-  { key: "wifi", label: "WiFi", icon: "📶", heading: "WiFi Network" },
+  { key: "text", label: "Text", icon: "📝", heading: "Plain Text" },
+  { key: "app", label: "App", icon: "📱", heading: "App Store Link" },
+  { key: "multiurl", label: "Multi-Link", icon: "📚", heading: "Multiple Links" },
 ] as const;
 
 type QrType = typeof typeList[number]["key"];
@@ -62,6 +64,12 @@ type FormState = {
   wifiSsid: string;
   wifiPassword: string;
   wifiEncryption: "WPA" | "WEP" | "nopass";
+  upiName: string;
+  upiVpa: string;
+  upiAmount: string;
+  upiNote: string;
+  waPhone: string;
+  waText: string;
   // styling - always available
   qrColor: string;
   logoData: string | null;
@@ -82,8 +90,30 @@ function normalizeUrl(input: string): string {
   return "https://" + u;
 }
 
+function whatsappLink(phone: string, text: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return "";
+  const q = text.trim() ? `?text=${encodeURIComponent(text.trim())}` : "";
+  return `https://wa.me/${digits}${q}`;
+}
+
 function buildPayload(f: FormState): string {
   switch (f.type) {
+    case "upi": {
+      const pa = f.upiVpa.trim();
+      const pn = f.upiName.trim();
+      if (!pa || !pn) return "";
+      const am = f.upiAmount.trim();
+      return buildUpiUri({
+        pa,
+        pn,
+        cu: "INR",
+        ...(am ? { am } : {}),
+        ...(f.upiNote.trim() ? { tn: f.upiNote.trim() } : {}),
+      });
+    }
+    case "whatsapp":
+      return whatsappLink(f.waPhone, f.waText);
     case "url": {
       return normalizeUrl(f.url);
     }
@@ -95,7 +125,7 @@ function buildPayload(f: FormState): string {
         .split(/[\n,]+/)
         .map(normalizeUrl)
         .filter(Boolean);
-      return urls.join("\n");
+      return urls[0] || "";
     }
     case "contact": {
       const parts = ["BEGIN:VCARD", "VERSION:3.0"];
@@ -110,11 +140,8 @@ function buildPayload(f: FormState): string {
     }
     case "text": return f.text.trim();
     case "app": {
-      const lines = [];
-      if (f.appName) lines.push(f.appName);
-      if (f.appIos) lines.push("iOS: " + f.appIos);
-      if (f.appAndroid) lines.push("Android: " + f.appAndroid);
-      return lines.join("\n");
+      const store = f.appIos.trim() || f.appAndroid.trim();
+      return store ? normalizeUrl(store) : "";
     }
     case "sms":
       return f.smsPhone ? `SMSTO:${f.smsPhone}:${f.smsMessage || ""}`.replace(/:$/, "") : "";
@@ -138,7 +165,7 @@ export function UniversalQrForm() {
   const previewRef = useRef<HTMLDivElement>(null);
 
   const initial: FormState = {
-    type: "url",
+    type: "upi",
     selectedTemplate: 1,
     url: "", pdfUrl: "", multiUrls: "",
     contactFirst: "", contactLast: "", contactOrg: "", contactEmail: "", contactPhone: "", contactWebsite: "",
@@ -147,6 +174,8 @@ export function UniversalQrForm() {
     emailTo: "", emailSubject: "", emailBody: "",
     phone: "",
     wifiSsid: "", wifiPassword: "", wifiEncryption: "WPA",
+    upiName: "", upiVpa: "", upiAmount: "", upiNote: "",
+    waPhone: "", waText: "",
     qrColor: "#113b2c",
     logoData: null,
     logoSize: 46,
@@ -165,15 +194,23 @@ export function UniversalQrForm() {
     try { localStorage.setItem(draftKey, JSON.stringify(rest)); } catch {}
   }, [form]);
 
-  // Load draft
+  // Load draft, then honour ?type=upi / #wifi so landing queries open the right tab
   useEffect(() => {
     const saved = localStorage.getItem(draftKey);
+    let next: FormState | null = null;
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
-        setForm(prev => ({ ...prev, ...parsed, logoData: null }));
+        next = { ...initial, ...parsed, logoData: null };
       } catch {}
     }
+    const params = new URLSearchParams(window.location.search);
+    const hash = window.location.hash.replace(/^#/, "");
+    const requested = params.get("type") || (typeList.some((t) => t.key === hash) ? hash : "");
+    if (requested && typeList.some((t) => t.key === requested)) {
+      next = { ...(next ?? initial), type: requested as QrType, logoData: next?.logoData ?? null };
+    }
+    if (next) setForm(next);
   }, []);
 
   // Render QR + apply logo
@@ -257,6 +294,29 @@ export function UniversalQrForm() {
     if (!canvasRef.current) return;
     downloadDataUrl(canvasRef.current.toDataURL("image/png"), "qr-code.png");
     trackProductEvent("export_png", "universal-qr");
+  }
+
+  async function downloadSvg() {
+    if (!payload) return;
+    try {
+      const svg = await QRCode.toString(payload, {
+        type: "svg",
+        margin: 1,
+        errorCorrectionLevel: "H",
+        color: { dark: form.qrColor, light: "#ffffff" },
+      });
+      const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "qr-code.svg";
+      a.click();
+      URL.revokeObjectURL(url);
+      trackProductEvent("export_svg", "universal-qr");
+    } catch {
+      notifyExportError("SVG export failed — please retry.");
+      trackProductEvent("tool_error", "universal-qr");
+    }
   }
 
   async function downloadStyledCard() {
@@ -346,6 +406,28 @@ export function UniversalQrForm() {
             <div className="font-black text-forest mb-4">{activeTypeInfo.heading}</div>
 
             {/* Dynamic fields per type */}
+            {form.type === "upi" && (
+              <div className="space-y-3 text-sm">
+                <input value={form.upiName} onChange={e => update("upiName", e.target.value)} placeholder="Payee name (as in bank app)" className="w-full rounded-2xl border border-forest/15 px-4 py-3" />
+                <input value={form.upiVpa} onChange={e => update("upiVpa", e.target.value)} placeholder="UPI ID / VPA (name@oksbi)" className="w-full rounded-2xl border border-forest/15 px-4 py-3 font-mono" />
+                <div className="grid grid-cols-2 gap-3">
+                  <input value={form.upiAmount} onChange={e => update("upiAmount", e.target.value)} placeholder="Amount ₹ (optional)" inputMode="decimal" className="rounded-2xl border border-forest/15 px-4 py-3" />
+                  <input value={form.upiNote} onChange={e => update("upiNote", e.target.value)} placeholder="Note (optional)" className="rounded-2xl border border-forest/15 px-4 py-3" />
+                </div>
+                <p className="text-[11px] text-forest/60 leading-snug">
+                  Encodes a standard <code className="font-mono">upi://pay</code> QR. PhonePe, GPay, Paytm, and BHIM can all scan it. For a shop standee with templates, use the{" "}
+                  <a href="/#generator" className="font-semibold text-leaf underline">UPI poster generator</a>.
+                </p>
+              </div>
+            )}
+
+            {form.type === "whatsapp" && (
+              <div className="space-y-3 text-sm">
+                <input value={form.waPhone} onChange={e => update("waPhone", e.target.value)} placeholder="WhatsApp number with country code (9198…)" className="w-full rounded-2xl border border-forest/15 px-4 py-3" />
+                <textarea value={form.waText} onChange={e => update("waText", e.target.value)} placeholder="Pre-filled message (optional)" rows={2} className="w-full rounded-2xl border border-forest/15 px-4 py-3" />
+              </div>
+            )}
+
             {form.type === "url" && (
               <input type="text" value={form.url} onChange={e => update("url", e.target.value)} placeholder="https://yourwebsite.com" className="w-full rounded-2xl border border-forest/15 px-4 py-3 text-sm focus:border-forest" />
             )}
@@ -364,8 +446,7 @@ export function UniversalQrForm() {
                   className="w-full rounded-2xl border border-forest/15 px-4 py-3 text-sm" 
                 />
                 <p className="text-[11px] text-forest/60 mt-1.5">
-                  The first link will usually open directly. Other links are shown as text. 
-                  For best results with multiple links, use a dedicated QR scanner app (Google Lens or similar).
+                  A QR can hold one destination. The first URL is encoded. For a page of several links, host a short landing URL instead.
                 </p>
               </>
             )}
@@ -387,9 +468,10 @@ export function UniversalQrForm() {
 
             {form.type === "app" && (
               <div className="space-y-3 text-sm">
-                <input value={form.appName} onChange={e => update("appName", e.target.value)} placeholder="App name" className="w-full rounded-2xl border px-3 py-2" />
+                <input value={form.appName} onChange={e => update("appName", e.target.value)} placeholder="App name (label only)" className="w-full rounded-2xl border px-3 py-2" />
                 <input value={form.appIos} onChange={e => update("appIos", e.target.value)} placeholder="iOS App Store URL" className="w-full rounded-2xl border px-3 py-2" />
                 <input value={form.appAndroid} onChange={e => update("appAndroid", e.target.value)} placeholder="Android Play Store URL" className="w-full rounded-2xl border px-3 py-2" />
+                <p className="text-[11px] text-forest/60">One QR, one store link. iOS URL is used if both are filled. For both stores, use a landing page URL instead.</p>
               </div>
             )}
 
@@ -519,7 +601,11 @@ export function UniversalQrForm() {
           {/* Actions */}
           <div className="mt-5 flex flex-wrap gap-3 items-center">
             <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-leaf transition disabled:opacity-50">Download PNG</button>
+            <button onClick={downloadSvg} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download SVG</button>
             <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
+            {form.type === "upi" && (
+              <a href="/#generator" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">Print UPI standee →</a>
+            )}
             <a href="/qr-sticker-generator/" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">🖨️ A4 Sticker Sheet</a>
             <button onClick={copyPayload} disabled={!isValid} className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-bold">Copy content</button>
             <button onClick={reset} className="ml-auto text-sm text-forest/70 hover:text-forest">Reset</button>

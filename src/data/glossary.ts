@@ -77,6 +77,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/upi-error-codes/", label: "NPCI UPI error code resolver" },
+      { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI QR generator explained" },
       { href: "/upi-limits/", label: "Bank-wise UPI limits checker" }
     ]
   },
@@ -317,7 +318,29 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/glossary/mdr/", label: "MDR — the fee that isn't there" },
+      { href: "/blog/p2m-meaning-in-banking-upi/", label: "P2M meaning in banking and UPI" },
       { href: "/split-bill-calculator/", label: "Split bills with per-person UPI links" }
+    ]
+  },
+  {
+    slug: "bharat-qr",
+    term: "Bharat QR",
+    full: "Bharat QR (EMVCo merchant QR)",
+    hindi: "भारत QR",
+    category: "Merchant & QR",
+    shortDef: "Bank-issued merchant QR that can carry UPI and card rails — not the everyday upi://pay standee shops print themselves.",
+    body: [
+      "Bharat QR is an EMVCo-based acceptance QR issued by acquiring banks. In principle it can accept UPI plus RuPay, Visa, and Mastercard on one print. UPI QR is a different object: a matrix of the NPCI upi://pay URI that any member app already scans.",
+      "RBI ATM & Card statistics still show Bharat QR stock as a small fraction of UPI QR. A kirana that only needs PhonePe, GPay, Paytm, and BHIM scans does not need Bharat QR. Searching “NPCI QR code generator” usually means a UPI QR, not Bharat QR.",
+      "You cannot DIY a genuine Bharat QR from a website form. Ask the acquiring bank. You can DIY a UPI QR from any live VPA."
+    ],
+    faqs: [
+      { question: "Is Bharat QR the same as a UPI QR?", answer: "No. UPI QR is upi://pay. Bharat QR is a bank-issued EMVCo code that may also accept cards." },
+      { question: "Should my shop print Bharat QR?", answer: "Only if your bank issued one and you need card-on-QR. For UPI-only counters, a standard UPI standee is enough." }
+    ],
+    related: [
+      { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR vs Bharat QR" },
+      { href: "/", label: "Print a UPI QR standee" }
     ]
   },
   {

@@ -15,6 +15,12 @@
     { "source": "/hi/sbi-business-qr-code-generator", "destination": "/hi/sbi-business-qr-code-generator/", "permanent": true },
     { "source": "/hi/hdfc-business-qr-code-generator", "destination": "/hi/hdfc-business-qr-code-generator/", "permanent": true },
     { "source": "/hi/icici-business-qr-code-generator", "destination": "/hi/icici-business-qr-code-generator/", "permanent": true },
+    { "source": "/qr-code-generator", "destination": "/universal-qr-generator/", "permanent": true },
+    { "source": "/qr-code-generator/", "destination": "/universal-qr-generator/", "permanent": true },
+    { "source": "/qr-generator", "destination": "/universal-qr-generator/", "permanent": true },
+    { "source": "/qr-generator/", "destination": "/universal-qr-generator/", "permanent": true },
+    { "source": "/free-qr-code-generator", "destination": "/universal-qr-generator/", "permanent": true },
+    { "source": "/free-qr-code-generator/", "destination": "/universal-qr-generator/", "permanent": true },
     { "source": "/universal-upi-qr-code-generator-for-bank-account/:path*", "destination": "/universal-qr-generator/", "permanent": true },
     { "source": "/hi/universal-upi-qr-code-generator-for-bank-account/:path*", "destination": "/hi/universal-qr-generator/", "permanent": true },
     { "source": "/hi/doctor-clinic-upi-qr-generator", "destination": "/hi/doctor-clinic-upi-qr-generator/", "permanent": true }

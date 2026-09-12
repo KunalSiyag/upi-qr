@@ -59,4 +59,4 @@ You can still use **Pro UPI QR** with your new merchant VPA — just update the 
 
 **[Create a free UPI QR with your existing UPI ID &rarr;](/)**
 
-Related: [Get free bank UPI QR vs custom standee](/blog/how-to-get-free-upi-qr-code-from-bank/) · [Accept payments without POS](/blog/how-to-accept-upi-payments-without-pos-machine/)
+Related: [Get free bank UPI QR vs custom standee](/blog/how-to-get-free-upi-qr-code-from-bank/) · [Accept payments without POS](/blog/how-to-accept-upi-payments-without-pos-machine/) · [P2M vs P2P](/blog/p2m-meaning-in-banking-upi/)

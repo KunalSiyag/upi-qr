@@ -18,7 +18,8 @@ fail_on_broken = "--fail-on-broken" in sys.argv
 
 ALLOWED_HOSTS = {"www.proupiqr.in", "proupiqr.in"}
 # Error pages canonicalize to themselves; Vercel never serves /404/ or /500/ as URLs.
-IGNORED_PREFIXES = ("/404", "/500")
+# Clerk dashboard routes are server-rendered and absent from the static HTML tree.
+IGNORED_PREFIXES = ("/404", "/500", "/sign-up", "/sign-in", "/dashboard", "/c/", "/r/")
 
 
 def exists(url_path: str) -> bool:

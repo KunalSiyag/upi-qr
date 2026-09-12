@@ -47,7 +47,20 @@ const faqs = [
   {
     question: "How to get UPI ID from QR code?",
     answer:
-      "To get a UPI ID from an existing QR code, simply scan it using any standard QR code reader app on your phone. The text result will be a 'upi://pay' link. Your UPI ID is the part immediately following 'pa=' in that link."
+      "Upload the image to the UPI QR decoder. It reads the pa= VPA, payee name, and amount in your browser. See how to extract UPI ID from a QR code for the full checklist.",
+    answerLink: { href: "/blog/extract-upi-id-from-qr-code/", label: "extract UPI ID from a QR code" }
+  },
+  {
+    question: "Is there an official NPCI QR code generator?",
+    answer:
+      "No public NPCI shop form. NPCI writes the upi://pay rulebook and runs BHIM. Paste your VPA here to print a compliant QR. Read NPCI UPI QR explained for Bharat QR vs UPI QR.",
+    answerLink: { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR explained" }
+  },
+  {
+    question: "Can I generate a UPI QR from a bank account number?",
+    answer:
+      "No. A UPI QR encodes your VPA, not IFSC plus account number. Copy the UPI ID from the bank app, then generate. Full steps: QR from bank account number.",
+    answerLink: { href: "/blog/generate-qr-from-bank-account-number/", label: "QR from bank account number" }
   },
   {
     question: "Is this UPI QR generator free and without signup?",
@@ -616,14 +629,14 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
         <div class="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 mb-8">
           <div>
             <p class="text-xs uppercase tracking-[2px] text-leaf font-black">ALSO AVAILABLE</p>
-            <h2 class="text-4xl font-black tracking-tight">Full Universal QR Code Generator</h2>
-            <p class="text-forest/70 mt-1 max-w-md">Create QR Codes for websites, PDFs, contacts, apps, SMS, WiFi and more. 13 beautiful templates. 100% free and private.</p>
+            <h2 class="text-4xl font-black tracking-tight">Universal QR Code Generator</h2>
+            <p class="text-forest/70 mt-1 max-w-md">Free QR codes for websites, WiFi, vCard, WhatsApp, PDF, and UPI. 13 templates. No signup, no watermark.</p>
           </div>
-          <a href="/universal-qr-generator/" class="rounded-full bg-forest text-white px-6 py-3 text-sm font-bold whitespace-nowrap">Open Universal QR Editor →</a>
+          <a href="/universal-qr-generator/" class="rounded-full bg-forest text-white px-6 py-3 text-sm font-bold whitespace-nowrap">Open universal QR editor →</a>
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
-          {["Website / URL", "PDF Files", "Contact (vCard)", "Multi-URL", "App Links", "SMS", "Email", "Phone", "Plain Text", "WiFi"].map((item) => (
+          {["UPI Pay", "Website / URL", "WhatsApp", "WiFi", "Contact (vCard)", "PDF Files", "SMS", "Email", "Phone", "Plain Text"].map((item) => (
             <a href="/universal-qr-generator/" class="block p-3 rounded-2xl border border-white/70 bg-white/80 hover:border-leaf/40">{item}</a>
           ))}
         </div>

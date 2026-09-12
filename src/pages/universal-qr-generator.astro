@@ -3,14 +3,15 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { UniversalQrForm } from "../components/UniversalQrForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 
-const title = "Universal UPI QR Generator for Any Bank Account";
-const description = "Free universal UPI QR code generator for any bank account. Create instant payment, URL, WiFi, contact & PDF QR codes. Works on PhonePe, GPay & Paytm.";
+const title = "Universal QR Code Generator — Free, UPI, WiFi | Pro UPI QR";
+const description =
+  "Free universal QR code generator for URLs, WiFi, vCard, WhatsApp, PDF, and UPI payments. No signup, no watermark. Any phone camera can scan it.";
 
 const highIntentQueries = [
-  { query: "universal upi qr code generator for bank account", href: "#editor", copy: "Link any Indian bank account (SBI, HDFC, ICICI, etc.) with a single universal UPI payment QR code." },
-  { query: "universal qr code generator", href: "#editor", copy: "Create QR codes for URL, PDF, WiFi, contact, text, email, phone, apps, and more from one editor." },
-  { query: "universal upi qr code generator app", href: "#editor", copy: "Use as a fast mobile web app in Chrome or Safari. Save to home screen for instant QR creation on phone." },
-  { query: "universal qr code generator for bank account", href: "#editor", copy: "For bank collections, generate a standard UPI payment QR using your VPA / UPI ID without signup fees." }
+  { query: "universal upi qr code generator for bank account", href: "/universal-qr-generator/?type=upi#editor", copy: "Paste your VPA (name@oksbi). One upi://pay QR works on PhonePe, GPay, Paytm, and BHIM." },
+  { query: "universal qr code generator", href: "#editor", copy: "Create QR codes for URL, PDF, WiFi, contact, WhatsApp, text, email, phone, and apps from one editor." },
+  { query: "universal upi qr code generator app", href: "/universal-qr-generator/?type=upi#editor", copy: "Use it as a mobile web app in Chrome or Safari. Add to Home Screen — no Play Store download." },
+  { query: "universal qr code generator for bank account", href: "/universal-qr-generator/?type=upi#editor", copy: "For bank collections, encode your UPI ID. For a printed shop standee, open the UPI poster generator." }
 ];
 
 const conversionFeatures = [
@@ -35,11 +36,18 @@ const schema = {
     {
       "@type": "WebApplication",
       "@id": "https://www.proupiqr.in/universal-qr-generator/#webapp",
-      "name": "Universal QR Code Generator | Pro UPI QR",
-      "applicationCategory": "BusinessApplication",
+      "name": "Universal QR Code Generator",
+      "alternateName": ["QR Code Generator", "Free QR Code Generator"],
+      "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any",
       "url": "https://www.proupiqr.in/universal-qr-generator/",
-      "description": "Generate free universal UPI QR codes for bank accounts, URLs, PDFs, contacts, apps, SMS, email, phone, and WiFi networks instantly in your browser without signup.",
+      "description": "Free QR code generator for URLs, WiFi, vCard, WhatsApp, PDF, and UPI payments. No signup, no watermark.",
+      "featureList": [
+        "QR code generator for URL, WiFi, vCard, WhatsApp, PDF",
+        "UPI payment QR (upi://pay)",
+        "PNG and SVG download",
+        "No signup, no watermark"
+      ],
       "offers": {
         "@type": "Offer",
         "price": "0",
@@ -49,27 +57,27 @@ const schema = {
     {
       "@type": "HowTo",
       "@id": "https://www.proupiqr.in/universal-qr-generator/#howto",
-      "name": "How to Generate a Universal UPI QR Code for Bank Account",
-      "description": "Create a free universal UPI QR code linked to your bank account in three steps using Pro UPI QR.",
+      "name": "How to Generate a Universal UPI QR Code for a Bank Account",
+      "description": "Create a free universal UPI QR from your VPA in three steps. The QR is a standard upi://pay code any member app can scan.",
       "totalTime": "PT1M",
       "step": [
         {
           "@type": "HowToStep",
           "position": 1,
-          "name": "Select UPI Payment type",
-          "text": "Open the universal QR editor and choose 'UPI Payment' from the QR type selector at the top."
+          "name": "Select UPI Pay",
+          "text": "Open the universal QR editor and choose UPI Pay in the type row. Or open /universal-qr-generator/?type=upi."
         },
         {
           "@type": "HowToStep",
           "position": 2,
-          "name": "Enter your UPI ID (VPA)",
-          "text": "Type your Virtual Payment Address — for example name@okicici or 9876543210@ybl — in the UPI ID field. Add your payee name and an optional fixed amount."
+          "name": "Enter payee name and UPI ID",
+          "text": "Type the payee name exactly as the bank app shows it, and your VPA such as name@okicici or 9876543210@ybl. Amount and note are optional."
         },
         {
           "@type": "HowToStep",
           "position": 3,
-          "name": "Download PNG and print",
-          "text": "Click Download to save a print-ready, high-resolution QR image. Scan it with PhonePe, Google Pay, Paytm, or any UPI app to verify it routes to the correct bank account."
+          "name": "Download PNG or SVG and test-scan",
+          "text": "Download the image and scan it with PhonePe and Google Pay before you print. For a shop standee with poster templates, use the UPI poster generator on the homepage."
         }
       ]
     },
@@ -77,6 +85,22 @@ const schema = {
       "@type": "FAQPage",
       "@id": "https://www.proupiqr.in/universal-qr-generator/#faq",
       "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "Is this a free QR code generator?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Yes. This QR code generator runs in your browser with no signup, no watermark, and no scan limit. Static codes never expire because the data is in the image."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What can I make with this QR code generator?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "URLs, WiFi, vCard, WhatsApp, PDF links, SMS, email, phone, app store links, and UPI payment QRs. Download PNG or SVG. For a printed Indian shop standee, use the UPI poster generator on the homepage."
+          }
+        },
         {
           "@type": "Question",
           "name": "What is a universal UPI QR code generator?",
@@ -90,7 +114,7 @@ const schema = {
           "name": "How do I create a universal UPI QR code for my bank account?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Select 'UPI Payment' in the editor, enter your UPI ID (VPA) such as name@okicici, add your payee name, then click Download. The generated QR code links directly to your bank account and works on all standard UPI apps."
+            "text": "Choose UPI Pay in the editor, enter your UPI ID (VPA) such as name@okicici, add your payee name, then download PNG or SVG. The QR is a standard upi://pay code. For a printable shop standee, use the homepage poster generator."
           }
         },
         {
@@ -106,7 +130,7 @@ const schema = {
           "name": "What is the difference between a universal QR code and a UPI QR code?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "A universal QR code is a broad term covering any QR code that works across multiple platforms — URLs, WiFi, contacts, and more. A UPI QR code is specifically encoded with a UPI URI to route payments to a bank account. This tool generates both: use the UPI type for bank payments, and URL/WiFi/Contact types for everything else."
+            "text": "A universal QR code is any static QR a phone camera can open — URL, WiFi, vCard, WhatsApp. A UPI QR is the same matrix with an upi://pay payload. This editor does both: UPI Pay for bank collections, the other tabs for links and WiFi."
           }
         },
         {
@@ -122,7 +146,7 @@ const schema = {
           "name": "Which QR generator should I use for a bank account or UPI payment?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "Use the UPI Payment option in this editor for collecting bank account payments. For a printable poster with logo templates and poster designs, use the dedicated UPI QR Poster Generator at proupiqr.in."
+            "text": "Use UPI Pay in this editor for a plain payment QR. For a printable counter standee with shop templates, use the UPI QR poster generator at proupiqr.in."
           }
         },
         {
@@ -131,6 +155,14 @@ const schema = {
           "acceptedAnswer": {
             "@type": "Answer",
             "text": "No, you can generate unlimited QR codes without creating an account or providing any personal details."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Which generator should I use for a shop standee?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "This page is the mixed editor for UPI, URL, WiFi, and vCard. For A4/A5 posters, sticker sheets, and branded PhonePe or GPay layouts, use the UPI poster generator on the homepage."
           }
         }
       ]
@@ -144,7 +176,7 @@ const schema = {
     <!-- Compact Header (above the fold) -->
     <section class="px-5 pt-8 pb-4 text-center max-w-3xl mx-auto">
       <h1 class="text-4xl md:text-5xl font-black tracking-[-1.2px] text-forest">Universal QR Code Generator</h1>
-      <p class="mt-2 text-base text-forest/70">Create static QR codes for links, PDFs, contacts, WiFi, email, and more. Free, local generation, no signup.</p>
+      <p class="mt-2 text-base text-forest/70">A free QR code generator for website URLs, WiFi, vCard, WhatsApp, PDF, and UPI payments. Static, no signup, no watermark.</p>
     </section>
 
     <!-- The Editor (above the fold) -->
@@ -157,30 +189,31 @@ const schema = {
       <div class="rounded-2xl border border-leaf/15 bg-mint/40 px-6 py-7">
         <h2 class="text-2xl font-black text-forest tracking-tight">Universal QR Code Generator for Bank Account</h2>
         <p class="mt-3 text-sm leading-7 text-forest/80">
-          To collect payments directly into your Indian bank account via UPI, select <strong>UPI Payment</strong> in the editor above and enter your UPI ID (VPA) — for example <code class="bg-white px-1.5 py-0.5 rounded text-xs font-mono border border-forest/10">yourname@okicici</code>. The generated QR works with Google Pay, PhonePe, Paytm, BHIM, and all standard UPI apps. No extra setup, no merchant registration needed.
+          To collect UPI into an Indian bank account, choose <strong>UPI Pay</strong> in the editor (or open this page with <code class="bg-white px-1.5 py-0.5 rounded text-xs font-mono border border-forest/10">?type=upi</code>) and enter your VPA — for example <code class="bg-white px-1.5 py-0.5 rounded text-xs font-mono border border-forest/10">yourname@okicici</code>. The file is a standard <code class="font-mono text-xs">upi://pay</code> QR. PhonePe, Google Pay, Paytm, and BHIM can all scan it. No merchant app required for a personal VPA.
         </p>
 
         <div class="mt-5 grid gap-3 sm:grid-cols-3">
           <div class="rounded-xl bg-white/70 border border-forest/10 p-4">
             <p class="text-xs font-black uppercase tracking-wider text-leaf">Step 1</p>
             <p class="mt-1.5 text-sm font-bold text-forest">Find your UPI ID</p>
-            <p class="mt-1 text-xs leading-5 text-forest/70">Open PhonePe, GPay, or your banking app. Go to Profile → UPI IDs. It looks like <span class="font-mono text-leaf">name@okaxis</span>.</p>
+            <p class="mt-1 text-xs leading-5 text-forest/70">Open PhonePe, GPay, or your bank app. Profile → UPI IDs. It looks like <span class="font-mono text-leaf">name@okaxis</span>.</p>
           </div>
           <div class="rounded-xl bg-white/70 border border-forest/10 p-4">
             <p class="text-xs font-black uppercase tracking-wider text-leaf">Step 2</p>
-            <p class="mt-1.5 text-sm font-bold text-forest">Enter in editor above</p>
-            <p class="mt-1 text-xs leading-5 text-forest/70">Select <strong>UPI Payment</strong> type, paste your UPI ID, add your name and an optional fixed amount.</p>
+            <p class="mt-1.5 text-sm font-bold text-forest">UPI Pay tab above</p>
+            <p class="mt-1 text-xs leading-5 text-forest/70">Select <strong>UPI Pay</strong>, paste the VPA, add the payee name, optional amount. <a class="font-semibold text-leaf underline" href="/universal-qr-generator/?type=upi#editor">Open UPI tab</a>.</p>
           </div>
           <div class="rounded-xl bg-white/70 border border-forest/10 p-4">
             <p class="text-xs font-black uppercase tracking-wider text-leaf">Step 3</p>
-            <p class="mt-1.5 text-sm font-bold text-forest">Download & print</p>
-            <p class="mt-1 text-xs leading-5 text-forest/70">Click Download PNG. Test it with a ₹1 scan before printing. Works on all UPI apps, no setup required.</p>
+            <p class="mt-1.5 text-sm font-bold text-forest">Download &amp; test-scan</p>
+            <p class="mt-1 text-xs leading-5 text-forest/70">PNG or SVG. Scan with two apps before print. Need a counter standee? Use the poster generator.</p>
           </div>
         </div>
 
         <div class="mt-5 flex flex-wrap gap-3">
-          <a href="/#generator" class="rounded-full bg-forest text-white px-5 py-2 text-xs font-bold hover:bg-leaf transition-colors">Use printable poster version →</a>
-          <a href="/blog/create-upi-qr-code-for-bank-account/" class="rounded-full border border-forest/15 px-5 py-2 text-xs font-bold text-forest hover:bg-white transition-colors">Full bank account QR guide →</a>
+          <a href="/universal-qr-generator/?type=upi#editor" class="rounded-full bg-forest text-white px-5 py-2 text-xs font-bold hover:bg-leaf transition-colors">Open UPI Pay editor →</a>
+          <a href="/#generator" class="rounded-full border border-forest/15 px-5 py-2 text-xs font-bold text-forest hover:bg-white transition-colors">Printable UPI standee →</a>
+          <a href="/blog/create-upi-qr-code-for-bank-account/" class="rounded-full border border-forest/15 px-5 py-2 text-xs font-bold text-forest hover:bg-white transition-colors">Bank account QR guide →</a>
         </div>
       </div>
     </section>
@@ -232,16 +265,18 @@ const schema = {
       <h2 class="text-center text-3xl font-black tracking-tight mb-6">Supported QR Types</h2>
       <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 text-sm">
         {[
+          ["UPI Pay", "Bank account VPA, any UPI app"],
           ["URL / Website", "Link to any page"],
-          ["PDF", "Share documents"],
-          ["Multi-Link", "Several destinations"],
+          ["WhatsApp", "Chat with a pre-filled message"],
+          ["WiFi", "Join network"],
           ["Contact (vCard)", "Save name + details"],
-          ["Plain Text", "Any message"],
-          ["App Links", "iOS + Android"],
+          ["PDF", "Share documents"],
+          ["Phone", "Call directly"],
           ["SMS", "Pre-filled text"],
           ["Email", "Pre-filled message"],
-          ["Phone", "Call directly"],
-          ["WiFi", "Join network"],
+          ["App Links", "One store URL per code"],
+          ["Plain Text", "Any message"],
+          ["Multi-Link", "First URL is encoded"],
         ].map(([title, desc]) => (
           <div class="bg-white rounded-2xl p-4 border border-forest/10">
             <div class="font-bold">{title}</div>
@@ -301,12 +336,15 @@ const schema = {
       <h2 class="text-2xl font-black tracking-tight text-forest mb-6">Frequently Asked Questions</h2>
       <div class="grid gap-3">
         {[
-          ["What is a universal UPI QR code generator?", "A universal UPI QR code generator creates a standard UPI URI-based QR code that works across all UPI payment apps — PhonePe, Google Pay, Paytm, BHIM, and all bank apps. Unlike app-specific QR codes, one universal UPI QR needs no separate setup per app."],
-          ["How do I create a universal UPI QR code for my bank account?", "Select 'UPI Payment' in the editor above, enter your UPI ID (VPA) such as name@okicici, add your payee name, and click Download. The QR links directly to your bank account and works on all standard UPI apps."],
-          ["Can I use this as a universal UPI QR code generator app on mobile?", "Yes. Pro UPI QR is a fully responsive web app. Open it in Chrome or Safari on any smartphone. You can tap 'Add to Home Screen' to save it like a native app — no Play Store or App Store required."],
-          ["What is the difference between a universal QR and a UPI QR?", "A universal QR code covers any type — URLs, WiFi, contacts, etc. A UPI QR specifically encodes a UPI URI to route payments to a bank account. This tool handles both: use UPI type for bank payments, and URL/WiFi/Contact for everything else."],
-          ["Are these QR codes free and permanent?", "Yes. All QR codes are 100% free, static, and permanent. They never expire and have no scan limits — the data is encoded directly into the image."],
-          ["Does this QR generator require sign up?", "No. Generate unlimited QR codes without creating an account or providing any personal details."]
+          ["Is this a free QR code generator?", "Yes. No signup, no watermark, no scan limit. Static codes never expire — the data lives in the image."],
+          ["What can I make with this QR code generator?", "URLs, WiFi, vCard, WhatsApp, PDF, SMS, email, phone, app links, and UPI payment QRs. PNG or SVG download."],
+          ["What is a universal UPI QR code generator?", "A universal UPI QR encodes a standard upi://pay URI. Any member app — PhonePe, Google Pay, Paytm, BHIM — can scan it. Use the UPI Pay tab here for a plain QR, or the homepage poster generator for a shop standee."],
+          ["How do I create a universal UPI QR code for my bank account?", "Choose UPI Pay, enter your UPI ID (VPA) such as name@okicici, add the payee name, and download PNG or SVG. Test-scan before you print. You cannot encode IFSC plus account number — you need the VPA."],
+          ["Can I use this as a universal UPI QR code generator app on mobile?", "Yes. Open it in Chrome or Safari. Add to Home Screen to keep it like an app. No Play Store download, no extra permissions."],
+          ["What is the difference between a universal QR and a UPI QR?", "Universal QR here means any static type: URL, WiFi, vCard, WhatsApp. UPI QR is the same matrix with a payment payload. This editor does both."],
+          ["Are these QR codes free and permanent?", "Yes. Static codes encode the data in the image. They do not expire and have no scan limits. Dynamic short links are a different tool."],
+          ["Does this QR generator require sign up?", "No. Generate unlimited QR codes without an account. Drafts stay in this browser."],
+          ["Which generator should I use for a shop standee?", "This page is the mixed editor. For A4/A5 posters, sticker sheets, and branded PhonePe/GPay layouts, use the UPI poster generator on the homepage."]
         ].map(([q, a]) => (
           <details class="rounded-2xl border border-white/75 bg-white/86 px-5 py-4">
             <summary class="cursor-pointer list-none text-base font-black text-forest">{q}</summary>

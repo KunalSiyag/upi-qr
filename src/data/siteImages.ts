@@ -201,6 +201,62 @@ export const SITE_IMAGES: SiteImage[] = [
     "Pair a free printable UPI QR with an acrylic standee, sticker, or printer. Hardware is optional; generators stay free.",
     "UPI QR hardware on a kirana counter"
   ),
+  jpeg(
+    "npci-upi-qr-counter",
+    "npci-upi-qr-counter",
+    "Acrylic T-stand with a Scan to pay UPI QR on an Indian kirana billing counter beside a steel cash box",
+    "NPCI has no public shop QR form. A printable upi://pay standee from your VPA is what member apps scan.",
+    "NPCI-compliant UPI QR on a shop counter"
+  ),
+  jpeg(
+    "extract-upi-id-qr-decode",
+    "extract-upi-id-qr-decode",
+    "Two phones on a wooden shop desk photographing a printed UPI QR card to read the encoded VPA",
+    "Extract the UPI ID from pa= in the upi://pay URI. Decode in the browser before you print or trust a sticker.",
+    "Extract UPI ID from a printed QR"
+  ),
+  jpeg(
+    "upi-payment-receipt-desk",
+    "upi-payment-receipt-desk",
+    "Handwritten shop bill and a UPI Pay QR card on a wooden desk under a yellow lamp",
+    "Issue a merchant receipt after the UTR credits. Do not fake a PhonePe or GPay success screen.",
+    "UPI payment receipt on a shop desk"
+  ),
+  jpeg(
+    "phonepe-qr-sticker-sheet-peel",
+    "phonepe-qr-sticker-sheet-peel",
+    "Shopkeeper peeling a Pay Here QR sticker from a yellow A4 sheet at a spice-jar kirana counter",
+    "Print a compatible UPI sticker today, or order PhonePe Business’s official sticker after KYC.",
+    "Peeling a UPI QR sticker from an A4 sheet"
+  ),
+  jpeg(
+    "p2m-merchant-shop-counter",
+    "p2m-merchant-shop-counter",
+    "Neighbourhood shop with a UPI Accepted standee, weighing scale, and two customers at the glass counter",
+    "P2M is person-to-merchant UPI. A personal VPA still works; merchant registration is for limits and dashboards.",
+    "P2M UPI payment at a merchant counter"
+  ),
+  jpeg(
+    "bank-account-number-qr",
+    "bank-account-number-qr",
+    "Savings passbook, cheque leaf, fountain pen, and a Scan and Pay UPI QR card on a teak desk",
+    "A UPI QR encodes the VPA, not the 16-digit account number. Find the UPI ID in the bank app first.",
+    "UPI QR beside a passbook and cheque"
+  ),
+  jpeg(
+    "sbi-upi-qr-shop-counter",
+    "sbi-upi-qr-shop-counter",
+    "Blue UPI Pay Here standee on a worn shop counter with a cash tray of notes and coins",
+    "An SBI-compatible standee uses your @sbi or @oksbi VPA. PhonePe and GPay can pay it.",
+    "SBI-style UPI QR on a shop counter"
+  ),
+  jpeg(
+    "free-upi-api-developer-desk",
+    "free-upi-api-developer-desk",
+    "Laptop with a code editor and a Scan to pay ₹450 UPI QR card on a wooden desk beside chai",
+    "The free UPI surface is the upi://pay URI. NPCI switch APIs stay with banks and PSPs.",
+    "Developer desk with a UPI QR card"
+  ),
   png(
     "print-size-chart",
     "/images/diagrams/print-size-chart.png",
@@ -363,10 +419,13 @@ const PATH_IMAGE_IDS: Record<string, string[]> = {
   "/google-pay-qr-generator/": ["google-pay-merchant-phone"],
   "/phonepe-qr-generator/": ["phonepe-business-qr-activation"],
   "/bhim-qr-generator/": ["bhim-navy-upi-poster"],
-  "/sbi-qr-generator/": ["bank-account-upi-qr-desk"],
+  "/sbi-qr-generator/": ["sbi-upi-qr-shop-counter", "bank-account-upi-qr-desk"],
   "/donation-qr-generator/": ["temple-donation-upi-box"],
   "/whatsapp-pay-qr-generator/": ["whatsapp-upi-payment-share"],
-  "/qr-sticker-generator/": ["upi-qr-sticker-sheet", "sticker-sheet-layouts"],
+  "/qr-sticker-generator/": ["upi-qr-sticker-sheet", "sticker-sheet-layouts", "phonepe-qr-sticker-sheet-peel"],
+  "/upi-qr-decoder/": ["extract-upi-id-qr-decode"],
+  "/receipt-generator/": ["upi-payment-receipt-desk"],
+  "/developer/": ["free-upi-api-developer-desk"],
   "/phonepe-vs-paytm-vs-gpay/": ["phonepe-gpay-paytm-compare"],
   "/dynamic-qr-generator/": ["static-vs-dynamic-qr"],
 };
