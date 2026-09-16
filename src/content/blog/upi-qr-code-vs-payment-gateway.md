@@ -23,7 +23,7 @@ Here is a high-level look at how static UPI QR codes compare to paid merchant ga
 
 | Feature | Static UPI QR Codes | Paid Payment Gateways |
 | :--- | :--- | :--- |
-| **Transaction Fees** | **0% (Free)** | 2.0% to 3.5% per transaction |
+| **Transaction Fees** | **0% on P2P, ≤ ₹2,000 P2M, and small QR shops; 0.4% MDR on some larger P2M from 15 Oct 2026** | 2.0% to 3.5% per transaction |
 | **Settlement Time** | **Instant (Real-time)** | T+2 to T+4 working days |
 | **Accepted Methods** | UPI Only (GPay, PhonePe, etc.) | Cards, Net Banking, Wallets, UPI |
 | **Setup Cost** | Zero | Zero (usually), but requires KYC |
@@ -38,7 +38,7 @@ For small stores, micro-merchants, freelancers, and local service providers, sta
 
 ### 1. No Platform Commissions (Keep 100% of Revenue)
 Payment gateways charge a standard MDR (Merchant Discount Rate) of **2% + GST** on domestic transactions. If your business collects ₹1,000, you pay ₹23 to the gateway. If you collect ₹1,00,000 monthly, you lose ₹2,300. 
-With direct UPI QR transfers, **there are zero commissions**. You keep every rupee.
+With direct UPI QR, most kirana scans still settle at **₹0**. From 15 October 2026 some person-to-merchant tickets **above ₹2,000** take a **0.4% MDR** (not a tax, capped at ₹300). That is still far below a 2% gateway. Work it: [UPI MDR calculator](/upi-mdr-calculator/).
 
 ### 2. Instant Settlement
 With a payment gateway, funds are typically held for 2 to 3 business days before being deposited into your bank account. Direct UPI QR codes deposit funds into your account **instantly (within seconds)**, which is crucial for managing daily cash flow.

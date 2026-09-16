@@ -1371,6 +1371,63 @@ export const INTERNATIONAL_TOOL_COPY: Record<string, Record<InternationalLang, L
       ]
     }
   },
+  "upi-mdr-calculator": {
+    es: {
+      name: "Calculadora de comisión UPI",
+      title: "Calculadora de MDR UPI — comisión 0,4% oct 2026",
+      description: "Estima la comisión UPI del 0,4% desde el 15 de octubre de 2026 en pagos a comercios. No es un impuesto. Incluye umbral, tope y GST.",
+      intro: "Los titulares hablaron de un impuesto UPI. Es una tasa de comercio en algunos pagos P2M por encima de ₹2.000.",
+      steps: ["Introduce cobros UPI mensuales o un pago", "Elige comercio, esencial o P2P", "Marca la exención de pequeño comercio si aplica"],
+      faqs: [
+        { question: "¿Es un impuesto?", answer: "No. El ministerio aclaró que el MDR no lo recauda el gobierno ni NPCI." },
+        { question: "¿Quién sigue gratis?", answer: "P2P, pagos de hasta ₹2.000 y comercios QR de hasta ₹1 lakh al mes." }
+      ]
+    },
+    pt: {
+      name: "Calculadora de tarifa UPI",
+      title: "Calculadora MDR UPI — tarifa 0,4% out 2026",
+      description: "Calcule a tarifa UPI de 0,4% a partir de 15 de outubro de 2026 em pagamentos a lojas. Não é imposto. Inclui limite, teto e GST.",
+      intro: "Não é um imposto. É uma taxa do lojista em alguns pagamentos P2M acima de ₹2.000.",
+      steps: ["Informe o volume UPI mensal ou um pagamento", "Escolha loja, essencial ou P2P", "Marque a isenção de pequeno comerciante"],
+      faqs: [
+        { question: "É um imposto?", answer: "Não. O MDR não é cobrado pelo governo nem pela NPCI." },
+        { question: "Quem continua grátis?", answer: "P2P, pagamentos até ₹2.000 e lojas QR até ₹1 lakh por mês." }
+      ]
+    },
+    fr: {
+      name: "Calculateur de frais UPI",
+      title: "Calculateur MDR UPI — frais 0,4 % oct. 2026",
+      description: "Estimez les frais UPI de 0,4 % dès le 15 octobre 2026 sur certains paiements commerçants. Ce n'est pas un impôt. Seuil, plafond et GST inclus.",
+      intro: "Ce n'est pas une taxe. C'est un MDR commerçant sur certains paiements P2M au-dessus de ₹2 000.",
+      steps: ["Saisissez le volume UPI mensuel ou un paiement", "Choisissez commerce, essentiel ou P2P", "Cochez l'exonération petit commerçant"],
+      faqs: [
+        { question: "Est-ce un impôt ?", answer: "Non. Le ministère a précisé que le MDR n'est perçu ni par l'État ni par NPCI." },
+        { question: "Qui reste gratuit ?", answer: "Le P2P, les paiements jusqu'à ₹2 000 et les QR de moins de ₹1 lakh par mois." }
+      ]
+    },
+    de: {
+      name: "UPI-Gebührenrechner",
+      title: "UPI-MDR-Rechner — 0,4 % ab Okt. 2026",
+      description: "Berechnen Sie die 0,4%-UPI-Händlergebühr ab 15. Oktober 2026. Keine Steuer. Schwelle, Deckel und GST enthalten. Kostenlos im Browser.",
+      intro: "Keine Steuer: ein Merchant Discount auf bestimmte P2M-Zahlungen über ₹2.000.",
+      steps: ["Monatliches UPI-Volumen oder einen Betrag eingeben", "Händler, essenziell oder P2P wählen", "Kleinunternehmer-Befreiung ankreuzen"],
+      faqs: [
+        { question: "Ist das eine Steuer?", answer: "Nein. MDR wird weder von der Regierung noch von NPCI erhoben." },
+        { question: "Wer bleibt gebührenfrei?", answer: "P2P, Zahlungen bis ₹2.000 und QR-Händler bis ₹1 Lakh im Monat." }
+      ]
+    },
+    id: {
+      name: "Kalkulator biaya UPI",
+      title: "Kalkulator MDR UPI — biaya 0,4% Okt 2026",
+      description: "Hitung biaya UPI 0,4% mulai 15 Oktober 2026 pada pembayaran ke toko. Bukan pajak. Termasuk ambang, plafon, dan GST. Gratis.",
+      intro: "Ini bukan pajak. Ini MDR pedagang pada sebagian pembayaran P2M di atas ₹2.000.",
+      steps: ["Masukkan omzet UPI bulanan atau satu transaksi", "Pilih toko, sektor esensial, atau P2P", "Centang pembebasan pedagang kecil"],
+      faqs: [
+        { question: "Apakah ini pajak?", answer: "Bukan. Kementerian menegaskan MDR tidak dipungut pemerintah atau NPCI." },
+        { question: "Siapa yang tetap gratis?", answer: "P2P, pembayaran sampai ₹2.000, dan toko QR sampai ₹1 lakh per bulan." }
+      ]
+    }
+  },
   "offer-poster-generator": {
     es: {
       name: "Generador de Carteles de Ofertas",

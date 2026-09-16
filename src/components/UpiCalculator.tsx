@@ -42,7 +42,11 @@ export function UpiCalculator() {
       {/* Calculator Inputs */}
       <div className="rounded-3xl border border-forest/10 bg-white p-5 sm:p-8 shadow-sm w-full min-w-0">
         <h3 className="text-xl font-black text-forest">Merchant Savings Calculator</h3>
-        <p className="mt-1 text-xs text-forest/60">Calculate how much money your business saves annually by switching from 2% Payment Gateways to Free UPI QR.</p>
+        <p className="mt-1 text-xs text-forest/60">Compare 2.36% gateway fees with direct UPI. From 15 Oct 2026 some large P2M tickets take 0.4% MDR — still far cheaper than a gateway.</p>
+        <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] leading-5 font-semibold text-amber-950">
+          Headlines called it a UPI tax. It is MDR, not a tax. Estimate the October fee on the{" "}
+          <a className="underline font-black text-leaf" href="/upi-mdr-calculator/">UPI MDR calculator</a>.
+        </p>
 
         <form className="mt-6 space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div>
@@ -105,7 +109,7 @@ export function UpiCalculator() {
         </form>
 
         <div className="mt-6 rounded-2xl border border-leaf/10 bg-mint/20 p-4 text-xs text-forest/80">
-          💡 <strong>Did you know?</strong> Bank-to-bank UPI payments have <strong>0% MDR</strong> for standard consumer-to-merchant (P2M) transactions under RBI guidelines. RuPay credit card on UPI above ₹2,000 may carry interchange.
+          P2P stays free. P2M of ₹2,000 or less stays free. Small QR shops under ₹1 lakh/month stay free. Other P2M above ₹2,000 may take 0.4% MDR from 15 October 2026, capped at ₹300. RuPay credit-card-on-UPI is a separate interchange product.
         </div>
       </div>
 
@@ -142,8 +146,8 @@ export function UpiCalculator() {
             </div>
 
             <div className="flex justify-between items-center pt-3 border-t border-white/10 font-bold text-sm text-mint">
-              <span>Net Pro UPI QR Fee</span>
-              <span>₹0 (100% FREE)</span>
+              <span>Direct UPI vs this gateway</span>
+              <span>Still cheaper — check Oct MDR</span>
             </div>
           </div>
         </div>
@@ -156,10 +160,10 @@ export function UpiCalculator() {
             🚀 Create Free UPI QR Poster
           </a>
           <a
-            href="/qr-sticker-generator/"
+            href="/qr-sticker-generator/?app=phonepe#tool"
             className="w-full inline-flex items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/10 px-6 py-3.5 text-xs font-black text-white hover:bg-white/20 text-center transition"
           >
-            🖨️ Print A4 Sticker Sheet
+            Print PhonePe / GPay sticker
           </a>
         </div>
       </div>

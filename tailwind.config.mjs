@@ -13,8 +13,8 @@ export default {
         coral: "#ef6f58"
       },
       fontFamily: {
-        sans: ["Sora", "Avenir Next", "Segoe UI", "sans-serif"],
-        display: ["Sora", "Avenir Next", "Segoe UI", "sans-serif"]
+        sans: ["ui-sans-serif", "system-ui", "Segoe UI", "Roboto", "Noto Sans", "sans-serif"],
+        display: ["ui-sans-serif", "system-ui", "Segoe UI", "Roboto", "Noto Sans", "sans-serif"]
       }
     }
   },

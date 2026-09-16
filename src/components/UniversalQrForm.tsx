@@ -606,7 +606,7 @@ export function UniversalQrForm() {
             {form.type === "upi" && (
               <a href="/#generator" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">Print UPI standee →</a>
             )}
-            <a href="/qr-sticker-generator/" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">🖨️ A4 Sticker Sheet</a>
+            <a href="/qr-sticker-generator/?app=phonepe#tool" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">PhonePe / GPay sticker</a>
             <button onClick={copyPayload} disabled={!isValid} className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-bold">Copy content</button>
             <button onClick={reset} className="ml-auto text-sm text-forest/70 hover:text-forest">Reset</button>
           </div>

@@ -3,6 +3,9 @@ import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
+type QrContentType = "upi" | "url" | "text" | "wifi";
+type AppSkin = "phonepe" | "gpay" | "paytm" | "bhim" | "neutral";
+type LogoKey = keyof typeof presetLogos | "none";
 
 const presetLogos: Record<string, string> = {
   phonepe: "/phonepe.png",
@@ -14,21 +17,50 @@ const presetLogos: Record<string, string> = {
   sbi: "/sbi.ico",
   hdfc: "/hdfc.ico",
   icici: "/icici.ico",
-  axis: `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" rx="24" fill="#97144d" /><path d="M50 20 L78 74 H22 Z" fill="#ffffff" /><path d="M50 40 L65 74 H35 Z" fill="#97144d" /><text x="50" y="92" font-family="sans-serif" font-weight="900" font-size="13" fill="#ffffff" text-anchor="middle">AXIS BANK</text></svg>`)}`
 };
 
+const SKINS: Record<
+  AppSkin,
+  { label: string; header: string; headerText: string; logo: LogoKey; badge: string }
+> = {
+  phonepe: { label: "PhonePe", header: "#5f259f", headerText: "#ffffff", logo: "phonepe", badge: "PhonePe · UPI" },
+  gpay: { label: "Google Pay", header: "#1a73e8", headerText: "#ffffff", logo: "gpay", badge: "GPay · UPI" },
+  paytm: { label: "Paytm", header: "#00baf2", headerText: "#ffffff", logo: "paytm", badge: "Paytm · UPI" },
+  bhim: { label: "BHIM", header: "#c2410c", headerText: "#ffffff", logo: "bhim", badge: "BHIM · UPI" },
+  neutral: { label: "Plain UPI", header: "#113b2c", headerText: "#ffffff", logo: "none", badge: "UPI" },
+};
+
+const APP_ICONS = [
+  { src: "/phonepe.png", label: "PhonePe" },
+  { src: "/googlepay.png", label: "GPay" },
+  { src: "/paytm.ico", label: "Paytm" },
+  { src: "/bhim.ico", label: "BHIM" },
+];
+
+function readSkinFromUrl(): AppSkin {
+  if (typeof window === "undefined") return "phonepe";
+  const params = new URLSearchParams(window.location.search);
+  const raw = (params.get("app") || window.location.hash.replace("#", "")).toLowerCase();
+  if (raw === "gpay" || raw === "googlepay" || raw === "google-pay") return "gpay";
+  if (raw === "paytm") return "paytm";
+  if (raw === "bhim") return "bhim";
+  if (raw === "neutral" || raw === "upi") return "neutral";
+  if (raw === "phonepe") return "phonepe";
+  return "phonepe";
+}
+
 export function StickerSheetGenerator() {
-  const [qrContentType, setQrContentType] = useState<"upi" | "url" | "text" | "wifi">("upi");
+  const [qrContentType, setQrContentType] = useState<QrContentType>("upi");
+  const [skin, setSkin] = useState<AppSkin>("phonepe");
   const [payee, setPayee] = useState("Sharma General Store");
-  const [upiId, setUpiId] = useState("sharmastore@upi");
+  const [upiId, setUpiId] = useState("sharmastore@ybl");
   const [amount, setAmount] = useState("");
   const [urlValue, setUrlValue] = useState("https://www.proupiqr.in");
   const [textValue, setTextValue] = useState("Scan for store info");
   const [wifiSsid, setWifiSsid] = useState("Store_Guest_WiFi");
   const [wifiPass, setWifiPass] = useState("welcome123");
   const [layout, setLayout] = useState<LayoutGrid>("6-grid");
-  const [logo, setLogo] = useState<keyof typeof presetLogos | "none">("phonepe");
-  const [accentColor, setAccentColor] = useState("#113b2c");
+  const [logo, setLogo] = useState<LogoKey>("phonepe");
 
   const [qrDataUrl, setQrDataUrl] = useState("");
   const [isGenerating, setIsGenerating] = useState(false);
@@ -38,13 +70,30 @@ export function StickerSheetGenerator() {
   const upiIdId = useId();
   const amountId = useId();
   const typeId = useId();
-  const amountColorId = useId();
   const urlId = useId();
   const textId = useId();
   const wifiSsidId = useId();
   const wifiPassId = useId();
   const layoutId = useId();
   const logoId = useId();
+  const skinGroupId = useId();
+
+  useEffect(() => {
+    const next = readSkinFromUrl();
+    setSkin(next);
+    setLogo(SKINS[next].logo);
+  }, []);
+
+  const applySkin = (next: AppSkin) => {
+    setSkin(next);
+    setLogo(SKINS[next].logo);
+    setQrContentType("upi");
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      url.searchParams.set("app", next);
+      window.history.replaceState({}, "", url);
+    }
+  };
 
   const rawQrPayload = useMemo(() => {
     if (qrContentType === "url") {
@@ -69,74 +118,64 @@ export function StickerSheetGenerator() {
     async function buildQr() {
       try {
         const canvas = document.createElement("canvas");
+        const logoSize = layout === "12-grid" ? 48 : 72;
         await QRCode.toCanvas(canvas, rawQrPayload, {
           width: 400,
           margin: 1,
           errorCorrectionLevel: "H",
-          color: { dark: accentColor || "#113b2c", light: "#ffffff" }
+          color: { dark: "#111111", light: "#ffffff" },
         });
 
-        if (logo !== "none" && presetLogos[logo]) {
+        if (logo !== "none" && presetLogos[logo] && layout !== "12-grid") {
           const ctx = canvas.getContext("2d");
           if (ctx) {
             const logoImg = new Image();
             logoImg.crossOrigin = "anonymous";
             logoImg.onload = () => {
-              const size = 72;
-              const x = (canvas.width - size) / 2;
-              const y = (canvas.height - size) / 2;
-
-              // Crisp white cutout box inside center of QR matrix
+              const x = (canvas.width - logoSize) / 2;
+              const y = (canvas.height - logoSize) / 2;
               ctx.fillStyle = "#ffffff";
               ctx.beginPath();
               if (ctx.roundRect) {
-                ctx.roundRect(x - 6, y - 6, size + 12, size + 12, 14);
+                ctx.roundRect(x - 6, y - 6, logoSize + 12, logoSize + 12, 14);
               } else {
-                ctx.rect(x - 6, y - 6, size + 12, size + 12);
+                ctx.rect(x - 6, y - 6, logoSize + 12, logoSize + 12);
               }
               ctx.fill();
-
-              ctx.drawImage(logoImg, x, y, size, size);
+              ctx.drawImage(logoImg, x, y, logoSize, logoSize);
               setQrDataUrl(canvas.toDataURL("image/png"));
             };
+            logoImg.onerror = () => setQrDataUrl(canvas.toDataURL("image/png"));
             logoImg.src = presetLogos[logo];
+            return;
           }
-        } else {
-          setQrDataUrl(canvas.toDataURL("image/png"));
         }
+        setQrDataUrl(canvas.toDataURL("image/png"));
       } catch (e) {
         console.error(e);
       }
     }
     void buildQr();
-  }, [rawQrPayload, logo, accentColor]);
+  }, [rawQrPayload, logo, layout]);
 
-  const countMap = {
-    "4-grid": 4,
-    "6-grid": 6,
-    "12-grid": 12,
-  };
-
+  const countMap = { "4-grid": 4, "6-grid": 6, "12-grid": 12 };
   const gridClassMap = {
-    "4-grid": "grid-cols-2 grid-rows-2 gap-4",
-    "6-grid": "grid-cols-2 grid-rows-3 gap-3",
-    "12-grid": "grid-cols-3 grid-rows-4 gap-2",
+    "4-grid": "grid-cols-2 grid-rows-2 gap-2",
+    "6-grid": "grid-cols-2 grid-rows-3 gap-1.5",
+    "12-grid": "grid-cols-3 grid-rows-4 gap-1",
   };
-
-  const qrSizeMap = {
-    "4-grid": "max-w-[130px] max-h-[130px]",
-    "6-grid": "max-w-[95px] max-h-[95px]",
-    "12-grid": "max-w-[60px] max-h-[60px]"
-  };
+  const compact = layout === "12-grid";
+  const theme = SKINS[skin];
 
   const handleDownloadPng = async () => {
     if (!sheetRef.current) return;
     setIsGenerating(true);
     try {
       const dataUrl = await safeToPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
-      downloadDataUrl(dataUrl, `upi-qr-stickers-${layout}.png`);
+      downloadDataUrl(dataUrl, `${skin}-upi-qr-stickers-${layout}.png`);
     } catch (e) {
       console.error("PNG export failed:", e);
+      notifyExportError();
     } finally {
       setIsGenerating(false);
     }
@@ -150,9 +189,10 @@ export function StickerSheetGenerator() {
       const dataUrl = await safeToPng(sheetRef.current, { pixelRatio: 3, cacheBust: true });
       const pdf = new jsPDF("p", "mm", "a4");
       pdf.addImage(dataUrl, "PNG", 0, 0, 210, 297);
-      pdf.save(`upi-qr-stickers-${layout}.pdf`);
+      pdf.save(`${skin}-upi-qr-stickers-${layout}.pdf`);
     } catch (e) {
       console.error("PDF export failed:", e);
+      notifyExportError();
     } finally {
       setIsGenerating(false);
     }
@@ -160,35 +200,51 @@ export function StickerSheetGenerator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] w-full min-w-0">
-      {/* Form Controls */}
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
-        <h2 className="text-xl font-black text-forest">A4 Sticker Sheet Generator</h2>
-        <p className="mt-1 text-xs text-forest/60">Generate print-ready sticker sheets with logos centered right inside the QR code matrix.</p>
+        <h2 className="text-xl font-black text-forest">Shop QR sticker</h2>
+        <p className="mt-1 text-xs text-forest/60">
+          PhonePe / GPay look on the sticker. The code is a normal UPI QR — any app can scan it.
+        </p>
 
-        <form className="mt-6 space-y-4">
-          <div className="grid gap-1 min-w-0">
-            <label htmlFor={typeId} className="text-xs font-bold text-forest">QR Data Type</label>
-            <select
-              id={typeId}
-              value={qrContentType}
-              onChange={(e) => setQrContentType(e.target.value as any)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
-            >
-              <option value="upi">💳 UPI Payment QR</option>
-              <option value="url">🔗 Website / Link QR</option>
-              <option value="text">📝 Plain Text / Note QR</option>
-              <option value="wifi">📶 WiFi Network QR</option>
-            </select>
-          </div>
+        <form className="mt-6 space-y-4" onSubmit={(e) => e.preventDefault()}>
+          <fieldset>
+            <legend className="text-xs font-bold text-forest" id={skinGroupId}>
+              Sticker look
+            </legend>
+            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3" role="radiogroup" aria-labelledby={skinGroupId}>
+              {(Object.keys(SKINS) as AppSkin[]).map((key) => {
+                const item = SKINS[key];
+                const selected = skin === key;
+                return (
+                  <button
+                    key={key}
+                    type="button"
+                    role="radio"
+                    aria-checked={selected}
+                    onClick={() => applySkin(key)}
+                    className={`rounded-xl border px-3 py-2 text-left text-xs font-black transition focus-visible:ring-2 focus-visible:ring-leaf ${
+                      selected ? "border-transparent text-white shadow-sm" : "border-forest/10 bg-cream/40 text-forest hover:border-forest/25"
+                    }`}
+                    style={selected ? { backgroundColor: item.header, color: item.headerText } : undefined}
+                  >
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </fieldset>
 
           <div className="grid gap-1 min-w-0">
-            <label htmlFor={payeeId} className="text-xs font-bold text-forest">Sticker Title / Shop Name</label>
+            <label htmlFor={payeeId} className="text-xs font-bold text-forest">
+              Shop name
+            </label>
             <input
               id={payeeId}
               type="text"
               value={payee}
               onChange={(e) => setPayee(e.target.value)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-semibold outline-none focus:border-leaf"
+              autoComplete="organization"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-semibold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
               placeholder="e.g. Sharma Kirana Store"
             />
           </div>
@@ -196,52 +252,51 @@ export function StickerSheetGenerator() {
           {qrContentType === "upi" && (
             <>
               <div className="grid gap-1 min-w-0">
-                <label htmlFor={upiIdId} className="text-xs font-bold text-forest">UPI VPA ID</label>
+                <label htmlFor={upiIdId} className="text-xs font-bold text-forest">
+                  UPI ID
+                </label>
                 <input
                   id={upiIdId}
                   type="text"
                   value={upiId}
                   onChange={(e) => setUpiId(e.target.value)}
-                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
-                  placeholder="e.g. sharmastore@upi"
+                  autoComplete="off"
+                  spellCheck={false}
+                  inputMode="email"
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
+                  placeholder="e.g. shop@ybl"
                 />
               </div>
-
-              <div className="grid gap-3 grid-cols-2 min-w-0">
-                <div className="grid gap-1 min-w-0">
-                  <label htmlFor={amountId} className="text-xs font-bold text-forest">Fixed Amount (Optional ₹)</label>
-                  <input
-                    id={amountId}
-                    type="number"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
-                    placeholder="Open amount"
-                  />
-                </div>
-                <div className="grid gap-1 min-w-0">
-                  <label htmlFor={amountColorId} className="text-xs font-bold text-forest">QR Dark Color</label>
-                  <input
-                    id={amountColorId}
-                    type="color"
-                    value={accentColor}
-                    onChange={(e) => setAccentColor(e.target.value)}
-                    className="w-full h-[38px] rounded-xl border border-forest/10 bg-cream/30 p-1 cursor-pointer focus-visible:ring-2 focus-visible:ring-leaf"
-                  />
-                </div>
+              <div className="grid gap-1 min-w-0">
+                <label htmlFor={amountId} className="text-xs font-bold text-forest">
+                  Fixed amount (optional ₹)
+                </label>
+                <input
+                  id={amountId}
+                  type="number"
+                  inputMode="decimal"
+                  min="0"
+                  step="0.01"
+                  value={amount}
+                  onChange={(e) => setAmount(e.target.value)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
+                  placeholder="Open amount"
+                />
               </div>
             </>
           )}
 
           {qrContentType === "url" && (
             <div className="grid gap-1 min-w-0">
-              <label htmlFor={urlId} className="text-xs font-bold text-forest">Target Website URL</label>
+              <label htmlFor={urlId} className="text-xs font-bold text-forest">
+                Website URL
+              </label>
               <input
                 id={urlId}
                 type="url"
                 value={urlValue}
                 onChange={(e) => setUrlValue(e.target.value)}
-                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf"
+                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-mono outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
                 placeholder="https://example.com"
               />
             </div>
@@ -249,13 +304,15 @@ export function StickerSheetGenerator() {
 
           {qrContentType === "text" && (
             <div className="grid gap-1 min-w-0">
-              <label htmlFor={textId} className="text-xs font-bold text-forest">QR Text Content</label>
+              <label htmlFor={textId} className="text-xs font-bold text-forest">
+                QR text
+              </label>
               <textarea
                 id={textId}
                 value={textValue}
                 onChange={(e) => setTextValue(e.target.value)}
                 rows={2}
-                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
                 placeholder="Enter text..."
               />
             </div>
@@ -264,142 +321,209 @@ export function StickerSheetGenerator() {
           {qrContentType === "wifi" && (
             <div className="grid gap-2 min-w-0 sm:grid-cols-2">
               <div className="grid gap-1 min-w-0">
-                <label htmlFor={wifiSsidId} className="text-xs font-bold text-forest">WiFi Network Name (SSID)</label>
+                <label htmlFor={wifiSsidId} className="text-xs font-bold text-forest">
+                  WiFi name (SSID)
+                </label>
                 <input
                   id={wifiSsidId}
                   type="text"
                   value={wifiSsid}
                   onChange={(e) => setWifiSsid(e.target.value)}
-                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
                 />
               </div>
               <div className="grid gap-1 min-w-0">
-                <label htmlFor={wifiPassId} className="text-xs font-bold text-forest">WiFi Password</label>
+                <label htmlFor={wifiPassId} className="text-xs font-bold text-forest">
+                  WiFi password
+                </label>
                 <input
                   id={wifiPassId}
                   type="password"
                   autoComplete="off"
                   value={wifiPass}
                   onChange={(e) => setWifiPass(e.target.value)}
-                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf"
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
                 />
               </div>
             </div>
           )}
 
           <div className="grid gap-1 min-w-0">
-            <label htmlFor={layoutId} className="text-xs font-bold text-forest">Sticker Grid Layout</label>
+            <label htmlFor={layoutId} className="text-xs font-bold text-forest">
+              Stickers per A4
+            </label>
             <select
               id={layoutId}
               value={layout}
               onChange={(e) => setLayout(e.target.value as LayoutGrid)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf font-bold"
+              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
             >
-              <option value="6-grid">6 Stickers per A4 (Standard Counter Size)</option>
-              <option value="4-grid">4 Stickers per A4 (Large Desk Standees)</option>
-              <option value="12-grid">12 Stickers per A4 (Compact Product Labels)</option>
+              <option value="6-grid">6 — standard counter sticker</option>
+              <option value="4-grid">4 — large desk / glass</option>
+              <option value="12-grid">12 — parcels and extra tills</option>
             </select>
           </div>
 
-          <div className="grid gap-1 min-w-0">
-            <label htmlFor={logoId} className="text-xs font-bold text-forest">QR Center Logo Overlay</label>
-            <select
-              id={logoId}
-              value={logo}
-              onChange={(e) => setLogo(e.target.value as any)}
-              className="w-full min-w-0 rounded-xl border border-forest/10 bg-cream/30 px-3.5 py-2.5 text-xs outline-none focus:border-leaf font-bold"
-            >
-              <option value="phonepe">PhonePe Logo</option>
-              <option value="gpay">Google Pay Logo</option>
-              <option value="paytm">Paytm Logo</option>
-              <option value="bhim">BHIM UPI Logo</option>
-              <option value="whatsapp">WhatsApp Pay Logo</option>
-              <option value="amazon">Amazon Pay Logo</option>
-              <option value="sbi">SBI Bank Logo</option>
-              <option value="hdfc">HDFC Bank Logo</option>
-              <option value="icici">ICICI Bank Logo</option>
-              <option value="axis">Axis Bank Logo</option>
-              <option value="none">Clean QR (No Center Logo)</option>
-            </select>
-          </div>
+          <details className="rounded-xl border border-forest/10 bg-cream/20 p-3">
+            <summary className="cursor-pointer text-xs font-bold text-forest">More options (URL, WiFi, logo)</summary>
+            <div className="mt-3 space-y-3">
+              <div className="grid gap-1 min-w-0">
+                <label htmlFor={typeId} className="text-xs font-bold text-forest">
+                  QR data type
+                </label>
+                <select
+                  id={typeId}
+                  value={qrContentType}
+                  onChange={(e) => setQrContentType(e.target.value as QrContentType)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-white px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
+                >
+                  <option value="upi">UPI payment QR</option>
+                  <option value="url">Website / link QR</option>
+                  <option value="text">Plain text QR</option>
+                  <option value="wifi">WiFi QR</option>
+                </select>
+              </div>
+              <div className="grid gap-1 min-w-0">
+                <label htmlFor={logoId} className="text-xs font-bold text-forest">
+                  QR centre logo
+                </label>
+                <select
+                  id={logoId}
+                  value={logo}
+                  onChange={(e) => setLogo(e.target.value as LogoKey)}
+                  className="w-full min-w-0 rounded-xl border border-forest/10 bg-white px-3.5 py-2.5 text-xs font-bold outline-none focus:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
+                >
+                  <option value="phonepe">PhonePe</option>
+                  <option value="gpay">Google Pay</option>
+                  <option value="paytm">Paytm</option>
+                  <option value="bhim">BHIM</option>
+                  <option value="whatsapp">WhatsApp Pay</option>
+                  <option value="amazon">Amazon Pay</option>
+                  <option value="sbi">SBI</option>
+                  <option value="hdfc">HDFC</option>
+                  <option value="icici">ICICI</option>
+                  <option value="none">No centre logo</option>
+                </select>
+              </div>
+            </div>
+          </details>
         </form>
 
-        {/* Export Buttons */}
-        <div className="mt-8 flex flex-col sm:flex-row items-center gap-3 pt-6 border-t border-forest/10">
+        <p className="mt-4 rounded-xl bg-mint/50 px-3 py-2 text-[11px] leading-relaxed text-forest/75">
+          Not an official PhonePe, Google Pay, or Paytm merchant kit. The sticker encodes your UPI ID. Customers pay from any UPI app.
+        </p>
+
+        <div className="mt-6 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 pt-5 border-t border-forest/10">
           <button
             type="button"
             onClick={handleDownloadPng}
             disabled={isGenerating}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
           >
-            🖼️ Download Sheet PNG
+            {isGenerating ? "Generating..." : "Download sticker PNG"}
           </button>
           <button
             type="button"
             onClick={handleDownloadPdf}
             disabled={isGenerating}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-forest/15 bg-mint/50 px-6 py-3.5 text-xs font-black text-forest transition hover:bg-mint active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl border border-forest/15 bg-mint/50 px-6 py-3.5 text-xs font-black text-forest transition hover:bg-mint focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
           >
-            {isGenerating ? "Generating..." : "📄 Download A4 PDF"}
+            {isGenerating ? "Generating..." : "Download A4 PDF"}
           </button>
         </div>
       </div>
 
-      {/* Live A4 Preview Container */}
       <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 shadow-sm w-full min-w-0">
-        <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/50">A4 Printable Page Preview</h3>
-        
-        {/* Scaled A4 Sheet Container */}
-        <div className="w-full max-w-[420px] aspect-[1/1.414] bg-white border border-black/10 shadow-2xl rounded-xl p-3 overflow-hidden relative">
-          <div
-            ref={sheetRef}
-            className={`w-full h-full bg-white grid ${gridClassMap[layout]} p-1 print:p-0`}
-          >
+        <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/50">A4 printable preview</h3>
+
+        <div className="w-full max-w-[420px] aspect-[1/1.414] bg-neutral-200 border border-black/10 shadow-2xl rounded-xl p-2 overflow-hidden relative">
+          <div ref={sheetRef} className={`w-full h-full bg-white grid ${gridClassMap[layout]} p-1`}>
             {Array.from({ length: countMap[layout] }).map((_, idx) => (
-              <div
+              <article
                 key={idx}
-                className="border-2 border-dashed border-neutral-300 rounded-xl p-2 flex flex-col items-center justify-between text-center bg-cream/10 relative overflow-hidden"
+                className="flex h-full min-h-0 flex-col overflow-hidden rounded-lg border border-black/10 bg-white"
               >
-                {/* Center Logo Embedded QR */}
-                {qrDataUrl ? (
-                  <img
-                    src={qrDataUrl}
-                    alt="UPI QR Code"
-                    className={`w-full ${qrSizeMap[layout]} aspect-square object-contain mx-auto my-auto shrink-0`}
-                  />
-                ) : (
-                  <div className="w-16 h-16 bg-neutral-100 rounded-lg flex items-center justify-center text-[10px] text-neutral-400">
-                    Loading QR...
-                  </div>
-                )}
+                <div
+                  className="flex shrink-0 items-center justify-between px-1.5"
+                  style={{
+                    backgroundColor: theme.header,
+                    color: theme.headerText,
+                    paddingTop: compact ? 2 : 4,
+                    paddingBottom: compact ? 2 : 4,
+                  }}
+                >
+                  <span className={`font-black leading-none ${compact ? "text-[6px]" : "text-[8px]"}`}>
+                    {theme.badge}
+                  </span>
+                  {theme.logo !== "none" && presetLogos[theme.logo] ? (
+                    <img
+                      src={presetLogos[theme.logo]}
+                      alt=""
+                      width={12}
+                      height={12}
+                      className={compact ? "h-2.5 w-2.5 rounded-full object-contain" : "h-3.5 w-3.5 rounded-full object-contain"}
+                    />
+                  ) : null}
+                </div>
 
-                {/* Merchant Details */}
-                <div className="mt-0.5 w-full shrink-0">
-                  <p className="font-black text-forest text-[10px] truncate leading-tight">
-                    {payee || "Merchant Name"}
+                <div className="flex min-h-0 flex-1 flex-col items-center justify-between px-1 py-1 text-center">
+                  <p
+                    className={`w-full truncate font-black leading-tight text-forest ${compact ? "text-[7px]" : "text-[10px]"}`}
+                  >
+                    {payee || "Shop name"}
                   </p>
-                  <p className="text-[8px] font-mono font-semibold text-neutral-500 truncate">
-                    {upiId || "payee@upi"}
-                  </p>
-                  {amount && (
-                    <span className="mt-0.5 inline-block rounded bg-mint px-1 py-0.2 text-[8px] font-black text-leaf">
-                      Pay ₹{amount}
-                    </span>
+
+                  {qrDataUrl ? (
+                    <img
+                      src={qrDataUrl}
+                      alt=""
+                      width={120}
+                      height={120}
+                      className={`aspect-square w-[72%] max-h-[58%] object-contain ${compact ? "max-h-[50%]" : ""}`}
+                    />
+                  ) : (
+                    <div className="flex h-12 w-12 items-center justify-center rounded bg-neutral-100 text-[8px] text-neutral-400">
+                      Loading
+                    </div>
                   )}
-                </div>
 
-                {/* Footer */}
-                <div className="mt-0.5 w-full border-t border-dashed border-neutral-200 pt-0.5 flex items-center justify-between text-[7px] font-bold text-neutral-400 uppercase tracking-wider shrink-0">
-                  <span>ACCEPTED HERE</span>
-                  <span>UPI</span>
+                  <div className="w-full shrink-0">
+                    {qrContentType === "upi" ? (
+                      <p className={`truncate font-mono font-semibold text-neutral-600 ${compact ? "text-[6px]" : "text-[8px]"}`}>
+                        {upiId || "payee@upi"}
+                      </p>
+                    ) : null}
+                    {amount && qrContentType === "upi" ? (
+                      <p className={`font-black text-forest ${compact ? "text-[6px]" : "text-[8px]"}`}>Pay ₹{amount}</p>
+                    ) : null}
+                    {!compact ? (
+                      <p className="mt-0.5 text-[6px] font-bold uppercase tracking-wider text-neutral-400">
+                        Scan &amp; pay · any UPI app
+                      </p>
+                    ) : null}
+                    {!compact ? (
+                      <div className="mt-0.5 flex items-center justify-center gap-1">
+                        {APP_ICONS.map((icon) => (
+                          <img
+                            key={icon.label}
+                            src={icon.src}
+                            alt=""
+                            width={10}
+                            height={10}
+                            className="h-2.5 w-2.5 rounded-full object-contain"
+                          />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
                 </div>
-              </div>
+              </article>
             ))}
           </div>
         </div>
 
-        <p className="mt-3 text-[10px] text-center text-forest/50 max-w-xs">
-          Center-embedded bank/app logos. Standard A4 export fits 4, 6, or 12 stickers perfectly.
+        <p className="mt-3 max-w-xs text-center text-[10px] text-forest/50">
+          Print on matte sticker paper. Test-scan at the counter before you laminate.
         </p>
       </div>
     </div>

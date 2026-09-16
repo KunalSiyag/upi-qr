@@ -20,7 +20,7 @@ export type LocalizedTool = {
     | "bulk" | "invoice" | "receipt" | "paidStamp" | "rentReceipt"
     | "paymentReminder" | "quotation" | "splitBill" | "cashDenomination"
     | "creditNote" | "emiCalculator" | "gratuity" | "sipCalculator" | "salarySlip" | "msmed" | "proforma" | "breakEven" | "treds"
-    | "upiCalculator" | "offerPoster"
+    | "upiCalculator" | "upiMdr" | "offerPoster"
     | "menuQr" | "margin" | "limits" | "decoder" | "upiLink" | "survey"
     | "merchantRecon" | "msmeReceivables"
     | "influencerContract" | "freelanceContract"
@@ -114,16 +114,16 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       faqs: [{ question: "स्टॅटिक QR वेगळा आहे का?", answer: "हो. स्टॅटिक कायमचा असतो. डायनॅमिक नंतर लिंक बदलू देतो." }]
     }
   }),
-  tool("qr-sticker-generator", "A4 QR Sticker Generator", "stickers", {
+  tool("qr-sticker-generator", "PhonePe QR Sticker Generator", "stickers", {
     hi: {
-      name: "A4 QR स्टीकर जनरेटर",
-      title: "A4 UPI QR स्टीकर शीट जनरेटर | मुफ्त प्रिंट",
-      description: "एक A4 पेज पर कई UPI QR स्टीकर प्रिंट करें। काउंटर, पैकेट और टेबल के लिए मुफ्त शीट।",
-      intro: "किराना, रेस्तरां और इवेंट टीम एक ही शीट पर 4, 6 या 12 स्टीकर छाप सकती है। UPI ID एक बार लिखें, ग्रिड डाउनलोड करें।",
-      steps: ["ग्रिड आकार चुनें (2x2 या 3x4)", "पेयी नाम और UPI ID भरें", "A4 स्टीकर शीट पर प्रिंट करें"],
+      name: "PhonePe QR स्टीकर जनरेटर",
+      title: "मुफ्त PhonePe QR स्टीकर जनरेटर — दुकान प्रिंट",
+      description: "दुकान के लिए PhonePe, Google Pay या Paytm जैसा UPI QR स्टीकर प्रिंट करें। A4 पर 4, 6 या 12 स्टीकर। आधिकारिक किट नहीं।",
+      intro: "UPI आईडी डालें, PhonePe या GPay लुक चुनें, और काउंटर स्टीकर प्रिंट करें। यह सामान्य upi://pay कोड है — कोई भी UPI ऐप स्कैन कर सकता है। आधिकारिक PhonePe किट नहीं है।",
+      steps: ["PhonePe, GPay या Paytm लुक चुनें", "दुकान का नाम और UPI आईडी भरें", "A4 पर 4, 6 या 12 स्टीकर प्रिंट करें"],
       faqs: [
-        { question: "कौन सा पेपर इस्तेमाल करें?", answer: "सेल्फ-अधहेसिव A4 स्टीकर शीट या 180+ GSM मैट पेपर। चमकदार लैमिनेशन स्कैन फेल कर सकता है।" },
-        { question: "क्या हर स्टीकर पर अलग राशि हो सकती है?", answer: "फिक्स्ड मेनू आइटम के लिए राशि भरें। सामान्य काउंटर के लिए राशि खाली रखें।" }
+        { question: "क्या यह आधिकारिक PhonePe स्टीकर है?", answer: "नहीं। PhonePe बिजनेस किट ऐप से आती है। यह आपके UPI आईडी का संगत स्टीकर प्रिंट करता है, जिसे GPay और Paytm भी स्कैन करते हैं।" },
+        { question: "कौन सा पेपर इस्तेमाल करें?", answer: "सेल्फ-अधहेसिव मैट विनाइल या 120–180 GSM स्टीकर पेपर। चमकदार लैमिनेशन स्कैन फेल कर सकता है।" }
       ]
     },
     ta: {
@@ -154,10 +154,10 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
   tool("gst-calculator", "GST Calculator", "gst", {
     hi: {
       name: "GST कैलकुलेटर",
-      title: "GST कैलकुलेटर और UPI QR | 5% 12% 18% 28%",
-      description: "5%, 12%, 18% या 28% GST जोड़ें और उसी बिल का UPI QR बनाएं। दुकान और फ्रीलांसर के लिए मुफ्त।",
-      intro: "टैक्स सहित राशि निकालें, फिर उसी नंबर से भुगतान QR जनरेट करें। ग्राहक स्कैन करते ही सही राशि देखता है।",
-      steps: ["टैक्सेबल राशि डालें", "GST स्लैब चुनें", "कुल राशि वाला UPI QR डाउनलोड करें"],
+      title: "GST कैलकुलेटर 2026 — रेट खोजें, जोड़ें या हटाएं",
+      description: "साबुन, फ्रीलांस, रेस्टोरेंट, सोना खोजें — GST 2.0 रेट खुद भरता है। CGST/SGST या IGST, फिर कुल का UPI QR।",
+      intro: "रेट याद रखना ज़रूरी नहीं। प्रोडक्ट खोजें, टैक्स जोड़ें या MRP से निकालें, intra/inter चुनें।",
+      steps: ["प्रोडक्ट या सेवा खोजें", "राशि और intra/inter चुनें", "ब्रेकडाउन कॉपी करें या UPI QR बनाएं"],
       faqs: [
         { question: "क्या यह आधिकारिक GST पोर्टल है?", answer: "नहीं। यह बिल जोड़ने और QR बनाने का टूल है। रिटर्न GSTN पोर्टल पर ही दाखिल करें।" },
         { question: "QR पर GST अलग दिखेगा?", answer: "UPI QR कुल देय राशि भेजता है। टैक्स ब्रेकडाउन अपने बिल या इनवॉइस पर रखें।" }
@@ -473,7 +473,7 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       description: "2% गेटवे फीस की तुलना डायरेक्ट UPI से करें और महीने की बचत देखें।",
       intro: "छोटी दुकानें कार्ड या पेमेंट लिंक पर 1.5–2.5% खो देती हैं। यह कैलकुलेटर दिखाता है कि डायरेक्ट UPI QR से कितना बचता है।",
       steps: ["मासिक सेल्स डालें", "गेटवे प्रतिशत चुनें", "बचत देखें और QR बनाएं"],
-      faqs: [{ question: "क्या UPI हमेशा 0% MDR है?", answer: "सामान्य P2P/P2PM UPI पर प्लेटफ़ॉर्म फीस नहीं लेते। क्रेडिट-ऑन-UPI जैसे खास मोड बैंक नियम से अलग हो सकते हैं।" }]
+      faqs: [{ question: "क्या UPI हमेशा 0% MDR है?", answer: "15 अक्टूबर 2026 से कुछ P2M पर 0.4% MDR। ₹2,000 तक और छोटे QR दुकान फ्री। RuPay क्रेडिट-ऑन-UPI अलग है।" }]
     },
     ta: {
       name: "UPI சேமிப்பு கால்குலேட்டர்",
@@ -497,7 +497,44 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
       description: "गेटवे फीची तुलना डायरेक्ट UPI शी करा.",
       intro: "डायरेक्ट UPI QR ने मासिक बचत पाहा.",
       steps: ["मासिक विक्री भरा", "फी टक्केवारी निवडा", "बचत पाहा"],
-      faqs: [{ question: "UPI नेहमी 0% आहे का?", answer: "सामान्य UPI साठी हो. काही क्रेडिट मोड वेगळे असू शकतात." }]
+      faqs: [{ question: "UPI नेहमी 0% आहे का?", answer: "15 ऑक्टोबर 2026 पासून काही P2M वर 0.4% MDR. छोटे QR दुकान आणि ₹2,000 पर्यंत फ्री." }]
+    }
+  }),
+  tool("upi-mdr-calculator", "UPI MDR Calculator", "upiMdr", {
+    hi: {
+      name: "UPI MDR कैलकुलेटर",
+      title: "UPI MDR कैलकुलेटर — 15 अक्टूबर 0.4% फीस",
+      description: "15 अक्टूबर 2026 से कुछ मर्चेंट UPI पर 0.4% MDR। ₹2,000 तक और ₹1 लाख/माह QR फ्री। GST और ITC सहित।",
+      intro: "यह टैक्स नहीं है। देखें आपकी दुकान 96% फ्री वाली है या बड़े बिल पर 0.4% लगेगा।",
+      steps: ["मासिक UPI या एक बिल डालें", "दुकान / जरूरी सेवा / P2P चुनें", "छोटे मर्चेंट छूट और GST ITC टिक करें"],
+      faqs: [
+        { question: "क्या यह UPI टैक्स है?", answer: "नहीं। वित्त मंत्रालय ने कहा MDR टैक्स नहीं है। बैंकों को मिलने वाली मर्चेंट फीस है।" },
+        { question: "किराना पर लगेगा?", answer: "महीने ₹1 लाख तक QR पर शून्य MDR। ₹2,000 तक के बिल भी फ्री।" }
+      ]
+    },
+    ta: {
+      name: "UPI MDR கணிப்பான்",
+      title: "UPI MDR கணிப்பான் — அக் 15 முதல் 0.4%",
+      description: "15 அக்டோபர் 2026 முதல் சில வணிகர் UPIக்கு 0.4% MDR. ₹2,000 வரை இலவசம். சிறு கடை QR விலக்கு. GST/ITC உடன்.",
+      intro: "இது வரி அல்ல. உங்கள் கடை கட்டண வலையில் உள்ளதா என பாருங்கள்.",
+      steps: ["மாத UPI தொகையை உள்ளிடவும்", "வகை தேர்வு", "சிறு வணிகர் விலக்கை குறிக்கவும்"],
+      faqs: [{ question: "UPI வரியா?", answer: "இல்லை. வங்கிகளுக்கான வணிகர் கட்டணம்." }]
+    },
+    te: {
+      name: "UPI MDR కాలిక్యులేటర్",
+      title: "UPI MDR కాలిక్యులేటర్ — అక్టోబర్ 15 నుండి 0.4%",
+      description: "15 అక్టోబర్ 2026 నుండి కొన్ని మర్చంట్ UPIపై 0.4% MDR. ₹2,000 వరకు ఉచితం. చిన్న QR దుకాణం మినహాయింపు. GST/ITC తో.",
+      intro: "ఇది పన్ను కాదు. మీ షాప్‌కు ఫీజు వస్తుందో లేదో చూడండి.",
+      steps: ["నెల UPI విలువ నమోదు", "వర్గం ఎంచుకోండి", "చిన్న వ్యాపారి మినహాయింపు టిక్"],
+      faqs: [{ question: "UPI పన్నా?", answer: "కాదు. బ్యాంకులకు మర్చంట్ ఫీజు." }]
+    },
+    mr: {
+      name: "UPI MDR कॅल्क्युलेटर",
+      title: "UPI MDR कॅल्क्युलेटर — 15 ऑक्टोबर 0.4% फी",
+      description: "15 ऑक्टोबर 2026 पासून काही मर्चंट UPI वर 0.4% MDR. ₹2,000 पर्यंत मोफत. छोटे QR दुकान सूट. GST आणि ITC सह.",
+      intro: "हे कर नाही. तुमचे दुकान फ्री नेटमध्ये आहे का ते पाहा.",
+      steps: ["मासिक UPI भरा", "प्रकार निवडा", "छोटे व्यापारी सूट टिक करा"],
+      faqs: [{ question: "UPI कर आहे का?", answer: "नाही. बँकांना मिळणारी मर्चंट फी आहे." }]
     }
   }),
   tool("offer-poster-generator", "Offer Poster Generator", "offerPoster", {

@@ -2,13 +2,13 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { CashDenominationCalculator } from "../components/CashDenominationCalculator";
 
-const title = "Cash Denomination Calculator for Shift Closing | Pro UPI QR";
-const description = "Count your shop's cash drawer by note and coin, check variance against recorded sales, and download a shift-closing summary PDF. Free, offline, no signup.";
+const title = "Shop Day-Close: Cash, UPI, Card Till Counter";
+const description = "Night-close a kirana till: count notes, add UPI, card, petty cash and bank deposit, then download the variance PDF. Free, stays in the browser.";
 
 const faqs = [
   {
     question: "How do shopkeepers count cash at the end of the day?",
-    answer: "Sort notes and coins by denomination, count each stack, and multiply count × value — this tool does that instantly as you type. Add your expected amount from the billing system to see whether you are over or short before locking up."
+    answer: "Count the drawer by note and coin, then fill opening float, cash sales, UPI, card, petty cash and any bank deposit. Expected cash is opening + cash sales − petty − deposit. Variance is counted minus expected — the number you actually argue about at lock-up."
   },
   {
     question: "What is a good cash variance limit for a shop?",
@@ -35,10 +35,10 @@ const schema = {
       "url": "https://www.proupiqr.in/cash-denomination-calculator/",
       "description": description,
       "featureList": [
-        "All Indian note and coin denominations",
-        "Automatic totals with stepper counting",
-        "Variance against expected cash",
-        "Printable shift-closing summary PDF/PNG",
+        "Note and coin counting for Indian currency",
+        "Opening float, cash sales, UPI and card mix",
+        "Petty cash, bank deposit, and drawer variance",
+        "Printable night-close summary PDF/PNG",
         "Offline browser-only operation"
       ],
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
@@ -53,13 +53,13 @@ const schema = {
     },
     {
       "@type": "HowTo",
-      "name": "How to close a cash shift with denomination counting",
-      "description": "Count the drawer by denomination and reconcile against sales.",
+      "name": "How to close a shop till with cash, UPI, and card",
+      "description": "Count the drawer, add digital collections, and reconcile against expected cash.",
       "step": [
-        { "@type": "HowToStep", "name": "Sort cash into notes and coins by value" },
-        { "@type": "HowToStep", "name": "Enter the count for each denomination" },
-        { "@type": "HowToStep", "name": "Add your expected amount to see variance" },
-        { "@type": "HowToStep", "name": "Download the shift summary for records" }
+        { "@type": "HowToStep", "name": "Count notes and coins in the drawer" },
+        { "@type": "HowToStep", "name": "Enter opening float, cash sales, UPI, and card" },
+        { "@type": "HowToStep", "name": "Subtract petty cash and bank deposit" },
+        { "@type": "HowToStep", "name": "Download the variance summary for records" }
       ]
     }
   ]
@@ -80,8 +80,8 @@ const schema = {
         </nav>
         <div class="max-w-4xl">
           <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
-          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Cash denomination calculator for shift closing</h1>
-          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Sort the drawer once, tap in the counts, and know instantly whether you're over or short against your records. Download a clean shift-closing summary your accountant will love.</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Close the till: cash, UPI, and the bank bag</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Kirana shops still count notes every night. This is that close — opening float, cash vs UPI vs card, petty cash, deposit to the bank, and a variance PDF your accountant can file.</p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#cash-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Count my drawer</a>
             <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>

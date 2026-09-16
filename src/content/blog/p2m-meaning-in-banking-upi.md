@@ -27,7 +27,7 @@ NPCI’s UPI product page lists both P2P and merchant payments. Apps sometimes s
 | --- | --- | --- |
 | Who is paid | Another person | A merchant VPA / MCC-tagged collect |
 | Everyday example | Sending ₹500 to a roommate | Scanning a kirana standee |
-| MDR on bank-to-bank UPI | 0% | 0% (RuPay CC UPI above ₹2,000 may carry interchange) |
+| MDR on bank-to-bank UPI | 0% | 0% on tickets ≤ ₹2,000 and small QR shops; 0.4% on some P2M above ₹2,000 from 15 Oct 2026 (not a tax). RuPay CC UPI above ₹2,000 may carry interchange |
 | Typical daily cap | Personal UPI limits (bank-wise) | Often higher on merchant / current accounts |
 | Failed-credit TAT (RBI) | Reversal by **T+1** working day | Reversal by **T+5** working days |
 | What the QR needs | Any live VPA | Live VPA; official merchant QR if you want KYC dashboards |
@@ -54,7 +54,7 @@ Person-to-merchant: a payment to a merchant collect, usually with merchant metad
 
 ### Q2. Is P2M slower or costlier than P2P?
 
-Same instant rail. Bank-to-bank UPI is 0% MDR on both. Failed P2M reversals get a longer RBI TAT (T+5 vs T+1).
+Same instant rail. P2P stays 0%. Some P2M above ₹2,000 take 0.4% MDR from 15 October 2026 unless you are a small QR merchant. Failed P2M reversals get a longer RBI TAT (T+5 vs T+1). See the [UPI MDR explainer](/blog/upi-mdr-charges-october-2026/).
 
 ### Q3. Can I accept shop payments on a personal UPI ID?
 

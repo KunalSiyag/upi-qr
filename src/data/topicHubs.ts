@@ -59,6 +59,7 @@ export interface NavHub {
 }
 
 export const FEATURED_GUIDE_SLUGS = [
+  "upi-mdr-charges-october-2026",
   "npci-upi-qr-code-generator-explained",
   "extract-upi-id-from-qr-code",
   "phonepe-business-qr-code-activation",
@@ -152,8 +153,8 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         heading: "Other QR tools",
         tools: [
-          { href: "/", name: "UPI standee generator", description: "Classic scan-to-pay poster with printable templates." },
-          { href: "/universal-qr-generator/", name: "Universal QR generator", description: "Free QR codes: UPI Pay, URL, WiFi, vCard, WhatsApp, PDF, and other static types." },
+          { href: "/", name: "UPI QR code generator", description: "Shop and bank-account payment standee. PhonePe, GPay, Paytm, BHIM." },
+          { href: "/universal-qr-generator/", name: "Universal QR generator", description: "UPI for a bank account, plus URL, WiFi, vCard, WhatsApp, and PDF." },
           { href: "/free-qr-generator-without-watermark/", name: "Watermark-free QR generator", description: "Download PNG or PDF posters with no signup and no watermark." },
           { href: "/bulk-qr/", name: "Bulk CSV QR generator", description: "Hundreds of labelled QRs from a spreadsheet as ZIP or PDF." },
           { href: "/dynamic-qr-generator/", name: "Dynamic QR & link shortener", description: "Editable destinations with optional scan analytics." },
@@ -308,7 +309,7 @@ export const TOPIC_HUBS: TopicHub[] = [
         tools: [
           { href: "/", name: "UPI standee generator", description: "Full-page payment posters for acrylic T-stands." },
           { href: "/print-templates/", name: "Printable template gallery", description: "A4, A5, 5×7, table tents, counter cards, and sticker sheets." },
-          { href: "/qr-sticker-generator/", name: "A4 QR sticker sheets", description: "Print 4, 6, or 12 counter stickers per sheet." },
+          { href: "/qr-sticker-generator/", name: "PhonePe / GPay QR stickers", description: "Print 4, 6, or 12 shop stickers. Not an official PhonePe kit." },
           { href: "/offer-poster-generator/", name: "Shop sale poster builder", description: "Discount banners with your UPI QR baked in." },
           { href: "/menu-qr-generator/", name: "Menu QR generator", description: "Printable price-list cards for restaurants and salons." },
           { href: "/bulk-qr/", name: "Bulk CSV QR", description: "Batch-print labelled QRs for staff counters or packing." },
@@ -383,7 +384,8 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/upi-error-codes/", name: "UPI error code resolver", description: "NPCI returned error? Look up U16, Z9, ZM and 40+ sourced codes." },
           { href: "/upi-limits/", name: "Indian bank UPI limits", description: "Daily caps for 30+ banks, last-reviewed with NPCI-facing sources." },
           { href: "/upi-qr-decoder/", name: "UPI QR validator & decoder", description: "Safety-check the VPA, amount, and tamper clues before you trust or reprint." },
-          { href: "/upi-calculator/", name: "UPI MDR savings calculator", description: "Compare gateway MDR with direct UPI. RuPay CC UPI is called out separately." },
+          { href: "/upi-mdr-calculator/", name: "UPI MDR calculator (Oct 2026)", description: "0.4% P2M above ₹2,000, small-merchant exemption, GST on MDR." },
+          { href: "/upi-calculator/", name: "UPI vs gateway savings", description: "Compare gateway MDR with direct UPI after the October schedule." },
         ],
       },
     ],
@@ -395,6 +397,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       "how-to-verify-upi-qr-code-before-displaying",
       "upi-qr-code-not-scanning-troubleshooting",
       "how-upi-soundboxes-work-and-their-safety",
+      "upi-mdr-charges-october-2026",
       "rupay-credit-card-upi-mdr-charges",
       "how-to-link-credit-card-to-upi-qr",
       "receive-international-upi-payments",
@@ -522,10 +525,10 @@ export const TOPIC_HUBS: TopicHub[] = [
     path: "/business-calculators/",
     title: "Free Business Calculators for Indian Shops | Pro UPI QR",
     description:
-      "GST, EMI, SIP, gratuity, MSMED interest, TReDS, break-even, margin, and cash-drawer calculators for Indian shops. Math is exact; sources are cited.",
+      "GST 2.0, UPI MDR from 15 Oct 2026, EMI, SIP, gratuity, MSMED, TReDS, break-even, margin, and night-close till tools. Math is exact; sources are cited.",
     h1: "Business calculators for Indian shops",
     intro:
-      "Work in integer paise. MSMED delayed-payment interest tracks the RBI-linked statutory formula, not a frozen 15%. UPI MDR savings treat RuPay credit card on UPI as a separate case from bank-to-bank UPI.",
+      "Work in integer paise. GST lookup follows GST 2.0 slabs. UPI MDR from 15 October 2026 is modelled as a merchant fee, not a tax — P2P and small QR shops stay free.",
     eyebrow: "Calculators",
     shortName: "Business calculators",
     blurb: "GST, EMI, SIP, MSMED, TReDS, margin, gratuity, and cash-drawer maths.",
@@ -535,10 +538,11 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         heading: "Tax and pricing",
         tools: [
-          { href: "/gst-calculator/", name: "GST calculator", description: "Inclusive and exclusive tax breakdowns with an optional payable QR." },
+          { href: "/gst-calculator/", name: "GST calculator", description: "Search the product, apply GST 2.0 rates, split CGST/SGST or IGST." },
+          { href: "/upi-mdr-calculator/", name: "UPI MDR calculator (Oct 2026)", description: "0.4% on some P2M above ₹2,000. Small QR shops stay free. Not a tax." },
           { href: "/margin-calculator/", name: "Profit margin calculator", description: "Cost, margin, and markup for retailers." },
           { href: "/break-even-calculator/", name: "Break-even calculator", description: "Survival units, target-profit units, and margin of safety." },
-          { href: "/upi-calculator/", name: "UPI MDR savings calculator", description: "Direct UPI versus gateway fees, with RuPay CC UPI called out." },
+          { href: "/upi-calculator/", name: "UPI vs gateway savings", description: "Direct UPI versus 2.36% gateway fees, with the October MDR netted." },
         ],
       },
       {
@@ -554,8 +558,8 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         heading: "Shop floor",
         tools: [
-          { href: "/split-bill-calculator/", name: "Split bill calculator", description: "Fair group splits with per-person UPI pay links." },
-          { href: "/cash-denomination-calculator/", name: "Cash denomination calculator", description: "Count the drawer by note and coin; download a shift summary." },
+          { href: "/split-bill-calculator/", name: "Split bill calculator", description: "Itemised restaurant splits with per-person UPI QR and WhatsApp." },
+          { href: "/cash-denomination-calculator/", name: "Night-close till", description: "Count notes, add UPI and card, petty cash, bank deposit, variance PDF." },
           { href: "/upi-limits/", name: "Bank UPI limits", description: "Daily transfer caps before you accept a large payment." },
           { href: "/merchant-reconciliation/", name: "UPI reconciliation tool", description: "Match invoices to UTRs, spot short payments, export monthly reports." },
           { href: "/msme-receivables/", name: "MSME receivables tracker", description: "Invoice aging, 45-day due tracker, and Section 16 demand letters." },
@@ -571,6 +575,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       },
     ],
     articleSlugs: [
+      "upi-mdr-charges-october-2026",
       "udyam-registration-guide-msme-benefits",
       "government-schemes-small-businesses-india-2026",
       "treds-invoice-discounting-msme-guide",
@@ -592,7 +597,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         question: "Is UPI always cheaper than a payment gateway?",
         answer:
-          "Bank-to-bank UPI has 0% MDR. Gateways still charge for cards, EMI, and often for convenience. RuPay credit card on UPI above ₹2,000 may carry interchange. Run the MDR calculator with your mix.",
+          "Usually yes. Gateways still take about 2% + GST. From 15 October 2026 some P2M UPI above ₹2,000 take 0.4% MDR (not a tax), capped at ₹300. P2P, sub-₹2,000 tickets, and small QR shops stay at 0%. Run both calculators with your mix.",
       },
       {
         question: "Do these calculators store my numbers?",

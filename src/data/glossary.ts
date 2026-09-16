@@ -24,14 +24,14 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     full: "Unified Payments Interface",
     hindi: "यूनिफाइड पेमेंट्स इंटरफेस",
     category: "UPI Basics",
-    shortDef: "India's instant, 24×7 bank-to-bank payment system run by NPCI — free for everyday merchant collections.",
+    shortDef: "India's instant, 24×7 bank-to-bank payment system run by NPCI. P2P and most small merchant QR scans stay free; some large P2M tickets take MDR from 15 Oct 2026.",
     body: [
       "Launched by NPCI in 2016, UPI moves money instantly between any two bank accounts using a smartphone app. Instead of sharing account numbers and IFSC codes, users identify each other with a simple UPI ID (VPA) or QR code, and transfers settle within seconds at any hour of any day.",
-      "For merchants, UPI is transformative because standard bank-to-bank person-to-merchant payments carry zero MDR — no percentage is deducted from your sale, unlike card machines or payment gateways which typically charge 1–2% plus setup costs. Note that RuPay credit card on UPI transactions above ₹2,000 may carry an interchange fee per NPCI circulars.",
+      "For merchants, UPI beat cards because bank-to-bank P2M sat at 0% MDR from January 2020. From 15 October 2026 a 0.4% merchant discount rate applies to some P2M payments above ₹2,000 (cap ₹300). P2P, tickets of ₹2,000 or less, and small QR merchants up to ₹1 lakh/month stay free. RuPay credit card on UPI above ₹2,000 is a separate interchange product.",
       "Every UPI payment needs two things: a valid VPA linked to a real bank account, and the payer's UPI PIN entered on their own device. No OTPs are ever shared with the payee — anyone asking for your PIN or OTP to 'receive' money is running a scam."
     ],
     faqs: [
-      { question: "Is UPI free for merchants?", answer: "Bank-to-bank UPI transactions carry zero MDR — shops receive the full amount. RuPay credit card on UPI transactions above ₹2,000 may have interchange fees per NPCI guidelines." },
+      { question: "Is UPI free for merchants?", answer: "P2P is free. P2M of ₹2,000 or less is free. Small QR shops up to ₹1 lakh/month stay free. Other P2M above ₹2,000 may take 0.4% MDR from 15 October 2026 — not a government tax. RuPay credit-card-on-UPI is a separate interchange product." },
       { question: "Does UPI work at night and on holidays?", answer: "Yes — UPI runs 24×7×365, including bank holidays." }
     ],
     related: [
@@ -267,17 +267,19 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     full: "Merchant Discount Rate",
     hindi: "मर्चेंट डिस्काउंट रेट",
     category: "Merchant & QR",
-    shortDef: "The percentage a payment provider deducts from each sale — zero for standard bank-to-bank UPI, applies to credit-card-on-UPI above ₹2,000.",
+    shortDef: "The slice a network takes from the merchant. From 15 Oct 2026 some UPI P2M above ₹2,000 take 0.4% MDR; it is not a government tax.",
     body: [
-      "MDR is the fee slice taken from a merchant on every card or digital transaction. Card networks and banks typically charge 1–3%, which quietly erodes margins on thin-margin retail.",
-      "Since January 2020, bank-to-bank UPI and RuPay debit carry zero MDR by government mandate — the structural reason Indian merchants push customers toward QR payments. RuPay credit card on UPI transactions above ₹2,000 are subject to interchange fees (typically 0.9–2% per NPCI circulars), but for ordinary bank-funded P2M UPI you keep 100% of the sale."
+      "MDR is the fee slice taken from a merchant on a card or digital sale. Card networks typically charge 1–3%. From 15 October 2026, specified person-to-merchant UPI payments above ₹2,000 take a 0.4% MDR capped at ₹300 (₹5 flat for fuel, rail, telecom, insurance and agri inputs). The Finance Ministry said this is not a tax and is not collected by the government or NPCI.",
+      "P2P stays free at any amount. P2M of ₹2,000 or less stays free. Small QR merchants collecting up to ₹1 lakh a month stay in the zero-MDR net — about 96% of P2M volume, per the ministry. RuPay credit card on UPI above ₹2,000 remains a separate interchange product. GST at 18% may apply on the MDR; registered merchants can usually claim ITC."
     ],
     faqs: [
-      { question: "So accepting UPI really costs me nothing?", answer: "Directly, yes for bank-to-bank UPI. RuPay credit card on UPI transactions above ₹2,000 may carry interchange — rare for kirana-level commerce. Indirect costs are hardware like soundboxes or optional subscription services — never a cut of the payment itself for standard UPI." },
-      { question: "How much am I losing on card sales?", answer: "Run your monthly card volume through our savings calculator to see the annual difference versus UPI." }
+      { question: "So accepting UPI still costs me nothing?", answer: "Often yes: P2P, sub-₹2,000 merchant scans, and small QR shops under ₹1 lakh/month. Larger P2M tickets may take 0.4% from 15 October 2026. Customers cannot be surcharged." },
+      { question: "How much will my shop pay?", answer: "Use the UPI MDR calculator for a monthly estimate, then compare with the gateway savings calculator." }
     ],
     related: [
-      { href: "/upi-calculator/", label: "Calculate your UPI vs card savings" },
+      { href: "/upi-mdr-calculator/", label: "UPI MDR calculator (Oct 2026)" },
+      { href: "/blog/upi-mdr-charges-october-2026/", label: "What merchants actually pay" },
+      { href: "/upi-calculator/", label: "UPI vs card gateway savings" },
       { href: "/glossary/p2p-payment/", label: "P2P vs P2M payment types" }
     ]
   },
@@ -309,15 +311,15 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     category: "Merchant & QR",
     shortDef: "Two UPI flows: casual transfers between people (P2P) versus structured payments to registered merchants (P2M).",
     body: [
-      "When you split a dinner bill with a friend, that is P2P. When you scan a shop's QR and the shop is registered as a merchant, that is P2M — routed with merchant metadata that enables zero-MDR treatment, dispute frameworks, and future credit products.",
+      "When you split a dinner bill with a friend, that is P2P (always free). When you scan a shop's QR, that is P2M — merchant metadata, longer failed-credit TAT, and from 15 October 2026 a 0.4% MDR on some tickets above ₹2,000.",
       "For a small business the distinction matters for credibility and accounting: registering as a merchant (even free tiers) marks your inflows as business revenue cleanly rather than mixing them with personal transfers."
     ],
     faqs: [
       { question: "Do I need merchant registration to accept payments?", answer: "Technically no — customers can pay any VPA. Registering unlocks P2M rails, better limits, and cleaner books though." },
-      { question: "Are P2M payments slower or costlier?", answer: "Neither — same speed, zero MDR on standard UPI." }
+      { question: "Are P2M payments slower or costlier?", answer: "Same speed. Cost: P2P is free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026 unless you are a small QR merchant." }
     ],
     related: [
-      { href: "/glossary/mdr/", label: "MDR — the fee that isn't there" },
+      { href: "/glossary/mdr/", label: "MDR — merchant discount rate" },
       { href: "/blog/p2m-meaning-in-banking-upi/", label: "P2M meaning in banking and UPI" },
       { href: "/split-bill-calculator/", label: "Split bills with per-person UPI links" }
     ]

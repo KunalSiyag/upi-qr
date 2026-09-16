@@ -6,7 +6,7 @@ author: "Kunal Siyag"
 tags: ["Credit Card", "MDR", "Reference"]
 ---
 
-The integration of RuPay Credit Cards with UPI has opened up credit payments for millions of consumers in India. However, unlike standard bank-to-bank UPI transfers which are completely free (0% MDR), credit card UPI transactions are subject to processing fees.
+The integration of RuPay Credit Cards with UPI has opened up credit payments for millions of consumers in India. This article is about **RuPay credit-card-on-UPI interchange**, which already existed on some tickets above ₹2,000. It is not the **0.4% bank-to-bank P2M MDR from 15 October 2026** — that schedule is in the [UPI MDR explainer](/blog/upi-mdr-charges-october-2026/).
 
 In this guide, we break down what charges apply to merchants when customers scan their QR codes using a linked RuPay credit card.
 

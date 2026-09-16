@@ -36,6 +36,12 @@ export function CashDenominationCalculator() {
   const today = new Date().toISOString().slice(0, 10);
   const [counts, setCounts] = useState<string[]>(() => DENOMINATIONS.map(() => ""));
   const [expected, setExpected] = useState("");
+  const [opening, setOpening] = useState("");
+  const [cashSales, setCashSales] = useState("");
+  const [cashOut, setCashOut] = useState("");
+  const [bankDeposit, setBankDeposit] = useState("");
+  const [upiCollected, setUpiCollected] = useState("");
+  const [cardCollected, setCardCollected] = useState("");
   const [counterName, setCounterName] = useState("Counter 1");
   const [staffName, setStaffName] = useState("");
   const [shiftDate, setShiftDate] = useState(today);
@@ -51,6 +57,12 @@ export function CashDenominationCalculator() {
       const d = JSON.parse(saved);
       if (Array.isArray(d.counts)) setCounts(DENOMINATIONS.map((_, i) => String(d.counts[i] ?? "")));
       setExpected(String(d.expected ?? ""));
+      setOpening(String(d.opening ?? ""));
+      setCashSales(String(d.cashSales ?? ""));
+      setCashOut(String(d.cashOut ?? ""));
+      setBankDeposit(String(d.bankDeposit ?? ""));
+      setUpiCollected(String(d.upiCollected ?? ""));
+      setCardCollected(String(d.cardCollected ?? ""));
       setCounterName(d.counterName ?? "Counter 1");
       setStaffName(d.staffName ?? "");
       setShiftDate(d.shiftDate ?? today);
@@ -62,8 +74,10 @@ export function CashDenominationCalculator() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ counts, expected, counterName, staffName, shiftDate, notes }));
-  }, [counts, expected, counterName, staffName, shiftDate, notes]);
+    localStorage.setItem(draftKey, JSON.stringify({
+      counts, expected, opening, cashSales, cashOut, bankDeposit, upiCollected, cardCollected, counterName, staffName, shiftDate, notes,
+    }));
+  }, [counts, expected, opening, cashSales, cashOut, bankDeposit, upiCollected, cardCollected, counterName, staffName, shiftDate, notes]);
 
   const rows = useMemo(() => DENOMINATIONS.map((d, i) => {
     const count = Math.max(0, Math.floor(Number(counts[i]) || 0));
@@ -72,8 +86,18 @@ export function CashDenominationCalculator() {
 
   const total = useMemo(() => rows.reduce((sum, r) => sum + r.lineTotal, 0), [rows]);
   const pieces = useMemo(() => rows.reduce((sum, r) => sum + r.count, 0), [rows]);
-  const expectedNum = Math.max(0, Number(expected) || 0);
-  const variance = expected ? total - expectedNum : null;
+  const num = (v: string) => Math.max(0, Number(v) || 0);
+  const openingNum = num(opening);
+  const cashSalesNum = num(cashSales);
+  const cashOutNum = num(cashOut);
+  const bankDepositNum = num(bankDeposit);
+  const upiNum = num(upiCollected);
+  const cardNum = num(cardCollected);
+  const derivedExpected = openingNum + cashSalesNum - cashOutNum - bankDepositNum;
+  const hasDayClose = Boolean(opening || cashSales || cashOut || bankDeposit);
+  const expectedNum = expected ? num(expected) : hasDayClose ? derivedExpected : 0;
+  const variance = expected || hasDayClose ? total - expectedNum : null;
+  const totalSales = cashSalesNum + upiNum + cardNum;
 
   function setCount(index: number, value: number) {
     const clamped = Math.max(0, Math.min(99999, Math.floor(value)));
@@ -159,8 +183,8 @@ export function CashDenominationCalculator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Cash counter</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Count The Drawer</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Night close</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">Count cash, then close the till</h2>
           </div>
           <button onClick={clearAll} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600 transition">Clear all</button>
         </div>
@@ -198,12 +222,32 @@ export function CashDenominationCalculator() {
         </div>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Expected / as per records ₹<input type="number" value={expected} onChange={(e) => setExpected(e.target.value)} placeholder="From billing system" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Opening float ₹<input type="number" value={opening} onChange={(e) => setOpening(e.target.value)} placeholder="Cash in drawer at open" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Cash sales ₹<input type="number" value={cashSales} onChange={(e) => setCashSales(e.target.value)} placeholder="Cash collected today" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">UPI collected ₹<input type="number" value={upiCollected} onChange={(e) => setUpiCollected(e.target.value)} placeholder="PhonePe / GPay / BHIM" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Card / POS ₹<input type="number" value={cardCollected} onChange={(e) => setCardCollected(e.target.value)} placeholder="Swipe machine" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Petty cash out ₹<input type="number" value={cashOut} onChange={(e) => setCashOut(e.target.value)} placeholder="Change given, expenses" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Bank deposit ₹<input type="number" value={bankDeposit} onChange={(e) => setBankDeposit(e.target.value)} placeholder="Notes sent to bank" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Override expected cash ₹<input type="number" value={expected} onChange={(e) => setExpected(e.target.value)} placeholder="Leave blank to auto-calc" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Counter / till name<input value={counterName} onChange={(e) => setCounterName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Staff name<input value={staffName} onChange={(e) => setStaffName(e.target.value)} placeholder="Who closed the shift" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Shift date<input type="date" value={shiftDate} onChange={(e) => setShiftDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest sm:col-span-2">Notes (optional)<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Reason for variance, pending dues…" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
+
+        {totalSales > 0 && (
+          <div className="mt-4 grid grid-cols-3 gap-2 rounded-2xl bg-mint px-4 py-3 text-center text-xs font-bold text-forest">
+            <div>Cash {money(cashSalesNum)}</div>
+            <div>UPI {money(upiNum)}</div>
+            <div>Card {money(cardNum)}</div>
+            <div className="col-span-3 text-[11px] font-semibold text-forest/70">Today's collections {money(totalSales)}</div>
+          </div>
+        )}
+        {hasDayClose && !expected && (
+          <p className="mt-3 text-xs font-semibold text-forest/65">
+            Expected drawer = opening {money(openingNum)} + cash sales {money(cashSalesNum)} − petty {money(cashOutNum)} − deposit {money(bankDepositNum)} = {money(derivedExpected)}.
+          </p>
+        )}
 
         {varianceLabel && <p className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${varianceLabel.cls}`}>{varianceLabel.text}</p>}
 
@@ -240,7 +284,8 @@ export function CashDenominationCalculator() {
           </tbody>
           <tfoot>
             <tr className="border-t-2 border-forest"><td className="pt-2 font-black text-forest" colSpan={2}>Total counted</td><td className="pt-2 text-right text-base font-black text-forest tabular-nums">{money(total)}</td></tr>
-            {expected && <tr><td colSpan={2} className="font-semibold text-forest/70">As per records</td><td className="text-right font-bold text-forest/70 tabular-nums">{money(expectedNum)}</td></tr>}
+            {(expected || hasDayClose) && <tr><td colSpan={2} className="font-semibold text-forest/70">Expected in drawer</td><td className="text-right font-bold text-forest/70 tabular-nums">{money(expectedNum)}</td></tr>}
+            {totalSales > 0 && <tr><td colSpan={2} className="font-semibold text-forest/70">Collections (cash + UPI + card)</td><td className="text-right font-bold text-forest/70 tabular-nums">{money(totalSales)}</td></tr>}
             {variance !== null && (
               <tr><td colSpan={2} className={`font-black ${variance >= 0 ? "text-green-700" : "text-red-600"}`}>{variance === 0 ? "Variance" : variance > 0 ? "Excess" : "Short"}</td>
               <td className={`text-right font-black tabular-nums ${variance >= 0 ? "text-green-700" : "text-red-600"}`}>{money(Math.abs(variance))}</td></tr>

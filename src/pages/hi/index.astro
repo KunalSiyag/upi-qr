@@ -4,9 +4,9 @@ import { GeneratorForm } from "../../components/GeneratorForm";
 import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import TemplateThumb from "../../components/TemplateThumb.astro";
 
-const title = "मुफ्त UPI QR कोड जनरेटर | दुकानों के लिए UPI QR कोड बनाएं";
+const title = "मुफ्त UPI QR कोड जनरेटर — PhonePe, GPay, Paytm";
 const description =
-  "मुफ्त UPI QR कोड जनरेटर। Paytm, PhonePe और Google Pay (GPay) के लिए यूनिवर्सल UPI QR कोड बनाएं। अपनी दुकान के लिए तुरंत क्यूआर पोस्टर डाउनलोड करें।";
+  "दुकान या बैंक खाते के लिए मुफ्त UPI QR कोड जनरेटर। PhonePe, Google Pay, Paytm और BHIM पर चलता है। बिना साइनअप, बिना वॉटरमार्क।";
 
 const faqs = [
   {
@@ -38,6 +38,11 @@ const faqs = [
     question: "QR कोड से UPI आईडी कैसे प्राप्त करें?",
     answer:
       "किसी मौजूदा QR कोड से UPI आईडी प्राप्त करने के लिए, बस अपने फोन पर किसी भी मानक QR कोड रीडर ऐप का उपयोग करके इसे स्कैन करें। परिणामी पाठ एक 'upi://pay' लिंक होगा। आपकी UPI आईडी उस लिंक में 'pa=' के ठीक बाद वाला हिस्सा है।"
+  },
+  {
+    question: "दुकान के लिए PhonePe QR स्टीकर कैसे बनाएं?",
+    answer:
+      "आधिकारिक PhonePe किट ऑर्डर करने की ज़रूरत नहीं। PhonePe QR स्टीकर जनरेटर में UPI आईडी डालें, A4 पर 4, 6 या 12 स्टीकर चुनें और प्रिंट करें। यह सामान्य upi://pay कोड है, इसलिए Google Pay, Paytm और BHIM भी स्कैन करेंगे।"
   }
 ];
 
@@ -184,13 +189,13 @@ const landingLinks = [
         <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div class="pt-4 min-w-0">
             <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
-              पेशेवर UPI भुगतान स्टैंडी और QR पोस्टर बिल्डर
+              दुकान और बैंक खाते के लिए मुफ्त UPI QR
             </p>
             <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
               मुफ्त UPI QR कोड जनरेटर
             </h1>
             <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
-              तुरंत राशि के साथ UPI QR कोड बनाएं। हमारा यूनिवर्सल UPI QR कोड जनरेटर बिना लॉग इन या साइनअप के PhonePe, Google Pay और Paytm के लिए सुरक्षित भुगतान पोस्टर बनाता है।
+              अपनी UPI आईडी डालें और PhonePe, Google Pay, Paytm व BHIM पर चलने वाला भुगतान QR डाउनलोड करें। साइनअप नहीं। राशि वैकल्पिक। काउंटर स्टैंडी या स्टीकर जब चाहिए तब प्रिंट करें।
             </p>
 
             <div class="mt-8 flex flex-wrap gap-3">
@@ -224,6 +229,12 @@ const landingLinks = [
                 >
                   <span class="w-1.5 h-1.5 rounded-full bg-[#5f259f]"></span>
                   PhonePe QR
+                </a>
+                <a
+                  href="/hi/qr-sticker-generator/"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-white px-4 py-2 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
+                >
+                  PhonePe स्टीकर
                 </a>
                 <a
                   href="/hi/google-pay-qr-generator/"

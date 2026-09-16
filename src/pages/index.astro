@@ -12,9 +12,9 @@ import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
 import { ogImageForPath } from "../data/siteImages";
 import { softwareApplicationSchema } from "../data/reviews";
 
-const title = "Free UPI QR Code Generator - Print Standee & Sticker";
+const title = "Free UPI QR Code Generator — PhonePe, GPay, Paytm";
 const description =
-  "Generate a free UPI QR code for your shop or bank account. Download and print PhonePe, GPay, and Paytm counter standees with no signup and no watermark.";
+  "Create a free UPI QR code for your shop or bank account. Works on PhonePe, Google Pay, Paytm, and BHIM. Print a standee, sticker, invoice, or receipt. No signup.";
 
 const faqs = [
   {
@@ -77,6 +77,18 @@ const faqs = [
     answer:
       "Public ratings live on Product Hunt. Named merchant quotes, when we have them, are on the Pro UPI QR reviews page. We do not invent star scores for search snippets.",
     answerLink: { href: "/reviews/", label: "Pro UPI QR reviews page" }
+  },
+  {
+    question: "What is the difference between this and the universal QR generator?",
+    answer:
+      "This page prints a UPI payment standee for shops. The universal QR generator is the one ranking for “universal qr code generator” — UPI for a bank account, plus URL, WiFi, vCard, and PDF.",
+    answerLink: { href: "/universal-qr-generator/", label: "universal QR generator" }
+  },
+  {
+    question: "How do I get a PhonePe QR code sticker for my shop?",
+    answer:
+      "You do not need to order an official PhonePe kit. Paste your UPI ID into the PhonePe QR sticker generator, pick 4, 6, or 12 stickers per A4, and print. It is a standard upi://pay code, so Google Pay, Paytm, and BHIM scan it too.",
+    answerLink: { href: "/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe QR sticker generator" }
   }
 ];
 
@@ -193,6 +205,7 @@ const landingLinks = [
   { href: "/icici-qr-generator/", label: "ICICI QR Generator" },
   { href: "/donation-qr-generator/", label: "Donation QR Generator" },
   { href: "/universal-qr-generator/", label: "Universal QR Generator" },
+  { href: "/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe QR Sticker" },
   { href: "/invoice-generator/", label: "Invoice QR Generator" },
   { href: "/receipt-generator/", label: "Payment Receipt Generator" },
   { href: "/paid-stamp-generator/", label: "Paid Stamp Generator" },
@@ -207,8 +220,9 @@ const merchantTools = [
   { title: "Rent Receipt Generator", href: "/rent-receipt-generator/", copy: "HRA-ready monthly rent receipts with amount in words and a revenue stamp box.", status: "Live now" },
   { title: "Quotation Generator", href: "/quotation-generator/", copy: "Send estimates with validity dates, terms, and an optional advance-payment QR.", status: "Live now" },
   { title: "Payment Reminder Generator", href: "/payment-reminder-generator/", copy: "Polite overdue invoice reminders for WhatsApp and SMS in three tones.", status: "Live now" },
-  { title: "Split Bill Calculator", href: "/split-bill-calculator/", copy: "Fair group splits with per-person WhatsApp messages carrying your UPI ID.", status: "Live now" },
-  { title: "Cash Denomination Calculator", href: "/cash-denomination-calculator/", copy: "Count the drawer by note and coin, check variance, download a shift summary.", status: "Live now" },
+  { title: "Split Bill Calculator", href: "/split-bill-calculator/", copy: "Split by dish, not just equally. Per-person WhatsApp and UPI QR.", status: "Live now" },
+  { title: "Night-close till", href: "/cash-denomination-calculator/", copy: "Count notes, add UPI and card, petty cash and bank deposit, download variance.", status: "Live now" },
+  { title: "UPI MDR Calculator", href: "/upi-mdr-calculator/", copy: "0.4% from 15 Oct 2026 on some P2M above ₹2,000. Not a tax. Small shops stay free.", status: "New" },
   { title: "GST Credit Note Generator", href: "/credit-note-generator/", copy: "Section 34 compliant credit notes for returns, discounts, and corrections.", status: "Live now" },
   { title: "Paid Stamp Generator", href: "/paid-stamp-generator/", copy: "Upload any bill photo and stamp PAID with date and signature, right inside your browser.", status: "Live now" },
   { title: "All Merchant Tools", href: "/tools/", copy: "Browse every QR generator, billing tool, calculator, and guide in one hub.", status: "20+ tools" },
@@ -239,13 +253,13 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
         <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div class="pt-4 min-w-0">
             <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
-              Professional UPI Payment Standees & QR Poster Builder
+              Free UPI QR for shops and bank accounts
             </p>
             <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
               Free UPI QR Code Generator
             </h1>
             <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
-              Create UPI QR code with amount instantly. Our universal UPI QR code generator creates secure payment posters for PhonePe, Google Pay, and Paytm without login or signup.
+              Enter your UPI ID and download a payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
             </p>
             <SocialProofBar compact />
 
@@ -275,15 +289,28 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
                   href="/phonepe-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-[#5f259f]/5 px-3.5 py-1.5 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
                 >
-                  <img src="/favicon.svg" alt="PhonePe" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   PhonePe QR
+                </a>
+                <a
+                  href="/qr-sticker-generator/?app=phonepe#tool"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-white px-3.5 py-1.5 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
+                >
+                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
+                  PhonePe sticker
                 </a>
                 <a
                   href="/google-pay-qr-generator/"
                   class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-[#4285f4]/5 px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
                 >
-                  <img src="/googlepay.png" alt="Google Pay" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
+                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   Google Pay QR
+                </a>
+                <a
+                  href="/qr-sticker-generator/?app=gpay#tool"
+                  class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-white px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
+                >
+                  GPay sticker
                 </a>
                 <a
                   href="/paytm-qr-generator/"
@@ -431,8 +458,10 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
               Generate UPI QR code with amount in under 30 seconds.
             </h2>
             <p class="mt-2 text-sm leading-relaxed text-forest/72">
-              Works for PhonePe, Google Pay, Paytm, BHIM, and other UPI apps that support standard
-              `upi://pay` links.
+              Works on PhonePe, Google Pay, Paytm, BHIM, and other UPI apps that support standard
+              <code class="font-mono text-xs">upi://pay</code> links. Need a peel-off counter sticker?
+              Use the <a href="/qr-sticker-generator/?app=phonepe#tool" class="font-bold text-leaf hover:underline">PhonePe / GPay sticker sheet</a>.
+              Need URL, WiFi, or vCard? Open the <a href="/universal-qr-generator/" class="font-bold text-leaf hover:underline">universal QR generator</a>.
             </p>
             <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
               <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">

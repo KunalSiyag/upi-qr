@@ -24,6 +24,7 @@ import { ProformaInvoiceGenerator } from "./ProformaInvoiceGenerator";
 import { BreakEvenCalculator } from "./BreakEvenCalculator";
 import { TredsCalculator } from "./TredsCalculator";
 import { UpiCalculator } from "./UpiCalculator";
+import { UpiMdrCalculator } from "./UpiMdrCalculator";
 import { OfferPosterGenerator } from "./OfferPosterGenerator";
 import { MenuQrGenerator } from "./MenuQrGenerator";
 import { MarginCalculator } from "./MarginCalculator";
@@ -104,6 +105,7 @@ const path = `/${lang}/${tool.slug}/`;
         {tool.component === "breakEven" && <BreakEvenCalculator client:visible />}
         {tool.component === "treds" && <TredsCalculator client:visible />}
         {tool.component === "upiCalculator" && <UpiCalculator client:visible />}
+        {tool.component === "upiMdr" && <UpiMdrCalculator client:visible />}
         {tool.component === "offerPoster" && <OfferPosterGenerator client:visible />}
         {tool.component === "menuQr" && <MenuQrGenerator client:visible />}
         {tool.component === "margin" && <MarginCalculator client:visible />}

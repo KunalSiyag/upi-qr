@@ -3,9 +3,9 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { UniversalQrForm } from "../components/UniversalQrForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 
-const title = "Universal QR Code Generator — Free, UPI, WiFi | Pro UPI QR";
+const title = "Universal QR Code Generator — Free, UPI, Bank, WiFi";
 const description =
-  "Free universal QR code generator for URLs, WiFi, vCard, WhatsApp, PDF, and UPI payments. No signup, no watermark. Any phone camera can scan it.";
+  "Free universal QR code generator for UPI bank accounts, URLs, WiFi, vCard, WhatsApp, and PDF. No signup, no watermark. Any phone camera can scan it.";
 
 const highIntentQueries = [
   { query: "universal upi qr code generator for bank account", href: "/universal-qr-generator/?type=upi#editor", copy: "Paste your VPA (name@oksbi). One upi://pay QR works on PhonePe, GPay, Paytm, and BHIM." },
@@ -37,7 +37,10 @@ const schema = {
       "@type": "WebApplication",
       "@id": "https://www.proupiqr.in/universal-qr-generator/#webapp",
       "name": "Universal QR Code Generator",
-      "alternateName": ["QR Code Generator", "Free QR Code Generator"],
+      "alternateName": [
+        "Universal UPI QR Code Generator",
+        "Universal QR Code Generator for Bank Account"
+      ],
       "applicationCategory": "UtilitiesApplication",
       "operatingSystem": "Any",
       "url": "https://www.proupiqr.in/universal-qr-generator/",
@@ -162,7 +165,7 @@ const schema = {
           "name": "Which generator should I use for a shop standee?",
           "acceptedAnswer": {
             "@type": "Answer",
-            "text": "This page is the mixed editor for UPI, URL, WiFi, and vCard. For A4/A5 posters, sticker sheets, and branded PhonePe or GPay layouts, use the UPI poster generator on the homepage."
+            "text": "This page is the mixed editor for UPI, URL, WiFi, and vCard. For a shop payment standee use the homepage generator. For a PhonePe or GPay counter sticker use the QR sticker generator."
           }
         }
       ]
@@ -176,7 +179,7 @@ const schema = {
     <!-- Compact Header (above the fold) -->
     <section class="px-5 pt-8 pb-4 text-center max-w-3xl mx-auto">
       <h1 class="text-4xl md:text-5xl font-black tracking-[-1.2px] text-forest">Universal QR Code Generator</h1>
-      <p class="mt-2 text-base text-forest/70">A free QR code generator for website URLs, WiFi, vCard, WhatsApp, PDF, and UPI payments. Static, no signup, no watermark.</p>
+      <p class="mt-2 text-base text-forest/70">A free QR code generator for UPI payments, bank-account VPAs, website URLs, WiFi, vCard, WhatsApp, and PDF. Static, no signup, no watermark.</p>
     </section>
 
     <!-- The Editor (above the fold) -->
@@ -225,7 +228,7 @@ const schema = {
             <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Popular searches</p>
             <h2 class="mt-2 text-2xl font-black text-forest">Choose the right universal QR workflow</h2>
           </div>
-          <a href="/#generator" class="rounded-full border border-forest/10 px-4 py-2 text-sm font-bold text-forest hover:bg-mint">Need bank payment QR?</a>
+          <a href="/universal-qr-generator/?type=upi#editor" class="rounded-full border border-forest/10 px-4 py-2 text-sm font-bold text-forest hover:bg-mint">Open UPI / bank account tab</a>
         </div>
         <div class="mt-5 grid gap-3 md:grid-cols-2">
           {highIntentQueries.map((item) => (
@@ -255,7 +258,7 @@ const schema = {
           <p class="text-xs font-black uppercase tracking-[0.2em] text-sun">Tool map</p>
           <h2 class="mt-2 text-2xl font-black">How Pro UPI QR tools connect</h2>
         </div>
-        <a href="/universal-qr-generator/" class="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><strong>Universal QR</strong><span class="mt-2 block text-sm leading-6 text-white/70">General QR codes for content, links, WiFi, contact cards, PDFs, and apps.</span></a>
+        <a href="/universal-qr-generator/?type=upi#editor" class="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><strong>UPI / bank account</strong><span class="mt-2 block text-sm leading-6 text-white/70">Same editor, UPI Pay tab — the query that already sends the most clicks here.</span></a>
         <a href="/invoice-generator/" class="rounded-2xl bg-white/10 p-4 hover:bg-white/15"><strong>Invoice QR</strong><span class="mt-2 block text-sm leading-6 text-white/70">Use your UPI QR inside an invoice PDF when billing customers or clients.</span></a>
       </div>
     </section>
@@ -344,7 +347,7 @@ const schema = {
           ["What is the difference between a universal QR and a UPI QR?", "Universal QR here means any static type: URL, WiFi, vCard, WhatsApp. UPI QR is the same matrix with a payment payload. This editor does both."],
           ["Are these QR codes free and permanent?", "Yes. Static codes encode the data in the image. They do not expire and have no scan limits. Dynamic short links are a different tool."],
           ["Does this QR generator require sign up?", "No. Generate unlimited QR codes without an account. Drafts stay in this browser."],
-          ["Which generator should I use for a shop standee?", "This page is the mixed editor. For A4/A5 posters, sticker sheets, and branded PhonePe/GPay layouts, use the UPI poster generator on the homepage."]
+          ["Which generator should I use for a shop standee?", "This page is the mixed editor. For a shop payment standee use the homepage UPI QR generator. For a PhonePe or GPay counter sticker use the QR sticker generator."]
         ].map(([q, a]) => (
           <details class="rounded-2xl border border-white/75 bg-white/86 px-5 py-4">
             <summary class="cursor-pointer list-none text-base font-black text-forest">{q}</summary>

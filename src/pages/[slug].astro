@@ -852,6 +852,18 @@ const seoTitle = (() => {
       <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Payment Quick-Links</p>
       <h1 class="mt-2 text-3xl font-black tracking-tight text-forest md:text-5xl">{headline}</h1>
       <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72 md:text-base">{intro}</p>
+      {(presetType === "phonepe" || presetType === "gpay") && (
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72">
+          Need a peel-off counter sticker instead of a standee? Print a free
+          <a
+            href={`/qr-sticker-generator/?app=${presetType === "gpay" ? "gpay" : "phonepe"}#tool`}
+            class="font-bold text-leaf hover:underline"
+          >
+            {presetType === "gpay" ? "Google Pay QR sticker" : "PhonePe QR sticker"}
+          </a>
+          on A4 paper. It is not an official merchant kit.
+        </p>
+      )}
       
       <div class="mt-5 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
         <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">

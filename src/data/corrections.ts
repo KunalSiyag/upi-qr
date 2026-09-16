@@ -8,6 +8,17 @@ export interface CorrectionEntry {
 /** Public log of material corrections. Oldest last. */
 export const CORRECTIONS: CorrectionEntry[] = [
   {
+    date: "2026-09-16",
+    title: "UPI P2M is no longer universally 0% MDR from 15 Oct 2026",
+    summary:
+      "Copy that said bank-to-bank UPI P2M is always 0% MDR is now dated. From 15 October 2026 a 0.4% merchant discount rate (not a tax) applies to specified P2M payments above ₹2,000, capped at ₹300. P2P, tickets of ₹2,000 or less, and small QR merchants up to ₹1 lakh/month stay free. 18% GST may apply on the MDR with ITC for registered merchants.",
+    hrefs: [
+      { href: "/upi-mdr-calculator/", label: "UPI MDR calculator" },
+      { href: "/blog/upi-mdr-charges-october-2026/", label: "October 2026 explainer" },
+      { href: "/glossary/mdr/", label: "MDR glossary" },
+    ],
+  },
+  {
     date: "2026-08-27",
     title: "PNB and Bank of Baroda daily UPI limits",
     summary:

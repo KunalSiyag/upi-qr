@@ -2,13 +2,13 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { SplitBillCalculator } from "../components/SplitBillCalculator";
 
-const title = "Split Bill Calculator with UPI - Fair Share & Pay Links | Pro UPI QR";
-const description = "Split any bill fairly — equal shares, custom amounts, tips — then send every friend their exact share over WhatsApp with your UPI ID. Free, no app needed.";
+const title = "Split Bill Calculator — Itemised UPI Pay Links";
+const description = "Split a restaurant bill by dish, not just equally. Tap who ate what, add service and tip, then send each friend a WhatsApp note or UPI QR for their exact share.";
 
 const faqs = [
   {
     question: "How do I split a restaurant bill fairly among friends?",
-    answer: "Enter the bill total, add a tip if service deserved it, and set the number of people. The calculator gives everyone an exact share (rounded to whole rupees if you like) with the last share adjusted so the amounts always add back up to the exact bill."
+    answer: "Use By items: add each dish and tap who ate it. Shared platters stay on everyone; a solo dessert stays on one person. Service charge and tip are then split equally. Equal and custom ₹ modes are still there for simpler tables."
   },
   {
     question: "Can some people pay more than others?",
@@ -35,11 +35,11 @@ const schema = {
       "url": "https://www.proupiqr.in/split-bill-calculator/",
       "description": description,
       "featureList": [
+        "Itemised split by dish and diner",
         "Equal and custom bill splitting",
-        "Tip calculation by percent or flat amount",
-        "Per-person WhatsApp messages with UPI ID",
-        "Paise-perfect rounding that always totals exactly",
-        "100% browser-based privacy"
+        "Service charge and tip",
+        "Per-person WhatsApp messages and UPI QR",
+        "Paise-perfect rounding that always totals exactly"
       ],
       "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" }
     },
@@ -56,10 +56,10 @@ const schema = {
       "name": "How to split a bill and collect via UPI",
       "description": "Divide a group bill into fair shares and collect them instantly.",
       "step": [
-        { "@type": "HowToStep", "name": "Enter the bill total and tip" },
-        { "@type": "HowToStep", "name": "Set the number of people and split mode" },
-        { "@type": "HowToStep", "name": "Add names for a personalised message" },
-        { "@type": "HowToStep", "name": "Send each friend their share on WhatsApp" }
+        { "@type": "HowToStep", "name": "Add dishes and tap who ate each one" },
+        { "@type": "HowToStep", "name": "Add service charge and tip" },
+        { "@type": "HowToStep", "name": "Enter your UPI ID to get paid back" },
+        { "@type": "HowToStep", "name": "Send WhatsApp or show a per-person QR" }
       ]
     }
   ]
@@ -80,8 +80,8 @@ const schema = {
         </nav>
         <div class="max-w-4xl">
           <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">Money tools</p>
-          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Split bill calculator with UPI pay links</h1>
-          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">You paid the bill; now everyone pays you back in one tap. Fair equal splits or custom amounts, paise-perfect rounding, and a ready-to-send WhatsApp message for every friend with your UPI ID included.</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Split the bill by who actually ordered</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Equal splits are fine until someone skipped the drinks. Add dishes, tap names, add service and tip, then send each friend a WhatsApp note or a scan-to-pay UPI QR.</p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#split-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Split my bill</a>
             <a href="/tools/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">More money tools →</a>
