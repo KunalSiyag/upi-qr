@@ -1,11 +1,10 @@
 import React, { useState, useId } from "react";
 import QRCode from "qrcode";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, money } = useToolLang(lang);
   const [costPrice, setCostPrice] = useState<string>("500");
   const [sellingPrice, setSellingPrice] = useState<string>("750");
   const [gstRate, setGstRate] = useState<number>(18);
@@ -42,9 +41,6 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       {/* Input Panel */}
       <div className="lg:col-span-7 space-y-6">
@@ -125,7 +121,7 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="space-y-3">
             <div className="flex justify-between text-sm">
               <span className="text-forest/70 font-semibold">Gross Profit</span>
-              <span className="font-mono font-bold text-leaf">₹{grossProfit.toFixed(2)}</span>
+              <span className="font-mono font-bold text-leaf">{money(grossProfit, 2)}</span>
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-forest/70 font-semibold">Profit Margin</span>
@@ -137,17 +133,17 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             </div>
             <div className="flex justify-between text-sm">
               <span className="text-forest/70 font-semibold">GST Liability</span>
-              <span className="font-mono font-bold text-amber-700">₹{gstAmount.toFixed(2)}</span>
+              <span className="font-mono font-bold text-amber-700">{money(gstAmount, 2)}</span>
             </div>
             <div className="flex justify-between text-sm border-t border-forest/10 pt-2">
               <span className="font-black text-forest">Net Profit (Post-GST)</span>
-              <span className="font-mono font-black text-leaf">₹{netProfit.toFixed(2)}</span>
+              <span className="font-mono font-black text-leaf">{money(netProfit, 2)}</span>
             </div>
           </div>
 
           {qrDataUrl && (
             <div className="border-t border-forest/10 pt-4 text-center space-y-2">
-              <div className="text-xs font-bold uppercase text-forest">Scan to Pay ₹{sell.toFixed(2)}</div>
+              <div className="text-xs font-bold uppercase text-forest">Scan to Pay {money(sell, 2)}</div>
               <img src={qrDataUrl} alt="Selling price QR" className="mx-auto w-36 h-36 border border-forest/15 p-2 bg-white rounded-xl" />
             </div>
           )}

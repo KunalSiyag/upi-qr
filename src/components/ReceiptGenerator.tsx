@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
-import { isDocLang, swapIfDefault, type DocLang } from "../data/documentLang";
+import { formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
 type ReceiptItem = { id: number; name: string; qty: string; price: string };
@@ -20,10 +19,6 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
       (err) => { clearTimeout(timer); reject(err); }
     );
   });
-}
-
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value || 0);
 }
 
 function isValidUpiId(upiId: string) {
@@ -44,8 +39,8 @@ const initialItems: ReceiptItem[] = [
 ];
 
 export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const t = RECEIPT_COPY[docLang] ?? RECEIPT_COPY.en;
+  const t = withCurrencyDeep(RECEIPT_COPY[lang] ?? RECEIPT_COPY.en, lang);
+  const money = (value: number) => formatMoney(value, lang, 2);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [upiId, setUpiId] = useState("merchant@upi");
   const [customer, setCustomer] = useState("Client Name");
@@ -66,8 +61,6 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const draft = JSON.parse(saved);
-      if (isDocLang(draft.docLang)) setDocLang(draft.docLang);
-      else if (lang !== "en") setDocLang(lang);
       setMerchant(draft.merchant ?? "ABC Solutions");
       setUpiId(draft.upiId ?? "merchant@upi");
       setCustomer(draft.customer ?? "Client Name");
@@ -99,8 +92,8 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ docLang, merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items }));
-  }, [docLang, merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items]);
+    localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items }));
+  }, [merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items]);
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
@@ -113,23 +106,6 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   const addItem = () => setItems((current) => [...current, { id: Date.now(), name: t.newItem, qty: "1", price: "0" }]);
 
-  function changeLang(next: DocLang) {
-    if (next === docLang) return;
-    const n = RECEIPT_COPY[next] ?? RECEIPT_COPY.en;
-    setNotes((current) => swapIfDefault(current, Object.values(RECEIPT_COPY).map((c) => c.defaultNotes), n.defaultNotes));
-    setReceivedBy((current) => swapIfDefault(current, Object.values(RECEIPT_COPY).map((c) => c.defaultReceivedBy), n.defaultReceivedBy));
-    setItems((current) =>
-      current.map((item, index) => ({
-        ...item,
-        name: swapIfDefault(
-          item.name,
-          Object.values(RECEIPT_COPY).flatMap((c) => [c.defaultItem, c.newItem]),
-          index === 0 ? n.defaultItem : n.newItem
-        ),
-      }))
-    );
-    setDocLang(next);
-  }
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
 
   async function renderPaperToPng(width = 800, padding = "36px") {
@@ -328,9 +304,6 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </div>
 
-        <div className="mt-6">
-          <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
-        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">{t.businessName}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -360,7 +333,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
       </div>
 
-      <article ref={receiptRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
+      <article ref={receiptRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{t.paymentReceipt}</p>

@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-msme-receivables-draft";
@@ -91,7 +90,7 @@ interface EntryStats {
 }
 
 export function MsmeReceivables({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState("");
   const [supplierUdyam, setSupplierUdyam] = useState("");
@@ -370,9 +369,6 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-wrap gap-3 sm:justify-between items-start">
           <div>
@@ -446,7 +442,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                       <input value={entry.invoiceNo} onChange={(ev) => updateEntry(entry.id, { invoiceNo: ev.target.value })} placeholder="INV-001" className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
                     <label className="text-[10px] font-bold text-forest/60">
-                      Amount ₹
+                      Amount {symbol}
                       <input type="number" value={entry.amount || ""} onChange={(ev) => updateEntry(entry.id, { amount: Math.max(0, parseInt(ev.target.value, 10) || 0) })} className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
                     <label className="text-[10px] font-bold text-forest/60">
@@ -459,7 +455,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                       {es.over45 && <span className="text-[10px] text-red-600 font-semibold">Capped at 45d</span>}
                     </label>
                     <label className="text-[10px] font-bold text-forest/60">
-                      Paid ₹ (optional)
+                      Paid {symbol} (optional)
                       <input type="number" value={entry.paidAmount ?? ""} onChange={(ev) => { const v = ev.target.value; updateEntry(entry.id, { paidAmount: v ? Math.max(0, parseInt(v, 10) || 0) : null }); }} placeholder="" className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
                   </div>
@@ -478,7 +474,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                       <span className="rounded-md bg-emerald-50 px-2 py-0.5 font-bold text-emerald-700">Settled</span>
                     )}
                     {entry.paidAmount != null && entry.paidAmount < entry.amount && (
-                      <span className="rounded-md bg-red-50 px-2 py-0.5 font-bold text-red-700">Short ₹{fmtRs(entry.amount - entry.paidAmount)}</span>
+                      <span className="rounded-md bg-red-50 px-2 py-0.5 font-bold text-red-700">Short {symbol}{fmtRs(entry.amount - entry.paidAmount)}</span>
                     )}
                   </div>
                 </div>
@@ -526,7 +522,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
             </div>
             <div className="mt-3 rounded-lg bg-red-50 p-2 text-center">
               <p className="text-[10px] font-bold text-red-700">
-                {totals.overdue} overdue · ₹{fmtRs(Math.round(totals.compoundInterest))} accrued interest @ {RATE_PCT}% p.a.
+                {totals.overdue} overdue · {symbol}{fmtRs(Math.round(totals.compoundInterest))} accrued interest @ {RATE_PCT}% p.a.
               </p>
             </div>
           </div>
@@ -558,9 +554,9 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
             </div>
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div><p className="text-[10px] uppercase text-gray-500">Total invoices</p><p className="text-lg font-bold">{entries.length}</p></div>
-              <div><p className="text-[10px] uppercase text-gray-500">{tr("Principal")}</p><p className="text-lg font-bold">₹{fmtRs(totals.principal)}</p></div>
+              <div><p className="text-[10px] uppercase text-gray-500">{tr("Principal")}</p><p className="text-lg font-bold">{symbol}{fmtRs(totals.principal)}</p></div>
               <div><p className="text-[10px] uppercase text-gray-500">Overdue</p><p className="text-lg font-bold" style={{ color: totals.overdue > 0 ? "#dc2626" : "#059669" }}>{totals.overdue}</p></div>
-              <div><p className="text-[10px] uppercase text-gray-500">Accrued interest</p><p className="text-lg font-bold">₹{fmtRs(Math.round(totals.compoundInterest))}</p></div>
+              <div><p className="text-[10px] uppercase text-gray-500">Accrued interest</p><p className="text-lg font-bold">{symbol}{fmtRs(Math.round(totals.compoundInterest))}</p></div>
             </div>
             <table className="w-full text-[11px] border-collapse">
               <thead>
@@ -580,7 +576,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                     <td className="py-1.5">{es.entry.buyer || "—"}</td>
                     <td className="py-1.5">{es.entry.invoiceNo}</td>
                     <td className="py-1.5">{es.entry.billDate}</td>
-                    <td className="text-right py-1.5">₹{fmtRs(es.entry.amount)}</td>
+                    <td className="text-right py-1.5">{symbol}{fmtRs(es.entry.amount)}</td>
                     <td className="py-1.5">{es.dueDate}</td>
                     <td className="text-right py-1.5">{es.overdueDays}</td>
                     <td className="text-right py-1.5">{es.entry.paidAmount != null ? "Paid" : es.isOverdue ? "Overdue" : "Not due"}</td>

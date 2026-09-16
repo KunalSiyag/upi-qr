@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-treds-draft";
@@ -17,12 +16,8 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol, money } = useToolLang(lang);
   const [invoiceAmount, setInvoiceAmount] = useState("1000000");
   const [discountRate, setDiscountRate] = useState("11");
   const [daysToMaturity, setDaysToMaturity] = useState("90");
@@ -128,9 +123,6 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
@@ -148,10 +140,10 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </p>
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest sm:col-span-2">Invoice value ₹<input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">Invoice value {symbol}<input type="number" value={invoiceAmount} onChange={(e) => setInvoiceAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Financier discount rate % p.a.<input type="number" step="0.25" value={discountRate} onChange={(e) => setDiscountRate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Days until buyer pays<input type="number" min={1} max={365} value={daysToMaturity} onChange={(e) => setDaysToMaturity(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest sm:col-span-2">Platform / transaction charges ₹ (optional)<input type="number" value={platformCharges} onChange={(e) => setPlatformCharges(e.target.value)} placeholder="If your platform quotes flat fees" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">Platform / transaction charges {symbol} (optional)<input type="number" value={platformCharges} onChange={(e) => setPlatformCharges(e.target.value)} placeholder="If your platform quotes flat fees" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <p className="mt-4 text-xs leading-5 font-semibold text-forest/55">

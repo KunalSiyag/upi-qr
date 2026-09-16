@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
-import { amountInWordsInr } from "../lib/inr-words";
+import { amountInWords } from "../lib/inr-words";
 import { DOC_DATE_LOCALE, type DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
-export { amountInWordsInr };
+export { amountInWords as amountInWordsInr };
 
 const draftKey = "proupiqr-rent-receipt-draft";
 const paymentModes = ["Bank Transfer / UPI", "Cash", "Cheque"] as const;
@@ -22,10 +21,6 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 function monthLabel(monthValue: string, locale = "en-IN") {
   if (!monthValue) return "";
   const [y, m] = monthValue.split("-").map(Number);
@@ -34,7 +29,7 @@ function monthLabel(monthValue: string, locale = "en-IN") {
 }
 
 export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { lang: docLang, tr, money } = useToolLang(lang);
   const [landlord, setLandlord] = useState("Ramesh Kumar");
   const [landlordPan, setLandlordPan] = useState("");
   const [tenant, setTenant] = useState("Suresh Sharma");
@@ -213,9 +208,6 @@ export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </div>
 
-        <div className="mt-6">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">{tr("Landlord name")}<input value={landlord} onChange={(e) => setLandlord(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -254,13 +246,13 @@ export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="rounded-2xl bg-forest p-4 text-white">
             <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{tr("Rent received")}</p>
             <p className="mt-2 text-3xl font-black">{money(amount)}</p>
-            <p className="mt-1 text-sm font-semibold text-sun">{amountInWordsInr(amount)}</p>
+            <p className="mt-1 text-sm font-semibold text-sun">{amountInWords(amount, docLang)}</p>
           </div>
           {qrDataUrl && <div className="rounded-2xl border border-dashed border-forest/20 p-3 text-center"><img src={qrDataUrl} alt={tr("Scan to pay next rent")} className="mx-auto h-24 w-24 rounded-lg border border-forest/10" /><p className="mt-1 text-[10px] font-bold text-forest/60">{tr("Scan to pay next rent")}</p></div>}
         </section>
 
         <section className="mt-6 space-y-3 rounded-2xl bg-cream p-5 text-base leading-8 text-forest/85">
-          <p>{tr("Received with thanks from")} <strong className="font-black text-forest">{tenant || tr("Tenant name")}</strong> {tr("a sum of")} <strong className="font-black text-forest">{money(amount)}</strong> ({amountInWordsInr(amount)}) {tr("by way of")} <strong className="font-black text-forest">{tr(paymentMode)}</strong>{referenceNo ? <> (Ref: {referenceNo})</> : null} {tr("towards rent of the premises at")} <strong className="font-black text-forest">{address || tr("Property address")}</strong> {tr("for the period of")} <strong className="font-black text-forest">{monthLabel(periodMonth, DOC_DATE_LOCALE[docLang])}</strong>.</p>
+          <p>{tr("Received with thanks from")} <strong className="font-black text-forest">{tenant || tr("Tenant name")}</strong> {tr("a sum of")} <strong className="font-black text-forest">{money(amount)}</strong> ({amountInWords(amount, docLang)}) {tr("by way of")} <strong className="font-black text-forest">{tr(paymentMode)}</strong>{referenceNo ? <> (Ref: {referenceNo})</> : null} {tr("towards rent of the premises at")} <strong className="font-black text-forest">{address || tr("Property address")}</strong> {tr("for the period of")} <strong className="font-black text-forest">{monthLabel(periodMonth, DOC_DATE_LOCALE[docLang])}</strong>.</p>
         </section>
 
         <footer className="mt-8 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">

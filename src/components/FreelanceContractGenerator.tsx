@@ -2,13 +2,13 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError, withTimeout } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import {
   collectStrings,
-  formatMoneyInr,
+  formatMoney,
   isDocLang,
   swapIfDefault,
   type DocLang,
+  withCurrencyDeep,
 } from "../data/documentLang";
 import {
   FREELANCE_COPY,
@@ -52,8 +52,7 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
   const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
   const initialCopy = FREELANCE_COPY[lang] ?? FREELANCE_COPY.en;
 
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const t = FREELANCE_COPY[docLang] ?? FREELANCE_COPY.en;
+  const t = withCurrencyDeep(FREELANCE_COPY[lang] ?? FREELANCE_COPY.en, lang);
 
   const [clientName, setClientName] = useState("Zenith Retail Pvt Ltd");
   const [clientRep, setClientRep] = useState("Rajesh Mehta (Director of Operations)");
@@ -103,7 +102,6 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
         const d = JSON.parse(saved);
         const savedLang: DocLang = isDocLang(d.docLang) ? d.docLang : lang;
         const copy = FREELANCE_COPY[savedLang] ?? FREELANCE_COPY.en;
-        setDocLang(savedLang);
         if (d.clientName) setClientName(d.clientName);
         if (d.clientRep) setClientRep(d.clientRep);
         if (d.clientEmail) setClientEmail(d.clientEmail);
@@ -127,7 +125,7 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
         if (d.payeeName) setPayeeName(d.payeeName);
         if (d.clientSignatory) setClientSignatory(d.clientSignatory);
         if (d.freelancerSignatory) setFreelancerSignatory(d.freelancerSignatory);
-        if (!d.docLang && lang !== "en") {
+        if (savedLang !== lang) {
           applyLanguage(lang, copy, false);
         }
       } else if (lang !== "en") {
@@ -147,7 +145,6 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
       localStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
-          docLang,
           clientName,
           clientRep,
           clientEmail,
@@ -175,7 +172,6 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
       );
     } catch {}
   }, [
-    docLang,
     clientName,
     clientRep,
     clientEmail,
@@ -209,7 +205,7 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
     return { total, advPct, advance, balance };
   }, [milestones, advancePercent]);
 
-  const money = (value: number) => formatMoneyInr(value, docLang);
+  const money = (value: number) => formatMoney(value, lang);
 
   useEffect(() => {
     if (upiId && isValidUpiId(upiId) && totals.advance > 0) {
@@ -225,7 +221,6 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
     const swap = (current: string, field: Parameters<typeof freelanceDefaults>[0]) =>
       forceDefaults ? n[field] : swapIfDefault(current, freelanceDefaults(field), n[field]);
 
-    setDocLang(next);
     setPaymentTerms((current) => swap(current, "defaultPaymentTerms"));
     setRevisionRounds((current) => swap(current, "defaultRevision"));
     setReviewTurnaround((current) => swap(current, "defaultReview"));
@@ -262,11 +257,6 @@ export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } =
         };
       });
     });
-  }
-
-  function changeLang(next: DocLang) {
-    if (next === docLang) return;
-    applyLanguage(next, t, false);
   }
 
   const addMilestone = () => {
@@ -379,7 +369,7 @@ ${t.copyClient}: ${clientName} (${t.representative}: ${clientRep}, ${t.email}: $
 ${t.copyContractor}: ${freelancerName} (${tradeName}, ${t.email}: ${freelancerEmail}, ${t.pan}: ${freelancerPan || t.copyNA})
 
 ${t.copyScope}
-${milestones.map((m, i) => `${i + 1}. ${m.title} - ${m.desc} (${t.copyTargetDate}: ${m.dueDate}, ${t.copyAmount}: ₹${m.amount})`).join("\n")}
+${milestones.map((m, i) => `${i + 1}. ${m.title} - ${m.desc} (${t.copyTargetDate}: ${m.dueDate}, ${t.copyAmount}: ${money(Number(m.amount) || 0)})`).join("\n")}
 
 ${t.copyCommercials}
 - ${t.totalValue} ${money(totals.total)}
@@ -438,7 +428,6 @@ ${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
           </div>
         </div>
 
-        <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
 
         <div className="space-y-4">
           <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">{t.parties}</h3>
@@ -695,7 +684,7 @@ ${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
         <article
           ref={paperRef}
           className="mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/15 bg-white p-7 text-forest shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-10 font-sans text-xs leading-relaxed"
-          lang={docLang}
+          lang={lang}
         >
           <header className="border-b-2 border-forest pb-5">
             <div className="flex items-start justify-between gap-4">

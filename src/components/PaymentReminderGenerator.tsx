@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-payment-reminder-draft";
@@ -13,10 +12,6 @@ const tones = [
 
 type ToneId = (typeof tones)[number]["id"];
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value || 0);
-}
-
 function daysOverdue(dueDate: string) {
   if (!dueDate) return null;
   const due = new Date(dueDate);
@@ -27,7 +22,8 @@ function daysOverdue(dueDate: string) {
 }
 
 export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, money: formatMajor } = useToolLang(lang);
+  const money = (value: number) => formatMajor(value, 2);
   const [business, setBusiness] = useState("ABC Solutions");
   const [customer, setCustomer] = useState("Client Name");
   const [invoiceNo, setInvoiceNo] = useState("INV-0001");
@@ -96,9 +92,6 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Reminder builder")}</p>

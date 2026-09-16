@@ -4,7 +4,6 @@ import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-ima
 import { trackProductEvent } from "../lib/productEvents";
 import { buildUpiUri } from "../lib/upi-uri";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const typeList = [
@@ -164,7 +163,7 @@ function buildPayload(f: FormState): string {
 }
 
 export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -384,9 +383,6 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="max-w-6xl mx-auto">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       {/* Type selector - compact, our style */}
       <div className="mb-6">

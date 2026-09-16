@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import QRCode from "qrcode";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface QrItem {
@@ -21,7 +20,7 @@ Student Rahul,coaching@paytm,1200,Maths Tuition Fee
 Vendor Auto Parts,parts@icici,4500,Invoice 8092`;
 
 export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [rawText, setRawText] = useState(sampleCsvText);
   const [isGenerating, setIsGenerating] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState("");
@@ -244,9 +243,6 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] w-full min-w-0">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       {/* Input Data Console */}
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">

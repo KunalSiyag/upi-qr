@@ -2,20 +2,18 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-dc-draft";
 const EXPORT_TIMEOUT_MS = 20000;
 
 function withTimeout<T>(promise: Promise<T>, label: string) { return new Promise<T>((resolve, reject) => { const t = setTimeout(() => reject(new Error(`${label} timed out`)), EXPORT_TIMEOUT_MS); promise.then(v => { clearTimeout(t); resolve(v); }, e => { clearTimeout(t); reject(e); }); }); }
-function money(v: number) { return `₹${new Intl.NumberFormat("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(v || 0)}`; }
 
 interface DcItem { id: number; name: string; qty: string; unit: string }
 let _id = 1; function nid() { return _id++; }
 
 export function DeliveryChallan({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState(""); const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
@@ -49,9 +47,6 @@ export function DeliveryChallan({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (<div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
     <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Delivery challan")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Dispatch goods")}</h2></div><div className="flex flex-wrap gap-2"><button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">{pngState === "busy" ? "..." : tr("Export PNG")}</button><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">

@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
-import { amountInWordsInr } from "../lib/inr-words";
-import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { amountInWords } from "../lib/inr-words";
+import { DOC_DATE_LOCALE, formatMoney, moneySymbol, type DocLang } from "../data/documentLang";
 import { t } from "../data/phrases";
 
 const draftKey = "proupiqr-salary-slip-draft";
@@ -18,19 +17,15 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 function num(v: string) {
   return Math.max(0, Number(v) || 0);
 }
 
-function monthLabel(monthValue: string) {
+function monthLabel(monthValue: string, locale = "en-IN") {
   if (!monthValue) return "";
   const [y, m] = monthValue.split("-").map(Number);
   if (!y || !m) return monthValue;
-  return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
 }
 
 type RowKey =
@@ -38,8 +33,8 @@ type RowKey =
   | "pf" | "pt" | "tds" | "otherDed";
 
 export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const tr = (s: string) => t(docLang, s);
+  const tr = (s: string) => t(lang, s);
+  const money = (value: number) => formatMoney(value, lang);
   const today = new Date();
   const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
@@ -160,7 +155,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   async function shareOnWhatsapp() {
     try {
-      const message = `*Salary Slip ${monthLabel(payMonth)}*\n` +
+      const message = `*Salary Slip ${monthLabel(payMonth, DOC_DATE_LOCALE[lang])}*\n` +
         `----------------------------\n` +
         `*Employee:* ${employeeName} (${employeeId})\n` +
         `*Gross:* ${money(totals.gross)} · *Deductions:* ${money(totals.deductions)}\n` +
@@ -173,7 +168,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           const blob = await (await fetch(dataUrl)).blob();
           const file = new File([blob], `${fileName()}.png`, { type: "image/png" });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: `Salary Slip ${monthLabel(payMonth)}`, text: message });
+            await navigator.share({ files: [file], title: `Salary Slip ${monthLabel(payMonth, DOC_DATE_LOCALE[lang])}`, text: message });
             shared = true;
           }
         } catch (err) {
@@ -220,7 +215,6 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-4">
-          <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
         </div>
 
         <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Employer</p>
@@ -247,7 +241,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">LOP days<input type="number" min={0} max={31} value={lopDays} onChange={(e) => setLopDays(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Earnings &amp; deductions (₹)</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Earnings &amp; deductions ({moneySymbol(lang)})</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 rounded-2xl bg-mint/60 p-3">
             <p className="text-xs font-black uppercase tracking-wide text-forest/60">{tr("Earnings")}</p>
@@ -269,7 +263,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             ))}
             <div className="flex gap-2 pt-1">
               <button type="button" onClick={() => setRow("pf", String(Math.round(num(rows.basic) * 0.12)))} className="rounded-full border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PF 12%</button>
-              <button type="button" onClick={() => setRow("pt", "200")} className="rounded-full border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PT ₹200</button>
+              <button type="button" onClick={() => setRow("pt", "200")} className="rounded-full border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PT {moneySymbol(lang)}200</button>
             </div>
             <p className="flex justify-between border-t border-forest/10 pt-2 text-xs font-black text-forest"><span>Total deductions</span><span>{money(totals.deductions)}</span></p>
           </div>
@@ -289,7 +283,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
             <p className="text-[10px] font-bold uppercase tracking-widest text-forest/55">{tr("Salary slip")}</p>
-            <p className="text-sm font-black text-forest">{monthLabel(payMonth)}</p>
+            <p className="text-sm font-black text-forest">{monthLabel(payMonth, DOC_DATE_LOCALE[lang])}</p>
           </div>
         </header>
 
@@ -327,7 +321,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Net salary payable</p>
               <p className="text-3xl font-black">{money(totals.net)}</p>
             </div>
-            <p className="max-w-[55%] text-right text-xs font-semibold leading-5 text-sun">{amountInWordsInr(totals.net)}</p>
+            <p className="max-w-[55%] text-right text-xs font-semibold leading-5 text-sun">{amountInWords(totals.net, lang)}</p>
           </div>
         </section>
 

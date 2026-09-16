@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-paid-stamp-draft";
@@ -40,7 +39,7 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
 }
 
 export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [imageSrc, setImageSrc] = useState("");
   const [imageSize, setImageSize] = useState({ width: 1000, height: 700 });
   const [stampText, setStampText] = useState("PAID");
@@ -213,9 +212,6 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>

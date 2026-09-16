@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 type QuoteItem = { id: number; name: string; qty: string; price: string };
@@ -20,10 +19,6 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value || 0);
-}
-
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
@@ -37,7 +32,8 @@ const initialItems: QuoteItem[] = [
 ];
 
 export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, money: formatMajor } = useToolLang(lang);
+  const money = (value: number) => formatMajor(value, 2);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [customer, setCustomer] = useState("Client Name");
   const [quoteNo, setQuoteNo] = useState("PI-0001");
@@ -208,9 +204,6 @@ export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>

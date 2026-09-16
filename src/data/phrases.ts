@@ -1,4 +1,4 @@
-import type { DocLang } from "./documentLang";
+import { withCurrency, type DocLang } from "./documentLang";
 
 const PACKS: Record<Exclude<DocLang, "en">, Record<string, string>> = {
   hi: {
@@ -550,6 +550,6 @@ for (const [english, map] of Object.entries(MORE)) {
 }
 
 export function t(lang: DocLang, english: string): string {
-  if (lang === "en") return english;
-  return PACKS[lang]?.[english] ?? english;
+  const raw = lang === "en" ? english : PACKS[lang]?.[english] ?? english;
+  return withCurrency(raw, lang);
 }

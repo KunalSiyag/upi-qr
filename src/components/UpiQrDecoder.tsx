@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from "react";
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface ParsedUpiData {
@@ -163,7 +162,7 @@ function verdictFromWarnings(warnings: ValidationWarning[]): SafetyVerdict {
 }
 
 export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -290,9 +289,6 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       <div
         onDragOver={(e) => e.preventDefault()}

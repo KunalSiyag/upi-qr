@@ -1,6 +1,5 @@
 import React, { useState, useId } from "react";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface BankLimit {
@@ -164,7 +163,7 @@ const LAST_REVIEWED = "2026-08-27";
 const SOURCE_NOTE = "Based on NPCI circulars and individual bank disclosures. Confirm against your bank's latest website.";
 
 export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [query, setQuery] = useState("");
   const [filterType, setFilterType] = useState<"all" | "bank" | "app">("all");
   const queryId = useId();
@@ -177,9 +176,6 @@ export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="space-y-6">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       {/* Controls Bar */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-3xl border border-forest/10 bg-white p-4 shadow-sm">

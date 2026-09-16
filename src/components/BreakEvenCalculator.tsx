@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-break-even-draft";
@@ -17,12 +16,8 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol, money } = useToolLang(lang);
   const [fixedCosts, setFixedCosts] = useState("50000");
   const [price, setPrice] = useState("200");
   const [variableCost, setVariableCost] = useState("120");
@@ -148,9 +143,6 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
@@ -164,9 +156,9 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-6 grid gap-4">
-          <label className="text-sm font-bold text-forest">Fixed costs per month ₹<input type="number" value={fixedCosts} onChange={(e) => setFixedCosts(e.target.value)} placeholder="Rent + salaries + EMIs…" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Selling price per unit ₹<input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Variable cost per unit ₹<input type="number" value={variableCost} onChange={(e) => setVariableCost(e.target.value)} placeholder="Materials + direct costs" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Fixed costs per month {symbol}<input type="number" value={fixedCosts} onChange={(e) => setFixedCosts(e.target.value)} placeholder="Rent + salaries + EMIs…" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Selling price per unit {symbol}<input type="number" value={price} onChange={(e) => setPrice(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Variable cost per unit {symbol}<input type="number" value={variableCost} onChange={(e) => setVariableCost(e.target.value)} placeholder="Materials + direct costs" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         {calc.valid && (
@@ -176,7 +168,7 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         )}
 
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Target monthly profit ₹ (optional)<input type="number" value={targetProfit} onChange={(e) => setTargetProfit(e.target.value)} placeholder="e.g. 40000" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">Target monthly profit {symbol} (optional)<input type="number" value={targetProfit} onChange={(e) => setTargetProfit(e.target.value)} placeholder="e.g. 40000" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Current monthly unit sales (optional)<input type="number" value={currentUnits} onChange={(e) => setCurrentUnits(e.target.value)} placeholder="To see profit & safety margin" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 

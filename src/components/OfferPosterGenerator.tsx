@@ -2,16 +2,15 @@ import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { symbol } = useToolLang(lang);
   const [theme, setTheme] = useState<"festive" | "clearance" | "cashback" | "minimal">("festive");
   const [shopName, setShopName] = useState("SHARMA GENERAL STORE");
   const [tagline, setTagline] = useState("Festival Mega Sale - Scan & Pay");
   const [offerHeadline, setOfferHeadline] = useState("FLAT 20% OFF");
-  const [offerSubtext, setOfferSubtext] = useState("On all items above ₹500");
+  const [offerSubtext, setOfferSubtext] = useState(`On all items above ${symbol}500`);
   const [vpa, setVpa] = useState("sharmastore@upi");
   const [payeeName, setPayeeName] = useState("Sharma General Store");
 
@@ -70,9 +69,6 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       {/* Input Panel */}
       <div className="lg:col-span-6 space-y-6">

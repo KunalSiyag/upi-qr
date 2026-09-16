@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
-import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { formatMoney, type DocLang } from "../data/documentLang";
 import { t } from "../data/phrases";
 
 type QuoteItem = { id: number; name: string; qty: string; price: string };
@@ -20,10 +19,6 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 2 }).format(value || 0);
-}
-
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
@@ -37,8 +32,8 @@ const initialItems: QuoteItem[] = [
 ];
 
 export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const tr = (s: string) => t(docLang, s);
+  const tr = (s: string) => t(lang, s);
+  const money = (value: number) => formatMoney(value, lang, 2);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [customer, setCustomer] = useState("Client Name");
   const [quoteNo, setQuoteNo] = useState("QTN-0001");
@@ -220,9 +215,6 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </div>
 
-        <div className="mt-6">
-          <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
-        </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">{tr("Your business")}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -250,7 +242,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <label className="mt-5 block text-sm font-bold text-forest">Terms &amp; conditions<textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
+      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Quotation / Estimate")}</p>

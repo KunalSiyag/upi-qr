@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-sip-draft";
@@ -17,12 +16,8 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol, money } = useToolLang(lang);
   const [monthly, setMonthly] = useState("5000");
   const [rate, setRate] = useState("12");
   const [years, setYears] = useState("10");
@@ -144,9 +139,6 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
@@ -167,7 +159,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          {[["5000", 12, 10, "₹5k · 12% · 10y"], ["10000", 12, 15, "₹10k · 12% · 15y"], ["25000", 11, 20, "₹25k · 11% · 20y"]].map(([p, r, y, label]) => (
+          {[["5000", 12, 10, `${symbol}5k · 12% · 10y`], ["10000", 12, 15, `${symbol}10k · 12% · 15y`], ["25000", 11, 20, `${symbol}25k · 11% · 20y`]].map(([p, r, y, label]) => (
             <button key={String(label)} type="button" onClick={() => { setMonthly(String(p)); setRate(String(r)); setYears(String(y)); }} className="rounded-full border border-forest/15 bg-cream px-3.5 py-1.5 text-xs font-bold text-forest hover:border-leaf transition">{label}</button>
           ))}
         </div>

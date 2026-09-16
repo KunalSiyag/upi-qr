@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useId, useMemo } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
@@ -53,7 +52,7 @@ function readSkinFromUrl(): AppSkin {
 }
 
 export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [qrContentType, setQrContentType] = useState<QrContentType>("upi");
   const [skin, setSkin] = useState<AppSkin>("phonepe");
   const [payee, setPayee] = useState("Sharma General Store");
@@ -204,9 +203,6 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] w-full min-w-0">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
         <h2 className="text-xl font-black text-forest">{tr("Shop QR sticker")}</h2>

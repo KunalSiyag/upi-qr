@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-cash-denomination-draft";
@@ -36,7 +35,7 @@ function money(rupees: number) {
 }
 
 export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [counts, setCounts] = useState<string[]>(() => DENOMINATIONS.map(() => ""));
   const [expected, setExpected] = useState("");
@@ -185,9 +184,6 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_0.95fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>

@@ -2,7 +2,6 @@ import React, { useState, useRef, useCallback, useEffect } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface BookEntry {
@@ -78,7 +77,7 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 const EMPTY_BOOK = JSON.stringify([]);
 
 export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol } = useToolLang(lang);
   const draftKey = "proupiqr-merchant-reconciliation-draft";
 
   const [entries, setEntries] = useState<BookEntry[]>(() => {
@@ -275,9 +274,6 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
       {/* Upload */}
       {entries.length === 0 && (
@@ -321,16 +317,16 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-2xl bg-mint/40 border border-leaf/20 p-4">
             <p className="text-[10px] uppercase font-bold text-forest/60">Expected</p>
-            <p className="text-lg font-black text-forest">₹{fRs(totals.expected)}</p>
+            <p className="text-lg font-black text-forest">{symbol}{fRs(totals.expected)}</p>
           </div>
           <div className="rounded-2xl bg-cream border border-forest/10 p-4">
             <p className="text-[10px] uppercase font-bold text-forest/60">Received</p>
-            <p className="text-lg font-black text-forest">₹{fRs(totals.received)}</p>
+            <p className="text-lg font-black text-forest">{symbol}{fRs(totals.received)}</p>
           </div>
           <div className={`rounded-2xl border p-4 ${totals.diff === 0 ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
             <p className="text-[10px] uppercase font-bold text-forest/60">Difference</p>
             <p className={`text-lg font-black ${totals.diff === 0 ? "text-emerald-700" : "text-amber-700"}`}>
-              {totals.diff >= 0 ? "₹" : "-₹"}{fRs(Math.abs(totals.diff))}
+              {totals.diff >= 0 ? symbol : `-${symbol}`}{fRs(Math.abs(totals.diff))}
             </p>
           </div>
           <div className="rounded-2xl bg-white border border-forest/10 p-4">
@@ -369,7 +365,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                   <td className="px-3 py-2 font-mono text-forest/80">{e.date}</td>
                   <td className="px-3 py-2 font-bold text-forest">{e.invoiceNo}</td>
                   <td className="px-3 py-2 text-forest/70">{e.customer}</td>
-                  <td className="px-3 py-2 font-mono text-forest">₹{fRs(e.expectedAmount)}</td>
+                  <td className="px-3 py-2 font-mono text-forest">{symbol}{fRs(e.expectedAmount)}</td>
                   <td className="px-3 py-2">
                     <input
                       type="text"
@@ -389,7 +385,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                     />
                   </td>
                   <td className={`px-3 py-2 font-mono font-bold ${e.difference == null ? "text-forest/40" : e.difference === 0 ? "text-emerald-600" : e.difference > 0 ? "text-emerald-600" : "text-red-600"}`}>
-                    {e.difference != null ? (e.difference >= 0 ? "₹" : "-₹") + fRs(Math.abs(e.difference)) : "—"}
+                    {e.difference != null ? (e.difference >= 0 ? symbol : `-${symbol}`) + fRs(Math.abs(e.difference)) : "—"}
                   </td>
                   <td className="px-3 py-2">
                     <input
@@ -436,8 +432,8 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
             <p className="text-sm text-gray-500 mt-1">Generated on {new Date().toLocaleDateString("en-IN")}</p>
           </div>
           <div className="grid grid-cols-5 gap-4 mb-6">
-            <div><p className="text-[10px] uppercase text-gray-500">Expected</p><p className="text-lg font-bold">₹{fRs(totals.expected)}</p></div>
-            <div><p className="text-[10px] uppercase text-gray-500">Received</p><p className="text-lg font-bold">₹{fRs(totals.received)}</p></div>
+            <div><p className="text-[10px] uppercase text-gray-500">Expected</p><p className="text-lg font-bold">{symbol}{fRs(totals.expected)}</p></div>
+            <div><p className="text-[10px] uppercase text-gray-500">Received</p><p className="text-lg font-bold">{symbol}{fRs(totals.received)}</p></div>
             <div><p className="text-[10px] uppercase text-gray-500">Difference</p><p className="text-lg font-bold">{totals.diff >= 0 ? "₹" : "-₹"}{fRs(Math.abs(totals.diff))}</p></div>
             <div><p className="text-[10px] uppercase text-gray-500">Settled</p><p className="text-lg font-bold">{totals.settled}/{entries.length}</p></div>
             <div><p className="text-[10px] uppercase text-gray-500">Unmatched</p><p className="text-lg font-bold">{totals.mismatch + totals.pending}</p></div>
@@ -456,10 +452,10 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                   <td className="py-2 px-1">{e.date}</td>
                   <td className="py-2 px-1 font-bold">{e.invoiceNo}</td>
                   <td className="py-2 px-1">{e.customer}</td>
-                  <td className="py-2 px-1">₹{fRs(e.expectedAmount)}</td>
-                  <td className="py-2 px-1">{e.receivedAmount != null ? `₹${fRs(e.receivedAmount)}` : "—"}</td>
+                  <td className="py-2 px-1">{symbol}{fRs(e.expectedAmount)}</td>
+                  <td className="py-2 px-1">{e.receivedAmount != null ? `${symbol}${fRs(e.receivedAmount)}` : "—"}</td>
                   <td className="py-2 px-1">{e.utr}</td>
-                  <td className="py-2 px-1 font-bold">{e.difference != null ? (e.difference >= 0 ? "₹" : "-₹") + fRs(Math.abs(e.difference)) : "—"}</td>
+                  <td className="py-2 px-1 font-bold">{e.difference != null ? (e.difference >= 0 ? symbol : `-${symbol}`) + fRs(Math.abs(e.difference)) : "—"}</td>
                   <td className="py-2 px-1">{e.settled ? "Settled" : e.difference != null ? "Mismatch" : "Pending"}</td>
                 </tr>
               ))}

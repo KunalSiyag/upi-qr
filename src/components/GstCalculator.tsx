@@ -3,7 +3,6 @@ import QRCode from "qrcode";
 import { GST_CATALOG, GST_LEGACY_SLABS, GST_SLABS, searchGstCatalog, type GstCatalogItem } from "../data/gstCatalog";
 import { gstLine, ratePercentToBps, rupeesToPaise } from "../lib/gstMath";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-gst-draft-v2";
@@ -19,16 +18,13 @@ type Line = {
   catalogId?: string;
 };
 
-function money(paise: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(paise / 100);
-}
-
 function nid() {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
 export function GstCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, money: formatMajor } = useToolLang(lang);
+  const money = (paise: number) => formatMajor(paise / 100, 2);
   const [mode, setMode] = useState<Mode>("exclusive");
   const [supply, setSupply] = useState<Supply>("intra");
   const [composition, setComposition] = useState(false);
@@ -160,9 +156,6 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12 mb-0">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       <div className="lg:col-span-7 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm">
@@ -241,7 +234,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
                 )}
                 <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
                   <label className="text-xs font-bold text-forest">
-                    {mode === "exclusive" ? "Taxable amount ₹" : "Amount including GST ₹"}
+                    {mode === "exclusive" ? tr("Taxable amount ₹") : tr("Amount including GST ₹")}
                     <input
                       id={index === 0 ? amountId : undefined}
                       type="number"

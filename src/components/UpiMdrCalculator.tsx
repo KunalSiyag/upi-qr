@@ -8,8 +8,6 @@ import {
 } from "../lib/upiMdr";
 import { rupeesToPaise } from "../lib/gstMath";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
-import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-upi-mdr-draft";
 
@@ -32,7 +30,6 @@ const PRESETS = [
 ];
 
 export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [tab, setTab] = useState<"single" | "monthly">("monthly");
   const [amount, setAmount] = useState("5000");
   const [monthly, setMonthly] = useState("300000");
@@ -92,10 +89,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   }, [monthlyPaise, shareAbove, ticket, category, smallExempt, gstRegistered]);
 
   return (
-    <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
+    <div className="grid gap-8 lg:grid-cols-12" lang={lang}>
 
       <div className="lg:col-span-6 space-y-5">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm">

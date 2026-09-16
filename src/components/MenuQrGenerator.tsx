@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface MenuItem {
@@ -13,7 +12,7 @@ interface MenuItem {
 }
 
 export function MenuQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { symbol } = useToolLang(lang);
   const [storeName, setStoreName] = useState("CAFE MONSOON");
   const [tagline, setTagline] = useState("Artisanal Coffee & Bakes");
   const [vpa, setVpa] = useState("cafemonsoon@upi");
@@ -205,9 +204,6 @@ Do NOT wrap output in markdown codeblocks or extra text.`
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       {/* Input Controls & AI Menu Builder */}
       <div className="lg:col-span-6 space-y-6">
@@ -366,7 +362,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
                       type="text"
                       value={item.price}
                       onChange={(e) => updateItem(i, "price", e.target.value)}
-                      placeholder="₹ Price"
+                      placeholder={`${symbol} Price`}
                       className="w-16 bg-white border border-slate-300 rounded-lg p-1.5 text-xs font-bold text-center"
                     />
                     <button type="button" onClick={() => removeItem(i)} className="text-xs font-bold text-red-500 hover:text-red-700 px-1">
@@ -458,7 +454,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
                     )}
                     <span className="truncate">{item.name}</span>
                   </div>
-                  <span className="font-mono shrink-0">₹{item.price}</span>
+                  <span className="font-mono shrink-0">{symbol}{item.price}</span>
                 </div>
               ))}
             </div>

@@ -1,7 +1,6 @@
 import React, { useState, useId } from "react";
 import QRCode from "qrcode";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 interface OrderItem {
@@ -11,7 +10,7 @@ interface OrderItem {
 }
 
 export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol, money } = useToolLang(lang);
   const [phone, setPhone] = useState("919876543210");
   const [storeName, setStoreName] = useState("Fresh Organic Store");
   const [items, setItems] = useState<OrderItem[]>([
@@ -43,10 +42,10 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
   };
 
   // Build WhatsApp text
-  const itemText = items.map((i, idx) => `${idx + 1}. ${i.name} (x${i.qty}) - ₹${i.qty * i.price}`).join("\n");
+  const itemText = items.map((i, idx) => `${idx + 1}. ${i.name} (x${i.qty}) - ${money(i.qty * i.price, 2)}`).join("\n");
   const upiPayUri = `upi://pay?pa=${encodeURIComponent(vpa)}&pn=${encodeURIComponent(storeName)}&am=${totalAmount.toFixed(2)}&cu=INR&tn=${encodeURIComponent(`WhatsApp Order`)}`;
   
-  const whatsappMsg = `*Order Confirmation from ${storeName}*\n\n*Items Ordered:*\n${itemText}\n\n*Total Payable:* ₹${totalAmount.toFixed(2)}\n\n*Pay via UPI ID:* ${vpa}\n*Instant Payment Link:* ${upiPayUri}\n\nPlease confirm order to proceed with dispatch!`;
+  const whatsappMsg = `*Order Confirmation from ${storeName}*\n\n*Items Ordered:*\n${itemText}\n\n*Total Payable:* ${money(totalAmount, 2)}\n\n*Pay via UPI ID:* ${vpa}\n*Instant Payment Link:* ${upiPayUri}\n\nPlease confirm order to proceed with dispatch!`;
   
   const whatsappUrl = `https://wa.me/${phone.replace(/[^0-9]/g, "")}?text=${encodeURIComponent(whatsappMsg)}`;
 
@@ -71,9 +70,6 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       {/* Left Input Panel */}
       <div className="lg:col-span-7 space-y-6">
@@ -147,7 +143,7 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
                 />
                 <input
                   type="number"
-                  placeholder="Price (₹)"
+                  placeholder={`Price (${symbol})`}
                   min="0"
                   value={item.price}
                   onChange={(e) => updateItem(idx, "price", parseFloat(e.target.value) || 0)}
@@ -189,10 +185,10 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
               <div className="font-bold text-slate-900">*Order Confirmation from {storeName}*</div>
               <div className="space-y-1 text-slate-700 font-mono text-[11px]">
                 {items.map((i, idx) => (
-                  <div key={idx}>{idx + 1}. {i.name || "Item"} (x{i.qty}) - ₹{i.qty * i.price}</div>
+                  <div key={idx}>{idx + 1}. {i.name || "Item"} (x{i.qty}) - {money(i.qty * i.price, 2)}</div>
                 ))}
               </div>
-              <div className="font-bold text-slate-900 border-t pt-1">*Total Payable:* ₹{totalAmount.toFixed(2)}</div>
+              <div className="font-bold text-slate-900 border-t pt-1">*Total Payable:* {money(totalAmount, 2)}</div>
               <div className="text-[10px] text-slate-500 font-mono">*Pay via UPI ID:* {vpa}</div>
             </div>
           </div>

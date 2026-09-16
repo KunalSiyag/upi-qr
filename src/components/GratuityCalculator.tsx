@@ -1,16 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-gratuity-draft";
 
-function money(value: number) {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
-}
-
 export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, money } = useToolLang(lang);
   const [salary, setSalary] = useState("30000");
   const [yearsService, setYearsService] = useState("10");
   const [coveredByAct, setCoveredByAct] = useState(true);
@@ -63,9 +58,6 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Gratuity planner")}</p>
@@ -103,7 +95,7 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="mt-6 rounded-[1.5rem] bg-forest p-6 text-white">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{tr("Estimated gratuity")}</p>
-          <p className="mt-2 text-4xl font-black">{result.eligible ? money(result.gratuity) : "₹0"}</p>
+          <p className="mt-2 text-4xl font-black">{result.eligible ? money(result.gratuity) : money(0)}</p>
           {result.capped && <p className="mt-2 text-xs font-bold text-sun">Capped at the ₹20 lakh statutory limit — employer may pay more voluntarily.</p>}
         </div>
 

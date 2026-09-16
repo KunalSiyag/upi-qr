@@ -2,15 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError, withTimeout } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { formatMoney, moneySymbol, type DocLang } from "../data/documentLang";
 import { t } from "../data/phrases";
 
 const DRAFT_KEY = "proupiqr-influencer-contract-draft";
-
-function money(value: number) {
-  return `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0)}`;
-}
 
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
@@ -31,8 +26,9 @@ function nextDelivId() {
 }
 
 export function InfluencerContractGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const tr = (s: string) => t(docLang, s);
+  const tr = (s: string) => t(lang, s);
+  const money = (value: number) => formatMoney(value, lang);
+  const symbol = moneySymbol(lang);
   const today = new Date().toISOString().slice(0, 10);
   const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
@@ -284,7 +280,7 @@ Brand: ${brandName} (Rep: ${brandRep}, Contact: ${brandEmail}, GSTIN: ${brandGst
 Creator: ${creatorName} (${creatorHandle} on ${primaryPlatform}, Contact: ${creatorEmail}, PAN: ${creatorPan || "N/A"})
 
 2. SCOPE OF DELIVERABLES
-${deliverables.map((d, i) => `${i + 1}. [${d.platform}] ${d.type} - ${d.desc} (Due: ${d.dueDate}, Fee: ₹${d.fee})`).join("\n")}
+${deliverables.map((d, i) => `${i + 1}. [${d.platform}] ${d.type} - ${d.desc} (Due: ${d.dueDate}, Fee: ${money(Number(d.fee) || 0)})`).join("\n")}
 
 3. COMMERCIALS & PAYMENT TERMS
 - Total Agreed Compensation: ${money(totals.total)}
@@ -343,7 +339,6 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
           </div>
         </div>
 
-        <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
 
         {/* Section 1: Brand & Creator Info */}
         <div className="space-y-4">
@@ -487,7 +482,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
                     type="number"
                     value={item.fee}
                     onChange={(e) => updateDeliverable(item.id, "fee", e.target.value)}
-                    placeholder="Fee (₹)"
+                    placeholder={`Fee (${symbol})`}
                     className="rounded-lg border border-forest/10 bg-white px-2.5 py-1.5 font-bold outline-none focus:border-leaf"
                   />
                 </div>

@@ -2,11 +2,10 @@ import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 export function DigitalVisitingCard({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr } = useToolLang(lang);
   const [name, setName] = useState("Vikram Sharma");
   const [title, setTitle] = useState("Founder & Lead Designer");
   const [company, setCompany] = useState("Sharma Designs Studio");
@@ -128,9 +127,6 @@ END:VCARD`;
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
-      <div className="lg:col-span-12">
-        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-      </div>
 
       {/* Input & Customizer Form */}
       <div className="lg:col-span-6 space-y-6">

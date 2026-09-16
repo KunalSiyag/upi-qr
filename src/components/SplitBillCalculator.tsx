@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import type { DocLang } from "../data/documentLang";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
 import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-split-bill-draft-v2";
@@ -15,10 +14,6 @@ function toPaise(value: string): number {
   return Number.isFinite(n) && n > 0 ? Math.round(n * 100) : 0;
 }
 
-function money(paise: number): string {
-  return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR" }).format(paise / 100);
-}
-
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
@@ -28,7 +23,8 @@ function padAssigned(assigned: boolean[] | undefined, n: number): boolean[] {
 }
 
 export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const { lang: docLang, setLang, tr } = useToolLang(lang);
+  const { tr, symbol, money: formatMajor } = useToolLang(lang);
+  const money = (paise: number) => formatMajor(paise / 100, 2);
   const [eventName, setEventName] = useState("Team dinner");
   const [payerName, setPayerName] = useState("");
   const [upiId, setUpiId] = useState("yourname@upi");
@@ -202,9 +198,6 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="mb-4 mt-1">
-          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
-        </div>
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Split calculator")}</p>
@@ -221,7 +214,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          {([["items", "By items"], ["equal", "Equal split"], ["custom", "Custom ₹"]] as const).map(([value, label]) => (
+          {([["items", "By items"], ["equal", "Equal split"], ["custom", `Custom ${symbol}`]] as const).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} aria-pressed={mode === value}
               className={`rounded-full border px-4 py-2 text-xs font-bold ${mode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
               {label}
@@ -238,7 +231,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <div>
               <p className="text-xs font-bold text-forest">{tr("Tip")}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
-                {([["none", "None"], ["percent", "%"], ["flat", "₹"]] as const).map(([value, label]) => (
+                {([["none", "None"], ["percent", "%"], ["flat", symbol]] as const).map(([value, label]) => (
                   <button key={value} type="button" onClick={() => setTipMode(value)} aria-pressed={tipMode === value}
                     className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${tipMode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
                     {label}
@@ -263,7 +256,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           {mode === "equal" && (
             <label className="flex items-center gap-2 pb-1 text-xs font-bold text-forest">
               <input type="checkbox" checked={roundToRupee} onChange={(e) => setRoundToRupee(e.target.checked)} className="h-4 w-4 accent-[#15803d]" />
-              Round shares to ₹1
+              Round shares to {symbol}1
             </label>
           )}
         </div>
@@ -281,7 +274,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <div key={item.id} className="rounded-2xl border border-forest/10 bg-cream p-3 space-y-2">
                 <div className="grid grid-cols-[1fr_110px_auto] gap-2">
                   <input value={item.name} onChange={(e) => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, name: e.target.value } : row))} placeholder="Dish" className="rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm font-semibold" />
-                  <input type="number" value={item.amount} onChange={(e) => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, amount: e.target.value } : row))} placeholder="₹" className="rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm font-semibold" />
+                  <input type="number" value={item.amount} onChange={(e) => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, amount: e.target.value } : row))} placeholder={symbol} className="rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm font-semibold" />
                   <button type="button" onClick={() => setItems((cur) => cur.filter((row) => row.id !== item.id))} className="text-[11px] font-bold text-red-600" aria-label="Remove dish">✕</button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
@@ -317,7 +310,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             {Array.from({ length: calc.n }, (_, i) => (
               <div key={i} className="grid grid-cols-[1fr_130px] gap-2">
                 <span className="rounded-xl bg-cream px-3 py-2 text-sm font-semibold text-forest">{names[i]?.trim() || `Person ${i + 1}`}</span>
-                <input type="number" value={customAmounts[i] ?? ""} onChange={(e) => setCustomAmounts((cur) => cur.map((v, j) => j === i ? e.target.value : v))} placeholder="₹ share" className="w-full rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm font-semibold" />
+                <input type="number" value={customAmounts[i] ?? ""} onChange={(e) => setCustomAmounts((cur) => cur.map((v, j) => j === i ? e.target.value : v))} placeholder={`${symbol} share`} className="w-full rounded-xl border border-forest/10 bg-cream px-3 py-2 text-sm font-semibold" />
               </div>
             ))}
             {Math.abs(customImbalance) > 0 && (

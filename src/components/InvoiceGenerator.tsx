@@ -2,8 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
-import { DOC_DATE_LOCALE, isDocLang, swapIfDefault, type DocLang } from "../data/documentLang";
+import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
@@ -42,8 +41,25 @@ export const invoiceTemplates: InvoiceTemplate[] = [
   { id: "eu-vat", flag: "🇪🇺", label: "EU · VAT €", currency: "EUR", locale: "en-IE", taxLabel: "VAT", taxIdLabel: "VAT ID", defaultTax: "19", docTitle: "VAT invoice" },
   { id: "ae-vat", flag: "🇦🇪", label: "UAE · VAT د.إ", currency: "AED", locale: "en-AE", taxLabel: "VAT", taxIdLabel: "TRN", defaultTax: "5", docTitle: "Tax invoice" },
   { id: "au-gst", flag: "🇦🇺", label: "Australia · GST A$", currency: "AUD", locale: "en-AU", taxLabel: "GST", taxIdLabel: "ABN", defaultTax: "10", docTitle: "Tax invoice" },
+  { id: "br-nf", flag: "🇧🇷", label: "Brazil · ISS R$", currency: "BRL", locale: "pt-BR", taxLabel: "ISS", taxIdLabel: "CNPJ", defaultTax: "0", docTitle: "Invoice" },
+  { id: "id-ppn", flag: "🇮🇩", label: "Indonesia · PPN Rp", currency: "IDR", locale: "id-ID", taxLabel: "PPN", taxIdLabel: "NPWP", defaultTax: "11", docTitle: "Tax invoice" },
+  { id: "jp-tax", flag: "🇯🇵", label: "Japan · 消費税 ¥", currency: "JPY", locale: "ja-JP", taxLabel: "消費税", taxIdLabel: "T-number", defaultTax: "10", docTitle: "Invoice" },
+  { id: "cn-vat", flag: "🇨🇳", label: "China · VAT ¥", currency: "CNY", locale: "zh-CN", taxLabel: "增值税", taxIdLabel: "税号", defaultTax: "13", docTitle: "Tax invoice" },
   { id: "global", flag: "🌍", label: "Global · No Tax", currency: "USD", locale: "en-001", taxLabel: "Tax", taxIdLabel: "Tax ID", defaultTax: "0", docTitle: "Invoice" }
 ];
+
+const TEMPLATE_SYMBOL: Record<string, string> = {
+  INR: "₹",
+  USD: "$",
+  GBP: "£",
+  EUR: "€",
+  AED: "د.إ",
+  AUD: "A$",
+  BRL: "R$",
+  IDR: "Rp",
+  JPY: "¥",
+  CNY: "¥",
+};
 
 function makeMoney(locale: string, currency: string) {
   return (value: number) => new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(value || 0);
@@ -78,9 +94,8 @@ const initialItems: InvoiceItem[] = [
 ];
 
 export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const [docLang, setDocLang] = useState<DocLang>(lang);
-  const t = INVOICE_COPY[docLang] ?? INVOICE_COPY.en;
-  const [templateId, setTemplateId] = useState("in-gst");
+  const t = withCurrencyDeep(INVOICE_COPY[lang] ?? INVOICE_COPY.en, lang);
+  const [templateId, setTemplateId] = useState(() => defaultInvoiceTemplateId(lang));
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [taxId, setTaxId] = useState("");
   const [upiId, setUpiId] = useState("merchant@upi");
@@ -89,7 +104,10 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [invoiceNo, setInvoiceNo] = useState("INV-0001");
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [dueDate, setDueDate] = useState(today);
-  const [gstPercent, setGstPercent] = useState("18");
+  const [gstPercent, setGstPercent] = useState(() => {
+    const id = defaultInvoiceTemplateId(lang);
+    return invoiceTemplates.find((item) => item.id === id)?.defaultTax ?? "18";
+  });
   const [discount, setDiscount] = useState("0");
   const [notes, setNotes] = useState(() => (INVOICE_COPY[lang] ?? INVOICE_COPY.en).defaultNotes);
   const [items, setItems] = useState<InvoiceItem[]>(() => {
@@ -101,8 +119,8 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   });
   const [qrDataUrl, setQrDataUrl] = useState("");
 
-  const template = invoiceTemplates.find((t) => t.id === templateId) ?? invoiceTemplates[0];
-  const dateLocale = docLang === "en" ? template.locale : DOC_DATE_LOCALE[docLang];
+  const template = invoiceTemplates.find((item) => item.id === templateId) ?? invoiceTemplates[0];
+  const dateLocale = lang === "en" ? template.locale : DOC_DATE_LOCALE[lang];
   const money = useMemo(() => makeMoney(template.locale, template.currency), [template]);
   const docTitle = invoiceDocTitle(template.docTitle, t);
 
@@ -111,9 +129,11 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const draft = JSON.parse(saved);
-      if (isDocLang(draft.docLang)) setDocLang(draft.docLang);
-      else if (lang !== "en") setDocLang(lang);
-      setTemplateId(invoiceTemplates.some((t) => t.id === draft.templateId) ? draft.templateId : "in-gst");
+      const savedTpl = invoiceTemplates.find((item) => item.id === draft.templateId);
+      const langCurrency = displayCurrency(lang).code;
+      const useSavedTpl = Boolean(savedTpl && savedTpl.currency === langCurrency);
+      const nextTplId = useSavedTpl && savedTpl ? savedTpl.id : defaultInvoiceTemplateId(lang);
+      setTemplateId(nextTplId);
       setMerchant(draft.merchant ?? "ABC Solutions");
       setTaxId(draft.taxId ?? "");
       setUpiId(draft.upiId ?? "merchant@upi");
@@ -122,7 +142,11 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       setInvoiceNo(draft.invoiceNo ?? "INV-0001");
       setInvoiceDate(draft.invoiceDate ?? today);
       setDueDate(draft.dueDate ?? today);
-      setGstPercent(draft.gstPercent ?? "18");
+      setGstPercent(
+        useSavedTpl
+          ? (draft.gstPercent ?? savedTpl?.defaultTax ?? "18")
+          : (invoiceTemplates.find((item) => item.id === nextTplId)?.defaultTax ?? "18")
+      );
       setDiscount(draft.discount ?? "0");
       setNotes(draft.notes ?? "");
       setItems(Array.isArray(draft.items) && draft.items.length ? draft.items : initialItems);
@@ -150,8 +174,8 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ docLang, templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
-  }, [docLang, templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
+    localStorage.setItem(draftKey, JSON.stringify({ templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
+  }, [templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
 
   const selectTemplate = (nextId: string) => {
     setTemplateId(nextId);
@@ -170,23 +194,6 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   const addItem = () => setItems((current) => [...current, { id: Date.now(), name: t.newItem, qty: "1", price: "0" }]);
 
-  function changeLang(next: DocLang) {
-    if (next === docLang) return;
-    const n = INVOICE_COPY[next] ?? INVOICE_COPY.en;
-    const noteDefaults = Object.values(INVOICE_COPY).map((c) => c.defaultNotes);
-    const item1Defaults = Object.values(INVOICE_COPY).map((c) => c.defaultItem1);
-    const item2Defaults = Object.values(INVOICE_COPY).map((c) => c.defaultItem2);
-    const newItemDefaults = Object.values(INVOICE_COPY).map((c) => c.newItem);
-    setNotes((current) => swapIfDefault(current, noteDefaults, n.defaultNotes));
-    setItems((current) =>
-      current.map((item, index) => {
-        const defaults = index === 0 ? item1Defaults : index === 1 ? item2Defaults : newItemDefaults;
-        const nextName = index === 0 ? n.defaultItem1 : index === 1 ? n.defaultItem2 : n.newItem;
-        return { ...item, name: swapIfDefault(item.name, defaults, nextName) };
-      })
-    );
-    setDocLang(next);
-  }
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
 
   function safeInvoiceNo() {
@@ -391,9 +398,6 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </div>
 
-        <div className="mt-6">
-          <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
-        </div>
 
         <div className="mt-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.countryTemplate}</p>
@@ -421,7 +425,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">{t.invoiceDate}<input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">{t.dueDate}<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">{template.taxLabel} %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.discount} {template.currency === "INR" ? "₹" : template.currency}<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.discount} {TEMPLATE_SYMBOL[template.currency] ?? template.currency}<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-6 space-y-3">
@@ -441,7 +445,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
       </div>
 
-      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{docTitle} · {template.flag} {template.currency}</p>
