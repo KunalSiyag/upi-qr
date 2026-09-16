@@ -2,12 +2,23 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError, withTimeout } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import {
+  collectStrings,
+  formatMoneyInr,
+  isDocLang,
+  swapIfDefault,
+  type DocLang,
+} from "../data/documentLang";
+import {
+  FREELANCE_COPY,
+  formatClientSignatory,
+  formatFreelancerSignatory,
+  freelanceDefaults,
+  type FreelanceCopy,
+} from "../data/freelanceContractI18n";
 
 const DRAFT_KEY = "proupiqr-freelance-contract-draft";
-
-function money(value: number) {
-  return `₹${new Intl.NumberFormat("en-IN", { maximumFractionDigits: 0 }).format(value || 0)}`;
-}
 
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
@@ -26,134 +37,180 @@ function nextMilestoneId() {
   return ++_milestoneId;
 }
 
-export function FreelanceContractGenerator() {
+function sampleMilestones(copy: FreelanceCopy, today: string, nextMonth: string): MilestoneItem[] {
+  return copy.sampleMilestones.map((item, index) => ({
+    id: index + 1,
+    title: item.title,
+    desc: item.desc,
+    dueDate: index === 0 ? today : nextMonth,
+    amount: index === 0 ? "30000" : "45000",
+  }));
+}
+
+export function FreelanceContractGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const today = new Date().toISOString().slice(0, 10);
   const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
+  const initialCopy = FREELANCE_COPY[lang] ?? FREELANCE_COPY.en;
 
-  // Client Details
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const t = FREELANCE_COPY[docLang] ?? FREELANCE_COPY.en;
+
   const [clientName, setClientName] = useState("Zenith Retail Pvt Ltd");
   const [clientRep, setClientRep] = useState("Rajesh Mehta (Director of Operations)");
   const [clientEmail, setClientEmail] = useState("rajesh@zenithretail.example");
   const [clientGstin, setClientGstin] = useState("27AAAAA0000A1Z5");
 
-  // Freelancer / Studio Details
   const [freelancerName, setFreelancerName] = useState("Arjun Verma");
   const [tradeName, setTradeName] = useState("Verma Digital Studio");
   const [freelancerEmail, setFreelancerEmail] = useState("arjun@vermadigital.example");
   const [freelancerPan, setFreelancerPan] = useState("ABCDE9876K");
 
-  // Project Info
   const [projectName, setProjectName] = useState("E-Commerce Web Redesign & UPI Checkout");
   const [agreementDate, setAgreementDate] = useState(today);
   const [targetCompletionDate, setTargetCompletionDate] = useState(nextMonth);
 
-  // Milestones & Deliverables
-  const [milestones, setMilestones] = useState<MilestoneItem[]>([
-    {
-      id: 1,
-      title: "Discovery & UI/UX Wireframes",
-      desc: "Information architecture, high-fidelity Figma prototypes for mobile and desktop checkouts.",
-      dueDate: today,
-      amount: "30000",
-    },
-    {
-      id: 2,
-      title: "Frontend & Payment Flow Development",
-      desc: "Responsive frontend development, UPI intent integration, and cross-browser testing.",
-      dueDate: nextMonth,
-      amount: "45000",
-    },
-  ]);
+  const [milestones, setMilestones] = useState<MilestoneItem[]>(() => sampleMilestones(initialCopy, today, nextMonth));
 
-  // Protective Clauses
   const [advancePercent, setAdvancePercent] = useState("40");
-  const [paymentTerms, setPaymentTerms] = useState("Net 7 days upon milestone demo and invoice issuance");
-  const [revisionRounds, setRevisionRounds] = useState("2 rounds included per milestone; additional scope billed at ₹1,500/hour");
-  const [reviewTurnaround, setReviewTurnaround] = useState("3 business days; lack of feedback constitutes acceptance");
-  const [ipClause, setIpClause] = useState("All intellectual property rights transfer to Client ONLY upon 100% receipt of final payment. Freelancer retains portfolio showcase rights.");
-  const [lateFee, setLateFee] = useState("1.5% per month (or statutory Section 16 MSMED interest if MSME registered)");
-  const [killFee, setKillFee] = useState("Either party may terminate with 7 days written notice. Client pays for completed work plus 25% kill fee on remaining project balance.");
+  const [paymentTerms, setPaymentTerms] = useState(initialCopy.defaultPaymentTerms);
+  const [revisionRounds, setRevisionRounds] = useState(initialCopy.defaultRevision);
+  const [reviewTurnaround, setReviewTurnaround] = useState(initialCopy.defaultReview);
+  const [ipClause, setIpClause] = useState(initialCopy.defaultIp);
+  const [lateFee, setLateFee] = useState(initialCopy.defaultLateFee);
+  const [killFee, setKillFee] = useState(initialCopy.defaultKillFee);
 
-  // Payment UPI
   const [upiId, setUpiId] = useState("arjun@okaxis");
   const [payeeName, setPayeeName] = useState("Arjun Verma");
   const [qrDataUrl, setQrDataUrl] = useState("");
 
-  // Signatures
-  const [clientSignatory, setClientSignatory] = useState("For Zenith Retail Pvt Ltd");
-  const [freelancerSignatory, setFreelancerSignatory] = useState("Arjun Verma (Freelancer / Contractor)");
+  const [clientSignatory, setClientSignatory] = useState(() =>
+    formatClientSignatory(initialCopy, "Zenith Retail Pvt Ltd")
+  );
+  const [freelancerSignatory, setFreelancerSignatory] = useState(() =>
+    formatFreelancerSignatory(initialCopy, "Arjun Verma")
+  );
 
-  // Export States
   const paperRef = useRef<HTMLDivElement | null>(null);
+  const persistReady = useRef(false);
   const [pdfState, setPdfState] = useState<"idle" | "busy" | "error">("idle");
   const [pngState, setPngState] = useState<"idle" | "busy" | "error">("idle");
   const [copiedState, setCopiedState] = useState(false);
 
-  // Persistence
   useEffect(() => {
     try {
       const saved = localStorage.getItem(DRAFT_KEY);
-      if (!saved) return;
-      const d = JSON.parse(saved);
-      if (d.clientName) setClientName(d.clientName);
-      if (d.clientRep) setClientRep(d.clientRep);
-      if (d.clientEmail) setClientEmail(d.clientEmail);
-      if (d.clientGstin) setClientGstin(d.clientGstin);
-      if (d.freelancerName) setFreelancerName(d.freelancerName);
-      if (d.tradeName) setTradeName(d.tradeName);
-      if (d.freelancerEmail) setFreelancerEmail(d.freelancerEmail);
-      if (d.freelancerPan) setFreelancerPan(d.freelancerPan);
-      if (d.projectName) setProjectName(d.projectName);
-      if (d.agreementDate) setAgreementDate(d.agreementDate);
-      if (d.targetCompletionDate) setTargetCompletionDate(d.targetCompletionDate);
-      if (Array.isArray(d.milestones) && d.milestones.length > 0) setMilestones(d.milestones);
-      if (d.advancePercent) setAdvancePercent(d.advancePercent);
-      if (d.paymentTerms) setPaymentTerms(d.paymentTerms);
-      if (d.revisionRounds) setRevisionRounds(d.revisionRounds);
-      if (d.reviewTurnaround) setReviewTurnaround(d.reviewTurnaround);
-      if (d.ipClause) setIpClause(d.ipClause);
-      if (d.lateFee) setLateFee(d.lateFee);
-      if (d.killFee) setKillFee(d.killFee);
-      if (d.upiId) setUpiId(d.upiId);
-      if (d.payeeName) setPayeeName(d.payeeName);
-      if (d.clientSignatory) setClientSignatory(d.clientSignatory);
-      if (d.freelancerSignatory) setFreelancerSignatory(d.freelancerSignatory);
-    } catch {}
+      if (saved) {
+        const d = JSON.parse(saved);
+        const savedLang: DocLang = isDocLang(d.docLang) ? d.docLang : lang;
+        const copy = FREELANCE_COPY[savedLang] ?? FREELANCE_COPY.en;
+        setDocLang(savedLang);
+        if (d.clientName) setClientName(d.clientName);
+        if (d.clientRep) setClientRep(d.clientRep);
+        if (d.clientEmail) setClientEmail(d.clientEmail);
+        if (d.clientGstin) setClientGstin(d.clientGstin);
+        if (d.freelancerName) setFreelancerName(d.freelancerName);
+        if (d.tradeName) setTradeName(d.tradeName);
+        if (d.freelancerEmail) setFreelancerEmail(d.freelancerEmail);
+        if (d.freelancerPan) setFreelancerPan(d.freelancerPan);
+        if (d.projectName) setProjectName(d.projectName);
+        if (d.agreementDate) setAgreementDate(d.agreementDate);
+        if (d.targetCompletionDate) setTargetCompletionDate(d.targetCompletionDate);
+        if (Array.isArray(d.milestones) && d.milestones.length > 0) setMilestones(d.milestones);
+        if (d.advancePercent) setAdvancePercent(d.advancePercent);
+        if (d.paymentTerms) setPaymentTerms(d.paymentTerms);
+        if (d.revisionRounds) setRevisionRounds(d.revisionRounds);
+        if (d.reviewTurnaround) setReviewTurnaround(d.reviewTurnaround);
+        if (d.ipClause) setIpClause(d.ipClause);
+        if (d.lateFee) setLateFee(d.lateFee);
+        if (d.killFee) setKillFee(d.killFee);
+        if (d.upiId) setUpiId(d.upiId);
+        if (d.payeeName) setPayeeName(d.payeeName);
+        if (d.clientSignatory) setClientSignatory(d.clientSignatory);
+        if (d.freelancerSignatory) setFreelancerSignatory(d.freelancerSignatory);
+        if (!d.docLang && lang !== "en") {
+          applyLanguage(lang, copy, false);
+        }
+      } else if (lang !== "en") {
+        applyLanguage(lang, FREELANCE_COPY.en, true);
+      }
+    } catch {
+      // Keep built-in sample if the draft is unreadable.
+    } finally {
+      persistReady.current = true;
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
+    if (!persistReady.current) return;
     try {
       localStorage.setItem(
         DRAFT_KEY,
         JSON.stringify({
-          clientName, clientRep, clientEmail, clientGstin,
-          freelancerName, tradeName, freelancerEmail, freelancerPan,
-          projectName, agreementDate, targetCompletionDate, milestones,
-          advancePercent, paymentTerms, revisionRounds, reviewTurnaround,
-          ipClause, lateFee, killFee, upiId, payeeName,
-          clientSignatory, freelancerSignatory,
+          docLang,
+          clientName,
+          clientRep,
+          clientEmail,
+          clientGstin,
+          freelancerName,
+          tradeName,
+          freelancerEmail,
+          freelancerPan,
+          projectName,
+          agreementDate,
+          targetCompletionDate,
+          milestones,
+          advancePercent,
+          paymentTerms,
+          revisionRounds,
+          reviewTurnaround,
+          ipClause,
+          lateFee,
+          killFee,
+          upiId,
+          payeeName,
+          clientSignatory,
+          freelancerSignatory,
         })
       );
     } catch {}
   }, [
-    clientName, clientRep, clientEmail, clientGstin,
-    freelancerName, tradeName, freelancerEmail, freelancerPan,
-    projectName, agreementDate, targetCompletionDate, milestones,
-    advancePercent, paymentTerms, revisionRounds, reviewTurnaround,
-    ipClause, lateFee, killFee, upiId, payeeName,
-    clientSignatory, freelancerSignatory,
+    docLang,
+    clientName,
+    clientRep,
+    clientEmail,
+    clientGstin,
+    freelancerName,
+    tradeName,
+    freelancerEmail,
+    freelancerPan,
+    projectName,
+    agreementDate,
+    targetCompletionDate,
+    milestones,
+    advancePercent,
+    paymentTerms,
+    revisionRounds,
+    reviewTurnaround,
+    ipClause,
+    lateFee,
+    killFee,
+    upiId,
+    payeeName,
+    clientSignatory,
+    freelancerSignatory,
   ]);
 
-  // Calculations
   const totals = useMemo(() => {
-    const total = milestones.reduce((acc, m) => acc + (Math.max(0, Number(m.amount) || 0)), 0);
+    const total = milestones.reduce((acc, m) => acc + Math.max(0, Number(m.amount) || 0), 0);
     const advPct = Math.min(100, Math.max(0, Number(advancePercent) || 0));
     const advance = Math.round((total * advPct) / 100);
     const balance = total - advance;
     return { total, advPct, advance, balance };
   }, [milestones, advancePercent]);
 
-  // QR Code Generation
+  const money = (value: number) => formatMoneyInr(value, docLang);
+
   useEffect(() => {
     if (upiId && isValidUpiId(upiId) && totals.advance > 0) {
       const uri = `upi://pay?pa=${encodeURIComponent(upiId.trim())}&pn=${encodeURIComponent(payeeName.trim() || freelancerName.trim())}&am=${totals.advance}&cu=INR&tn=${encodeURIComponent(`Adv ${projectName.slice(0, 20)}`)}`;
@@ -163,13 +220,62 @@ export function FreelanceContractGenerator() {
     }
   }, [upiId, payeeName, freelancerName, totals.advance, projectName]);
 
+  function applyLanguage(next: DocLang, prevCopy: FreelanceCopy, forceDefaults: boolean) {
+    const n = FREELANCE_COPY[next] ?? FREELANCE_COPY.en;
+    const swap = (current: string, field: Parameters<typeof freelanceDefaults>[0]) =>
+      forceDefaults ? n[field] : swapIfDefault(current, freelanceDefaults(field), n[field]);
+
+    setDocLang(next);
+    setPaymentTerms((current) => swap(current, "defaultPaymentTerms"));
+    setRevisionRounds((current) => swap(current, "defaultRevision"));
+    setReviewTurnaround((current) => swap(current, "defaultReview"));
+    setIpClause((current) => swap(current, "defaultIp"));
+    setLateFee((current) => swap(current, "defaultLateFee"));
+    setKillFee((current) => swap(current, "defaultKillFee"));
+    setClientSignatory((current) => {
+      const prevDefault = formatClientSignatory(prevCopy, clientName);
+      const nextDefault = formatClientSignatory(n, clientName);
+      return forceDefaults || current === prevDefault ? nextDefault : current;
+    });
+    setFreelancerSignatory((current) => {
+      const prevDefault = formatFreelancerSignatory(prevCopy, freelancerName);
+      const nextDefault = formatFreelancerSignatory(n, freelancerName);
+      return forceDefaults || current === prevDefault ? nextDefault : current;
+    });
+    setMilestones((current) => {
+      if (forceDefaults) return sampleMilestones(n, today, nextMonth);
+      return current.map((item, index) => {
+        const nextSample =
+          n.sampleMilestones[index] ??
+          (index >= n.sampleMilestones.length ? n.addMilestoneSample : undefined);
+        if (!nextSample) return item;
+        const titleDefaults = collectStrings(FREELANCE_COPY, "addMilestoneSample")
+          .concat(Object.values(FREELANCE_COPY).flatMap((c) => c.sampleMilestones.map((s) => s.title)));
+        const descDefaults = Object.values(FREELANCE_COPY).flatMap((c) => [
+          ...c.sampleMilestones.map((s) => s.desc),
+          c.addMilestoneSample.desc,
+        ]);
+        return {
+          ...item,
+          title: swapIfDefault(item.title, titleDefaults, nextSample.title),
+          desc: swapIfDefault(item.desc, descDefaults, nextSample.desc),
+        };
+      });
+    });
+  }
+
+  function changeLang(next: DocLang) {
+    if (next === docLang) return;
+    applyLanguage(next, t, false);
+  }
+
   const addMilestone = () => {
     setMilestones([
       ...milestones,
       {
         id: nextMilestoneId(),
-        title: "Quality Assurance & Production Launch",
-        desc: "Final bug fixing, client walkthrough, and deployment to production hosting.",
+        title: t.addMilestoneSample.title,
+        desc: t.addMilestoneSample.desc,
         dueDate: targetCompletionDate,
         amount: "25000",
       },
@@ -240,7 +346,7 @@ export function FreelanceContractGenerator() {
       const h = (paperRef.current?.offsetHeight || 1200) * px;
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [w, h] });
       pdf.addImage(du, "PNG", 0, 0, w, h);
-      pdf.save(`freelance-agreement-${projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.pdf`);
+      pdf.save(`freelance-agreement-${projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "contract"}.pdf`);
       trackProductEvent("export_pdf", "freelance-contract");
       setPdfState("idle");
     } catch (e) {
@@ -254,7 +360,7 @@ export function FreelanceContractGenerator() {
     try {
       setPngState("busy");
       const du = await renderPaper();
-      downloadDataUrl(du, `freelance-agreement-${projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-")}.png`);
+      downloadDataUrl(du, `freelance-agreement-${projectName.toLowerCase().replace(/[^a-z0-9]+/g, "-") || "contract"}.png`);
       trackProductEvent("export_png", "freelance-contract");
       setPngState("idle");
     } catch (e) {
@@ -265,33 +371,33 @@ export function FreelanceContractGenerator() {
   }
 
   function copyAgreementText() {
-    const text = `FREELANCE SERVICE AGREEMENT & STATEMENT OF WORK
-Effective Date: ${agreementDate} | Project: ${projectName}
+    const text = `${t.copyDocTitle}
+${t.date}: ${agreementDate} | ${t.project}: ${projectName}
 
-1. PARTIES
-Client: ${clientName} (Rep: ${clientRep}, Email: ${clientEmail}, GSTIN: ${clientGstin || "N/A"})
-Contractor / Freelancer: ${freelancerName} (${tradeName}, Email: ${freelancerEmail}, PAN: ${freelancerPan || "N/A"})
+${t.copyParties}
+${t.copyClient}: ${clientName} (${t.representative}: ${clientRep}, ${t.email}: ${clientEmail}, ${t.gstin}: ${clientGstin || t.copyNA})
+${t.copyContractor}: ${freelancerName} (${tradeName}, ${t.email}: ${freelancerEmail}, ${t.pan}: ${freelancerPan || t.copyNA})
 
-2. SCOPE OF WORK & MILESTONES
-${milestones.map((m, i) => `${i + 1}. ${m.title} - ${m.desc} (Target Date: ${m.dueDate}, Amount: ₹${m.amount})`).join("\n")}
+${t.copyScope}
+${milestones.map((m, i) => `${i + 1}. ${m.title} - ${m.desc} (${t.copyTargetDate}: ${m.dueDate}, ${t.copyAmount}: ₹${m.amount})`).join("\n")}
 
-3. COMMERCIALS & PAYMENT SCHEDULE
-- Total Project Value: ${money(totals.total)}
-- Advance Retainer (${totals.advPct}%): ${money(totals.advance)} (Due upon signing before work begins)
-- Balance Amount: ${money(totals.balance)} payable per ${paymentTerms}
-- UPI ID for Payment: ${upiId} (${payeeName})
+${t.copyCommercials}
+- ${t.totalValue} ${money(totals.total)}
+- ${t.advanceRetainer} (${totals.advPct}%): ${money(totals.advance)} (${t.copyAdvanceDue})
+- ${t.balanceLabel}: ${money(totals.balance)} ${t.copyBalancePayable} ${paymentTerms}
+- ${t.copyUpi}: ${upiId} (${payeeName})
 
-4. KEY TERMS OF ENGAGEMENT
-- Revisions: ${revisionRounds}.
-- Client Review SLA: ${reviewTurnaround}.
-- Intellectual Property: ${ipClause}.
-- Late Payment Fee: ${lateFee}.
-- Termination & Kill Fee: ${killFee}.
-- Relationship: Independent contractor. Not an employer-employee relationship.
+${t.copyTerms}
+- ${t.revisionLimits} ${revisionRounds}
+- ${t.reviewApproval} ${reviewTurnaround}
+- ${t.ipRights} ${ipClause}
+- ${t.lateInterest} ${lateFee}
+- ${t.termination} ${killFee}
+- ${t.copyRelationship}
 
-SIGNATURES:
-For Client: ${clientSignatory} (Date: ${agreementDate})
-For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
+${t.copySignatures}
+${t.copyForClient}: ${clientSignatory} (${t.date}: ${agreementDate})
+${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
 
     navigator.clipboard.writeText(text).then(() => {
       setCopiedState(true);
@@ -302,43 +408,43 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      {/* Editor Console */}
       <div className="no-print space-y-6 rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/10 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Contractor Legal Protection</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Freelance Agreement</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{t.eyebrow}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={copyAgreementText}
               className="rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-mint"
             >
-              {copiedState ? "✓ Copied Text" : "Copy Text"}
+              {copiedState ? t.copied : t.copyText}
             </button>
             <button
               onClick={downloadPng}
               disabled={pngState === "busy"}
               className="rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
             >
-              {pngState === "busy" ? "..." : "Export PNG"}
+              {pngState === "busy" ? "..." : t.exportPng}
             </button>
             <button
               onClick={downloadPdf}
               disabled={pdfState === "busy"}
               className="rounded-full bg-forest px-4 py-1.5 text-xs font-bold text-white transition hover:bg-leaf disabled:opacity-50"
             >
-              {pdfState === "busy" ? "Generating..." : "Export PDF"}
+              {pdfState === "busy" ? t.generating : t.exportPdf}
             </button>
           </div>
         </div>
 
-        {/* Section 1: Client & Freelancer Info */}
+        <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
+
         <div className="space-y-4">
-          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">1. Parties</h3>
+          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">{t.parties}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-forest">
-              Client / Company Name
+              {t.clientName}
               <input
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
@@ -346,7 +452,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Client Contact Person
+              {t.clientRep}
               <input
                 value={clientRep}
                 onChange={(e) => setClientRep(e.target.value)}
@@ -354,7 +460,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Client Email
+              {t.clientEmail}
               <input
                 value={clientEmail}
                 onChange={(e) => setClientEmail(e.target.value)}
@@ -362,7 +468,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Client GSTIN / Tax ID
+              {t.clientGstin}
               <input
                 value={clientGstin}
                 onChange={(e) => setClientGstin(e.target.value)}
@@ -374,7 +480,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
 
           <div className="grid gap-3 sm:grid-cols-2 pt-2 border-t border-forest/10">
             <label className="text-xs font-bold text-forest">
-              Freelancer Legal Name
+              {t.freelancerName}
               <input
                 value={freelancerName}
                 onChange={(e) => setFreelancerName(e.target.value)}
@@ -382,7 +488,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Studio / Trade Name (Optional)
+              {t.tradeName}
               <input
                 value={tradeName}
                 onChange={(e) => setTradeName(e.target.value)}
@@ -390,7 +496,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Freelancer Email
+              {t.freelancerEmail}
               <input
                 value={freelancerEmail}
                 onChange={(e) => setFreelancerEmail(e.target.value)}
@@ -398,7 +504,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Freelancer PAN (for TDS 194J)
+              {t.freelancerPan}
               <input
                 value={freelancerPan}
                 onChange={(e) => setFreelancerPan(e.target.value)}
@@ -409,17 +515,16 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
           </div>
         </div>
 
-        {/* Section 2: Project & Milestones */}
         <div className="space-y-3 pt-2 border-t border-forest/10">
           <div className="flex items-center justify-between">
-            <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">2. Scope & Milestones</h3>
+            <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">{t.scope}</h3>
             <button onClick={addMilestone} className="text-xs font-bold text-leaf hover:underline">
-              + Add Milestone
+              {t.addMilestone}
             </button>
           </div>
           <div className="grid gap-3 sm:grid-cols-3">
             <label className="text-xs font-bold text-forest sm:col-span-3">
-              Project Title / Objective
+              {t.projectTitle}
               <input
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
@@ -427,7 +532,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Contract Date
+              {t.contractDate}
               <input
                 type="date"
                 value={agreementDate}
@@ -436,7 +541,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest sm:col-span-2">
-              Target Completion Date
+              {t.targetDate}
               <input
                 type="date"
                 value={targetCompletionDate}
@@ -450,10 +555,12 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
             {milestones.map((item, idx) => (
               <div key={item.id} className="relative rounded-2xl border border-forest/10 bg-cream/50 p-3 text-xs space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-forest">Milestone #{idx + 1}</span>
+                  <span className="font-bold text-forest">
+                    {t.milestoneN} #{idx + 1}
+                  </span>
                   {milestones.length > 1 && (
                     <button onClick={() => removeMilestone(item.id)} className="text-red-500 font-bold hover:underline">
-                      Remove
+                      {t.remove}
                     </button>
                   )}
                 </div>
@@ -461,21 +568,21 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
                   <input
                     value={item.title}
                     onChange={(e) => updateMilestone(item.id, "title", e.target.value)}
-                    placeholder="Milestone Title"
+                    placeholder={t.milestoneTitle}
                     className="sm:col-span-2 rounded-lg border border-forest/10 bg-white px-2.5 py-1.5 outline-none focus:border-leaf font-semibold"
                   />
                   <input
                     type="number"
                     value={item.amount}
                     onChange={(e) => updateMilestone(item.id, "amount", e.target.value)}
-                    placeholder="Amount (₹)"
+                    placeholder={t.amountInr}
                     className="rounded-lg border border-forest/10 bg-white px-2.5 py-1.5 font-bold outline-none focus:border-leaf"
                   />
                 </div>
                 <textarea
                   value={item.desc}
                   onChange={(e) => updateMilestone(item.id, "desc", e.target.value)}
-                  placeholder="Deliverable details, technical requirements, acceptance criteria..."
+                  placeholder={t.deliverablePlaceholder}
                   rows={2}
                   className="w-full rounded-lg border border-forest/10 bg-white px-2.5 py-1.5 outline-none focus:border-leaf"
                 />
@@ -484,12 +591,11 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
           </div>
         </div>
 
-        {/* Section 3: Commercials & Advance UPI */}
         <div className="space-y-3 pt-2 border-t border-forest/10">
-          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">3. Commercials & Advance Deposit</h3>
+          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">{t.commercials}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-forest">
-              Advance Deposit Required (%)
+              {t.advancePct}
               <input
                 type="number"
                 value={advancePercent}
@@ -500,7 +606,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Milestone Payment Terms
+              {t.paymentTermsLabel}
               <input
                 value={paymentTerms}
                 onChange={(e) => setPaymentTerms(e.target.value)}
@@ -508,7 +614,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Freelancer UPI ID
+              {t.upiId}
               <input
                 value={upiId}
                 onChange={(e) => setUpiId(e.target.value)}
@@ -517,7 +623,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Beneficiary Name
+              {t.beneficiary}
               <input
                 value={payeeName}
                 onChange={(e) => setPayeeName(e.target.value)}
@@ -525,19 +631,24 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
           </div>
-          <div className="rounded-xl bg-mint/50 p-3 text-xs flex justify-between items-center text-forest font-bold">
-            <span>Total: {money(totals.total)}</span>
-            <span>Advance Deposit ({totals.advPct}%): {money(totals.advance)}</span>
-            <span>Milestone Balance: {money(totals.balance)}</span>
+          <div className="rounded-xl bg-mint/50 p-3 text-xs flex justify-between items-center text-forest font-bold gap-2 flex-wrap">
+            <span>
+              {t.total}: {money(totals.total)}
+            </span>
+            <span>
+              {t.advanceDeposit} ({totals.advPct}%): {money(totals.advance)}
+            </span>
+            <span>
+              {t.milestoneBalance}: {money(totals.balance)}
+            </span>
           </div>
         </div>
 
-        {/* Section 4: Protective Terms */}
         <div className="space-y-3 pt-2 border-t border-forest/10">
-          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">4. Protective Legal Terms</h3>
+          <h3 className="text-xs font-black uppercase tracking-wider text-forest/70">{t.protective}</h3>
           <div className="grid gap-3 sm:grid-cols-2">
             <label className="text-xs font-bold text-forest sm:col-span-2">
-              Revision Limit & Out-of-Scope Work
+              {t.revisionLabel}
               <input
                 value={revisionRounds}
                 onChange={(e) => setRevisionRounds(e.target.value)}
@@ -545,7 +656,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest sm:col-span-2">
-              Client Feedback Turnaround (SLA)
+              {t.reviewSla}
               <input
                 value={reviewTurnaround}
                 onChange={(e) => setReviewTurnaround(e.target.value)}
@@ -553,7 +664,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest sm:col-span-2">
-              Intellectual Property (IP) Transfer Condition
+              {t.ipLabel}
               <input
                 value={ipClause}
                 onChange={(e) => setIpClause(e.target.value)}
@@ -561,7 +672,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Late Payment Interest
+              {t.lateFeeLabel}
               <input
                 value={lateFee}
                 onChange={(e) => setLateFee(e.target.value)}
@@ -569,7 +680,7 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
               />
             </label>
             <label className="text-xs font-bold text-forest">
-              Termination & Kill Fee
+              {t.killFeeLabel}
               <input
                 value={killFee}
                 onChange={(e) => setKillFee(e.target.value)}
@@ -580,62 +691,81 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
         </div>
       </div>
 
-      {/* Contract Paper Preview */}
       <div className="relative">
         <article
           ref={paperRef}
           className="mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/15 bg-white p-7 text-forest shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-10 font-sans text-xs leading-relaxed"
+          lang={docLang}
         >
-          {/* Header */}
           <header className="border-b-2 border-forest pb-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-leaf">Contractual Statement of Work</p>
-                <div className="mt-1 text-2xl font-black tracking-tight text-forest">FREELANCE SERVICE AGREEMENT</div>
-                <p className="mt-1 font-semibold text-forest/70">Project: {projectName || "Untitled Project"}</p>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-leaf">{t.docKicker}</p>
+                <div className="mt-1 text-2xl font-black tracking-tight text-forest">{t.docTitle}</div>
+                <p className="mt-1 font-semibold text-forest/70">
+                  {t.project}: {projectName || t.untitled}
+                </p>
               </div>
               <div className="text-right text-[11px] font-bold text-forest/70">
-                <p>Date: {agreementDate}</p>
-                <p>Target Delivery: {targetCompletionDate}</p>
+                <p>
+                  {t.date}: {agreementDate}
+                </p>
+                <p>
+                  {t.targetDelivery}: {targetCompletionDate}
+                </p>
               </div>
             </div>
           </header>
 
-          {/* 1. Parties */}
           <section className="mt-5 space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-leaf border-b border-forest/10 pb-1">
-              1. Parties to the Agreement
+              {t.partiesHeading}
             </h2>
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-xl bg-forest/5 p-3">
-                <p className="font-black text-forest">THE CLIENT:</p>
+                <p className="font-black text-forest">{t.theClient}</p>
                 <p className="font-bold">{clientName}</p>
-                <p className="text-forest/70">Representative: {clientRep}</p>
-                <p className="text-forest/70">Email: {clientEmail}</p>
-                {clientGstin && <p className="text-forest/70">GSTIN: {clientGstin}</p>}
+                <p className="text-forest/70">
+                  {t.representative}: {clientRep}
+                </p>
+                <p className="text-forest/70">
+                  {t.email}: {clientEmail}
+                </p>
+                {clientGstin && (
+                  <p className="text-forest/70">
+                    {t.gstin}: {clientGstin}
+                  </p>
+                )}
               </div>
               <div className="rounded-xl bg-mint/40 p-3">
-                <p className="font-black text-forest">THE CONTRACTOR / FREELANCER:</p>
-                <p className="font-bold">{freelancerName} {tradeName ? `(${tradeName})` : ""}</p>
-                <p className="text-forest/70">Email: {freelancerEmail}</p>
-                {freelancerPan && <p className="text-forest/70">PAN: {freelancerPan}</p>}
+                <p className="font-black text-forest">{t.theContractor}</p>
+                <p className="font-bold">
+                  {freelancerName} {tradeName ? `(${tradeName})` : ""}
+                </p>
+                <p className="text-forest/70">
+                  {t.email}: {freelancerEmail}
+                </p>
+                {freelancerPan && (
+                  <p className="text-forest/70">
+                    {t.pan}: {freelancerPan}
+                  </p>
+                )}
               </div>
             </div>
           </section>
 
-          {/* 2. Scope & Milestones */}
           <section className="mt-5 space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-leaf border-b border-forest/10 pb-1">
-              2. Scope of Work & Milestone Schedule
+              {t.scopeHeading}
             </h2>
             <table className="w-full text-left border-collapse">
               <thead>
                 <tr className="border-b border-forest/20 text-[10px] font-black uppercase text-forest/80">
-                  <th className="py-1.5">#</th>
-                  <th className="py-1.5">Milestone</th>
-                  <th className="py-1.5">Deliverable Description</th>
-                  <th className="py-1.5 text-right">Target Date</th>
-                  <th className="py-1.5 text-right">Amount</th>
+                  <th className="py-1.5">{t.colN}</th>
+                  <th className="py-1.5">{t.colMilestone}</th>
+                  <th className="py-1.5">{t.colDesc}</th>
+                  <th className="py-1.5 text-right">{t.colDate}</th>
+                  <th className="py-1.5 text-right">{t.colAmount}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-forest/10">
@@ -652,90 +782,90 @@ For Freelancer: ${freelancerSignatory} (Date: ${agreementDate})`;
             </table>
           </section>
 
-          {/* 3. Commercials & Advance QR */}
           <section className="mt-5 space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-leaf border-b border-forest/10 pb-1">
-              3. Commercial Terms & Payment Details
+              {t.commercialHeading}
             </h2>
             <div className="grid grid-cols-[1.5fr_1fr] gap-4 items-center">
               <div className="space-y-1.5">
                 <div className="flex justify-between border-b border-forest/10 py-1">
-                  <span className="font-semibold">Total Project Value:</span>
+                  <span className="font-semibold">{t.totalValue}</span>
                   <span className="font-black text-sm">{money(totals.total)}</span>
                 </div>
                 <div className="flex justify-between border-b border-forest/10 py-1">
-                  <span className="font-semibold">Advance Retainer ({totals.advPct}%):</span>
+                  <span className="font-semibold">
+                    {t.advanceRetainer} ({totals.advPct}%):
+                  </span>
                   <span className="font-bold text-leaf">{money(totals.advance)}</span>
                 </div>
                 <div className="flex justify-between py-1">
-                  <span className="font-semibold">Milestone Balance ({100 - totals.advPct}%):</span>
+                  <span className="font-semibold">
+                    {t.balanceLabel} ({100 - totals.advPct}%):
+                  </span>
                   <span className="font-bold">{money(totals.balance)}</span>
                 </div>
                 <p className="text-[10px] text-forest/70 pt-1">
-                  <strong>Invoicing Terms:</strong> {paymentTerms}. Work initiates only after advance confirmation.
+                  <strong>{t.invoicingTerms}</strong> {paymentTerms}. {t.workAfterAdvance}
                 </p>
               </div>
 
-              {/* Advance UPI QR Box */}
               {qrDataUrl && (
                 <div className="flex flex-col items-center justify-center rounded-xl border border-forest/10 bg-cream/40 p-2.5 text-center">
-                  <img src={qrDataUrl} alt="Advance Deposit QR" className="h-24 w-24 rounded-lg shadow-sm" />
-                  <p className="mt-1 text-[9px] font-black text-forest">Scan to Pay Deposit</p>
+                  <img src={qrDataUrl} alt={t.scanDeposit} className="h-24 w-24 rounded-lg shadow-sm" />
+                  <p className="mt-1 text-[9px] font-black text-forest">{t.scanDeposit}</p>
                   <p className="text-[9px] font-mono text-forest/70">{upiId}</p>
                 </div>
               )}
             </div>
           </section>
 
-          {/* 4. Terms of Engagement */}
           <section className="mt-5 space-y-2">
             <h2 className="text-xs font-black uppercase tracking-wider text-leaf border-b border-forest/10 pb-1">
-              4. Standard Terms of Engagement
+              {t.termsHeading}
             </h2>
             <ol className="list-decimal pl-4 space-y-1.5 text-[11px] text-forest/80">
               <li>
-                <strong>Revision Limits:</strong> {revisionRounds}.
+                <strong>{t.revisionLimits}</strong> {revisionRounds}
               </li>
               <li>
-                <strong>Review & Approval SLA:</strong> {reviewTurnaround}. Delays in Client feedback directly push back target completion dates.
+                <strong>{t.reviewApproval}</strong> {reviewTurnaround}. {t.reviewDelay}
               </li>
               <li>
-                <strong>Intellectual Property Rights:</strong> {ipClause}.
+                <strong>{t.ipRights}</strong> {ipClause}
               </li>
               <li>
-                <strong>Late Payment Interest:</strong> Overdue invoices incur interest at <strong>{lateFee}</strong> until settled in full.
+                <strong>{t.lateInterest}</strong> {t.overdueUntil} <strong>{lateFee}</strong>.
               </li>
               <li>
-                <strong>Termination & Kill Fee:</strong> {killFee}.
+                <strong>{t.termination}</strong> {killFee}
               </li>
               <li>
-                <strong>Independent Contractor:</strong> The parties agree this agreement does not establish an employment, joint venture, or partnership arrangement.
+                <strong>{t.independent}</strong> {t.independentBody}
               </li>
             </ol>
           </section>
 
-          {/* 5. Signatures */}
           <section className="mt-7 pt-4 border-t-2 border-forest">
-            <p className="text-[10px] font-bold text-forest/60 mb-4">
-              IN WITNESS WHEREOF, both parties agree to the scope, deliverables, and commercial terms set forth above.
-            </p>
+            <p className="text-[10px] font-bold text-forest/60 mb-4">{t.witness}</p>
             <div className="grid grid-cols-2 gap-8 pt-4">
               <div className="border-t border-forest/30 pt-2">
                 <p className="font-bold text-forest">{clientSignatory}</p>
-                <p className="text-[10px] text-forest/60">Authorized Signatory (Client)</p>
-                <p className="text-[10px] text-forest/60">Date: {agreementDate}</p>
+                <p className="text-[10px] text-forest/60">{t.clientSign}</p>
+                <p className="text-[10px] text-forest/60">
+                  {t.date}: {agreementDate}
+                </p>
               </div>
               <div className="border-t border-forest/30 pt-2 text-right">
                 <p className="font-bold text-forest">{freelancerSignatory}</p>
-                <p className="text-[10px] text-forest/60">Contractor / Freelancer</p>
-                <p className="text-[10px] text-forest/60">Date: {agreementDate}</p>
+                <p className="text-[10px] text-forest/60">{t.contractorSign}</p>
+                <p className="text-[10px] text-forest/60">
+                  {t.date}: {agreementDate}
+                </p>
               </div>
             </div>
           </section>
 
-          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/50">
-            Prepared with Pro UPI QR Freelance Contract Generator &bull; Private, client-side, legal-ready document.
-          </footer>
+          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/50">{t.footer}</footer>
         </article>
       </div>
     </div>

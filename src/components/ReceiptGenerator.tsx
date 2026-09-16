@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { isDocLang, swapIfDefault, type DocLang } from "../data/documentLang";
+import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
 type ReceiptItem = { id: number; name: string; qty: string; price: string };
 
@@ -37,10 +40,12 @@ function buildUpiUrl(upiId: string, payee: string, amount: number, note: string)
 const today = new Date().toISOString().slice(0, 10);
 
 const initialItems: ReceiptItem[] = [
-  { id: 1, name: "Advance payment received", qty: "1", price: "2500" }
+  { id: 1, name: RECEIPT_COPY.en.defaultItem, qty: "1", price: "2500" }
 ];
 
-export function ReceiptGenerator() {
+export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const t = RECEIPT_COPY[docLang] ?? RECEIPT_COPY.en;
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [upiId, setUpiId] = useState("merchant@upi");
   const [customer, setCustomer] = useState("Client Name");
@@ -49,9 +54,11 @@ export function ReceiptGenerator() {
   const [receiptDate, setReceiptDate] = useState(today);
   const [paymentMode, setPaymentMode] = useState<(typeof paymentModes)[number]>("UPI");
   const [referenceNo, setReferenceNo] = useState("");
-  const [receivedBy, setReceivedBy] = useState("Authorized Signatory");
-  const [notes, setNotes] = useState("Received with thanks. This receipt acknowledges full settlement of the amount mentioned above.");
-  const [items, setItems] = useState<ReceiptItem[]>(initialItems);
+  const [receivedBy, setReceivedBy] = useState(() => (RECEIPT_COPY[lang] ?? RECEIPT_COPY.en).defaultReceivedBy);
+  const [notes, setNotes] = useState(() => (RECEIPT_COPY[lang] ?? RECEIPT_COPY.en).defaultNotes);
+  const [items, setItems] = useState<ReceiptItem[]>(() => [
+    { id: 1, name: (RECEIPT_COPY[lang] ?? RECEIPT_COPY.en).defaultItem, qty: "1", price: "2500" },
+  ]);
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   useEffect(() => {
@@ -59,6 +66,8 @@ export function ReceiptGenerator() {
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const draft = JSON.parse(saved);
+      if (isDocLang(draft.docLang)) setDocLang(draft.docLang);
+      else if (lang !== "en") setDocLang(lang);
       setMerchant(draft.merchant ?? "ABC Solutions");
       setUpiId(draft.upiId ?? "merchant@upi");
       setCustomer(draft.customer ?? "Client Name");
@@ -90,8 +99,8 @@ export function ReceiptGenerator() {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items }));
-  }, [merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items]);
+    localStorage.setItem(draftKey, JSON.stringify({ docLang, merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items }));
+  }, [docLang, merchant, upiId, customer, customerPhone, receiptNo, receiptDate, paymentMode, referenceNo, receivedBy, notes, items]);
 
   const receiptRef = useRef<HTMLDivElement | null>(null);
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
@@ -102,7 +111,25 @@ export function ReceiptGenerator() {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const addItem = () => setItems((current) => [...current, { id: Date.now(), name: "Payment for", qty: "1", price: "0" }]);
+  const addItem = () => setItems((current) => [...current, { id: Date.now(), name: t.newItem, qty: "1", price: "0" }]);
+
+  function changeLang(next: DocLang) {
+    if (next === docLang) return;
+    const n = RECEIPT_COPY[next] ?? RECEIPT_COPY.en;
+    setNotes((current) => swapIfDefault(current, Object.values(RECEIPT_COPY).map((c) => c.defaultNotes), n.defaultNotes));
+    setReceivedBy((current) => swapIfDefault(current, Object.values(RECEIPT_COPY).map((c) => c.defaultReceivedBy), n.defaultReceivedBy));
+    setItems((current) =>
+      current.map((item, index) => ({
+        ...item,
+        name: swapIfDefault(
+          item.name,
+          Object.values(RECEIPT_COPY).flatMap((c) => [c.defaultItem, c.newItem]),
+          index === 0 ? n.defaultItem : n.newItem
+        ),
+      }))
+    );
+    setDocLang(next);
+  }
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
 
   async function renderPaperToPng(width = 800, padding = "36px") {
@@ -207,15 +234,15 @@ export function ReceiptGenerator() {
   }
 
   function buildShareMessage() {
-    return `*Payment Receipt from ${merchant || "Merchant"}*\n` +
+    return `*${t.shareFrom} ${merchant || t.yourBusiness}*\n` +
       `----------------------------\n` +
-      `*Receipt No:* ${receiptNo}\n` +
-      `*Received From:* ${customer}\n` +
-      `*Amount Received:* ${money(totals.subtotal)}\n` +
-      `*Mode:* ${paymentMode}${referenceNo ? `\n*Reference:* ${referenceNo}` : ""}\n` +
-      `*Date:* ${receiptDate}\n\n` +
-      `Thank you for your payment!\n\n` +
-      `Generated free via Pro UPI QR (https://www.proupiqr.in)`;
+      `*${t.shareNo}:* ${receiptNo}\n` +
+      `*${t.shareReceivedFrom}:* ${customer}\n` +
+      `*${t.shareAmount}:* ${money(totals.subtotal)}\n` +
+      `*${t.shareMode}:* ${receiptModeLabel(t, paymentMode)}${referenceNo ? `\n*${t.shareReference}:* ${referenceNo}` : ""}\n` +
+      `*${t.shareDate}:* ${receiptDate}\n\n` +
+      `${t.shareThanks}\n\n` +
+      t.shareVia;
   }
 
   async function dataUrlToPngFile(dataUrl: string, fileName: string) {
@@ -272,49 +299,53 @@ export function ReceiptGenerator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Receipt builder</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Create Payment Receipt</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{t.eyebrow}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={shareOnWhatsapp}
               disabled={shareState === "busy"}
-              title="Share the receipt image via WhatsApp"
+              title={t.whatsapp}
               className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
             >
-              {shareState === "busy" ? "Preparing…" : "💬 WhatsApp Share"}
+              {shareState === "busy" ? t.preparing : `💬 ${t.whatsapp}`}
             </button>
             <button
               onClick={downloadReceiptPdf}
               disabled={downloadPdfState === "busy"}
               className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
             >
-              {downloadPdfState === "busy" ? "Generating..." : "📄 Download PDF"}
+              {downloadPdfState === "busy" ? t.generating : `📄 ${t.downloadPdf}`}
             </button>
             <button
               onClick={downloadReceiptPng}
               disabled={downloadPngState === "busy"}
               className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
             >
-              {downloadPngState === "busy" ? "Generating..." : "🖼️ Download PNG"}
+              {downloadPngState === "busy" ? t.generating : `🖼️ ${t.downloadPng}`}
             </button>
           </div>
         </div>
 
+        <div className="mt-6">
+          <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
+        </div>
+
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Business name<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">UPI ID<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Received from<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Customer phone (optional)<input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="98765 43210" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Receipt number<input value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Receipt date<input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Payment mode<select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as (typeof paymentModes)[number])} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{paymentModes.map((mode) => <option key={mode} value={mode}>{mode}</option>)}</select></label>
-          <label className="text-sm font-bold text-forest">Reference / UTR number<input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="UPI transaction ID or cheque no." className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Received by<input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.businessName}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.upiId}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.receivedFrom}<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.customerPhone}<input type="tel" value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="98765 43210" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.receiptNumber}<input value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.receiptDate}<input type="date" value={receiptDate} onChange={(e) => setReceiptDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.paymentMode}<select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as (typeof paymentModes)[number])} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{paymentModes.map((mode) => <option key={mode} value={mode}>{receiptModeLabel(t, mode)}</option>)}</select></label>
+          <label className="text-sm font-bold text-forest">{t.reference}<input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} placeholder="UPI transaction ID or cheque no." className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.receivedBy}<input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-black text-forest">Amount breakdown</h3><button onClick={addItem} className="text-sm font-bold text-leaf">+ Add entry</button></div>
+          <div className="flex items-center justify-between"><h3 className="font-black text-forest">{t.amountBreakdown}</h3><button onClick={addItem} className="text-sm font-bold text-leaf">{t.addEntry}</button></div>
           {items.map((item) => (
             <div key={item.id} className="grid gap-2 rounded-2xl bg-cream p-3 sm:grid-cols-[1fr_72px_100px_28px]">
               <input aria-label="Entry description" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
@@ -325,59 +356,59 @@ export function ReceiptGenerator() {
           ))}
         </div>
 
-        <label className="mt-5 block text-sm font-bold text-forest">Receipt notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID so future customers can scan and pay against this receipt.</p>}
+        <label className="mt-5 block text-sm font-bold text-forest">{t.receiptNotes}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={4} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        {!isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
       </div>
 
-      <article ref={receiptRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={receiptRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Payment receipt</p>
-            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{t.paymentReceipt}</p>
+            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || t.yourBusiness}</h2>
             <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
           </div>
           <div className="relative rounded-2xl bg-mint p-4 text-right">
-            <span className="absolute -right-2 -top-3 rotate-12 rounded-lg border-2 border-leaf bg-white px-3 py-1 text-sm font-black uppercase tracking-widest text-leaf shadow-sm">Paid</span>
+            <span className="absolute -right-2 -top-3 rotate-12 rounded-lg border-2 border-leaf bg-white px-3 py-1 text-sm font-black uppercase tracking-widest text-leaf shadow-sm">{t.paid}</span>
             <p className="text-sm font-black text-forest">{receiptNo}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">Date: {receiptDate}</p>
-            <p className="text-xs font-semibold text-forest/65">Mode: {paymentMode}</p>
+            <p className="mt-1 text-xs font-semibold text-forest/65">{t.date}: {receiptDate}</p>
+            <p className="text-xs font-semibold text-forest/65">{t.mode}: {receiptModeLabel(t, paymentMode)}</p>
           </div>
         </header>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl bg-cream p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Received from</p>
-            <p className="mt-2 text-lg font-black text-forest">{customer || "Customer"}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.receivedFrom}</p>
+            <p className="mt-2 text-lg font-black text-forest">{customer || t.customerFallback}</p>
             {customerPhone && <p className="text-sm font-semibold text-forest/65">{customerPhone}</p>}
           </div>
-          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Amount received</p><p className="mt-2 text-3xl font-black">{money(totals.subtotal)}</p></div>
+          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{t.amountReceived}</p><p className="mt-2 text-3xl font-black">{money(totals.subtotal)}</p></div>
         </section>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
           <table className="w-full text-left text-sm">
-            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">Description</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Rate</th><th className="p-3 text-right">Amount</th></tr></thead>
+            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">{t.description}</th><th className="p-3 text-right">{t.qty}</th><th className="p-3 text-right">{t.rate}</th><th className="p-3 text-right">{t.amount}</th></tr></thead>
             <tbody>{items.map((item) => { const amount = (Number(item.qty) || 0) * (Number(item.price) || 0); return <tr key={item.id} className="border-t border-forest/10"><td className="p-3 font-semibold text-forest">{item.name}</td><td className="p-3 text-right">{item.qty}</td><td className="p-3 text-right">{money(Number(item.price) || 0)}</td><td className="p-3 text-right font-bold">{money(amount)}</td></tr>; })}</tbody>
           </table>
         </div>
 
         <section className="mt-6 grid gap-6 sm:grid-cols-[1fr_260px]">
           <div className="space-y-3 text-sm">
-            <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">Total received</span><strong>{money(totals.subtotal)}</strong></div>
-            <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">Payment mode</span><strong>{paymentMode}</strong></div>
-            {referenceNo && <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">Reference / UTR</span><strong className="break-all text-right">{referenceNo}</strong></div>}
-            <div className="flex justify-between rounded-2xl border-2 border-dashed border-leaf/40 bg-mint/40 p-3"><span className="font-black uppercase tracking-wide text-leaf">Status</span><strong className="font-black uppercase tracking-wide text-leaf">Fully Paid ✓</strong></div>
+            <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">{t.totalReceived}</span><strong>{money(totals.subtotal)}</strong></div>
+            <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">{t.paymentMode}</span><strong>{receiptModeLabel(t, paymentMode)}</strong></div>
+            {referenceNo && <div className="flex justify-between rounded-2xl bg-cream p-3"><span className="font-bold text-forest">{t.referenceUtr}</span><strong className="break-all text-right">{referenceNo}</strong></div>}
+            <div className="flex justify-between rounded-2xl border-2 border-dashed border-leaf/40 bg-mint/40 p-3"><span className="font-black uppercase tracking-wide text-leaf">{t.status}</span><strong className="font-black uppercase tracking-wide text-leaf">{t.fullyPaid}</strong></div>
           </div>
           <div className="rounded-2xl border border-dashed border-forest/20 p-4">
-            <p className="text-sm font-black text-forest">Pay next time via UPI</p>
-            <div className="mt-3 flex flex-col items-center gap-3">{qrDataUrl && <img src={qrDataUrl} alt="UPI QR for future payments" className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-center text-sm leading-6 text-forest/70">Scan with any UPI app to pay {merchant || "us"} instantly next time.</p></div>
+            <p className="text-sm font-black text-forest">{t.payNext}</p>
+            <div className="mt-3 flex flex-col items-center gap-3">{qrDataUrl && <img src={qrDataUrl} alt={t.payNext} className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-center text-sm leading-6 text-forest/70">{t.scanNext} {merchant || t.yourBusiness}.</p></div>
           </div>
         </section>
 
         <footer className="mt-6 flex flex-col justify-between gap-4 rounded-2xl bg-cream p-4 text-sm leading-6 text-forest/70 sm:flex-row sm:items-end">
-          <div className="max-w-md"><strong className="text-forest">Notes:</strong> {notes}</div>
+          <div className="max-w-md"><strong className="text-forest">{t.notes}</strong> {notes}</div>
           <div className="text-center">
             <p className="border-t border-forest/30 pt-2 font-bold text-forest">{receivedBy}</p>
-            <p className="text-xs text-forest/55">Authorised signatory</p>
+            <p className="text-xs text-forest/55">{t.authorised}</p>
           </div>
         </footer>
       </article>

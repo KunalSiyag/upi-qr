@@ -16,6 +16,10 @@ const allStaticPaths: string[] = [
   ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/fr/${slug}/` : "/fr/")),
   ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/de/${slug}/` : "/de/")),
   ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/id/${slug}/` : "/id/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/ar/${slug}/` : "/ar/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/it/${slug}/` : "/it/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/ja/${slug}/` : "/ja/")),
+  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/zh/${slug}/` : "/zh/")),
 ];
 
 // Deduplicate paths

@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { DOC_DATE_LOCALE, isDocLang, swapIfDefault, type DocLang } from "../data/documentLang";
+import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
@@ -70,11 +73,13 @@ function buildUpiUrl(upiId: string, payee: string, amount: number, note: string)
 const today = new Date().toISOString().slice(0, 10);
 
 const initialItems: InvoiceItem[] = [
-  { id: 1, name: "Website design service", qty: "1", price: "4999" },
-  { id: 2, name: "Maintenance", qty: "1", price: "999" }
+  { id: 1, name: INVOICE_COPY.en.defaultItem1, qty: "1", price: "4999" },
+  { id: 2, name: INVOICE_COPY.en.defaultItem2, qty: "1", price: "999" }
 ];
 
-export function InvoiceGenerator() {
+export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const t = INVOICE_COPY[docLang] ?? INVOICE_COPY.en;
   const [templateId, setTemplateId] = useState("in-gst");
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [taxId, setTaxId] = useState("");
@@ -86,18 +91,28 @@ export function InvoiceGenerator() {
   const [dueDate, setDueDate] = useState(today);
   const [gstPercent, setGstPercent] = useState("18");
   const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState("Thank you for your business. Scan the QR to pay instantly via any UPI app.");
-  const [items, setItems] = useState<InvoiceItem[]>(initialItems);
+  const [notes, setNotes] = useState(() => (INVOICE_COPY[lang] ?? INVOICE_COPY.en).defaultNotes);
+  const [items, setItems] = useState<InvoiceItem[]>(() => {
+    const copy = INVOICE_COPY[lang] ?? INVOICE_COPY.en;
+    return [
+      { id: 1, name: copy.defaultItem1, qty: "1", price: "4999" },
+      { id: 2, name: copy.defaultItem2, qty: "1", price: "999" },
+    ];
+  });
   const [qrDataUrl, setQrDataUrl] = useState("");
 
   const template = invoiceTemplates.find((t) => t.id === templateId) ?? invoiceTemplates[0];
+  const dateLocale = docLang === "en" ? template.locale : DOC_DATE_LOCALE[docLang];
   const money = useMemo(() => makeMoney(template.locale, template.currency), [template]);
+  const docTitle = invoiceDocTitle(template.docTitle, t);
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem(draftKey);
       if (!saved) return;
       const draft = JSON.parse(saved);
+      if (isDocLang(draft.docLang)) setDocLang(draft.docLang);
+      else if (lang !== "en") setDocLang(lang);
       setTemplateId(invoiceTemplates.some((t) => t.id === draft.templateId) ? draft.templateId : "in-gst");
       setMerchant(draft.merchant ?? "ABC Solutions");
       setTaxId(draft.taxId ?? "");
@@ -135,8 +150,8 @@ export function InvoiceGenerator() {
   }, [upiUrl]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
-  }, [templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
+    localStorage.setItem(draftKey, JSON.stringify({ docLang, templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
+  }, [docLang, templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
 
   const selectTemplate = (nextId: string) => {
     setTemplateId(nextId);
@@ -153,7 +168,25 @@ export function InvoiceGenerator() {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
   };
 
-  const addItem = () => setItems((current) => [...current, { id: Date.now(), name: "New item", qty: "1", price: "0" }]);
+  const addItem = () => setItems((current) => [...current, { id: Date.now(), name: t.newItem, qty: "1", price: "0" }]);
+
+  function changeLang(next: DocLang) {
+    if (next === docLang) return;
+    const n = INVOICE_COPY[next] ?? INVOICE_COPY.en;
+    const noteDefaults = Object.values(INVOICE_COPY).map((c) => c.defaultNotes);
+    const item1Defaults = Object.values(INVOICE_COPY).map((c) => c.defaultItem1);
+    const item2Defaults = Object.values(INVOICE_COPY).map((c) => c.defaultItem2);
+    const newItemDefaults = Object.values(INVOICE_COPY).map((c) => c.newItem);
+    setNotes((current) => swapIfDefault(current, noteDefaults, n.defaultNotes));
+    setItems((current) =>
+      current.map((item, index) => {
+        const defaults = index === 0 ? item1Defaults : index === 1 ? item2Defaults : newItemDefaults;
+        const nextName = index === 0 ? n.defaultItem1 : index === 1 ? n.defaultItem2 : n.newItem;
+        return { ...item, name: swapIfDefault(item.name, defaults, nextName) };
+      })
+    );
+    setDocLang(next);
+  }
   const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
 
   function safeInvoiceNo() {
@@ -269,14 +302,14 @@ export function InvoiceGenerator() {
   }
 
   function buildShareMessage() {
-    return `*${template.docTitle} from ${merchant || "Merchant"}*\n` +
+    return `*${docTitle} — ${merchant || t.yourBusiness}*\n` +
       `----------------------------\n` +
-      `*Invoice No:* ${invoiceNo}\n` +
-      `*Customer:* ${customer}\n` +
-      `*Total Payable:* ${money(totals.total)}\n` +
-      `*Due Date:* ${formatDate(dueDate, template.locale)}\n\n` +
-      (template.currency === "INR" ? `*Pay via UPI:* ${upiId || "yourname@upi"}\nThe attached invoice has a scan-and-pay QR.\n\n` : "") +
-      `Generated free via Pro UPI QR (https://www.proupiqr.in)`;
+      `*${t.shareInvoiceNo}:* ${invoiceNo}\n` +
+      `*${t.shareCustomer}:* ${customer}\n` +
+      `*${t.shareTotal}:* ${money(totals.total)}\n` +
+      `*${t.shareDue}:* ${formatDate(dueDate, dateLocale)}\n\n` +
+      (template.currency === "INR" ? `*${t.sharePayUpi}:* ${upiId || "yourname@upi"}\n${t.shareQr}\n\n` : "") +
+      t.shareVia;
   }
 
   async function shareOnWhatsapp() {
@@ -292,7 +325,7 @@ export function InvoiceGenerator() {
           if (navigator.canShare({ files: [file] })) {
             await navigator.share({
               files: [file],
-              title: `${template.docTitle} ${invoiceNo}`,
+              title: `${docTitle} ${invoiceNo}`,
               text: buildShareMessage()
             });
             sharedVisually = true;
@@ -329,66 +362,70 @@ export function InvoiceGenerator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Invoice builder</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Create Invoice</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{t.eyebrow}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={shareOnWhatsapp}
               disabled={shareState === "busy"}
-              title="Share the invoice image with a scan-and-pay QR via WhatsApp"
+              title={t.whatsapp}
               className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
             >
-              {shareState === "busy" ? "Preparing…" : "💬 WhatsApp Share"}
+              {shareState === "busy" ? t.preparing : `💬 ${t.whatsapp}`}
             </button>
             <button
               onClick={downloadInvoicePdf}
               disabled={downloadPdfState === "busy"}
               className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
             >
-              {downloadPdfState === "busy" ? "Generating..." : "📄 Download PDF"}
+              {downloadPdfState === "busy" ? t.generating : `📄 ${t.downloadPdf}`}
             </button>
             <button
               onClick={downloadInvoicePng}
               disabled={downloadPngState === "busy"}
               className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
             >
-              {downloadPngState === "busy" ? "Generating..." : "🖼️ Download PNG"}
+              {downloadPngState === "busy" ? t.generating : `🖼️ ${t.downloadPng}`}
             </button>
           </div>
         </div>
 
         <div className="mt-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Country template</p>
+          <DocumentLanguagePicker value={docLang} onChange={changeLang} label={t.langLabel} />
+        </div>
+
+        <div className="mt-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.countryTemplate}</p>
           <div className="mt-2 flex flex-wrap gap-2">
-            {invoiceTemplates.map((t) => (
+            {invoiceTemplates.map((tpl) => (
               <button
-                key={t.id}
+                key={tpl.id}
                 type="button"
-                onClick={() => selectTemplate(t.id)}
-                aria-pressed={t.id === templateId}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${t.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
+                onClick={() => selectTemplate(tpl.id)}
+                aria-pressed={tpl.id === templateId}
+                className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${tpl.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
               >
-                {t.flag} {t.label}
+                {tpl.flag} {tpl.label}
               </button>
             ))}
           </div>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Business name<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{template.taxIdLabel} (optional)<input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder={`${template.taxIdLabel} shown on invoice`} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">UPI ID{template.currency !== "INR" && " (INR payments only)"}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Customer<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Invoice number<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Invoice date<input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.businessName}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{template.taxIdLabel} {t.taxIdOptional}<input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder={`${template.taxIdLabel} shown on invoice`} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.upiId}{template.currency !== "INR" && t.upiInrOnly}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.customer}<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.invoiceNumber}<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.invoiceDate}<input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.dueDate}<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">{template.taxLabel} %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Discount ₹<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{t.discount} {template.currency === "INR" ? "₹" : template.currency}<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-black text-forest">Line items</h3><button onClick={addItem} className="text-sm font-bold text-leaf">+ Add item</button></div>
+          <div className="flex items-center justify-between"><h3 className="font-black text-forest">{t.lineItems}</h3><button onClick={addItem} className="text-sm font-bold text-leaf">{t.addItem}</button></div>
           {items.map((item) => (
             <div key={item.id} className="grid gap-2 rounded-2xl bg-cream p-3 sm:grid-cols-[1fr_72px_100px_28px]">
               <input aria-label="Item name" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
@@ -399,34 +436,34 @@ export function InvoiceGenerator() {
           ))}
         </div>
 
-        <label className="mt-5 block text-sm font-bold text-forest">Invoice notes<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="mt-4 block text-sm font-bold text-forest">{template.currency === "INR" ? "Bank / payment details (optional)" : "Bank / payment details"}<textarea value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} rows={3} placeholder={template.currency === "INR" ? "Shown below the QR if filled" : "Account name, IBAN / account no., SWIFT, payment terms…"} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter a real UPI ID before sending this invoice. The current value is only a sample.</p>}
+        <label className="mt-5 block text-sm font-bold text-forest">{t.invoiceNotes}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="mt-4 block text-sm font-bold text-forest">{template.currency === "INR" ? t.bankOptional : t.bankRequired}<textarea value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} rows={3} placeholder={template.currency === "INR" ? t.bankPlaceholderInr : t.bankPlaceholderIntl} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
       </div>
 
-      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{template.docTitle} · {template.flag} {template.currency}</p>
-            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{docTitle} · {template.flag} {template.currency}</p>
+            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || t.yourBusiness}</h2>
             {taxId && <p className="mt-1 text-sm font-semibold text-forest/65">{template.taxIdLabel}: {taxId}</p>}
             <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
           </div>
           <div className="rounded-2xl bg-mint p-4 text-right">
             <p className="text-sm font-black text-forest">{invoiceNo}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">Issued: {formatDate(invoiceDate, template.locale)}</p>
-            <p className="text-xs font-semibold text-forest/65">Due: {formatDate(dueDate, template.locale)}</p>
+            <p className="mt-1 text-xs font-semibold text-forest/65">{t.issued} {formatDate(invoiceDate, dateLocale)}</p>
+            <p className="text-xs font-semibold text-forest/65">{t.due} {formatDate(dueDate, dateLocale)}</p>
           </div>
         </header>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Bill to</p><p className="mt-2 text-lg font-black text-forest">{customer || "Customer"}</p></div>
-          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Amount payable</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.billTo}</p><p className="mt-2 text-lg font-black text-forest">{customer || t.customerFallback}</p></div>
+          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{t.amountPayable}</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
         </section>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
           <table className="w-full text-left text-sm">
-            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">Item</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Rate</th><th className="p-3 text-right">Amount</th></tr></thead>
+            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">{t.item}</th><th className="p-3 text-right">{t.qty}</th><th className="p-3 text-right">{t.rate}</th><th className="p-3 text-right">{t.amount}</th></tr></thead>
             <tbody>{items.map((item) => { const amount = (Number(item.qty) || 0) * (Number(item.price) || 0); return <tr key={item.id} className="border-t border-forest/10"><td className="p-3 font-semibold text-forest">{item.name}</td><td className="p-3 text-right">{item.qty}</td><td className="p-3 text-right">{money(Number(item.price) || 0)}</td><td className="p-3 text-right font-bold">{money(amount)}</td></tr>; })}</tbody>
           </table>
         </div>
@@ -435,20 +472,20 @@ export function InvoiceGenerator() {
           <div className="rounded-2xl border border-dashed border-forest/20 p-4">
             {template.currency === "INR" ? (
               <>
-                <p className="text-sm font-black text-forest">Payment QR</p>
-                <div className="mt-3 flex items-center gap-4">{qrDataUrl && <img src={qrDataUrl} alt="UPI payment QR for this invoice" className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-sm leading-6 text-forest/70">Scan with PhonePe, Google Pay, Paytm, BHIM, or any UPI app. The QR includes invoice number and payable amount.</p></div>
-                {bankDetails && <p className="mt-3 whitespace-pre-line border-t border-dashed border-forest/15 pt-3 text-xs leading-5 text-forest/70"><strong className="text-forest">Bank details:</strong>{"\n"}{bankDetails}</p>}
+                <p className="text-sm font-black text-forest">{t.paymentQr}</p>
+                <div className="mt-3 flex items-center gap-4">{qrDataUrl && <img src={qrDataUrl} alt={t.paymentQr} className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-sm leading-6 text-forest/70">{t.scanHelp}</p></div>
+                {bankDetails && <p className="mt-3 whitespace-pre-line border-t border-dashed border-forest/15 pt-3 text-xs leading-5 text-forest/70"><strong className="text-forest">{t.bankDetails}</strong>{"\n"}{bankDetails}</p>}
               </>
             ) : (
               <>
-                <p className="text-sm font-black text-forest">Payment details</p>
-                {bankDetails ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-forest/75">{bankDetails}</p> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 font-semibold text-amber-800">Add your bank account, IBAN / account number, SWIFT code, or other payment instructions in the builder so customers know how to pay.</p>}
+                <p className="text-sm font-black text-forest">{t.paymentDetails}</p>
+                {bankDetails ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-forest/75">{bankDetails}</p> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 font-semibold text-amber-800">{t.addBankWarning}</p>}
               </>
             )}
           </div>
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span>Subtotal</span><strong>{money(totals.subtotal)}</strong></div>
-            <div className="flex justify-between"><span>Discount</span><strong>- {money(totals.discountValue)}</strong></div>
+            <div className="flex justify-between"><span>{t.subtotal}</span><strong>{money(totals.subtotal)}</strong></div>
+            <div className="flex justify-between"><span>{t.discountLabel}</span><strong>- {money(totals.discountValue)}</strong></div>
             {template.splitTax && (Number(gstPercent) || 0) > 0 ? (
               <>
                 <div className="flex justify-between"><span>CGST ({(Number(gstPercent) || 0) / 2}%)</span><strong>{money(totals.gst / 2)}</strong></div>
@@ -457,11 +494,11 @@ export function InvoiceGenerator() {
             ) : (
               <div className="flex justify-between"><span>{template.taxLabel} ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
             )}
-            <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">Total</span><strong>{money(totals.total)}</strong></div>
+            <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">{t.total}</span><strong>{money(totals.total)}</strong></div>
           </div>
         </section>
 
-        <footer className="mt-6 rounded-2xl bg-cream p-4 text-sm leading-6 text-forest/70"><strong className="text-forest">Notes:</strong> {notes}</footer>
+        <footer className="mt-6 rounded-2xl bg-cream p-4 text-sm leading-6 text-forest/70"><strong className="text-forest">{t.notes}</strong> {notes}</footer>
       </article>
     </div>
   );

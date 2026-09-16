@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-payment-reminder-draft";
 
@@ -23,7 +26,8 @@ function daysOverdue(dueDate: string) {
   return isNaN(due.getTime()) ? null : diff;
 }
 
-export function PaymentReminderGenerator() {
+export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [business, setBusiness] = useState("ABC Solutions");
   const [customer, setCustomer] = useState("Client Name");
   const [invoiceNo, setInvoiceNo] = useState("INV-0001");
@@ -92,29 +96,33 @@ export function PaymentReminderGenerator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Reminder builder</p>
-          <h2 className="mt-1 text-2xl font-black text-forest">Chase Payments Politely</h2>
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Tone</p>
+        <div className="border-b border-forest/5 pb-4">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Reminder builder")}</p>
+          <h2 className="mt-1 text-2xl font-black text-forest">{tr("Chase Payments Politely")}</h2>
+        </div>
+
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Tone")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {tones.map((t) => (
             <button key={t.id} type="button" onClick={() => setTone(t.id)} aria-pressed={t.id === tone}
               className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${t.id === tone ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}>
-              {t.label}
+              {tr(t.label)}
             </button>
           ))}
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Your business<input value={business} onChange={(e) => setBusiness(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Customer name<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Invoice number<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Amount due ₹<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Due date<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">UPI ID (optional)<input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="yourname@upi" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest sm:col-span-2">Signed off as (optional)<input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Accounts Team" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Your business")}<input value={business} onChange={(e) => setBusiness(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Customer name")}<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Invoice number")}<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Amount due ₹")}<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Due date")}<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("UPI ID (optional)")}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="yourname@upi" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Signed off as (optional)")}<input value={senderName} onChange={(e) => setSenderName(e.target.value)} placeholder="Accounts Team" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         {overdue !== null && (
@@ -127,8 +135,8 @@ export function PaymentReminderGenerator() {
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex items-center justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Message preview</p>
-            <h2 className="mt-1 text-xl font-black text-forest">{tones.find((t) => t.id === tone)?.name}</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Message preview")}</p>
+            <h2 className="mt-1 text-xl font-black text-forest">{tr(tones.find((item) => item.id === tone)?.name ?? "")}</h2>
           </div>
           <span className="rounded-full bg-mint px-3 py-1.5 text-[11px] font-black text-forest/70">{message.length} chars</span>
         </div>
@@ -138,7 +146,7 @@ export function PaymentReminderGenerator() {
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={copyMessage} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf transition">{copied ? "✓ Copied!" : "📋 Copy message"}</button>
+          <button onClick={copyMessage} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf transition">{copied ? `${"✓"} ${tr("Copied!")}` : `${"📋"} ${tr("Copy message")}`}</button>
           <button onClick={() => openWith("https://api.whatsapp.com/send?text=")} className="rounded-full bg-[#25D366] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1da851] transition">💬 WhatsApp</button>
           <button onClick={() => openWith("sms:?&body=")} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition">📱 SMS</button>
           <button onClick={() => openWith(`mailto:?subject=${encodeURIComponent(`Payment reminder - Invoice ${invoiceNo}`)}&body=`)} className="rounded-full border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:bg-mint transition">✉️ Email</button>

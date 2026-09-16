@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-bos-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -11,7 +14,8 @@ function money(v: number) { return `₹${new Intl.NumberFormat("en-IN", { minimu
 interface BosItem { id: number; name: string; qty: string; rate: string }
 let _id = 1; function nid() { return _id++; }
 
-export function BillOfSupplyGenerator() {
+export function BillOfSupplyGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState(""); const [supplierAddress, setSupplierAddress] = useState("");
   const [buyerName, setBuyerName] = useState(""); const [buyerGstin, setBuyerGstin] = useState("");
@@ -44,43 +48,47 @@ export function BillOfSupplyGenerator() {
 
   return (<div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
     <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Bill of supply</p><h2 className="mt-1 text-2xl font-black text-forest">GST-exempt billing</h2></div><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : "Export PDF"}</button></div>
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
+      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Bill of supply")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("GST-exempt billing")}</h2></div><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-bold text-forest">Supplier (your business)<input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Supplier address<input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Buyer name<input value={buyerName} onChange={e => setBuyerName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Supplier (your business)")}<input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Supplier address")}<input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Buyer name")}<input value={buyerName} onChange={e => setBuyerName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         <label className="text-sm font-bold text-forest">Buyer GSTIN (if registered)<input value={buyerGstin} onChange={e => setBuyerGstin(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest sm:col-span-2">Buyer address<input value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Bill number<input value={bosNo} onChange={e => setBosNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Date<input type="date" value={bosDate} onChange={e => setBosDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Buyer address")}<input value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Bill number")}<input value={bosNo} onChange={e => setBosNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Date")}<input type="date" value={bosDate} onChange={e => setBosDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         <div className="sm:col-span-2 flex gap-2">
           {[[true, "Composition dealer"], [false, "Exempt supply"]].map(([val, label]) => (<button key={String(val)} onClick={() => setIsComposition(val as boolean)} className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold transition ${isComposition === val ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-cream text-forest"}`}>{label}</button>))}
         </div>
       </div>
-      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">Items</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">+ Add row</button></div>
+      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
         {items.map((it, idx) => (<div key={it.id} className="mb-2 grid grid-cols-4 gap-1.5 rounded-xl bg-cream/60 p-2">
-          <input value={it.name} onChange={e => upd(it.id, "name", e.target.value)} placeholder="Item" className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
-          <input value={it.qty} onChange={e => upd(it.id, "qty", e.target.value)} placeholder="Qty" className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
-          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder="Rate" className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-red-500 text-xs font-bold">×</button>}</div>
+          <input value={it.name} onChange={e => upd(it.id, "name", e.target.value)} placeholder={tr("Item")} className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
+          <input value={it.qty} onChange={e => upd(it.id, "qty", e.target.value)} placeholder={tr("Qty")} className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
+          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder={tr("Rate")} className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-red-500 text-xs font-bold">×</button>}</div>
         </div>))}
       </div>
     </div>
     <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="flex items-start justify-between border-b-2 border-forest pb-4">
-        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Bill of Supply</p><h2 className="mt-2 text-2xl font-black text-forest">{bosNo}</h2><p className="text-xs font-semibold text-forest/60">Date: {bosDate}</p></div>
+        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Bill of supply")}</p><h2 className="mt-2 text-2xl font-black text-forest">{bosNo}</h2><p className="text-xs font-semibold text-forest/60">{tr("Date")}: {bosDate}</p></div>
       </header>
       <section className="mt-4 grid grid-cols-2 gap-4 text-xs leading-6">
-        <div><p className="font-black text-forest">Supplier</p><p className="font-semibold">{supplierName || "—"}</p><p className="text-forest/60">{supplierAddress}</p></div>
-        <div className="text-right"><p className="font-black text-forest">Buyer</p><p className="font-semibold">{buyerName || "—"}</p>{buyerGstin && <p className="text-forest/60">GSTIN: {buyerGstin}</p>}<p className="text-forest/60">{buyerAddress}</p></div>
+        <div><p className="font-black text-forest">{tr("Supplier")}</p><p className="font-semibold">{supplierName || "—"}</p><p className="text-forest/60">{supplierAddress}</p></div>
+        <div className="text-right"><p className="font-black text-forest">{tr("Buyer")}</p><p className="font-semibold">{buyerName || "—"}</p>{buyerGstin && <p className="text-forest/60">GSTIN: {buyerGstin}</p>}<p className="text-forest/60">{buyerAddress}</p></div>
       </section>
       {isComposition && <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[10px] font-bold text-amber-800">Composition taxable person — not eligible to collect tax. Tax on supplies is paid by the supplier under composition levy.</div>}
       {!isComposition && <div className="mt-3 rounded-xl bg-mint border border-leaf/20 p-3 text-[10px] font-bold text-forest">Exempt supply — no GST chargeable under notification.</div>}
       <div className="mt-5 overflow-x-auto"><table className="w-full text-xs">
-        <thead><tr className="border-b-2 border-forest text-left"><th className="py-2 font-black">#</th><th className="py-2 font-black">Description</th><th className="py-2 text-right font-black">Qty</th><th className="py-2 text-right font-black">Rate</th><th className="py-2 text-right font-black">Amount</th></tr></thead>
+        <thead><tr className="border-b-2 border-forest text-left"><th className="py-2 font-black">#</th><th className="py-2 font-black">{tr("Description")}</th><th className="py-2 text-right font-black">{tr("Qty")}</th><th className="py-2 text-right font-black">{tr("Rate")}</th><th className="py-2 text-right font-black">{tr("Amount")}</th></tr></thead>
         <tbody>{items.map((it, idx) => { const ln = (Math.max(0, Number(it.qty) || 0)) * (Math.max(0, Number(it.rate) || 0)); return (<tr key={it.id} className="border-b border-forest/10"><td className="py-1.5">{idx + 1}</td><td className="py-1.5 font-semibold">{it.name || "—"}</td><td className="py-1.5 text-right">{it.qty}</td><td className="py-1.5 text-right">{money(Number(it.rate) || 0)}</td><td className="py-1.5 text-right font-bold">{money(ln)}</td></tr>); })}</tbody>
       </table></div>
       <div className="mt-3 ml-auto w-60 space-y-1 text-xs">
-        <div className="flex justify-between border-t-2 border-forest pt-1 text-sm"><span className="font-black">Total</span><strong className="font-black">{money(calc.total)}</strong></div>
+        <div className="flex justify-between border-t-2 border-forest pt-1 text-sm"><span className="font-black">{tr("Total")}</span><strong className="font-black">{money(calc.total)}</strong></div>
         <div className="flex justify-between text-[10px] text-forest/60"><span>No GST charged</span></div>
       </div>
       <footer className="mt-6 pt-3 border-t border-forest/10 text-[10px] text-forest/60 space-y-1">

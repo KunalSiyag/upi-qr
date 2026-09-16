@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { amountInWordsInr } from "../lib/inr-words";
+import { DOC_DATE_LOCALE, type DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 export { amountInWordsInr };
 
@@ -23,14 +26,15 @@ function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 }
 
-function monthLabel(monthValue: string) {
+function monthLabel(monthValue: string, locale = "en-IN") {
   if (!monthValue) return "";
   const [y, m] = monthValue.split("-").map(Number);
   if (!y || !m) return monthValue;
-  return new Intl.DateTimeFormat("en-IN", { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
+  return new Intl.DateTimeFormat(locale, { month: "long", year: "numeric" }).format(new Date(y, m - 1, 1));
 }
 
-export function RentReceiptGenerator() {
+export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [landlord, setLandlord] = useState("Ramesh Kumar");
   const [landlordPan, setLandlordPan] = useState("");
   const [tenant, setTenant] = useState("Suresh Sharma");
@@ -199,69 +203,73 @@ export function RentReceiptGenerator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Rent receipt builder</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Create Rent Receipt</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Rent receipt builder")}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{tr("Create Rent Receipt")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? "Preparing…" : "💬 WhatsApp Share"}</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 Download PDF"}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? "Generating..." : "🖼️ Download PNG"}</button>
+            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `💬 ${tr("WhatsApp share")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `📄 ${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `🖼️ ${tr("Download PNG")}`}</button>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Landlord name<input value={landlord} onChange={(e) => setLandlord(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Landlord PAN (optional)<input value={landlordPan} onChange={(e) => setLandlordPan(e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium uppercase outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Tenant name<input value={tenant} onChange={(e) => setTenant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Monthly rent ₹<input type="number" value={rentAmount} onChange={(e) => setRentAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest sm:col-span-2">Property address<input value={address} onChange={(e) => setAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Rent period<input type="month" value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Paid on<input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Payment mode<select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as (typeof paymentModes)[number])} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{paymentModes.map((mode) => <option key={mode}>{mode}</option>)}</select></label>
-          <label className="text-sm font-bold text-forest">Receipt number<input value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Reference / UTR (optional)<input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Landlord name")}<input value={landlord} onChange={(e) => setLandlord(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Landlord PAN (optional)")}<input value={landlordPan} onChange={(e) => setLandlordPan(e.target.value.toUpperCase())} placeholder="ABCDE1234F" maxLength={10} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium uppercase outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Tenant name")}<input value={tenant} onChange={(e) => setTenant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Monthly rent ₹")}<input type="number" value={rentAmount} onChange={(e) => setRentAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Property address")}<input value={address} onChange={(e) => setAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Rent period")}<input type="month" value={periodMonth} onChange={(e) => setPeriodMonth(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Paid on")}<input type="date" value={paidOn} onChange={(e) => setPaidOn(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Payment mode")}<select value={paymentMode} onChange={(e) => setPaymentMode(e.target.value as (typeof paymentModes)[number])} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{paymentModes.map((mode) => <option key={mode} value={mode}>{tr(mode)}</option>)}</select></label>
+          <label className="text-sm font-bold text-forest">{tr("Receipt number")}<input value={receiptNo} onChange={(e) => setReceiptNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Reference / UTR (optional)")}<input value={referenceNo} onChange={(e) => setReferenceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
-          <button onClick={nextMonth} className="rounded-full border border-forest/15 bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition">📅 Next month + new number</button>
-          <p className="text-xs font-semibold text-forest/60">Tenants claiming HRA usually need one signed receipt per month.</p>
+          <button onClick={nextMonth} className="rounded-full border border-forest/15 bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition">📅 {tr("Next month + new number")}</button>
+          <p className="text-xs font-semibold text-forest/60">{tr("Tenants claiming HRA usually need one signed receipt per month.")}</p>
         </div>
       </div>
 
       <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-4 border-b-2 border-forest pb-5 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Rent receipt</p>
-            <h2 className="mt-2 text-3xl font-black text-forest">Receipt No. {receiptNo}</h2>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Rent receipt")}</p>
+            <h2 className="mt-2 text-3xl font-black text-forest">{tr("Receipt number")} {receiptNo}</h2>
           </div>
           <div className="rounded-2xl bg-mint p-4 text-right">
-            <p className="text-xs font-semibold text-forest/65">Date of payment</p>
+            <p className="text-xs font-semibold text-forest/65">{tr("Date of payment")}</p>
             <p className="text-sm font-black text-forest">{paidOn}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">Period</p>
-            <p className="text-sm font-black text-forest">{monthLabel(periodMonth)}</p>
+            <p className="mt-1 text-xs font-semibold text-forest/65">{tr("Period")}</p>
+            <p className="text-sm font-black text-forest">{monthLabel(periodMonth, DOC_DATE_LOCALE[docLang])}</p>
           </div>
         </header>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-[1fr_auto]">
           <div className="rounded-2xl bg-forest p-4 text-white">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Rent received</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{tr("Rent received")}</p>
             <p className="mt-2 text-3xl font-black">{money(amount)}</p>
             <p className="mt-1 text-sm font-semibold text-sun">{amountInWordsInr(amount)}</p>
           </div>
-          {qrDataUrl && <div className="rounded-2xl border border-dashed border-forest/20 p-3 text-center"><img src={qrDataUrl} alt="UPI QR for this rent amount" className="mx-auto h-24 w-24 rounded-lg border border-forest/10" /><p className="mt-1 text-[10px] font-bold text-forest/60">Scan to pay next rent</p></div>}
+          {qrDataUrl && <div className="rounded-2xl border border-dashed border-forest/20 p-3 text-center"><img src={qrDataUrl} alt={tr("Scan to pay next rent")} className="mx-auto h-24 w-24 rounded-lg border border-forest/10" /><p className="mt-1 text-[10px] font-bold text-forest/60">{tr("Scan to pay next rent")}</p></div>}
         </section>
 
         <section className="mt-6 space-y-3 rounded-2xl bg-cream p-5 text-base leading-8 text-forest/85">
-          <p>Received with thanks from <strong className="font-black text-forest">{tenant || "Tenant Name"}</strong> a sum of <strong className="font-black text-forest">{money(amount)}</strong> ({amountInWordsInr(amount)}) by way of <strong className="font-black text-forest">{paymentMode}</strong>{referenceNo ? <> (Ref: {referenceNo})</> : null} towards rent of the premises at <strong className="font-black text-forest">{address || "property address"}</strong> for the period of <strong className="font-black text-forest">{monthLabel(periodMonth)}</strong>.</p>
+          <p>{tr("Received with thanks from")} <strong className="font-black text-forest">{tenant || tr("Tenant name")}</strong> {tr("a sum of")} <strong className="font-black text-forest">{money(amount)}</strong> ({amountInWordsInr(amount)}) {tr("by way of")} <strong className="font-black text-forest">{tr(paymentMode)}</strong>{referenceNo ? <> (Ref: {referenceNo})</> : null} {tr("towards rent of the premises at")} <strong className="font-black text-forest">{address || tr("Property address")}</strong> {tr("for the period of")} <strong className="font-black text-forest">{monthLabel(periodMonth, DOC_DATE_LOCALE[docLang])}</strong>.</p>
         </section>
 
         <footer className="mt-8 flex flex-col gap-8 sm:flex-row sm:items-end sm:justify-between">
           <div className="flex h-28 w-32 flex-col items-center justify-center rounded-xl border-2 border-dashed border-forest/30 text-center text-[10px] font-bold uppercase tracking-widest text-forest/45">
-            <span>Affix</span><span>Revenue</span><span>Stamp</span><span className="mt-1 normal-case">(if paid in cash)</span>
+            <span>{tr("Affix")}</span><span>{tr("Revenue")}</span><span>{tr("Stamp")}</span><span className="mt-1 normal-case">{tr("(if paid in cash)")}</span>
           </div>
           <div className="text-right">
-            <p className="border-t border-forest/40 pt-2 text-lg font-black text-forest">{landlord || "Landlord Name"}</p>
-            <p className="text-xs font-semibold text-forest/60">Landlord{landlordPan ? ` · PAN: ${landlordPan}` : ""}</p>
+            <p className="border-t border-forest/40 pt-2 text-lg font-black text-forest">{landlord || tr("Landlord")}</p>
+            <p className="text-xs font-semibold text-forest/60">{tr("Landlord")}{landlordPan ? ` · PAN: ${landlordPan}` : ""}</p>
           </div>
         </footer>
       </article>

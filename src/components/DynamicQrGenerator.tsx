@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useId, useRef } from "react";
 import QRCode from "qrcode";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 import {
   deleteLinkFromCloud,
   getGlobalScanCount,
@@ -40,7 +43,8 @@ function mergeCloudCampaign(local: CloudLinkData | undefined, cloud: CloudLinkDa
   };
 }
 
-export function DynamicQrGenerator() {
+export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [links, setLinks] = useState<CloudLinkData[]>([]);
   const [title, setTitle] = useState("Main Store Counter Standee");
   const [destination, setDestination] = useState("https://www.proupiqr.in/");
@@ -374,6 +378,10 @@ export function DynamicQrGenerator() {
 
   return (
     <div className="space-y-8">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       <div className={`rounded-2xl border p-4 text-sm ${accountStatus === "signed-out" ? "border-amber-200 bg-amber-50 text-amber-950" : "border-leaf/20 bg-mint/40 text-forest"}`}>
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>

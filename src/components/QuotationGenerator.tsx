@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { t } from "../data/phrases";
 
 type QuoteItem = { id: number; name: string; qty: string; price: string };
 
@@ -33,7 +36,9 @@ const initialItems: QuoteItem[] = [
   { id: 2, name: "Maintenance (per month)", qty: "1", price: "999" }
 ];
 
-export function QuotationGenerator() {
+export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const tr = (s: string) => t(docLang, s);
   const [merchant, setMerchant] = useState("ABC Solutions");
   const [customer, setCustomer] = useState("Client Name");
   const [quoteNo, setQuoteNo] = useState("QTN-0001");
@@ -205,29 +210,33 @@ export function QuotationGenerator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Quotation builder</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Send Estimates That Convert</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Quotation builder")}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{tr("Send Estimates That Convert")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? "Preparing…" : "💬 WhatsApp Share"}</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 Download PDF"}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? "Generating..." : "🖼️ Download PNG"}</button>
+            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `💬 ${tr("WhatsApp share")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `📄 ${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `🖼️ ${tr("Download PNG")}`}</button>
           </div>
+        </div>
+
+        <div className="mt-6">
+          <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Your business<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Quotation for (customer)<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Quotation number<input value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Valid until<input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Tax % (GST / VAT)<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Discount ₹<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">UPI ID for advance (optional)<input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="yourname@upi" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Prepared by<input value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Your business")}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Quotation for (customer)")}<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Quotation number")}<input value={quoteNo} onChange={(e) => setQuoteNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Valid until")}<input type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Tax % (GST / VAT)")}<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Discount ₹")}<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("UPI ID for advance (optional)")}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} placeholder="yourname@upi" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Prepared by")}<input value={preparedBy} onChange={(e) => setPreparedBy(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-black text-forest">Line items</h3><button onClick={addItem} className="text-sm font-bold text-leaf">+ Add item</button></div>
+          <div className="flex items-center justify-between"><h3 className="font-black text-forest">{tr("Line items")}</h3><button onClick={addItem} className="text-sm font-bold text-leaf">{tr("+ Add item")}</button></div>
           {items.map((item) => (
             <div key={item.id} className="grid gap-2 rounded-2xl bg-cream p-3 sm:grid-cols-[1fr_72px_100px_28px]">
               <input aria-label="Item name" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
@@ -241,47 +250,47 @@ export function QuotationGenerator() {
         <label className="mt-5 block text-sm font-bold text-forest">Terms &amp; conditions<textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={docLang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Quotation / Estimate</p>
-            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Quotation / Estimate")}</p>
+            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || tr("Your business")}</h2>
           </div>
           <div className="rounded-2xl bg-sun/40 p-4 text-right">
             <p className="text-sm font-black text-forest">{quoteNo}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">Date: {quoteDate}</p>
-            <p className="text-xs font-black text-forest">Valid until: {validUntil}</p>
+            <p className="mt-1 text-xs font-semibold text-forest/65">{tr("Date")}: {quoteDate}</p>
+            <p className="text-xs font-black text-forest">{tr("Valid until")}: {validUntil}</p>
           </div>
         </header>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Prepared for</p><p className="mt-2 text-lg font-black text-forest">{customer || "Customer"}</p></div>
-          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">Estimated total</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Prepared for")}</p><p className="mt-2 text-lg font-black text-forest">{customer || tr("Customer")}</p></div>
+          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{tr("Estimated total")}</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
         </section>
 
         <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
           <table className="w-full text-left text-sm">
-            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">Item</th><th className="p-3 text-right">Qty</th><th className="p-3 text-right">Rate</th><th className="p-3 text-right">Amount</th></tr></thead>
+            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">{tr("Item")}</th><th className="p-3 text-right">{tr("Qty")}</th><th className="p-3 text-right">{tr("Rate")}</th><th className="p-3 text-right">{tr("Amount")}</th></tr></thead>
             <tbody>{items.map((item) => { const amount = (Number(item.qty) || 0) * (Number(item.price) || 0); return <tr key={item.id} className="border-t border-forest/10"><td className="p-3 font-semibold text-forest">{item.name}</td><td className="p-3 text-right">{item.qty}</td><td className="p-3 text-right">{money(Number(item.price) || 0)}</td><td className="p-3 text-right font-bold">{money(amount)}</td></tr>; })}</tbody>
           </table>
         </div>
 
         <section className="mt-6 grid gap-6 sm:grid-cols-[1fr_260px]">
           <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span>Subtotal</span><strong>{money(totals.subtotal)}</strong></div>
-            <div className="flex justify-between"><span>Discount</span><strong>- {money(totals.discountValue)}</strong></div>
-            <div className="flex justify-between"><span>Tax ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
-            <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">Total estimate</span><strong>{money(totals.total)}</strong></div>
-            {qrDataUrl && <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-forest/20 p-3">{qrDataUrl && <img src={qrDataUrl} alt="UPI QR for advance payment" className="h-20 w-20 rounded-lg border border-forest/10" />}<p className="text-xs leading-5 text-forest/70"><strong className="text-forest">Advance payment:</strong> scan this QR to confirm the booking with a token advance.</p></div>}
+            <div className="flex justify-between"><span>{tr("Subtotal")}</span><strong>{money(totals.subtotal)}</strong></div>
+            <div className="flex justify-between"><span>{tr("Discount")}</span><strong>- {money(totals.discountValue)}</strong></div>
+            <div className="flex justify-between"><span>{tr("Tax")} ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
+            <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">{tr("Total estimate")}</span><strong>{money(totals.total)}</strong></div>
+            {qrDataUrl && <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-forest/20 p-3">{qrDataUrl && <img src={qrDataUrl} alt="UPI QR for advance payment" className="h-20 w-20 rounded-lg border border-forest/10" />}<p className="text-xs leading-5 text-forest/70"><strong className="text-forest">{tr("Advance payment:")}</strong> scan this QR to confirm the booking with a token advance.</p></div>}
           </div>
           <div className="rounded-2xl bg-cream p-4 text-xs leading-6 text-forest/75">
-            <p className="font-black uppercase tracking-wide text-forest/60">Terms</p>
+            <p className="font-black uppercase tracking-wide text-forest/60">{tr("Terms")}</p>
             <p className="mt-2 whitespace-pre-line">{terms || "—"}</p>
           </div>
         </section>
 
         <footer className="mt-6 flex items-end justify-between rounded-2xl bg-cream p-4 text-sm leading-6 text-forest/70">
-          <p>This is an estimate, not a tax invoice. A formal invoice will be issued on confirmation.</p>
+          <p>{tr("This is an estimate, not a tax invoice. A formal invoice will be issued on confirmation.")}</p>
           <div className="shrink-0 pl-4 text-center">
             <p className="border-t border-forest/30 pt-2 font-bold text-forest">{preparedBy}</p>
           </div>

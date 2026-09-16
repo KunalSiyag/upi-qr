@@ -1,4 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-gratuity-draft";
 
@@ -6,7 +9,8 @@ function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 }
 
-export function GratuityCalculator() {
+export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [salary, setSalary] = useState("30000");
   const [yearsService, setYearsService] = useState("10");
   const [coveredByAct, setCoveredByAct] = useState(true);
@@ -59,14 +63,18 @@ export function GratuityCalculator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Gratuity planner</p>
-          <h2 className="mt-1 text-2xl font-black text-forest">Estimate Leaving Benefits</h2>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Gratuity planner")}</p>
+          <h2 className="mt-1 text-2xl font-black text-forest">{tr("Estimate Leaving Benefits")}</h2>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest sm:col-span-2">Last drawn monthly salary (Basic + DA) ₹<input type="number" value={salary} onChange={(e) => setSalary(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest sm:col-span-2">Years of continuous service<input type="number" step="0.1" min={0} max={45} value={yearsService} onChange={(e) => setYearsService(e.target.value)} placeholder="e.g. 7.6 for 7 years 7 months" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Last drawn monthly salary (Basic + DA) ₹")}<input type="number" value={salary} onChange={(e) => setSalary(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Years of continuous service")}<input type="number" step="0.1" min={0} max={45} value={yearsService} onChange={(e) => setYearsService(e.target.value)} placeholder="e.g. 7.6 for 7 years 7 months" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-5 space-y-3">
@@ -89,12 +97,12 @@ export function GratuityCalculator() {
 
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Estimated payout</p>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Estimated payout")}</p>
           <h2 className="mt-1 text-xl font-black text-forest">{result.eligible ? "Gratuity payable on exit" : "Not yet eligible"}</h2>
         </div>
 
         <div className="mt-6 rounded-[1.5rem] bg-forest p-6 text-white">
-          <p className="text-[10px] font-black uppercase tracking-widest text-white/60">Estimated gratuity</p>
+          <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{tr("Estimated gratuity")}</p>
           <p className="mt-2 text-4xl font-black">{result.eligible ? money(result.gratuity) : "₹0"}</p>
           {result.capped && <p className="mt-2 text-xs font-bold text-sun">Capped at the ₹20 lakh statutory limit — employer may pay more voluntarily.</p>}
         </div>

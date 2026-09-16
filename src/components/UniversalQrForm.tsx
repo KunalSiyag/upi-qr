@@ -3,6 +3,9 @@ import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import { buildUpiUri } from "../lib/upi-uri";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const typeList = [
   { key: "upi", label: "UPI Pay", icon: "₹", heading: "UPI payment (any app)" },
@@ -160,7 +163,8 @@ function buildPayload(f: FormState): string {
   }
 }
 
-export function UniversalQrForm() {
+export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
 
@@ -380,6 +384,10 @@ export function UniversalQrForm() {
 
   return (
     <div className="max-w-6xl mx-auto">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       {/* Type selector - compact, our style */}
       <div className="mb-6">
         <div className="flex flex-wrap gap-2">
@@ -456,8 +464,8 @@ export function UniversalQrForm() {
                 <input value={form.contactFirst} onChange={e => update("contactFirst", e.target.value)} placeholder="First name" className="rounded-2xl border px-3 py-2" />
                 <input value={form.contactLast} onChange={e => update("contactLast", e.target.value)} placeholder="Last name" className="rounded-2xl border px-3 py-2" />
                 <input value={form.contactOrg} onChange={e => update("contactOrg", e.target.value)} placeholder="Organization" className="rounded-2xl border px-3 py-2 col-span-2" />
-                <input value={form.contactEmail} onChange={e => update("contactEmail", e.target.value)} placeholder="Email" className="rounded-2xl border px-3 py-2" />
-                <input value={form.contactPhone} onChange={e => update("contactPhone", e.target.value)} placeholder="Phone" className="rounded-2xl border px-3 py-2" />
+                <input value={form.contactEmail} onChange={e => update("contactEmail", e.target.value)} placeholder={tr("Email")} className="rounded-2xl border px-3 py-2" />
+                <input value={form.contactPhone} onChange={e => update("contactPhone", e.target.value)} placeholder={tr("Phone")} className="rounded-2xl border px-3 py-2" />
                 <input value={form.contactWebsite} onChange={e => update("contactWebsite", e.target.value)} placeholder="Website" className="rounded-2xl border px-3 py-2 col-span-2" />
               </div>
             )}
@@ -540,7 +548,7 @@ export function UniversalQrForm() {
                   <div className="flex items-center gap-3 text-sm">
                     <span className="text-leaf">Logo added</span>
                     <input type="range" min="28" max="80" value={form.logoSize} onChange={e => update("logoSize", Number(e.target.value))} />
-                    <button onClick={removeLogo} className="text-xs text-red-600">Remove</button>
+                    <button onClick={removeLogo} className="text-xs text-red-600">{tr("Remove")}</button>
                   </div>
                 )}
               </div>
@@ -600,7 +608,7 @@ export function UniversalQrForm() {
 
           {/* Actions */}
           <div className="mt-5 flex flex-wrap gap-3 items-center">
-            <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-leaf transition disabled:opacity-50">Download PNG</button>
+            <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-leaf transition disabled:opacity-50">{tr("Download PNG")}</button>
             <button onClick={downloadSvg} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download SVG</button>
             <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
             {form.type === "upi" && (

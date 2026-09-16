@@ -1,5 +1,8 @@
 import React, { useState, useRef } from "react";
 import QRCode from "qrcode";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 interface Question {
   id: string;
@@ -8,7 +11,8 @@ interface Question {
   options?: string[];
 }
 
-export function SurveyQrGenerator() {
+export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [businessName, setBusinessName] = useState("The Grand Cafe & Bistro");
   const [surveyTitle, setSurveyTitle] = useState("How was your dining experience today?");
   const [googleReviewUrl, setGoogleReviewUrl] = useState("https://g.page/r/your-google-review-link/review");
@@ -65,6 +69,10 @@ export function SurveyQrGenerator() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-8">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       {/* Top Controls & Navigation */}
       <div className="flex items-center justify-between border-b border-forest/10 pb-4">
         <div className="flex gap-2">

@@ -1,6 +1,10 @@
 import React, { useState } from "react";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
-export function UpiLinkGenerator() {
+export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [vpa, setVpa] = useState("sharmastores@okicici");
   const [name, setName] = useState("Sharma Kirana Store");
   const [amount, setAmount] = useState("500");
@@ -35,6 +39,10 @@ export function UpiLinkGenerator() {
 
   return (
     <div className="w-full max-w-4xl mx-auto space-y-8">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       {/* Input Form */}
       <div className="rounded-3xl border border-leaf/20 bg-white p-6 md:p-8 shadow-sm space-y-5">
         <h3 className="text-xl font-black text-forest border-b border-forest/10 pb-3 flex items-center gap-2">

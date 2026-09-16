@@ -7,6 +7,9 @@ import {
   type UpiMdrCategory,
 } from "../lib/upiMdr";
 import { rupeesToPaise } from "../lib/gstMath";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-upi-mdr-draft";
 
@@ -28,7 +31,8 @@ const PRESETS = [
   { label: "Petrol pump", monthly: "8000000", share: "80", ticket: "4000", category: "essential" as const },
 ];
 
-export function UpiMdrCalculator() {
+export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [tab, setTab] = useState<"single" | "monthly">("monthly");
   const [amount, setAmount] = useState("5000");
   const [monthly, setMonthly] = useState("300000");
@@ -89,6 +93,10 @@ export function UpiMdrCalculator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       <div className="lg:col-span-6 space-y-5">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm">
           <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-5 font-semibold text-amber-950">

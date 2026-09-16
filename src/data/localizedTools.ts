@@ -1,7 +1,7 @@
-import { INTERNATIONAL_TOOL_COPY, type InternationalLang } from "./internationalTranslations";
+import { INTERNATIONAL_TOOL_COPY, type GlobalLang, type InternationalLang } from "./internationalTranslations";
 
 export type RegionalToolLanguage = "hi" | "ta" | "te" | "mr";
-export type SupportedToolLanguage = RegionalToolLanguage | InternationalLang;
+export type SupportedToolLanguage = RegionalToolLanguage | InternationalLang | GlobalLang;
 
 export type LocalizedToolCopy = {
   name: string;
@@ -24,8 +24,44 @@ export type LocalizedTool = {
     | "menuQr" | "margin" | "limits" | "decoder" | "upiLink" | "survey"
     | "merchantRecon" | "msmeReceivables"
     | "influencerContract" | "freelanceContract"
+    | "purchaseOrder" | "deliveryChallan" | "debitNote" | "billOfSupply" | "cashMemo"
     | "default";
   copy: Record<SupportedToolLanguage, LocalizedToolCopy>;
+};
+
+const GENERIC_GLOBAL: Record<"ar" | "it" | "ja" | "zh", (name: string) => LocalizedToolCopy> = {
+  ar: (name) => ({
+    name,
+    title: `${name} | مجاني بدون تسجيل`,
+    description: `استخدم ${name} مجانًا في المتصفح. بدون تسجيل، وبياناتك تبقى على جهازك.`,
+    intro: `أداة ${name} تعمل بالكامل في المتصفح. يمكنك التبديل إلى العربية من داخل الأداة نفسها.`,
+    steps: ["أدخل بياناتك", "راجع المعاينة", "نزّل PDF أو الصورة"],
+    faqs: [{ question: "هل البيانات تُرفع إلى الخادم؟", answer: "لا. المعالجة محلية في المتصفح." }],
+  }),
+  it: (name) => ({
+    name,
+    title: `${name} | Gratis senza registrazione`,
+    description: `Usa ${name} gratis nel browser. Niente account: i dati restano sul tuo dispositivo.`,
+    intro: `${name} funziona interamente nel browser. Puoi cambiare lingua dallo strumento.`,
+    steps: ["Inserisci i dati", "Controlla l'anteprima", "Scarica PDF o immagine"],
+    faqs: [{ question: "I dati vanno sul server?", answer: "No. Tutto resta nel browser." }],
+  }),
+  ja: (name) => ({
+    name,
+    title: `${name} | 無料・登録不要`,
+    description: `${name} をブラウザで無料利用。登録なし。データは端末内に留まります。`,
+    intro: `${name} はブラウザ内で完結します。ツール内で言語を切り替えできます。`,
+    steps: ["情報を入力", "プレビューを確認", "PDFまたは画像を保存"],
+    faqs: [{ question: "データはサーバーに送られますか？", answer: "いいえ。処理はブラウザ内だけです。" }],
+  }),
+  zh: (name) => ({
+    name,
+    title: `${name} | 免费无需注册`,
+    description: `在浏览器中免费使用${name}。无需账户，数据留在你的设备上。`,
+    intro: `${name} 完全在浏览器中运行。可在工具内切换语言。`,
+    steps: ["填写信息", "检查预览", "下载 PDF 或图片"],
+    faqs: [{ question: "数据会上传服务器吗？", answer: "不会。全部在浏览器本地处理。" }],
+  }),
 };
 
 function tool(
@@ -34,8 +70,21 @@ function tool(
   component: LocalizedTool["component"],
   regionalCopy: Record<RegionalToolLanguage, LocalizedToolCopy>
 ): LocalizedTool {
-  const intlCopy = INTERNATIONAL_TOOL_COPY[slug];
+  const intlCopy = INTERNATIONAL_TOOL_COPY[slug] ?? {};
   const copy = { ...regionalCopy, ...intlCopy } as Record<SupportedToolLanguage, LocalizedToolCopy>;
+  const genericEs: Record<"es" | "pt" | "fr" | "de" | "id", (n: string) => LocalizedToolCopy> = {
+    es: (n) => ({ name: n, title: `${n} | Gratis sin registro`, description: `Usa ${n} gratis en el navegador. Sin cuenta; tus datos se quedan en tu dispositivo.`, intro: `${n} funciona por completo en el navegador. Puedes cambiar el idioma desde la herramienta.`, steps: ["Introduce los datos", "Revisa la vista previa", "Descarga PDF o imagen"], faqs: [{ question: "¿Se suben los datos al servidor?", answer: "No. Todo se procesa en tu navegador." }] }),
+    pt: (n) => ({ name: n, title: `${n} | Grátis sem cadastro`, description: `Use ${n} grátis no navegador. Sem conta; os dados ficam no seu dispositivo.`, intro: `${n} funciona inteiramente no navegador. Pode mudar o idioma na ferramenta.`, steps: ["Introduza os dados", "Reveja a pré-visualização", "Descarregue PDF ou imagem"], faqs: [{ question: "Os dados vão para o servidor?", answer: "Não. Tudo fica no navegador." }] }),
+    fr: (n) => ({ name: n, title: `${n} | Gratuit sans inscription`, description: `Utilisez ${n} gratuitement dans le navigateur. Pas de compte ; vos données restent sur l'appareil.`, intro: `${n} fonctionne entièrement dans le navigateur. Vous pouvez changer la langue dans l'outil.`, steps: ["Saisissez les informations", "Vérifiez l'aperçu", "Téléchargez PDF ou image"], faqs: [{ question: "Les données partent-elles sur un serveur ?", answer: "Non. Tout reste dans le navigateur." }] }),
+    de: (n) => ({ name: n, title: `${n} | Kostenlos ohne Konto`, description: `Nutzen Sie ${n} kostenlos im Browser. Kein Konto; Ihre Daten bleiben auf dem Gerät.`, intro: `${n} läuft vollständig im Browser. Die Sprache können Sie im Tool wechseln.`, steps: ["Daten eingeben", "Vorschau prüfen", "PDF oder Bild laden"], faqs: [{ question: "Werden Daten auf den Server geschickt?", answer: "Nein. Alles bleibt im Browser." }] }),
+    id: (n) => ({ name: n, title: `${n} | Gratis tanpa daftar`, description: `Gunakan ${n} gratis di browser. Tanpa akun; data tetap di perangkat Anda.`, intro: `${n} berjalan sepenuhnya di browser. Bahasa bisa diganti di dalam alat.`, steps: ["Isi data", "Periksa pratinjau", "Unduh PDF atau gambar"], faqs: [{ question: "Apakah data diunggah ke server?", answer: "Tidak. Semua diproses di browser." }] }),
+  };
+  (["es", "pt", "fr", "de", "id"] as const).forEach((lang) => {
+    if (!copy[lang]) copy[lang] = genericEs[lang](name);
+  });
+  (["ar", "it", "ja", "zh"] as const).forEach((lang) => {
+    if (!copy[lang]) copy[lang] = GENERIC_GLOBAL[lang](name);
+  });
   return { slug, name, component, copy };
 }
 
@@ -1385,7 +1434,37 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
         { question: "रिव्हिजन मर्यादा का महत्त्वाची आहे?", answer: "विनामोबदला अतिरिक्त काम टाळण्यासाठी प्रति टप्पा २ रिव्हिजन निश्चित केल्या आहेत." }
       ]
     }
-  })
+  }),
+  tool("purchase-order-generator", "Purchase Order Generator", "purchaseOrder", {
+    hi: { name: "खरीद आदेश जनरेटर", title: "मुफ्त खरीद आदेश (PO) PDF जनरेटर", description: "खरीदार और सप्लायर GSTIN, डिलीवरी तिथि और आइटम के साथ मुफ्त PO बनाएं। साइनअप नहीं।", intro: "औपचारिक खरीद आदेश ब्राउज़र में बनता है। भाषा टूल के अंदर बदल सकते हैं।", steps: ["खरीदार और सप्लायर भरें", "आइटम जोड़ें", "PDF डाउनलोड करें"], faqs: [{ question: "क्या यह टैक्स इनवॉइस है?", answer: "नहीं। PO ऑर्डर है, टैक्स इनवॉइस नहीं।" }] },
+    ta: { name: "கொள்முதல் ஆணை", title: "இலவச கொள்முதல் ஆணை PDF", description: "வாங்குபவர்/சப்ளையர் GSTIN உடன் இலவச PO உருவாக்குங்கள்.", intro: "உலாவியில் PO தயாராகும்.", steps: ["விவரங்கள்", "பொருட்கள்", "PDF"], faqs: [{ question: "இது வரி விலைப்பட்டியலா?", answer: "இல்லை. இது ஆர்டர் ஆவணம்." }] },
+    te: { name: "కొనుగోలు ఆర్డర్", title: "ఉచిత కొనుగోలు ఆర్డర్ PDF", description: "కొనుగోలుదారు/సప్లయర్ GSTINతో ఉచిత PO.", intro: "బ్రౌజర్‌లో PO తయారవుతుంది.", steps: ["వివరాలు", "ఐటమ్‌లు", "PDF"], faqs: [{ question: "ఇది టాక్స్ ఇన్‌వాయిస్‌నా?", answer: "కాదు. ఇది ఆర్డర్ పత్రం." }] },
+    mr: { name: "खरेदी आदेश", title: "मोफत खरेदी आदेश PDF", description: "खरेदीदार/पुरवठादार GSTIN सह मोफत PO तयार करा.", intro: "ब्राउझरमध्ये PO तयार होतो.", steps: ["माहिती", "वस्तू", "PDF"], faqs: [{ question: "हे कर चलन आहे का?", answer: "नाही. हे ऑर्डर दस्तऐवज आहे." }] },
+  }),
+  tool("delivery-challan-generator", "Delivery Challan Generator", "deliveryChallan", {
+    hi: { name: "डिलीवरी चालान जनरेटर", title: "मुफ्त डिलीवरी चालान PDF जनरेटर", description: "वाहन, ट्रांसपोर्टर और ई-वे बिल के साथ मुफ्त डिलीवरी चालान बनाएं।", intro: "माल भेजते समय चालान ब्राउज़र में तैयार करें।", steps: ["सप्लायर/खरीदार भरें", "आइटम और वाहन जोड़ें", "PDF डाउनलोड करें"], faqs: [{ question: "ई-वे बिल ज़रूरी है?", answer: "सीमा पार होने पर अलग से ई-वे बिल चाहिए; यहाँ केवल संदर्भ लिख सकते हैं।" }] },
+    ta: { name: "டெலிவரி சலான்", title: "இலவச டெலிவரி சலான் PDF", description: "வாகனம் மற்றும் ஈ-வே பில் உடன் சலான்.", intro: "உலாவியில் சலான் தயாராகும்.", steps: ["விவரங்கள்", "பொருட்கள்", "PDF"], faqs: [{ question: "ஈ-வே பில் தேவையா?", answer: "வரம்பு தாண்டினால் தனியாக தேவை." }] },
+    te: { name: "డెలివరీ చలాన్", title: "ఉచిత డెలివరీ చలాన్ PDF", description: "వాహనం మరియు ఈ-వే బిల్‌తో చలాన్.", intro: "బ్రౌజర్‌లో చలాన్ తయారవుతుంది.", steps: ["వివరాలు", "ఐటమ్‌లు", "PDF"], faqs: [{ question: "ఈ-వే బిల్ అవసరమా?", answer: "పరిమితి దాటితే వేరుగా అవసరం." }] },
+    mr: { name: "डिलिव्हरी चलन", title: "मोफत डिलिव्हरी चलन PDF", description: "वाहन आणि ई-वे बिल सह चलन तयार करा.", intro: "ब्राउझरमध्ये चलन तयार होते.", steps: ["माहिती", "वस्तू", "PDF"], faqs: [{ question: "ई-वे बिल आवश्यक आहे का?", answer: "मर्यादा ओलांडल्यास स्वतंत्र ई-वे बिल लागते." }] },
+  }),
+  tool("debit-note-generator", "GST Debit Note Generator", "debitNote", {
+    hi: { name: "GST डेबिट नोट जनरेटर", title: "धारा 34 मुफ्त GST डेबिट नोट PDF", description: "कम बिल हुए इनवॉइस पर अतिरिक्त कर के लिए GST डेबिट नोट बनाएं।", intro: "मूल इनवॉइस का संदर्भ जरूरी है। PDF ब्राउज़र में बनता है।", steps: ["GSTIN भरें", "मूल इनवॉइस लिखें", "PDF डाउनलोड करें"], faqs: [{ question: "डेबिट नोट कब?", answer: "मूल इनवॉइस में मूल्य कम दिखाया हो तो धारा 34 के तहत।" }] },
+    ta: { name: "GST டெபிட் நோட்", title: "இலவச GST டெபிட் நோட் PDF", description: "குறைவாக பில் ஆன விலைப்பட்டியலுக்கு டெபிட் நோட்.", intro: "அசல் இன்வாய்ஸ் குறிப்பு தேவை.", steps: ["GSTIN", "அசல் இன்வாய்ஸ்", "PDF"], faqs: [{ question: "எப்போது?", answer: "மதிப்பு குறைவாக காட்டப்பட்டால்." }] },
+    te: { name: "GST డెబిట్ నోట్", title: "ఉచిత GST డెబిట్ నోట్ PDF", description: "తక్కువగా బిల్ అయిన ఇన్‌వాయిస్‌కు డెబిట్ నోట్.", intro: "అసలు ఇన్‌వాయిస్ సూచన అవసరం.", steps: ["GSTIN", "అసలు ఇన్‌వాయిస్", "PDF"], faqs: [{ question: "ఎప్పుడు?", answer: "విలువ తక్కువగా చూపితే." }] },
+    mr: { name: "GST डेबिट नोट", title: "मोफत GST डेबिट नोट PDF", description: "कमी बिल झालेल्या चलनासाठी डेबिट नोट.", intro: "मूळ चलनाचा संदर्भ आवश्यक.", steps: ["GSTIN", "मूळ चलन", "PDF"], faqs: [{ question: "केव्हा?", answer: "मूल्य कमी दाखवले असल्यास." }] },
+  }),
+  tool("bill-of-supply-generator", "Bill of Supply Generator", "billOfSupply", {
+    hi: { name: "बिल ऑफ सप्लाई जनरेटर", title: "मुफ्त बिल ऑफ सप्लाई PDF जनरेटर", description: "कंपोज़िशन डीलर और कर-मुक्त आपूर्ति के लिए जीरो-GST बिल बनाएं।", intro: "GST न वसूलने पर बिल ऑफ सप्लाई ब्राउज़र में बनाएँ।", steps: ["प्रकार चुनें", "आइटम जोड़ें", "PDF डाउनलोड करें"], faqs: [{ question: "टैक्स कॉलम क्यों नहीं?", answer: "बिल ऑफ सप्लाई पर GST नहीं लिया जाता।" }] },
+    ta: { name: "பில் ஆஃப் சப்ளை", title: "இலவச பில் ஆஃப் சப்ளை PDF", description: "கூட்டு வரி விற்பனையாளருக்கான பூஜ்ய GST பில்.", intro: "உலாவியில் தயாராகும்.", steps: ["வகை", "பொருட்கள்", "PDF"], faqs: [{ question: "வரி இல்லையா?", answer: "இந்த ஆவணத்தில் GST வசூலிக்கப்படாது." }] },
+    te: { name: "బిల్ ఆఫ్ సప్లై", title: "ఉచిత బిల్ ఆఫ్ సప్లై PDF", description: "కంపోజిషన్ డీలర్ కోసం జీరో GST బిల్.", intro: "బ్రౌజర్‌లో తయారవుతుంది.", steps: ["రకం", "ఐటమ్‌లు", "PDF"], faqs: [{ question: "పన్ను లేదా?", answer: "ఈ పత్రంపై GST వసూలు చేయరు." }] },
+    mr: { name: "बिल ऑफ सप्लाय", title: "मोफत बिल ऑफ सप्लाय PDF", description: "कंपोझिशन डीलरसाठी शून्य GST बिल.", intro: "ब्राउझरमध्ये तयार होते.", steps: ["प्रकार", "वस्तू", "PDF"], faqs: [{ question: "कर नाही का?", answer: "या कागदपत्रावर GST आकारला जात नाही." }] },
+  }),
+  tool("cash-memo-generator", "Cash Memo Generator", "cashMemo", {
+    hi: { name: "कैश मेमो जनरेटर", title: "मुफ्त कैश मेमो / रिटेल बिल PDF", description: "किराना और काउंटर बिक्री के लिए सरल कैश मेमो बनाएं। साइनअप नहीं।", intro: "रिटेल स्लिप ब्राउज़र में बनती है। भाषा टूल में बदलें।", steps: ["दुकान भरें", "आइटम जोड़ें", "PDF डाउनलोड करें"], faqs: [{ question: "क्या GST लगता है?", answer: "कैश मेमो सरल रिटेल स्लिप है; टैक्स इनवॉइस अलग टूल में है।" }] },
+    ta: { name: "கேஷ் மெமோ", title: "இலவச கேஷ் மெமோ PDF", description: "சில்லறை விற்பனைக்கான எளிய மெமோ.", intro: "உலாவியில் தயாராகும்.", steps: ["கடை", "பொருட்கள்", "PDF"], faqs: [{ question: "GST உண்டா?", answer: "இது எளிய சில்லறை சீட்டு; வரி விலைப்பட்டியல் வேறு." }] },
+    te: { name: "క్యాష్ మెమో", title: "ఉచిత క్యాష్ మెమో PDF", description: "రిటైల్ అమ్మకాల కోసం సాధారణ మెమో.", intro: "బ్రౌజర్‌లో తయారవుతుంది.", steps: ["దుకాణం", "ఐటమ్‌లు", "PDF"], faqs: [{ question: "GST ఉందా?", answer: "ఇది సాధారణ రిటైల్ స్లిప్; టాక్స్ ఇన్‌వాయిస్ వేరు." }] },
+    mr: { name: "कॅश मेमो", title: "मोफत कॅश मेमो PDF", description: "किराणा व काउंटर विक्रीसाठी सोपी पावती.", intro: "ब्राउझरमध्ये तयार होते.", steps: ["दुकान", "वस्तू", "PDF"], faqs: [{ question: "GST आहे का?", answer: "ही साधी रिटेल स्लिप आहे; कर चलन वेगळे आहे." }] },
+  }),
 ];
 
 export function getLocalizedTool(slug: string) {

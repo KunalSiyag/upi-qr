@@ -1,6 +1,9 @@
 import { useState, useEffect, useRef, useId, useMemo } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 type LayoutGrid = "6-grid" | "4-grid" | "12-grid";
 type QrContentType = "upi" | "url" | "text" | "wifi";
@@ -49,7 +52,8 @@ function readSkinFromUrl(): AppSkin {
   return "phonepe";
 }
 
-export function StickerSheetGenerator() {
+export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [qrContentType, setQrContentType] = useState<QrContentType>("upi");
   const [skin, setSkin] = useState<AppSkin>("phonepe");
   const [payee, setPayee] = useState("Sharma General Store");
@@ -200,8 +204,12 @@ export function StickerSheetGenerator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr] w-full min-w-0">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
-        <h2 className="text-xl font-black text-forest">Shop QR sticker</h2>
+        <h2 className="text-xl font-black text-forest">{tr("Shop QR sticker")}</h2>
         <p className="mt-1 text-xs text-forest/60">
           PhonePe / GPay look on the sticker. The code is a normal UPI QR — any app can scan it.
         </p>
@@ -420,7 +428,7 @@ export function StickerSheetGenerator() {
             disabled={isGenerating}
             className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
           >
-            {isGenerating ? "Generating..." : "Download sticker PNG"}
+            {isGenerating ? tr("Generating...") : "Download sticker PNG"}
           </button>
           <button
             type="button"
@@ -428,7 +436,7 @@ export function StickerSheetGenerator() {
             disabled={isGenerating}
             className="inline-flex items-center justify-center gap-2 rounded-2xl border border-forest/15 bg-mint/50 px-6 py-3.5 text-xs font-black text-forest transition hover:bg-mint focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
           >
-            {isGenerating ? "Generating..." : "Download A4 PDF"}
+            {isGenerating ? tr("Generating...") : "Download A4 PDF"}
           </button>
         </div>
       </div>

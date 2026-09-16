@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
-export function OfferPosterGenerator() {
+export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [theme, setTheme] = useState<"festive" | "clearance" | "cashback" | "minimal">("festive");
   const [shopName, setShopName] = useState("SHARMA GENERAL STORE");
   const [tagline, setTagline] = useState("Festival Mega Sale - Scan & Pay");
@@ -66,6 +70,10 @@ export function OfferPosterGenerator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       {/* Input Panel */}
       <div className="lg:col-span-6 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">

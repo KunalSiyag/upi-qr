@@ -1,8 +1,12 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
-export function DigitalVisitingCard() {
+export function DigitalVisitingCard({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [name, setName] = useState("Vikram Sharma");
   const [title, setTitle] = useState("Founder & Lead Designer");
   const [company, setCompany] = useState("Sharma Designs Studio");
@@ -124,14 +128,18 @@ END:VCARD`;
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       {/* Input & Customizer Form */}
       <div className="lg:col-span-6 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-black text-forest">Customize Business Card</h2>
+          <h2 className="text-xl font-black text-forest">{tr("Customize Business Card")}</h2>
 
           {/* Theme Selector */}
           <div className="space-y-2">
-            <label className="block text-xs font-bold uppercase tracking-wider text-forest/75">Select Card Theme</label>
+            <label className="block text-xs font-bold uppercase tracking-wider text-forest/75">{tr("Select Card Theme")}</label>
             <div className="grid grid-cols-5 gap-2">
               {[
                 { id: "forest", label: "Forest" },
@@ -156,7 +164,7 @@ END:VCARD`;
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label htmlFor={nameId} className="block text-xs font-bold text-forest/75 mb-1">Full Name</label>
+              <label htmlFor={nameId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Full Name")}</label>
               <input
                 id={nameId}
                 type="text"
@@ -166,7 +174,7 @@ END:VCARD`;
               />
             </div>
             <div>
-              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">Job Title</label>
+              <label htmlFor={titleId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Job Title")}</label>
               <input
                 id={titleId}
                 type="text"
@@ -189,7 +197,7 @@ END:VCARD`;
               />
             </div>
             <div>
-              <label htmlFor={taglineId} className="block text-xs font-bold text-forest/75 mb-1">Tagline</label>
+              <label htmlFor={taglineId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Tagline")}</label>
               <input
                 id={taglineId}
                 type="text"
@@ -202,7 +210,7 @@ END:VCARD`;
 
           <div className="grid grid-cols-3 gap-3">
             <div>
-              <label htmlFor={phoneId} className="block text-xs font-bold text-forest/75 mb-1">Phone</label>
+              <label htmlFor={phoneId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Phone")}</label>
               <input
                 id={phoneId}
                 type="text"
@@ -212,7 +220,7 @@ END:VCARD`;
               />
             </div>
             <div>
-              <label htmlFor={emailId} className="block text-xs font-bold text-forest/75 mb-1">Email</label>
+              <label htmlFor={emailId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Email")}</label>
               <input
                 id={emailId}
                 type="email"

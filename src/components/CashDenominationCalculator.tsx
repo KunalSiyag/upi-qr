@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-cash-denomination-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -32,7 +35,8 @@ function money(rupees: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(rupees);
 }
 
-export function CashDenominationCalculator() {
+export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [counts, setCounts] = useState<string[]>(() => DENOMINATIONS.map(() => ""));
   const [expected, setExpected] = useState("");
@@ -181,6 +185,10 @@ export function CashDenominationCalculator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_0.95fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Night close</p>
@@ -252,8 +260,8 @@ export function CashDenominationCalculator() {
         {varianceLabel && <p className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${varianceLabel.cls}`}>{varianceLabel.text}</p>}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 Download summary PDF"}</button>
-          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? "Generating..." : "🖼️ Download PNG"}</button>
+          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "📄 Download summary PDF"}</button>
+          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("Download PNG")}`}</button>
         </div>
       </div>
 
@@ -271,7 +279,7 @@ export function CashDenominationCalculator() {
         </header>
 
         <table className="mt-4 w-full text-left text-sm">
-          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/55"><th className="py-2">Denomination</th><th className="py-2 text-center">×</th><th className="py-2 text-right">Amount</th></tr></thead>
+          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/55"><th className="py-2">Denomination</th><th className="py-2 text-center">×</th><th className="py-2 text-right">{tr("Amount")}</th></tr></thead>
           <tbody>
             {rows.map((row, idx) => row.count > 0 && (
               <tr key={`${row.value}-${idx}`} className="border-b border-forest/5">

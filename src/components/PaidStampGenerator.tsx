@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-paid-stamp-draft";
 const MAX_DIMENSION = 1800;
@@ -36,7 +39,8 @@ function roundRectPath(ctx: CanvasRenderingContext2D, x: number, y: number, w: n
   ctx.closePath();
 }
 
-export function PaidStampGenerator() {
+export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [imageSrc, setImageSrc] = useState("");
   const [imageSize, setImageSize] = useState({ width: 1000, height: 700 });
   const [stampText, setStampText] = useState("PAID");
@@ -209,10 +213,14 @@ export function PaidStampGenerator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Stamp studio</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Mark It As Paid</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Stamp studio")}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{tr("Mark It As Paid")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -239,11 +247,11 @@ export function PaidStampGenerator() {
         </label>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Stamp text<input value={stampText} onChange={(e) => setStampText(e.target.value)} maxLength={18} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Date line (optional)<input value={dateLine} onChange={(e) => setDateLine(e.target.value)} placeholder="Paid on 21 Aug 2026" maxLength={40} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Signature name (optional)<input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} placeholder="Ravi Kumar" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Stamp colour<select value={color} onChange={(e) => setColor(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{colorOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
-          <label className="text-sm font-bold text-forest">Position<select value={position} onChange={(e) => setPosition(e.target.value as PositionKey)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{Object.keys(positions).map((key) => <option key={key} value={key}>{key.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>)}</select></label>
+          <label className="text-sm font-bold text-forest">{tr("Stamp text")}<input value={stampText} onChange={(e) => setStampText(e.target.value)} maxLength={18} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Date line (optional)")}<input value={dateLine} onChange={(e) => setDateLine(e.target.value)} placeholder="Paid on 21 Aug 2026" maxLength={40} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Signature name (optional)")}<input value={receivedBy} onChange={(e) => setReceivedBy(e.target.value)} placeholder="Ravi Kumar" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Stamp colour")}<select value={color} onChange={(e) => setColor(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{colorOptions.map((option) => <option key={option.value} value={option.value}>{tr(option.label)}</option>)}</select></label>
+          <label className="text-sm font-bold text-forest">{tr("Position")}<select value={position} onChange={(e) => setPosition(e.target.value as PositionKey)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf">{Object.keys(positions).map((key) => <option key={key} value={key}>{key.replace("-", " ").replace(/\b\w/g, (c) => c.toUpperCase())}</option>)}</select></label>
           <label className="text-sm font-bold text-forest">Stamp size ({scale}%)<input type="range" min={25} max={90} value={scale} onChange={(e) => setScale(Number(e.target.value))} className="mt-4 w-full accent-[#15803d]" /></label>
           <label className="text-sm font-bold text-forest">Ink opacity ({opacity}%)<input type="range" min={30} max={100} value={opacity} onChange={(e) => setOpacity(Number(e.target.value))} className="mt-4 w-full accent-[#15803d]" /></label>
         </div>
@@ -253,7 +261,7 @@ export function PaidStampGenerator() {
       </div>
 
       <div className="rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Live preview</p>
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Live preview")}</p>
         <div className="mt-4 overflow-hidden rounded-2xl border border-forest/10 bg-[repeating-conic-gradient(#f3f4f6_0%_25%,#ffffff_0%_50%)] bg-[length:24px_24px] p-3">
           <canvas ref={canvasRef} className="mx-auto block h-auto w-full max-w-full rounded-xl shadow-inner" />
         </div>

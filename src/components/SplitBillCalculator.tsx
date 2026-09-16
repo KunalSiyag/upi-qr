@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import QRCode from "qrcode";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-split-bill-draft-v2";
 
@@ -24,7 +27,8 @@ function padAssigned(assigned: boolean[] | undefined, n: number): boolean[] {
   return Array.from({ length: n }, (_, i) => assigned?.[i] ?? true);
 }
 
-export function SplitBillCalculator() {
+export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [eventName, setEventName] = useState("Team dinner");
   const [payerName, setPayerName] = useState("");
   const [upiId, setUpiId] = useState("yourname@upi");
@@ -198,18 +202,22 @@ export function SplitBillCalculator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Split calculator</p>
-          <h2 className="mt-1 text-2xl font-black text-forest">Who ordered what</h2>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Split calculator")}</p>
+          <h2 className="mt-1 text-2xl font-black text-forest">{tr("Who ordered what")}</h2>
         </div>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">Occasion<input value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="Team dinner" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Your name (payer)<input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Shown on payment requests" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Occasion")}<input value={eventName} onChange={(e) => setEventName(e.target.value)} placeholder="Team dinner" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Your name (payer)")}<input value={payerName} onChange={(e) => setPayerName(e.target.value)} placeholder="Shown on payment requests" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           {mode !== "items" && (
-            <label className="text-sm font-bold text-forest">Bill amount ₹<input type="number" value={totalBill} onChange={(e) => setTotalBill(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+            <label className="text-sm font-bold text-forest">{tr("Bill amount ₹")}<input type="number" value={totalBill} onChange={(e) => setTotalBill(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           )}
-          <label className="text-sm font-bold text-forest">Your UPI ID (to receive)<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Your UPI ID (to receive)")}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -222,13 +230,13 @@ export function SplitBillCalculator() {
         </div>
 
         <div className="mt-5 rounded-2xl bg-cream p-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Service + tip</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Service + tip")}</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <label className="text-xs font-bold text-forest">Service charge %
               <input type="number" value={servicePercent} onChange={(e) => setServicePercent(e.target.value)} className="mt-1 w-full rounded-xl border border-forest/10 px-3 py-2 text-sm font-bold" />
             </label>
             <div>
-              <p className="text-xs font-bold text-forest">Tip</p>
+              <p className="text-xs font-bold text-forest">{tr("Tip")}</p>
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {([["none", "None"], ["percent", "%"], ["flat", "₹"]] as const).map(([value, label]) => (
                   <button key={value} type="button" onClick={() => setTipMode(value)} aria-pressed={tipMode === value}
@@ -328,7 +336,7 @@ export function SplitBillCalculator() {
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Who owes what</p>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Who owes what")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{money(calc.grandPaise)} across {calc.n}</h2>
           </div>
           <button onClick={() => shareOnWhatsapp(null)} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm">
@@ -352,7 +360,7 @@ export function SplitBillCalculator() {
                   <p className="text-sm font-bold text-leaf">{money(paise)}</p>
                 </div>
                 <button onClick={() => copyText(personMessage(i), i)} className="shrink-0 rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[11px] font-bold text-forest hover:border-leaf transition">
-                  {copiedIndex === i ? "Copied" : "Copy"}
+                  {copiedIndex === i ? tr("Copied") : "Copy"}
                 </button>
                 <button onClick={() => shareOnWhatsapp(i)} className="shrink-0 rounded-full bg-[#25D366] px-3 py-1.5 text-[11px] font-bold text-white">WA</button>
                 <button onClick={() => showQr(i)} className="shrink-0 rounded-full bg-forest px-3 py-1.5 text-[11px] font-bold text-white">QR</button>

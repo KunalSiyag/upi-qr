@@ -2,6 +2,9 @@ import { useEffect, useId, useMemo, useState } from "react";
 import QRCode from "qrcode";
 import { GST_CATALOG, GST_LEGACY_SLABS, GST_SLABS, searchGstCatalog, type GstCatalogItem } from "../data/gstCatalog";
 import { gstLine, ratePercentToBps, rupeesToPaise } from "../lib/gstMath";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-gst-draft-v2";
 
@@ -24,7 +27,8 @@ function nid() {
   return Date.now() + Math.floor(Math.random() * 1000);
 }
 
-export function GstCalculator() {
+export function GstCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [mode, setMode] = useState<Mode>("exclusive");
   const [supply, setSupply] = useState<Supply>("intra");
   const [composition, setComposition] = useState(false);
@@ -156,36 +160,40 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12 mb-0">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       <div className="lg:col-span-7 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black text-forest">1. What are you billing?</h2>
+          <h2 className="text-xl font-black text-forest">{tr("1. What are you billing?")}</h2>
           <p className="mt-1 text-xs leading-5 text-forest/65">
             Search a product or service. GST 2.0 is 0 / 5 / 18 / 40 (plus 3% gold). Confirm the HSN on the GST portal before you file.
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 p-1.5 rounded-2xl bg-mint/50">
             <button type="button" onClick={() => setMode("exclusive")} className={`py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold ${mode === "exclusive" ? "bg-forest text-white shadow-md" : "text-forest/70 hover:text-forest"}`}>
-              Add GST (exclusive)
+              {tr("Add GST (exclusive)")}
             </button>
             <button type="button" onClick={() => setMode("inclusive")} className={`py-2.5 px-4 rounded-xl text-xs sm:text-sm font-bold ${mode === "inclusive" ? "bg-forest text-white shadow-md" : "text-forest/70 hover:text-forest"}`}>
-              Remove GST (MRP)
+              {tr("Remove GST (MRP)")}
             </button>
           </div>
 
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={() => setSupply("intra")} aria-pressed={supply === "intra"} className={`rounded-2xl border px-3 py-3 text-left ${supply === "intra" ? "border-leaf bg-mint/40" : "border-forest/10 bg-cream/40"}`}>
-              <div className="text-sm font-black text-forest">Intra-state</div>
-              <div className="text-[11px] text-forest/60">CGST + SGST, same state</div>
+              <div className="text-sm font-black text-forest">{tr("Intra-state")}</div>
+              <div className="text-[11px] text-forest/60">{tr("CGST + SGST, same state")}</div>
             </button>
             <button type="button" onClick={() => setSupply("inter")} aria-pressed={supply === "inter"} className={`rounded-2xl border px-3 py-3 text-left ${supply === "inter" ? "border-leaf bg-mint/40" : "border-forest/10 bg-cream/40"}`}>
-              <div className="text-sm font-black text-forest">Inter-state</div>
-              <div className="text-[11px] text-forest/60">IGST at the full slab</div>
+              <div className="text-sm font-black text-forest">{tr("Inter-state")}</div>
+              <div className="text-[11px] text-forest/60">{tr("IGST at the full slab")}</div>
             </button>
           </div>
 
           <label className="mt-4 flex items-center gap-2 text-xs font-bold text-forest">
             <input type="checkbox" checked={composition} onChange={(e) => setComposition(e.target.checked)} className="h-4 w-4 accent-[#15803d]" />
-            Composition dealer — I cannot charge GST (bill of supply)
+            {tr("Composition dealer — I cannot charge GST (bill of supply)")}
           </label>
 
           <div className="mt-5 space-y-4">
@@ -195,12 +203,12 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
                   <p className="text-xs font-black uppercase tracking-wider text-forest/50">Item {index + 1}</p>
                   {lines.length > 1 && (
                     <button type="button" onClick={() => setLines((cur) => cur.filter((row) => row.id !== line.id))} className="text-[11px] font-bold text-red-600 hover:underline">
-                      Remove
+                      {tr("Remove")}
                     </button>
                   )}
                 </div>
                 <label className="block text-xs font-bold text-forest">
-                  Product / service
+                  {tr("Product / service")}
                   <input
                     value={activeLine === line.id ? search : line.name}
                     onFocus={() => {
@@ -245,7 +253,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
                     />
                   </label>
                   <div>
-                    <p className="text-xs font-bold text-forest">Rate</p>
+                    <p className="text-xs font-bold text-forest">{tr("Rate")}</p>
                     <div className="mt-1 flex flex-wrap gap-1.5">
                       {slabButtons.map((slab) => (
                         <button
@@ -266,22 +274,22 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
           </div>
 
           <button type="button" onClick={addLine} className="mt-4 rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf">
-            + Add another item
+            {tr("+ Add another item")}
           </button>
         </div>
 
         <div className="rounded-3xl border border-leaf/20 bg-mint/30 p-6 space-y-4">
           <div className="flex items-center gap-2">
             <span className="flex h-6 w-6 items-center justify-center rounded-full bg-leaf text-white text-xs font-bold">2</span>
-            <h3 className="text-base font-black text-forest">UPI QR for the payable total</h3>
+            <h3 className="text-base font-black text-forest">{tr("UPI QR for the payable total")}</h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label htmlFor={vpaId} className="block text-[11px] font-bold text-forest/75 mb-1">Your UPI ID</label>
+              <label htmlFor={vpaId} className="block text-[11px] font-bold text-forest/75 mb-1">{tr("Your UPI ID")}</label>
               <input id={vpaId} type="text" placeholder="shop@oksbi" value={vpa} onChange={(e) => setVpa(e.target.value)} className="w-full rounded-xl border border-forest/15 bg-white p-2.5 text-xs font-semibold outline-none focus:border-leaf" />
             </div>
             <div>
-              <label htmlFor={nameId} className="block text-[11px] font-bold text-forest/75 mb-1">Payee name</label>
+              <label htmlFor={nameId} className="block text-[11px] font-bold text-forest/75 mb-1">{tr("Payee name")}</label>
               <input id={nameId} type="text" placeholder="Store name" value={payee} onChange={(e) => setPayee(e.target.value)} className="w-full rounded-xl border border-forest/15 bg-white p-2.5 text-xs font-semibold outline-none focus:border-leaf" />
             </div>
           </div>
@@ -294,7 +302,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
       <div className="lg:col-span-5 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg space-y-5">
           <div className="flex items-center justify-between border-b border-forest/10 pb-4">
-            <h3 className="text-lg font-black text-forest">Tax breakdown</h3>
+            <h3 className="text-lg font-black text-forest">{tr("Tax breakdown")}</h3>
             <span className="rounded-full bg-mint px-3 py-1 text-xs font-bold text-leaf">{composition ? "Composition" : supply === "intra" ? "CGST + SGST" : "IGST"}</span>
           </div>
 
@@ -308,7 +316,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
           </div>
 
           <div className="space-y-3 border-t border-forest/10 pt-4 text-sm">
-            <div className="flex justify-between"><span className="text-forest/70 font-semibold">Taxable value</span><span className="font-mono font-bold">{money(computed.sum.basePaise)}</span></div>
+            <div className="flex justify-between"><span className="text-forest/70 font-semibold">{tr("Taxable value")}</span><span className="font-mono font-bold">{money(computed.sum.basePaise)}</span></div>
             {supply === "intra" ? (
               <>
                 <div className="flex justify-between"><span className="text-forest/70 font-semibold">CGST</span><span className="font-mono font-bold text-leaf">+ {money(computed.sum.cgstPaise)}</span></div>
@@ -317,16 +325,16 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
             ) : (
               <div className="flex justify-between"><span className="text-forest/70 font-semibold">IGST</span><span className="font-mono font-bold text-leaf">+ {money(computed.sum.igstPaise)}</span></div>
             )}
-            <div className="flex justify-between border-t border-forest/10 pt-3"><span className="font-bold text-forest/80">Total GST</span><span className="font-mono font-bold text-leaf">{money(computed.sum.gstPaise)}</span></div>
+            <div className="flex justify-between border-t border-forest/10 pt-3"><span className="font-bold text-forest/80">{tr("Total GST")}</span><span className="font-mono font-bold text-leaf">{money(computed.sum.gstPaise)}</span></div>
           </div>
 
           <div className="rounded-2xl bg-forest p-4 text-mint flex items-center justify-between shadow-md">
             <div>
-              <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">Amount payable</div>
+              <div className="text-[10px] font-bold uppercase tracking-widest opacity-80">{tr("Amount payable")}</div>
               <div className="text-2xl font-black font-mono">{money(computed.sum.totalPaise)}</div>
             </div>
             <button type="button" onClick={copyBreakdown} className="rounded-xl bg-mint/20 px-3 py-2 text-xs font-bold text-mint hover:bg-mint/30">
-              {copied ? "Copied!" : "Copy"}
+              {copied ? tr("Copied!") : "Copy"}
             </button>
           </div>
 
@@ -336,7 +344,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
 
           {qrDataUrl && (
             <div className="border-t border-forest/10 pt-6 text-center space-y-3">
-              <div className="text-xs font-bold uppercase tracking-wider text-forest/75">Payment QR</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-forest/75">{tr("Payment QR")}</div>
               <div className="mx-auto w-48 h-48 p-2 rounded-2xl bg-white border border-forest/15 shadow-md">
                 <img src={qrDataUrl} alt="UPI payment QR for GST total" className="w-full h-full object-contain" />
               </div>

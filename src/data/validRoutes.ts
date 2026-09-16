@@ -192,6 +192,6 @@ export function routeExistsInLang(slug: string, lang: string): boolean {
   if (lang === "en") return ENGLISH_SLUGS.has(cleanSlug);
   if (lang === "hi") return HINDI_SLUGS.has(cleanSlug);
   if (lang === "ta" || lang === "te" || lang === "mr") return REGIONAL_SLUGS.has(cleanSlug);
-  if (lang === "es" || lang === "pt" || lang === "fr" || lang === "de" || lang === "id") return INTERNATIONAL_SLUGS.has(cleanSlug);
+  if (lang === "es" || lang === "pt" || lang === "fr" || lang === "de" || lang === "id" || lang === "ar" || lang === "it" || lang === "ja" || lang === "zh") return INTERNATIONAL_SLUGS.has(cleanSlug);
   return false;
 }

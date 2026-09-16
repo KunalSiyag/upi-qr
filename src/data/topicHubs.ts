@@ -635,7 +635,7 @@ export const TOPIC_HUB_BY_ID: Record<TopicHubId, TopicHub> = Object.fromEntries(
 
 export function normalizePath(path: string): string {
   const noHash = path.split("#")[0].split("?")[0];
-  const noLocale = noHash.replace(/^\/(hi|ta|te|mr)(?=\/|$)/, "") || "/";
+  const noLocale = noHash.replace(/^\/(hi|ta|te|mr|es|pt|fr|de|id|ar|it|ja|zh)(?=\/|$)/, "") || "/";
   const withSlash = noLocale.startsWith("/") ? noLocale : `/${noLocale}`;
   if (withSlash === "/") return "/";
   return withSlash.endsWith("/") ? withSlash : `${withSlash}/`;

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-break-even-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -18,7 +21,8 @@ function money(value: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(value || 0);
 }
 
-export function BreakEvenCalculator() {
+export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [fixedCosts, setFixedCosts] = useState("50000");
   const [price, setPrice] = useState("200");
   const [variableCost, setVariableCost] = useState("120");
@@ -144,14 +148,18 @@ export function BreakEvenCalculator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Unit economics</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Find Your Survival Point</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 Analysis PDF"}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? "Generating..." : "🖼️ PNG"}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "📄 Analysis PDF"}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("PNG")}`}</button>
           </div>
         </div>
 

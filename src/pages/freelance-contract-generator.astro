@@ -29,6 +29,10 @@ const faqs = [
   {
     question: "Does Pro UPI QR store my client or project contracts?",
     answer: "No. The generator runs completely client-side in your web browser. All project milestones, client information, and payment details are stored locally on your device in localStorage and never sent to our servers."
+  },
+  {
+    question: "Can I generate the freelance contract in Hindi or other languages?",
+    answer: "Yes. Use the contract language buttons in the editor to switch the agreement, clauses, and PDF labels to Hindi, Tamil, Telugu, Marathi, Spanish, Portuguese, French, German, or Indonesian. Your typed names and amounts stay as you entered them; default legal clauses swap when they still match a built-in template."
   }
 ];
 
@@ -93,7 +97,7 @@ const schema = {
             Free Freelance Contract Generator
           </h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
-            Create professional freelance service agreements with milestone deliverables, strict revision caps, intellectual property protection, and advance UPI payment QR codes. 100% private, no signup.
+            Create professional freelance service agreements with milestone deliverables, strict revision caps, intellectual property protection, and advance UPI payment QR codes. Switch the contract language to Hindi, Tamil, Telugu, Marathi, Spanish, and more — the PDF itself is generated in that language. 100% private, no signup.
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#contract-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">
@@ -109,7 +113,7 @@ const schema = {
 
     <section id="contract-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <FreelanceContractGenerator client:visible />
+        <FreelanceContractGenerator client:visible lang="en" />
       </div>
     </section>
 

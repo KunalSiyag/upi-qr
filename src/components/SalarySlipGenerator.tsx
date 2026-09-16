@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { amountInWordsInr } from "../lib/inr-words";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { t } from "../data/phrases";
 
 const draftKey = "proupiqr-salary-slip-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -34,7 +37,9 @@ type RowKey =
   | "basic" | "hra" | "conveyance" | "special" | "otherEarn"
   | "pf" | "pt" | "tds" | "otherDed";
 
-export function SalarySlipGenerator() {
+export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const tr = (s: string) => t(docLang, s);
   const today = new Date();
   const thisMonth = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}`;
 
@@ -204,14 +209,18 @@ export function SalarySlipGenerator() {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Payslip builder</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Issue Salary Slips Free</h2>
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Payslip builder")}</p>
+            <h2 className="mt-1 text-2xl font-black text-forest">{tr("Issue Salary Slips Free")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
             <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">💬 Share</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 PDF"}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? "Generating..." : "🖼️ PNG"}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `📄 ${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `🖼️ ${tr("Download PNG")}`}</button>
           </div>
+        </div>
+
+        <div className="mt-4">
+          <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
         </div>
 
         <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Employer</p>
@@ -220,7 +229,7 @@ export function SalarySlipGenerator() {
           <label className="text-sm font-bold text-forest">Company address<input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Employee</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Employee")}</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">Full name<input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Employee ID<input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -241,7 +250,7 @@ export function SalarySlipGenerator() {
         <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Earnings &amp; deductions (₹)</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 rounded-2xl bg-mint/60 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-forest/60">Earnings</p>
+            <p className="text-xs font-black uppercase tracking-wide text-forest/60">{tr("Earnings")}</p>
             {([["basic", "Basic salary"], ["hra", "HRA"], ["conveyance", "Conveyance"], ["special", "Special allowance"], ["otherEarn", "Other / bonus"]] as const).map(([key, label]) => (
               <label key={key} className="flex items-center justify-between gap-2 text-xs font-bold text-forest">
                 <span>{label}</span>
@@ -251,7 +260,7 @@ export function SalarySlipGenerator() {
             <p className="flex justify-between border-t border-forest/10 pt-2 text-xs font-black text-forest"><span>Gross earnings</span><span>{money(totals.gross)}</span></p>
           </div>
           <div className="space-y-2 rounded-2xl bg-red-50/70 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-forest/60">Deductions</p>
+            <p className="text-xs font-black uppercase tracking-wide text-forest/60">{tr("Deductions")}</p>
             {([["pf", "Provident fund"], ["pt", "Professional tax"], ["tds", "TDS"], ["otherDed", "Other"]] as const).map(([key, label]) => (
               <label key={key} className="flex items-center justify-between gap-2 text-xs font-bold text-forest">
                 <span>{label}</span>
@@ -267,7 +276,7 @@ export function SalarySlipGenerator() {
         </div>
 
         <div className="mt-5 flex items-center justify-between rounded-2xl bg-forest px-5 py-4 text-white">
-          <span className="text-sm font-black uppercase tracking-widest">Net payable</span>
+          <span className="text-sm font-black uppercase tracking-widest">{tr("Net payable")}</span>
           <span className="text-2xl font-black">{money(totals.net)}</span>
         </div>
       </div>
@@ -279,13 +288,13 @@ export function SalarySlipGenerator() {
             <p className="text-xs font-semibold text-forest/60">{companyAddress}</p>
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-forest/55">Payslip for</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-forest/55">{tr("Salary slip")}</p>
             <p className="text-sm font-black text-forest">{monthLabel(payMonth)}</p>
           </div>
         </header>
 
         <section className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl bg-cream p-4 text-sm sm:grid-cols-3">
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Employee</span><strong className="text-forest">{employeeName || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/50">{tr("Employee")}</span><strong className="text-forest">{employeeName || "—"}</strong></p>
           <p><span className="block text-[10px] font-bold uppercase text-forest/50">Employee ID</span><strong className="text-forest">{employeeId || "—"}</strong></p>
           <p><span className="block text-[10px] font-bold uppercase text-forest/50">Designation</span><strong className="text-forest">{designation || "—"}</strong></p>
           <p><span className="block text-[10px] font-bold uppercase text-forest/50">Department</span><strong className="text-forest">{department || "—"}</strong></p>
@@ -298,7 +307,7 @@ export function SalarySlipGenerator() {
 
         <section className="mt-4 overflow-hidden rounded-xl border border-forest/10">
           <table className="w-full text-left text-sm">
-            <thead><tr className="bg-mint text-[10px] uppercase tracking-widest text-forest/65"><th className="p-2.5">Earnings</th><th className="p-2.5 text-right">Amount</th></tr></thead>
+            <thead><tr className="bg-mint text-[10px] uppercase tracking-widest text-forest/65"><th className="p-2.5">{tr("Earnings")}</th><th className="p-2.5 text-right">{tr("Amount")}</th></tr></thead>
             <tbody>
               {earnRows.map(([label, val]) => val > 0 && (
                 <tr key={label} className="border-t border-forest/5"><td className="p-2.5 font-semibold text-forest">{label}</td><td className="p-2.5 text-right tabular-nums">{money(val)}</td></tr>

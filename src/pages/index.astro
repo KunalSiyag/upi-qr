@@ -89,6 +89,12 @@ const faqs = [
     answer:
       "You do not need to order an official PhonePe kit. Paste your UPI ID into the PhonePe QR sticker generator, pick 4, 6, or 12 stickers per A4, and print. It is a standard upi://pay code, so Google Pay, Paytm, and BHIM scan it too.",
     answerLink: { href: "/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe QR sticker generator" }
+  },
+  {
+    question: "How do I print a Google Pay QR sticker for my counter?",
+    answer:
+      "Open the GPay sticker generator, paste your UPI ID, pick 4, 6, or 12 stickers per A4, and print on matte vinyl. It is a standard upi://pay code, so PhonePe, Paytm, and BHIM scan it too. It is not an official Google Pay Business kit.",
+    answerLink: { href: "/qr-sticker-generator/?app=gpay#tool", label: "GPay QR sticker generator" }
   }
 ];
 
@@ -206,6 +212,7 @@ const landingLinks = [
   { href: "/donation-qr-generator/", label: "Donation QR Generator" },
   { href: "/universal-qr-generator/", label: "Universal QR Generator" },
   { href: "/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe QR Sticker" },
+  { href: "/qr-sticker-generator/?app=gpay#tool", label: "GPay QR Sticker" },
   { href: "/invoice-generator/", label: "Invoice QR Generator" },
   { href: "/receipt-generator/", label: "Payment Receipt Generator" },
   { href: "/paid-stamp-generator/", label: "Paid Stamp Generator" },
@@ -310,6 +317,7 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
                   href="/qr-sticker-generator/?app=gpay#tool"
                   class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-white px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
                 >
+                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
                   GPay sticker
                 </a>
                 <a

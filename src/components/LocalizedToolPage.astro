@@ -36,6 +36,11 @@ import { MerchantReconciliation } from "./MerchantReconciliation";
 import { MsmeReceivables } from "./MsmeReceivables";
 import { InfluencerContractGenerator } from "./InfluencerContractGenerator";
 import { FreelanceContractGenerator } from "./FreelanceContractGenerator";
+import { PurchaseOrderGenerator } from "./PurchaseOrderGenerator";
+import { DeliveryChallan } from "./DeliveryChallan";
+import { DebitNoteGenerator } from "./DebitNoteGenerator";
+import { BillOfSupplyGenerator } from "./BillOfSupplyGenerator";
+import { CashMemoGenerator } from "./CashMemoGenerator";
 import InternalLinkHub from "./InternalLinkHub.astro";
 import type { LocalizedTool, SupportedToolLanguage } from "../data/localizedTools";
 import { getLocalizedToolCopy } from "../data/localizedTools";
@@ -53,6 +58,10 @@ const chrome = {
   fr: { home: "Retour à l'accueil", label: "Outil professionnel gratuit", howTo: "Mode d'emploi", faq: "Foire aux questions", privacy: "Sans inscription", instant: "Résultats instantanés", local: "Traitement local et privé" },
   de: { home: "Zur Startseite zurückkehren", label: "Kostenloses Business-Tool", howTo: "Anleitung", faq: "Häufige Fragen", privacy: "Ohne Registrierung", instant: "Sofortige Ergebnisse", local: "Lokale & private Verarbeitung" },
   id: { home: "Kembali ke beranda utama", label: "Alat bisnis & UMKM gratis", howTo: "Cara penggunaan", faq: "Pertanyaan umum", privacy: "Tanpa registrasi", instant: "Hasil instan", local: "Pemrosesan privat di browser" },
+  ar: { home: "العودة إلى الصفحة الرئيسية", label: "أداة أعمال مجانية", howTo: "طريقة الاستخدام", faq: "الأسئلة الشائعة", privacy: "بدون تسجيل", instant: "نتائج فورية", local: "معالجة خاصة في المتصفح" },
+  it: { home: "Torna alla home", label: "Strumento business gratuito", howTo: "Come si usa", faq: "Domande frequenti", privacy: "Senza registrazione", instant: "Risultati immediati", local: "Elaborazione privata nel browser" },
+  ja: { home: "ホームに戻る", label: "無料ビジネスツール", howTo: "使い方", faq: "よくある質問", privacy: "登録不要", instant: "すぐ結果", local: "ブラウザ内のプライベート処理" },
+  zh: { home: "返回首页", label: "免费商务工具", howTo: "使用方法", faq: "常见问题", privacy: "无需注册", instant: "即时结果", local: "浏览器本地私密处理" },
 }[lang];
 const cloudBadges = {
   hi: ["साइन इन आवश्यक", "सुरक्षित क्लाउड रीडायरेक्ट", "केवल कुल स्कैन आंकड़े"],
@@ -64,6 +73,10 @@ const cloudBadges = {
   fr: ["Connexion requise", "Redirection cloud sécurisée", "Statistiques de scan uniquement"],
   de: ["Anmeldung erforderlich", "Sichere Cloud-Weiterleitung", "Nur Scan-Zähler"],
   id: ["Perlu masuk akun", "Pengalihan cloud aman", "Hanya statistik total scan"],
+  ar: ["يلزم تسجيل الدخول", "إعادة توجيه سحابية آمنة", "إحصاءات المسح الإجمالية فقط"],
+  it: ["Accesso richiesto", "Reindirizzamento cloud sicuro", "Solo conteggio scansioni"],
+  ja: ["ログインが必要", "安全なクラウド転送", "スキャン合計のみ"],
+  zh: ["需要登录", "安全云端跳转", "仅总扫描次数"],
 }[lang];
 const badges = tool.component === "dynamicQr"
   ? cloudBadges
@@ -81,42 +94,47 @@ const path = `/${lang}/${tool.slug}/`;
         <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold text-forest/75">{badges.map((badge) => <span class="rounded-full bg-mint px-3 py-2">{badge}</span>)}</div>
       </section>
       <section id="tool" class="rounded-[2rem] border border-white/75 bg-white/86 p-4 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-8 md:p-10">
-        {tool.component === "digitalCard" && <DigitalVisitingCard client:visible />}
-        {tool.component === "dynamicQr" && <DynamicQrGenerator client:visible />}
-        {tool.component === "stickers" && <StickerSheetGenerator client:visible />}
-        {tool.component === "gst" && <GstCalculator client:visible />}
-        {tool.component === "whatsapp" && <WhatsappOrderGenerator client:visible />}
-        {tool.component === "bulk" && <BulkQrGenerator client:visible />}
-        {tool.component === "invoice" && <InvoiceGenerator client:visible />}
-        {tool.component === "receipt" && <ReceiptGenerator client:visible />}
-        {tool.component === "paidStamp" && <PaidStampGenerator client:visible />}
-        {tool.component === "rentReceipt" && <RentReceiptGenerator client:visible />}
-        {tool.component === "paymentReminder" && <PaymentReminderGenerator client:visible />}
-        {tool.component === "quotation" && <QuotationGenerator client:visible />}
-        {tool.component === "splitBill" && <SplitBillCalculator client:visible />}
-        {tool.component === "cashDenomination" && <CashDenominationCalculator client:visible />}
-        {tool.component === "creditNote" && <CreditNoteGenerator client:visible />}
-        {tool.component === "emiCalculator" && <EmiCalculator client:visible />}
-        {tool.component === "gratuity" && <GratuityCalculator client:visible />}
-        {tool.component === "sipCalculator" && <SipCalculator client:visible />}
-        {tool.component === "salarySlip" && <SalarySlipGenerator client:visible />}
-        {tool.component === "msmed" && <MsmedInterestCalculator client:visible />}
-        {tool.component === "proforma" && <ProformaInvoiceGenerator client:visible />}
-        {tool.component === "breakEven" && <BreakEvenCalculator client:visible />}
-        {tool.component === "treds" && <TredsCalculator client:visible />}
-        {tool.component === "upiCalculator" && <UpiCalculator client:visible />}
-        {tool.component === "upiMdr" && <UpiMdrCalculator client:visible />}
-        {tool.component === "offerPoster" && <OfferPosterGenerator client:visible />}
-        {tool.component === "menuQr" && <MenuQrGenerator client:visible />}
-        {tool.component === "margin" && <MarginCalculator client:visible />}
-        {tool.component === "limits" && <UpiLimitsChecker client:visible />}
-        {tool.component === "decoder" && <UpiQrDecoder client:visible />}
-        {tool.component === "upiLink" && <UpiLinkGenerator client:visible />}
-        {tool.component === "survey" && <SurveyQrGenerator client:visible />}
-        {tool.component === "merchantRecon" && <MerchantReconciliation client:visible />}
-        {tool.component === "msmeReceivables" && <MsmeReceivables client:visible />}
-        {tool.component === "influencerContract" && <InfluencerContractGenerator client:visible />}
-        {tool.component === "freelanceContract" && <FreelanceContractGenerator client:visible />}
+        {tool.component === "digitalCard" && <DigitalVisitingCard client:visible lang={lang} />}
+        {tool.component === "dynamicQr" && <DynamicQrGenerator client:visible lang={lang} />}
+        {tool.component === "stickers" && <StickerSheetGenerator client:visible lang={lang} />}
+        {tool.component === "gst" && <GstCalculator client:visible lang={lang} />}
+        {tool.component === "whatsapp" && <WhatsappOrderGenerator client:visible lang={lang} />}
+        {tool.component === "bulk" && <BulkQrGenerator client:visible lang={lang} />}
+        {tool.component === "invoice" && <InvoiceGenerator client:visible lang={lang} />}
+        {tool.component === "receipt" && <ReceiptGenerator client:visible lang={lang} />}
+        {tool.component === "paidStamp" && <PaidStampGenerator client:visible lang={lang} />}
+        {tool.component === "rentReceipt" && <RentReceiptGenerator client:visible lang={lang} />}
+        {tool.component === "paymentReminder" && <PaymentReminderGenerator client:visible lang={lang} />}
+        {tool.component === "quotation" && <QuotationGenerator client:visible lang={lang} />}
+        {tool.component === "splitBill" && <SplitBillCalculator client:visible lang={lang} />}
+        {tool.component === "cashDenomination" && <CashDenominationCalculator client:visible lang={lang} />}
+        {tool.component === "creditNote" && <CreditNoteGenerator client:visible lang={lang} />}
+        {tool.component === "emiCalculator" && <EmiCalculator client:visible lang={lang} />}
+        {tool.component === "gratuity" && <GratuityCalculator client:visible lang={lang} />}
+        {tool.component === "sipCalculator" && <SipCalculator client:visible lang={lang} />}
+        {tool.component === "salarySlip" && <SalarySlipGenerator client:visible lang={lang} />}
+        {tool.component === "msmed" && <MsmedInterestCalculator client:visible lang={lang} />}
+        {tool.component === "proforma" && <ProformaInvoiceGenerator client:visible lang={lang} />}
+        {tool.component === "breakEven" && <BreakEvenCalculator client:visible lang={lang} />}
+        {tool.component === "treds" && <TredsCalculator client:visible lang={lang} />}
+        {tool.component === "upiCalculator" && <UpiCalculator client:visible lang={lang} />}
+        {tool.component === "upiMdr" && <UpiMdrCalculator client:visible lang={lang} />}
+        {tool.component === "offerPoster" && <OfferPosterGenerator client:visible lang={lang} />}
+        {tool.component === "menuQr" && <MenuQrGenerator client:visible lang={lang} />}
+        {tool.component === "margin" && <MarginCalculator client:visible lang={lang} />}
+        {tool.component === "limits" && <UpiLimitsChecker client:visible lang={lang} />}
+        {tool.component === "decoder" && <UpiQrDecoder client:visible lang={lang} />}
+        {tool.component === "upiLink" && <UpiLinkGenerator client:visible lang={lang} />}
+        {tool.component === "survey" && <SurveyQrGenerator client:visible lang={lang} />}
+        {tool.component === "merchantRecon" && <MerchantReconciliation client:visible lang={lang} />}
+        {tool.component === "msmeReceivables" && <MsmeReceivables client:visible lang={lang} />}
+        {tool.component === "influencerContract" && <InfluencerContractGenerator client:visible lang={lang} />}
+        {tool.component === "freelanceContract" && <FreelanceContractGenerator client:visible lang={lang} />}
+        {tool.component === "purchaseOrder" && <PurchaseOrderGenerator client:visible lang={lang} />}
+        {tool.component === "deliveryChallan" && <DeliveryChallan client:visible lang={lang} />}
+        {tool.component === "debitNote" && <DebitNoteGenerator client:visible lang={lang} />}
+        {tool.component === "billOfSupply" && <BillOfSupplyGenerator client:visible lang={lang} />}
+        {tool.component === "cashMemo" && <CashMemoGenerator client:visible lang={lang} />}
         {tool.component === "default" && <GeneratorForm client:visible lang={lang} />}
       </section>
       {locale.steps.length > 0 && (

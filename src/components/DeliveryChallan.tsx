@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-dc-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -11,7 +14,8 @@ function money(v: number) { return `₹${new Intl.NumberFormat("en-IN", { minimu
 interface DcItem { id: number; name: string; qty: string; unit: string }
 let _id = 1; function nid() { return _id++; }
 
-export function DeliveryChallan() {
+export function DeliveryChallan({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState(""); const [supplierGstin, setSupplierGstin] = useState("");
   const [supplierAddress, setSupplierAddress] = useState("");
@@ -45,39 +49,43 @@ export function DeliveryChallan() {
 
   return (<div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
     <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Delivery challan</p><h2 className="mt-1 text-2xl font-black text-forest">Dispatch goods</h2></div><div className="flex flex-wrap gap-2"><button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">{pngState === "busy" ? "..." : "Export PNG"}</button><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : "Export PDF"}</button></div></div>
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
+      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Delivery challan")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Dispatch goods")}</h2></div><div className="flex flex-wrap gap-2"><button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">{pngState === "busy" ? "..." : tr("Export PNG")}</button><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
-        <label className="text-sm font-bold text-forest">Supplier (you)<input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Supplier GSTIN<input value={supplierGstin} onChange={e => setSupplierGstin(e.target.value)} placeholder="22AAAAA0000A1Z5" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest sm:col-span-2">Supplier address<input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} placeholder="Warehouse address" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Buyer name<input value={buyerName} onChange={e => setBuyerName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Buyer address<input value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">DC number<input value={dcNo} onChange={e => setDcNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">DC date<input type="date" value={dcDate} onChange={e => setDcDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">PO reference<input value={poRef} onChange={e => setPoRef(e.target.value)} placeholder="PO-001" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Transporter<input value={transporter} onChange={e => setTransporter(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">Vehicle number<input value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="KA01AB1234" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="text-sm font-bold text-forest">E-way bill number<input value={ewayNo} onChange={e => setEwayNo(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Supplier (you)")}<input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Supplier GSTIN")}<input value={supplierGstin} onChange={e => setSupplierGstin(e.target.value)} placeholder="22AAAAA0000A1Z5" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest sm:col-span-2">{tr("Supplier address")}<input value={supplierAddress} onChange={e => setSupplierAddress(e.target.value)} placeholder="Warehouse address" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Buyer name")}<input value={buyerName} onChange={e => setBuyerName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Buyer address")}<input value={buyerAddress} onChange={e => setBuyerAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("DC number")}<input value={dcNo} onChange={e => setDcNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("DC date")}<input type="date" value={dcDate} onChange={e => setDcDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("PO reference")}<input value={poRef} onChange={e => setPoRef(e.target.value)} placeholder="PO-001" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Transporter")}<input value={transporter} onChange={e => setTransporter(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("Vehicle number")}<input value={vehicleNo} onChange={e => setVehicleNo(e.target.value)} placeholder="KA01AB1234" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+        <label className="text-sm font-bold text-forest">{tr("E-way bill number")}<input value={ewayNo} onChange={e => setEwayNo(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
       </div>
-      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">Items</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">+ Add row</button></div>
+      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
         {items.map((it, idx) => (<div key={it.id} className="mb-2 grid grid-cols-4 gap-1.5 rounded-xl bg-cream/60 p-2">
-          <input value={it.name} onChange={e => updateItem(it.id, "name", e.target.value)} placeholder="Item" className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
-          <input value={it.qty} onChange={e => updateItem(it.id, "qty", e.target.value)} placeholder="Qty" className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
+          <input value={it.name} onChange={e => updateItem(it.id, "name", e.target.value)} placeholder={tr("Item")} className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
+          <input value={it.qty} onChange={e => updateItem(it.id, "qty", e.target.value)} placeholder={tr("Qty")} className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
           <div className="flex items-center gap-1"><input value={it.unit} onChange={e => updateItem(it.id, "unit", e.target.value)} placeholder="Unit" className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-red-500 text-xs font-bold">×</button>}</div>
         </div>))}
       </div>
     </div>
     <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="flex items-start justify-between border-b-2 border-forest pb-4">
-        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Delivery Challan</p><h2 className="mt-2 text-2xl font-black text-forest">{dcNo}</h2><p className="text-xs font-semibold text-forest/60">Date: {dcDate}</p></div>
+        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Delivery challan")}</p><h2 className="mt-2 text-2xl font-black text-forest">{dcNo}</h2><p className="text-xs font-semibold text-forest/60">{tr("Date")}: {dcDate}</p></div>
         <div className="text-right text-xs font-bold text-forest/70">DC</div>
       </header>
       <section className="mt-4 grid grid-cols-2 gap-4 text-xs leading-6">
-        <div><p className="font-black text-forest">From (Supplier)</p><p className="font-semibold">{supplierName || "—"}</p>{supplierGstin && <p className="text-forest/60">GSTIN: {supplierGstin}</p>}<p className="text-forest/60 whitespace-pre-wrap">{supplierAddress}</p></div>
-        <div className="text-right"><p className="font-black text-forest">To (Buyer)</p><p className="font-semibold">{buyerName || "—"}</p><p className="text-forest/60 whitespace-pre-wrap">{buyerAddress}</p></div>
+        <div><p className="font-black text-forest">{tr("From (Supplier)")}</p><p className="font-semibold">{supplierName || "—"}</p>{supplierGstin && <p className="text-forest/60">GSTIN: {supplierGstin}</p>}<p className="text-forest/60 whitespace-pre-wrap">{supplierAddress}</p></div>
+        <div className="text-right"><p className="font-black text-forest">{tr("To (Buyer)")}</p><p className="font-semibold">{buyerName || "—"}</p><p className="text-forest/60 whitespace-pre-wrap">{buyerAddress}</p></div>
       </section>
       <div className="mt-5 overflow-x-auto"><table className="w-full text-xs">
-        <thead><tr className="border-b-2 border-forest text-left"><th className="py-2 font-black">#</th><th className="py-2 font-black">Item</th><th className="py-2 text-right font-black">Qty</th><th className="py-2 text-right font-black">Unit</th></tr></thead>
+        <thead><tr className="border-b-2 border-forest text-left"><th className="py-2 font-black">#</th><th className="py-2 font-black">{tr("Item")}</th><th className="py-2 text-right font-black">{tr("Qty")}</th><th className="py-2 text-right font-black">Unit</th></tr></thead>
         <tbody>{items.map((it, idx) => (<tr key={it.id} className="border-b border-forest/10"><td className="py-1.5">{idx + 1}</td><td className="py-1.5 font-semibold">{it.name || "—"}</td><td className="py-1.5 text-right">{it.qty}</td><td className="py-1.5 text-right">{it.unit}</td></tr>))}</tbody>
       </table></div>
       <div className="mt-4 grid grid-cols-2 gap-3 text-xs">
@@ -87,7 +95,7 @@ export function DeliveryChallan() {
         {ewayNo && <div className="rounded-lg bg-cream/60 p-2"><span className="font-black">E-way bill:</span> {ewayNo}</div>}
       </div>
       <footer className="mt-6 pt-3 border-t border-forest/10 text-xs space-y-2 text-forest/60">
-        <div className="grid grid-cols-2 gap-4"><div><p className="font-black text-forest text-[11px] mb-1">Prepared by</p><p className="text-[10px]">{supplierName || "—"}</p></div><div><p className="font-black text-forest text-[11px] mb-1">Received by</p><div className="border-b border-dashed border-forest/30 h-5"></div><p className="text-[10px]">Signature / stamp</p></div></div>
+        <div className="grid grid-cols-2 gap-4"><div><p className="font-black text-forest text-[11px] mb-1">{tr("Prepared by")}</p><p className="text-[10px]">{supplierName || "—"}</p></div><div><p className="font-black text-forest text-[11px] mb-1">Received by</p><div className="border-b border-dashed border-forest/30 h-5"></div><p className="text-[10px]">Signature / stamp</p></div></div>
         <p>This is a delivery challan — it records physical movement of goods. It is not a tax invoice. Prepared using Pro UPI QR.</p>
       </footer>
     </article>

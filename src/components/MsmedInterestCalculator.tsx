@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-msmed-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -28,7 +31,8 @@ function addDays(iso: string, days: number): string {
   return d.toISOString().slice(0, 10);
 }
 
-export function MsmedInterestCalculator() {
+export function MsmedInterestCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState("");
   const [buyerName, setBuyerName] = useState("");
@@ -153,6 +157,10 @@ export function MsmedInterestCalculator() {
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">MSMED Act toolkit</p>
@@ -160,7 +168,7 @@ export function MsmedInterestCalculator() {
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
             <button onClick={copyClaimText} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">📋 Copy claim</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "Generating..." : "📄 Statement PDF"}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "📄 Statement PDF"}</button>
           </div>
         </div>
 
@@ -171,8 +179,8 @@ export function MsmedInterestCalculator() {
         <div className="mt-5 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">Your business (supplier)<input value={supplierName} onChange={(e) => setSupplierName(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Buyer company<input value={buyerName} onChange={(e) => setBuyerName(e.target.value)} placeholder="Optional" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Invoice number<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Bill amount ₹<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Invoice number")}<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <label className="text-sm font-bold text-forest">{tr("Bill amount ₹")}<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Bill date<input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Agreed credit days<input type="number" min={0} max={180} value={creditDays} onChange={(e) => setCreditDays(Math.max(0, Math.min(180, Number(e.target.value) || 0)))} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /><span className="mt-1 block text-[11px] font-semibold text-forest/55">{calc.statutoryNote ? "⚠ Above 45 days — the Act deems the maximum credit period as 45 days before interest starts." : "Within 45 days — interest begins after agreed credit days."}</span></label>
           <label className="text-sm font-bold text-forest sm:col-span-2">Payment received on (leave empty if still unpaid)<input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -201,7 +209,7 @@ export function MsmedInterestCalculator() {
 
         <section className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
           <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Bill amount</p><p className="font-black text-forest">{money(calc.P)}</p></div>
-          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Due date</p><p className="font-black text-forest">{calc.dueDate}</p></div>
+          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">{tr("Due date")}</p><p className="font-black text-forest">{calc.dueDate}</p></div>
           <div className={`rounded-xl p-3 ${calc.isOverdue ? "bg-red-50" : "bg-mint"}`}><p className="text-[10px] font-bold uppercase text-forest/55">Overdue by</p><p className={`font-black ${calc.isOverdue ? "text-red-600" : "text-green-700"}`}>{calc.overdueDays > 0 ? `${calc.overdueDays} days` : "Not due"}</p></div>
         </section>
 

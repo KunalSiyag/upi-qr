@@ -1,6 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from "react";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 interface BookEntry {
   id: number;
@@ -74,7 +77,8 @@ function downloadCsv(filename: string, headers: string[], rows: string[][]) {
 
 const EMPTY_BOOK = JSON.stringify([]);
 
-export function MerchantReconciliation() {
+export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const draftKey = "proupiqr-merchant-reconciliation-draft";
 
   const [entries, setEntries] = useState<BookEntry[]>(() => {
@@ -271,6 +275,10 @@ export function MerchantReconciliation() {
 
   return (
     <div className="w-full max-w-5xl mx-auto space-y-6">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       {/* Upload */}
       {entries.length === 0 && (
         <div className="rounded-3xl border-2 border-dashed border-leaf/30 hover:border-leaf bg-mint/30 p-8 text-center">
@@ -301,7 +309,7 @@ export function MerchantReconciliation() {
             </label>
             <button onClick={exportCsv} className="rounded-full bg-white border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
             <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest text-white px-4 py-2 text-xs font-bold hover:bg-leaf transition disabled:opacity-50">
-              {pdfState === "busy" ? "PDF..." : "Export PDF"}
+              {pdfState === "busy" ? "PDF..." : tr("Export PDF")}
             </button>
             <button onClick={clearAll} className="rounded-full bg-red-50 border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear</button>
           </div>

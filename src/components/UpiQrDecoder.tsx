@@ -1,5 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 interface ParsedUpiData {
   vpa: string;
@@ -159,7 +162,8 @@ function verdictFromWarnings(warnings: ValidationWarning[]): SafetyVerdict {
   };
 }
 
-export function UpiQrDecoder() {
+export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -286,6 +290,10 @@ export function UpiQrDecoder() {
 
   return (
     <div className="w-full max-w-3xl mx-auto space-y-6">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       <div
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
@@ -406,7 +414,7 @@ export function UpiQrDecoder() {
                       onClick={() => copyToClipboard(parsedData.vpa, "vpa")}
                       className="ml-3 shrink-0 px-3 py-1.5 rounded-xl bg-forest text-white hover:bg-leaf text-xs font-bold transition-all shadow-sm"
                     >
-                      {copiedField === "vpa" ? "✓ Copied!" : "Copy VPA"}
+                      {copiedField === "vpa" ? `${"✓"} ${tr("Copied!")}` : "Copy VPA"}
                     </button>
                   )}
                 </div>
@@ -472,7 +480,7 @@ export function UpiQrDecoder() {
                     onClick={() => copyToClipboard(parsedData.rawUri, "raw")}
                     className="px-2.5 py-1 rounded-lg bg-forest/10 text-forest hover:bg-forest/20 text-[10px] font-bold transition-all"
                   >
-                    {copiedField === "raw" ? "✓ Copied!" : "Copy URI"}
+                    {copiedField === "raw" ? `${"✓"} ${tr("Copied!")}` : "Copy URI"}
                   </button>
                 </div>
                 <code className="block text-[11px] font-mono text-forest/80 break-all bg-forest/5 rounded-lg p-2.5 max-h-20 overflow-y-auto">

@@ -1,6 +1,7 @@
 import type { LocalizedToolCopy } from "./localizedTools";
 
 export type InternationalLang = "es" | "pt" | "fr" | "de" | "id";
+export type GlobalLang = "ar" | "it" | "ja" | "zh";
 
 export const INTERNATIONAL_TOOL_COPY: Record<string, Record<InternationalLang, LocalizedToolCopy>> = {
   "digital-visiting-card": {

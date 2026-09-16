@@ -1,10 +1,14 @@
 import { useState, useMemo } from "react";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 function money(amount: number) {
   return new Intl.NumberFormat("en-IN", { style: "currency", currency: "INR", maximumFractionDigits: 0 }).format(amount || 0);
 }
 
-export function UpiCalculator() {
+export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [monthlySales, setMonthlySales] = useState("100000"); // 1 Lakh
   const [avgTicketSize, setAvgTicketSize] = useState("500");
   const [cardPercentage, setCardPercentage] = useState("40"); // 40% Card/PG vs 60% UPI
@@ -39,6 +43,10 @@ export function UpiCalculator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr] w-full min-w-0">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
       {/* Calculator Inputs */}
       <div className="rounded-3xl border border-forest/10 bg-white p-5 sm:p-8 shadow-sm w-full min-w-0">
         <h3 className="text-xl font-black text-forest">Merchant Savings Calculator</h3>

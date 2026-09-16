@@ -1,5 +1,8 @@
 import React, { useState, useId } from "react";
 import QRCode from "qrcode";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 interface OrderItem {
   name: string;
@@ -7,7 +10,8 @@ interface OrderItem {
   price: number;
 }
 
-export function WhatsappOrderGenerator() {
+export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [phone, setPhone] = useState("919876543210");
   const [storeName, setStoreName] = useState("Fresh Organic Store");
   const [items, setItems] = useState<OrderItem[]>([
@@ -67,6 +71,10 @@ export function WhatsappOrderGenerator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       {/* Left Input Panel */}
       <div className="lg:col-span-7 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
@@ -131,7 +139,7 @@ export function WhatsappOrderGenerator() {
                 />
                 <input
                   type="number"
-                  placeholder="Qty"
+                  placeholder={tr("Qty")}
                   min="1"
                   value={item.qty}
                   onChange={(e) => updateItem(idx, "qty", parseInt(e.target.value) || 1)}

@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { safeToPng, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-msme-receivables-draft";
 const EXPORT_TIMEOUT_MS = 20000;
@@ -87,7 +90,8 @@ interface EntryStats {
   effectiveCreditDays: number;
 }
 
-export function MsmeReceivables() {
+export function MsmeReceivables({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const today = new Date().toISOString().slice(0, 10);
   const [supplierName, setSupplierName] = useState("");
   const [supplierUdyam, setSupplierUdyam] = useState("");
@@ -366,6 +370,10 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+        <div className="mb-4 mt-1">
+          <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+        </div>
+
         <div className="flex flex-wrap gap-3 sm:justify-between items-start">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">MSMED receivables suite</p>
@@ -404,7 +412,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
           </label>
           <button onClick={exportCsv} className="rounded-full border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
           <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">
-            {pdfState === "busy" ? "PDF..." : "Export PDF"}
+            {pdfState === "busy" ? "PDF..." : tr("Export PDF")}
           </button>
           {entries.length > 0 && (
             <button onClick={clearAll} className="rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear all</button>
@@ -426,7 +434,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                 <div key={entry.id} className="rounded-xl border border-forest/10 bg-cream/60 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-black text-forest uppercase">Invoice {idx + 1}</span>
-                    <button onClick={() => removeEntry(entry.id)} className="text-[11px] font-bold text-red-500 hover:text-red-700">Remove</button>
+                    <button onClick={() => removeEntry(entry.id)} className="text-[11px] font-bold text-red-500 hover:text-red-700">{tr("Remove")}</button>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
                     <label className="text-[10px] font-bold text-forest/60">
@@ -488,7 +496,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
               <p className="text-xl font-black text-forest">{totals.total}</p>
             </div>
             <div className="rounded-xl bg-cream/80 p-2.5 text-center">
-              <p className="text-[10px] font-bold text-forest/55">Total</p>
+              <p className="text-[10px] font-bold text-forest/55">{tr("Total")}</p>
               <p className="text-lg font-black text-forest">{fmtMoney(totals.principal)}</p>
             </div>
             <div className={`rounded-xl p-2.5 text-center ${totals.overdue > 0 ? "bg-red-50" : "bg-mint"}`}>
@@ -550,17 +558,17 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
             </div>
             <div className="grid grid-cols-4 gap-4 mb-6">
               <div><p className="text-[10px] uppercase text-gray-500">Total invoices</p><p className="text-lg font-bold">{entries.length}</p></div>
-              <div><p className="text-[10px] uppercase text-gray-500">Principal</p><p className="text-lg font-bold">₹{fmtRs(totals.principal)}</p></div>
+              <div><p className="text-[10px] uppercase text-gray-500">{tr("Principal")}</p><p className="text-lg font-bold">₹{fmtRs(totals.principal)}</p></div>
               <div><p className="text-[10px] uppercase text-gray-500">Overdue</p><p className="text-lg font-bold" style={{ color: totals.overdue > 0 ? "#dc2626" : "#059669" }}>{totals.overdue}</p></div>
               <div><p className="text-[10px] uppercase text-gray-500">Accrued interest</p><p className="text-lg font-bold">₹{fmtRs(Math.round(totals.compoundInterest))}</p></div>
             </div>
             <table className="w-full text-[11px] border-collapse">
               <thead>
                 <tr className="border-b-2 border-gray-300">
-                  <th className="text-left py-1.5">Buyer</th>
+                  <th className="text-left py-1.5">{tr("Buyer")}</th>
                   <th className="text-left py-1.5">Invoice</th>
                   <th className="text-left py-1.5">Bill Date</th>
-                  <th className="text-right py-1.5">Amount</th>
+                  <th className="text-right py-1.5">{tr("Amount")}</th>
                   <th className="text-left py-1.5">Due</th>
                   <th className="text-right py-1.5">Overdue Days</th>
                   <th className="text-right py-1.5">Status</th>

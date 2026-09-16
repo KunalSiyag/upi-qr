@@ -1,7 +1,11 @@
 import React, { useState, useId } from "react";
 import QRCode from "qrcode";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
-export function MarginCalculator() {
+export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [costPrice, setCostPrice] = useState<string>("500");
   const [sellingPrice, setSellingPrice] = useState<string>("750");
   const [gstRate, setGstRate] = useState<number>(18);
@@ -38,14 +42,18 @@ export function MarginCalculator() {
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       {/* Input Panel */}
       <div className="lg:col-span-7 space-y-6">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
-          <h2 className="text-xl font-black text-forest">Pricing Inputs</h2>
+          <h2 className="text-xl font-black text-forest">{tr("Pricing Inputs")}</h2>
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label htmlFor={costId} className="block text-xs font-bold text-forest/75 mb-1">Cost Price (CP) ₹</label>
+              <label htmlFor={costId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Cost Price (CP) ₹")}</label>
               <input
                 id={costId}
                 type="number"
@@ -56,7 +64,7 @@ export function MarginCalculator() {
               />
             </div>
             <div>
-              <label htmlFor={sellId} className="block text-xs font-bold text-forest/75 mb-1">Selling Price (SP) ₹</label>
+              <label htmlFor={sellId} className="block text-xs font-bold text-forest/75 mb-1">{tr("Selling Price (SP) ₹")}</label>
               <input
                 id={sellId}
                 type="number"
@@ -69,7 +77,7 @@ export function MarginCalculator() {
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-forest/75 mb-1">GST Tax Slab (%)</label>
+            <label className="block text-xs font-bold text-forest/75 mb-1">{tr("GST Tax Slab (%)")}</label>
             <div className="grid grid-cols-5 gap-2">
               {[0, 5, 12, 18, 28].map((rate) => (
                 <button

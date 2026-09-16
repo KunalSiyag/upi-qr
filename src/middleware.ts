@@ -1,6 +1,7 @@
 import { defineMiddleware, sequence } from "astro:middleware";
 import { clerkMiddleware } from "@clerk/astro/server";
 import { routeExistsInLang } from "./data/validRoutes";
+import { NON_EN_LANG_PATTERN } from "./lib/locale";
 
 const PRIVATE_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/dashboard", "/c", "/api", "/embed", "/r"];
 const CLERK_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/dashboard", "/api/dynamic", "/api/internal", "/api/v1"];
@@ -11,7 +12,7 @@ const searchIndexPolicy = defineMiddleware(async (context, next) => {
   const isPrivateRoute = PRIVATE_ROUTE_PREFIXES.some(
     (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
   );
-  const isFeed = pathname === "/rss.xml" || /^\/(hi|ta|te|mr|es|pt|fr|de|id)\/rss\.xml$/.test(pathname);
+  const isFeed = pathname === "/rss.xml" || new RegExp(`^/(${NON_EN_LANG_PATTERN})/rss\\.xml$`).test(pathname);
 
   if (isPrivateRoute) response.headers.set("X-Robots-Tag", "noindex, nofollow");
   else if (isFeed) response.headers.set("X-Robots-Tag", "noindex, follow");
@@ -21,7 +22,7 @@ const searchIndexPolicy = defineMiddleware(async (context, next) => {
 
 const localeFallback = defineMiddleware(async (context, next) => {
   const url = new URL(context.request.url);
-  const match = url.pathname.match(/^\/(hi|ta|te|mr|es|pt|fr|de|id)\/([^/?#]+?)\/?$/);
+  const match = url.pathname.match(new RegExp(`^/(${NON_EN_LANG_PATTERN})/([^/?#]+?)/?$`));
   if (!match) return next();
 
   const [, lang, slug] = match;

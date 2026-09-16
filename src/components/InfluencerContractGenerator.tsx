@@ -2,6 +2,9 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError, withTimeout } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { t } from "../data/phrases";
 
 const DRAFT_KEY = "proupiqr-influencer-contract-draft";
 
@@ -27,7 +30,9 @@ function nextDelivId() {
   return ++_delivId;
 }
 
-export function InfluencerContractGenerator() {
+export function InfluencerContractGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const [docLang, setDocLang] = useState<DocLang>(lang);
+  const tr = (s: string) => t(docLang, s);
   const today = new Date().toISOString().slice(0, 10);
   const nextMonth = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
 
@@ -312,7 +317,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/10 pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Creator & Brand Legal Tool</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">Influencer Contract</h2>
+            <h2 className="mt-1 text-2xl font-black text-forest">{tr("Influencer Contract")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
             <button
@@ -326,17 +331,19 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
               disabled={pngState === "busy"}
               className="rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
             >
-              {pngState === "busy" ? "..." : "Export PNG"}
+              {pngState === "busy" ? "..." : tr("Export PNG")}
             </button>
             <button
               onClick={downloadPdf}
               disabled={pdfState === "busy"}
               className="rounded-full bg-forest px-4 py-1.5 text-xs font-bold text-white transition hover:bg-leaf disabled:opacity-50"
             >
-              {pdfState === "busy" ? "Generating..." : "Export PDF"}
+              {pdfState === "busy" ? tr("Generating...") : tr("Download PDF")}
             </button>
           </div>
         </div>
+
+        <DocumentLanguagePicker value={docLang} onChange={setDocLang} label={tr("Document language")} />
 
         {/* Section 1: Brand & Creator Info */}
         <div className="space-y-4">
@@ -607,7 +614,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
                 <p className="mt-1 font-semibold text-forest/70">Campaign: {campaignName || "Untitled Campaign"}</p>
               </div>
               <div className="text-right text-[11px] font-bold text-forest/70">
-                <p>Date: {agreementDate}</p>
+                <p>{tr("Date")}: {agreementDate}</p>
                 <p>Valid Till: {completionDate}</p>
               </div>
             </div>
@@ -736,12 +743,12 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
               <div className="border-t border-forest/30 pt-2">
                 <p className="font-bold text-forest">{brandSignatory}</p>
                 <p className="text-[10px] text-forest/60">Authorized Signatory (Brand)</p>
-                <p className="text-[10px] text-forest/60">Date: {agreementDate}</p>
+                <p className="text-[10px] text-forest/60">{tr("Date")}: {agreementDate}</p>
               </div>
               <div className="border-t border-forest/30 pt-2 text-right">
                 <p className="font-bold text-forest">{creatorSignatory}</p>
                 <p className="text-[10px] text-forest/60">Creator / Influencer</p>
-                <p className="text-[10px] text-forest/60">Date: {agreementDate}</p>
+                <p className="text-[10px] text-forest/60">{tr("Date")}: {agreementDate}</p>
               </div>
             </div>
           </section>

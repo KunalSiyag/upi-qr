@@ -8,12 +8,29 @@ interface Props { lang: Exclude<SiteLang, "en" | "hi">; }
 const { lang } = Astro.props;
 const copy = HOME_COPY[lang];
 
+const stickerCopy: Record<typeof lang, { phonepe: string; gpay: string }> = {
+  ta: { phonepe: "PhonePe ஸ்டிக்கர்", gpay: "GPay ஸ்டிக்கர்" },
+  te: { phonepe: "PhonePe స్టిక్కర్", gpay: "GPay స్టిక్కర్" },
+  mr: { phonepe: "PhonePe स्टिकर", gpay: "GPay स्टिकर" },
+  es: { phonepe: "Sticker PhonePe", gpay: "Sticker GPay" },
+  pt: { phonepe: "Adesivo PhonePe", gpay: "Adesivo GPay" },
+  fr: { phonepe: "Sticker PhonePe", gpay: "Sticker GPay" },
+  de: { phonepe: "PhonePe-Sticker", gpay: "GPay-Sticker" },
+  id: { phonepe: "Stiker PhonePe", gpay: "Stiker GPay" },
+  ar: { phonepe: "ملصق PhonePe", gpay: "ملصق GPay" },
+  it: { phonepe: "Sticker PhonePe", gpay: "Sticker GPay" },
+  ja: { phonepe: "PhonePeステッカー", gpay: "GPayステッカー" },
+  zh: { phonepe: "PhonePe 贴纸", gpay: "GPay 贴纸" },
+};
+const stickers = stickerCopy[lang];
 const presets = [
-  { href: localeHref(lang, "phonepe-qr-generator"), label: "PhonePe QR", color: "#5f259f" },
-  { href: localeHref(lang, "google-pay-qr-generator"), label: "Google Pay QR", color: "#4285f4" },
-  { href: localeHref(lang, "paytm-qr-generator"), label: "Paytm QR", color: "#00baf2" },
-  { href: localeHref(lang, "upi-error-codes"), label: "NPCI", color: "#113b2c" },
-  { href: localeHref(lang, "tools"), label: "Tools", color: "#287a57" },
+  { href: localeHref(lang, "phonepe-qr-generator"), label: "PhonePe QR", color: "#5f259f", img: "/phonepe.png" },
+  { href: `${localeHref(lang, "qr-sticker-generator")}?app=phonepe#tool`, label: stickers.phonepe, color: "#5f259f", img: "/phonepe.png" },
+  { href: localeHref(lang, "google-pay-qr-generator"), label: "Google Pay QR", color: "#4285f4", img: "/googlepay.png" },
+  { href: `${localeHref(lang, "qr-sticker-generator")}?app=gpay#tool`, label: stickers.gpay, color: "#4285f4", img: "/googlepay.png" },
+  { href: localeHref(lang, "paytm-qr-generator"), label: "Paytm QR", color: "#00baf2", img: "/paytm.ico" },
+  { href: localeHref(lang, "upi-error-codes"), label: "NPCI", color: "#113b2c", img: "" },
+  { href: localeHref(lang, "tools"), label: "Tools", color: "#287a57", img: "" },
 ];
 ---
 
@@ -42,6 +59,11 @@ const presets = [
             class="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition hover:text-white"
             style={`border-color:${preset.color}40;color:${preset.color}`}
           >
+            {preset.img ? (
+              <img src={preset.img} alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
+            ) : (
+              <span class="w-1.5 h-1.5 rounded-full" style={`background:${preset.color}`}></span>
+            )}
             {preset.label}
           </a>
         ))}

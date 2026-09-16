@@ -1,6 +1,9 @@
 import React, { useState, useEffect, useRef, useId } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import type { DocLang } from "../data/documentLang";
+import { DocumentLanguagePicker } from "./DocumentLanguagePicker";
+import { useToolLang } from "../lib/useToolLang";
 
 interface MenuItem {
   name: string;
@@ -9,7 +12,8 @@ interface MenuItem {
   imageUrl?: string;
 }
 
-export function MenuQrGenerator() {
+export function MenuQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { lang: docLang, setLang, tr } = useToolLang(lang);
   const [storeName, setStoreName] = useState("CAFE MONSOON");
   const [tagline, setTagline] = useState("Artisanal Coffee & Bakes");
   const [vpa, setVpa] = useState("cafemonsoon@upi");
@@ -201,6 +205,10 @@ Do NOT wrap output in markdown codeblocks or extra text.`
 
   return (
     <div className="grid gap-8 lg:grid-cols-12">
+      <div className="lg:col-span-12">
+        <DocumentLanguagePicker value={docLang} onChange={setLang} label={tr("Document language")} />
+      </div>
+
       {/* Input Controls & AI Menu Builder */}
       <div className="lg:col-span-6 space-y-6">
         {/* Groq AI Auto Menu Generator Box */}
