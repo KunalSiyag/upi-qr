@@ -14,7 +14,7 @@ from xml.etree import ElementTree as ET
 
 
 SITE_ORIGIN = "https://www.proupiqr.in"
-LOCALES = {"hi", "ta", "te", "mr", "es", "pt", "fr", "de", "id"}
+LOCALES = {"hi", "ta", "te", "mr", "es", "pt", "fr", "de", "id", "ar", "it", "ja", "zh"}
 SITEMAP_NS = {"sm": "http://www.sitemaps.org/schemas/sitemap/0.9"}
 
 
