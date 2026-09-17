@@ -17,7 +17,7 @@ This is an educational summary, not legal advice. Verify specifics with your ban
 1. **Correct payee identification** — Customer must see accurate merchant/trust name before confirming UPI PIN.
 2. **No forced payment mode** — You may encourage UPI but cannot refuse legal tender cash (per RBI cash guidelines) unless policy is clearly disclosed for digital-only venues.
 3. **Authorized UPI infrastructure** — Use bank-issued or legitimate `upi://pay` QRs, not fake payment pages.
-4. **MDR transparency** — Standard UPI bank transfers to merchants are generally **zero MDR**. RuPay credit card on UPI carries charges — disclose if you promote credit-on-UPI. See [RuPay MDR guide](/blog/rupay-credit-card-upi-mdr-charges/).
+4. **MDR transparency** — Do not add a UPI surcharge on the customer’s bill. P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026 (merchant-borne). RuPay credit card on UPI carries separate interchange — disclose if you promote credit-on-UPI. See [UPI MDR calculator](/upi-mdr-calculator/) and [RuPay MDR guide](/blog/rupay-credit-card-upi-mdr-charges/).
 
 ---
 

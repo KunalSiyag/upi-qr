@@ -69,7 +69,7 @@ No. UPI QR is the `upi://pay` matrix shops print every day. Bharat QR is a bank-
 
 ### Q4. Does generating this QR cost MDR?
 
-Bank-to-bank UPI is 0% MDR. RuPay credit card on UPI above ₹2,000 may carry interchange. The QR file itself has no Pro UPI QR fee.
+P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit card on UPI above ₹2,000 may carry interchange. The QR file itself has no Pro UPI QR fee.
 
 **[Generate a free NPCI-compliant UPI QR →](/)**
 

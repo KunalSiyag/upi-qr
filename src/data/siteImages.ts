@@ -128,7 +128,7 @@ export const SITE_IMAGES: SiteImage[] = [
     "temple-donation-upi-box",
     "temple-donation-upi-box",
     "Wooden donation box with a taped UPI QR card on a temple desk next to brass lamps",
-    "Bank-to-bank UPI donations settle to the trust VPA with 0% MDR. RuPay credit-card UPI above ₹2,000 may carry interchange.",
+    "Donations settle to the trust VPA. Most small UPI scans stay free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026. RuPay credit-card UPI above ₹2,000 may carry interchange.",
     "Temple donation box with UPI QR"
   ),
   jpeg(
@@ -289,7 +289,7 @@ export const SITE_IMAGES: SiteImage[] = [
     "phonepe-gpay-paytm-compare",
     "/images/diagrams/phonepe-gpay-paytm-compare.png",
     "Comparison table of PhonePe, Google Pay, Paytm, and a compatible print for shop QR extras",
-    "UPI is interoperable. Apps compete on merchant extras. Bank-to-bank UPI is 0% MDR; RuPay CC UPI above ₹2,000 may carry interchange.",
+    "UPI is interoperable. Apps compete on merchant extras. P2P and small P2M stay free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026. RuPay CC UPI above ₹2,000 may carry interchange.",
     "PhonePe vs GPay vs Paytm shop QR extras"
   ),
   png(

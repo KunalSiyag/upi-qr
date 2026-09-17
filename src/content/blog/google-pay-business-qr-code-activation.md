@@ -53,7 +53,7 @@ Full print spec (sizes, matte vs glossy, test protocol): [How to print a GPay QR
 
 <h2 id="charges">Charges</h2>
 
-Bank-to-bank UPI is **0% MDR**. RuPay credit card on UPI above ₹2,000 may carry interchange — see [RuPay CC MDR](/blog/rupay-credit-card-upi-mdr-charges/). Voice alerts in GPay for Business are a software toggle; hardware soundboxes are a separate product if Google or a partner offers them in your city.
+P2P and P2M of ₹2,000 or less stay at **0% MDR**. Small QR (P2PM) shops under ₹1 lakh/month stay free. Other P2M above ₹2,000 may take 0.4% from 15 October 2026 — [MDR calculator](/upi-mdr-calculator/). RuPay credit card on UPI above ₹2,000 may carry interchange — see [RuPay CC MDR](/blog/rupay-credit-card-upi-mdr-charges/). Voice alerts in GPay for Business are a software toggle; hardware soundboxes are a separate product if Google or a partner offers them in your city.
 
 <h2 id="faq">Frequently asked questions</h2>
 

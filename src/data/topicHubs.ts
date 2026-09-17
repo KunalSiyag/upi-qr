@@ -59,6 +59,7 @@ export interface NavHub {
 }
 
 export const FEATURED_GUIDE_SLUGS = [
+  "p2pm-small-merchant-upi-mdr",
   "upi-mdr-charges-october-2026",
   "npci-upi-qr-code-generator-explained",
   "extract-upi-id-from-qr-code",
@@ -206,7 +207,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         question: "Is UPI MDR zero on these QRs?",
         answer:
-          "Standard bank-to-bank UPI has 0% MDR. RuPay credit card on UPI above ₹2,000 may carry interchange as published by NPCI. The QR itself does not add a Pro UPI QR fee.",
+          "P2P and P2M of ₹2,000 or less stay at 0% MDR. Small QR (P2PM) shops under ₹1 lakh/month stay free. Other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit-card-on-UPI is a separate interchange product. The QR itself does not add a Pro UPI QR fee.",
       },
     ],
   },
@@ -262,6 +263,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       "upi-qr-code-vs-payment-gateway",
       "how-to-create-whatsapp-payment-link-upi",
       "p2m-meaning-in-banking-upi",
+      "p2pm-small-merchant-upi-mdr",
       "phonepe-qr-sticker-print-free-vs-order",
       "sbi-upi-qr-code-generator-guide",
     ],
@@ -398,6 +400,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       "upi-qr-code-not-scanning-troubleshooting",
       "how-upi-soundboxes-work-and-their-safety",
       "upi-mdr-charges-october-2026",
+      "p2pm-small-merchant-upi-mdr",
       "rupay-credit-card-upi-mdr-charges",
       "how-to-link-credit-card-to-upi-qr",
       "receive-international-upi-payments",
@@ -576,6 +579,7 @@ export const TOPIC_HUBS: TopicHub[] = [
     ],
     articleSlugs: [
       "upi-mdr-charges-october-2026",
+      "p2pm-small-merchant-upi-mdr",
       "udyam-registration-guide-msme-benefits",
       "government-schemes-small-businesses-india-2026",
       "treds-invoice-discounting-msme-guide",

@@ -9,7 +9,7 @@ tags: ["Freelancer", "Billing", "Tutorial"]
 
 Freelancers in India often lose 2–3% of their hard-earned fees to payment gateway commissions on every single client invoice. For a freelancer earning ₹1,00,000 a month, that amounts to ₹2,500 to ₹3,000 lost each month—or over ₹30,000 annually—just to payment processors.
 
-If your Indian clients pay you via direct **UPI bank transfer**, you keep 100% of your earnings. 
+If your Indian clients pay you via direct **UPI bank transfer**, you keep almost all of it: invoices of ₹2,000 or less stay at 0% MDR, and larger P2M tickets take 0.4% from 15 October 2026 — still far below a 2% gateway. 
 
 Integrating a custom UPI QR code into your invoice documents, proposals, or WhatsApp billing cards replaces the cumbersome "please NEFT/IMPS to my account details" with a single scan-and-pay action. In this guide, we will explore the advantages of UPI invoicing for freelancers, explain how to embed these QR codes into your invoice templates, and compare UPI to traditional payment channels.
 
@@ -17,7 +17,7 @@ Integrating a custom UPI QR code into your invoice documents, proposals, or What
 
 ## Why Freelancers Should Use UPI QR Codes
 
-* **Zero Transaction Fees:** Direct bank-to-bank UPI settlements carry no MDR (Merchant Discount Rate) or payment processing charges.
+* **Low transaction fees:** P2P and invoices of ₹2,000 or less stay at 0% MDR. Larger P2M invoices may take 0.4% from 15 October 2026 (cap ₹300) — still far below a 2% gateway. Check: [UPI MDR calculator](/upi-mdr-calculator/).
 * **Instant Cash Flow Settle:** Payment gateway settlements typically take 2-3 business days. UPI transfers settle directly in your primary bank account in real-time.
 * **Reconciliation Efficiency:** By attaching a unique transaction note or invoice reference to the QR code, matching incoming payments to specific clients in your bank statement becomes effortless.
 * **Professional Appearance:** Rather than displaying raw bank details, presenting a branded Payment Card shows clients that your billing operations are modern and frictionless.

@@ -1,12 +1,12 @@
 ---
 title: "How to Accept UPI Payments Without a POS Machine"
-description: "Kirana stores and small shops can collect digital payments using only a UPI QR standee — no card swipe machine, rental fees, or MDR."
+description: "Kirana stores can collect digital payments with a UPI QR standee — no POS rental. Most small scans stay free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026."
 pubDate: 2026-06-17
 author: "Kunal Siyag"
 tags: ["Merchant Tips", "Shops", "Tutorial"]
 ---
 
-Card POS terminals cost ₹5,000–₹15,000 upfront plus monthly rentals and MDR on every swipe. For millions of Indian kirana stores, a printed **UPI QR standee** does the same job for cardless, cashless payments at **zero transaction fee** on standard UPI bank transfers.
+Card POS terminals cost ₹5,000–₹15,000 upfront plus monthly rentals and MDR on every swipe. For millions of Indian kirana stores, a printed **UPI QR standee** does the same job without hardware rent. P2P and bills of ₹2,000 or less stay at **₹0 MDR**. Small QR shops (P2PM, up to ₹1 lakh/month) stay free. Other P2M above ₹2,000 may take **0.4% from 15 October 2026** — still far below card MDR. [UPI MDR calculator](/upi-mdr-calculator/).
 
 ---
 
@@ -39,7 +39,7 @@ Optional: Add [PhonePe](/phonepe-qr-generator/) or [Google Pay](/google-pay-qr-g
 | :--- | :--- | :--- |
 | Hardware cost | ₹50–₹300 (print) | ₹5,000+ device |
 | Monthly rental | None | ₹200–₹500+ |
-| Per-txn fee (debit UPI) | Free (bank transfer) | N/A for UPI |
+| Per-txn fee (UPI) | ₹0 on ≤ ₹2,000 and small QR shops; 0.4% on some P2M above ₹2,000 from 15 Oct 2026 | N/A for UPI |
 | Per-txn fee (credit card) | N/A | 1.5%–3% MDR |
 | Customer coverage in India | Very high (UPI) | Moderate (cards) |
 | Settlement | Instant to bank | T+1 to T+3 |

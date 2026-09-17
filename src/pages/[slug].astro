@@ -414,7 +414,7 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   paytm: {
     vpaFormats: ["mobile@paytm", "username@paytm"],
     targetAudience: "Paytm Wallet & UPI users, kirana stores, and billing desks.",
-    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee poster for direct bank credit with zero MDR on standard UPI.",
+    tip: "You do not need a paid Paytm Soundbox to accept payments. Print this free standee for direct bank credit. Most small UPI scans stay free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026.",
     extraFaq: {
       question: "Do I need a Paytm merchant or Soundbox to use this QR?",
       answer: "No. Paste your @paytm UPI ID, print the poster, and money settles to the linked bank account. A Soundbox is optional and is not required to accept UPI."
@@ -468,7 +468,7 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   icici: {
     vpaFormats: ["mobile@icici", "username@pockets", "username@icici"],
     targetAudience: "ICICI Bank business and savings account holders.",
-    tip: "ICICI UPI QRs offer 0% MDR charges for standard bank-funded P2P and P2M merchant transfers.",
+    tip: "ICICI UPI QRs credit your VPA directly. P2P and P2M of ₹2,000 or less stay free; other P2M above ₹2,000 may take 0.4% MDR from 15 Oct 2026.",
     extraFaq: {
       question: "Which ICICI UPI ID should I print?",
       answer: "Use the ID visible in iMobile or any linked UPI app, typically name@icici or mobile@icici. Test-scan before you laminate the standee."
@@ -657,7 +657,7 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   donation: {
     vpaFormats: ["trustname@upi", "ngo@bankhandle"],
     targetAudience: "Temples, Non-Profit Organizations, NGOs, and Charitable Drives.",
-    tip: "Standard UPI collections carry zero MDR for charitable donations, ensuring collected funds reach your organization without deduction.",
+    tip: "Pro UPI QR does not take a platform cut. Bank-to-bank UPI follows the Oct 2026 MDR schedule — most small donations stay free.",
     extraFaq: {
       question: "Should NGOs lock a donation amount?",
       answer: "Leave it open for general fundraising. Use a fixed amount only for a published ticket, kit, or membership."
@@ -736,7 +736,7 @@ const presetFaqs = [
   },
   {
     question: `Are there any MDR (Merchant Discount Rate) charges?`,
-    answer: `No, standard bank-funded P2P and P2M UPI transactions directly into your bank account carry 0% MDR commission under NPCI guidelines. RuPay credit card on UPI transactions above ₹2,000 may carry interchange fees.`
+    answer: `P2P and merchant payments of ₹2,000 or less stay at 0% MDR. Small QR merchants (P2PM, up to ₹1 lakh/month) stay free. Other P2M above ₹2,000 may take 0.4% MDR from 15 October 2026, capped at ₹300. RuPay credit card on UPI above ₹2,000 is a separate interchange product. This site does not add a platform fee.`
   },
   {
     question: `How do I print a durable standee for my checkout counter?`,
@@ -760,7 +760,7 @@ const schema = {
       "featureList": [
         "100% Browser Local Rendering",
         "NPCI upi://pay Protocol Compliance",
-        "0% MDR on Bank-to-Bank UPI",
+        "Oct 2026 UPI MDR schedule (0.4% on some P2M above ₹2,000)",
         "High-Resolution PNG Poster Download"
       ],
       "softwareVersion": "2.0.0",

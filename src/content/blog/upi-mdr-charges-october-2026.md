@@ -67,7 +67,7 @@ Essential-sector example: a ₹4,000 fuel payment is **₹5**, not ₹16.
 
 **2. Merchant bills of ₹2,000 or less.** Tea, groceries, medicines, a salon trim. This is most QR scans by *count*.
 
-**3. Small QR merchants up to ₹1 lakh a month.** Street vendors and neighbourhood shops collecting through UPI QR into their account, classified under the P2PM / small-merchant framework, stay at zero MDR. Volume alone does not exempt you — the VPA has to be tagged as a small QR merchant. In the calculator, tick that box only if your bank or app listed you that way. If typical bills are ₹2,000 or less, MDR is ₹0 even without the tag.
+**3. Small QR merchants up to ₹1 lakh a month.** Street vendors and neighbourhood shops collecting through UPI QR into their account, classified under the P2PM / small-merchant framework, stay at zero MDR. Volume alone does not exempt you — the VPA has to be tagged as a small QR merchant. How to check, and what happens after three months over ₹1 lakh: [Am I a P2PM small merchant?](/blog/p2pm-small-merchant-upi-mdr/). In the calculator, tick that box only if your bank or app listed you that way. If typical bills are ₹2,000 or less, MDR is ₹0 even without the tag.
 
 BBC, citing the government, also reported that **QR collections in rural and semi-urban areas stay outside MDR**. Treat that as a location carve-out to confirm with your acquiring bank — it is not something this site can see from a VPA.
 

@@ -2,12 +2,15 @@ import React, { useState, useId } from "react";
 import QRCode from "qrcode";
 import type { DocLang } from "../data/documentLang";
 import { useToolLang } from "../lib/useToolLang";
+import { rupeesToPaise } from "../lib/gstMath";
+import { formatInrPaise, mdrOnTransaction } from "../lib/upiMdr";
 
 export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   const { tr, money } = useToolLang(lang);
   const [costPrice, setCostPrice] = useState<string>("500");
   const [sellingPrice, setSellingPrice] = useState<string>("750");
   const [gstRate, setGstRate] = useState<number>(18);
+  const [upiPaid, setUpiPaid] = useState(true);
   const [vpa, setVpa] = useState("");
   const [qrDataUrl, setQrDataUrl] = useState("");
 
@@ -22,7 +25,9 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   const marginPercent = sell > 0 ? (grossProfit / sell) * 100 : 0;
   const markupPercent = cost > 0 ? (grossProfit / cost) * 100 : 0;
   const gstAmount = (sell * gstRate) / (100 + gstRate);
-  const netProfit = grossProfit - gstAmount;
+  const mdrPaise = upiPaid ? mdrOnTransaction(rupeesToPaise(sell), "standard") : 0;
+  const mdrRupees = mdrPaise / 100;
+  const netProfit = grossProfit - gstAmount - mdrRupees;
 
   const generateQr = async () => {
     if (!vpa.trim() || sell <= 0) return;
@@ -90,6 +95,21 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             </div>
           </div>
 
+          <label className="flex items-start gap-2 text-xs font-bold text-forest">
+            <input
+              type="checkbox"
+              checked={upiPaid}
+              onChange={(e) => setUpiPaid(e.target.checked)}
+              className="mt-0.5 h-4 w-4 accent-[#15803d]"
+            />
+            <span>
+              Selling price is paid by UPI
+              <span className="mt-1 block font-semibold text-forest/55">
+                Bills of ₹2,000 or less stay ₹0 MDR. Above that, 0.4% comes out of your margin — not the customer’s bill.
+              </span>
+            </span>
+          </label>
+
           <div className="border-t border-forest/10 pt-4 space-y-3">
             <label htmlFor={vpaId} className="block text-xs font-bold text-forest/75">Generate Selling Price Payment QR</label>
             <div className="flex gap-2">
@@ -135,10 +155,22 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <span className="text-forest/70 font-semibold">GST Liability</span>
               <span className="font-mono font-bold text-amber-700">{money(gstAmount, 2)}</span>
             </div>
+            {upiPaid && (
+              <div className="flex justify-between text-sm">
+                <span className="text-forest/70 font-semibold">UPI MDR (you pay)</span>
+                <span className="font-mono font-bold text-amber-700">{formatInrPaise(mdrPaise)}</span>
+              </div>
+            )}
             <div className="flex justify-between text-sm border-t border-forest/10 pt-2">
-              <span className="font-black text-forest">Net Profit (Post-GST)</span>
+              <span className="font-black text-forest">{upiPaid ? "Net profit after GST + UPI MDR" : "Net Profit (Post-GST)"}</span>
               <span className="font-mono font-black text-leaf">{money(netProfit, 2)}</span>
             </div>
+            {upiPaid && mdrPaise > 0 && (
+              <p className="text-[11px] leading-5 text-forest/55">
+                Do not add {formatInrPaise(mdrPaise)} as a UPI surcharge on the bill.{" "}
+                <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">MDR calculator</a>
+              </p>
+            )}
           </div>
 
           {qrDataUrl && (

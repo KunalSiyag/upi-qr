@@ -8,6 +8,17 @@ export interface CorrectionEntry {
 /** Public log of material corrections. Oldest last. */
 export const CORRECTIONS: CorrectionEntry[] = [
   {
+    date: "2026-09-17",
+    title: "P2PM is a bank tag, not automatic under ₹1 lakh",
+    summary:
+      "Activation guides, profession QRs, and some FAQs still said bank-to-bank UPI was always 0% MDR. Copy now follows the 15 October 2026 schedule. Small-merchant exemption is P2PM classification plus the ₹1 lakh/month band — three consecutive months above that typically graduates the account to chargeable P2M. GSTIN is not the test.",
+    hrefs: [
+      { href: "/blog/p2pm-small-merchant-upi-mdr/", label: "Am I a P2PM small merchant?" },
+      { href: "/upi-mdr-calculator/", label: "UPI MDR calculator" },
+      { href: "/glossary/p2pm/", label: "P2PM glossary" },
+    ],
+  },
+  {
     date: "2026-09-16",
     title: "UPI P2M is no longer universally 0% MDR from 15 Oct 2026",
     summary:

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { gstExclusive, gstInclusive, gstLine, ratePercentToBps } from "../src/lib/gstMath.ts";
-import { gatewayFeePaise, gstOnMdr, mdrFormula, mdrOnTransaction, monthlyMdrEstimate, UPI_MDR } from "../src/lib/upiMdr.ts";
+import { gatewayFeePaise, gstOnMdr, looksLikeUpiMdrGap, mdrFormula, mdrOnTransaction, monthlyMdrEstimate, UPI_MDR } from "../src/lib/upiMdr.ts";
 
 // Exclusive ₹1,000 @ 18% → ₹180 GST, ₹1,180 total
 {
@@ -86,6 +86,9 @@ assert.equal(mdrOnTransaction(5000_00, "standard", { smallMerchantExempt: true }
 }
 
 assert.equal(gstOnMdr(12_00), 216);
+assert.equal(looksLikeUpiMdrGap(3000_00, 2988_00).kind, "mdr");
+assert.equal(looksLikeUpiMdrGap(3000_00, 2985_84).kind, "mdr_gst");
+assert.equal(looksLikeUpiMdrGap(1500_00, 1500_00).kind, null);
 assert.equal(gatewayFeePaise(10000_00), 236_00);
 assert.equal(mdrOnTransaction(100000_00, "capital"), 20_00);
 assert.match(mdrFormula(100000_00, "standard", 300_00), /capped/);

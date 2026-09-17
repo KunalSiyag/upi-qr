@@ -99,7 +99,7 @@ Why choose a universal QR generator over standard bank-issued or app-specific me
 |---|---|---|---|
 | **Supported Apps** | All UPI Apps (PhonePe, GPay, Paytm, BHIM, Bank Apps) | Often branded for 1 app; supports others via small text | All UPI Apps |
 | **Setup Time** | Instant (30 seconds, no signup) | 3–7 Days (KYC & physical standee delivery) | 1–3 Days (Merchant onboarding & API integration) |
-| **Transaction Fees (MDR)** | 0% (Standard P2P / P2M NPCI rates) | 0% for standard UPI | 1.5% – 2.0% per transaction |
+| **Transaction Fees (MDR)** | 0% on P2P and P2M ≤ ₹2,000; 0.4% on some larger P2M from 15 Oct 2026 | Same NPCI schedule | 1.5% – 2.0% per transaction |
 | **Amount Locking** | Supported (Static or Preset amount) | Not supported on physical standees | Supported dynamically |
 | **Design Customization** | 100% Customizable (Colors, Logos, Templates) | Locked to brand colors | Fixed web modal |
 | **Data Privacy** | 100% Private (Generated in-browser) | Merchant app logs location & sales history | Fully tracked by gateway |
@@ -123,7 +123,7 @@ When displaying a universal UPI QR code for public payments, follow NPCI complia
 ## Frequently Asked Questions
 
 ### Q1. Is a universal UPI QR code completely free to use?
-Yes. Universal UPI QR codes created with Pro UPI QR use standard NPCI open-spec protocols. There are no registration fees, monthly subscriptions, or per-scan MDR deductions for bank-to-bank transfers. RuPay credit card on UPI above ₹2,000 may carry interchange fees. For standard bank-funded UPI, 100% of the customer's transfer settles directly into your bank account.
+Yes. Universal UPI QR codes created with Pro UPI QR use standard NPCI open-spec protocols. There are no registration fees or monthly subscriptions from this site. P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 October 2026. RuPay credit card on UPI above ₹2,000 may carry interchange fees.
 
 ### Q2. Do static universal UPI QR codes expire?
 No. Static universal UPI QR codes encode your VPA directly into the image matrix. As long as your bank account and linked UPI VPA remain active with your bank, the printed QR code will function indefinitely without expiring.

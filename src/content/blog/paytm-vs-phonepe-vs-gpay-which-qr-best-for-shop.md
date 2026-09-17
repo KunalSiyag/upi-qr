@@ -17,7 +17,7 @@ In this comprehensive guide, we compare Paytm, PhonePe, and Google Pay merchant 
 
 If you are looking for a quick decision:
 * **Interoperability:** Every standard UPI QR code is fully interoperable. A single QR can accept payments from GPay, PhonePe, Paytm, BHIM, and 80+ banking apps.
-* **Transaction Fees:** Bank-to-bank UPI transactions have **0% MDR (Zero fees)** at any amount. RuPay credit card on UPI has 0% MDR under ₹2,000; interchange applies above ₹2,000 per NPCI circulars.
+* **Transaction Fees:** P2P and P2M of ₹2,000 or less stay at **0% MDR** on every app. Small QR (P2PM) shops under ₹1 lakh/month stay free. Other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit card on UPI above ₹2,000 is a separate interchange product. [MDR calculator](/upi-mdr-calculator/).
 * **Best for Storefront Visibility:** Google Pay is excellent for local SEO, placing your shop on Google Maps.
 * **Best for Audio Alerts:** PhonePe and Paytm are neck-and-neck with soundbox offerings, though PhonePe features lower rental schemes in many regions.
 

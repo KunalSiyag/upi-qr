@@ -13,6 +13,7 @@ export const UPI_MDR = {
   essentialFlatPaise: 5_00,
   capitalRateBps: 2, // 0.02%
   smallMerchantMonthlyPaise: 1_00_000_00,
+  p2pmGraduateMonths: 3,
   gstOnMdrBps: 1800,
   gatewayRateBps: 236, // 2% + 18% GST = 2.36%
 } as const;
@@ -45,6 +46,22 @@ export function mdrOnTransaction(
 
 export function gstOnMdr(mdrPaise: number): number {
   return Math.round((Math.max(0, Math.round(mdrPaise)) * UPI_MDR.gstOnMdrBps) / 10000);
+}
+
+/** Settlement shortfall that matches Oct 2026 UPI MDR (with or without GST on the fee). */
+export function looksLikeUpiMdrGap(
+  expectedPaise: number,
+  receivedPaise: number
+): { kind: "mdr" | "mdr_gst" | null; mdrPaise: number; gstPaise: number } {
+  const expected = Math.max(0, Math.round(expectedPaise));
+  const received = Math.max(0, Math.round(receivedPaise));
+  const mdrPaise = mdrOnTransaction(expected, "standard");
+  const gstPaise = gstOnMdr(mdrPaise);
+  if (mdrPaise <= 0) return { kind: null, mdrPaise: 0, gstPaise: 0 };
+  const gap = expected - received;
+  if (gap === mdrPaise) return { kind: "mdr", mdrPaise, gstPaise };
+  if (gap === mdrPaise + gstPaise) return { kind: "mdr_gst", mdrPaise, gstPaise };
+  return { kind: null, mdrPaise, gstPaise };
 }
 
 export function gatewayFeePaise(amountPaise: number): number {

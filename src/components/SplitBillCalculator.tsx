@@ -211,6 +211,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <label className="text-sm font-bold text-forest">{tr("Bill amount ₹")}<input type="number" value={totalBill} onChange={(e) => setTotalBill(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           )}
           <label className="text-sm font-bold text-forest">{tr("Your UPI ID (to receive)")}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
+          <p className="sm:col-span-2 text-[11px] leading-5 text-forest/55">Friends paying you back is person-to-person UPI — always ₹0 MDR, any amount. Shop QR is different. <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">Merchant MDR calculator</a></p>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">

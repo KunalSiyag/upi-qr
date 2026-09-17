@@ -3,6 +3,7 @@ import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-ima
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
 import { useToolLang } from "../lib/useToolLang";
+import { looksLikeUpiMdrGap } from "../lib/upiMdr";
 
 interface BookEntry {
   id: number;
@@ -192,13 +193,19 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
     return sortDir === "asc" ? (va as number) - (vb as number) : (vb as number) - (va as number);
   });
 
+  function mdrKind(e: BookEntry) {
+    if (e.receivedAmount == null) return null;
+    return looksLikeUpiMdrGap(e.expectedAmount, e.receivedAmount).kind;
+  }
+
   const totals = {
     expected: entries.reduce((s, e) => s + e.expectedAmount, 0),
     received: entries.reduce((s, e) => s + (e.receivedAmount ?? 0), 0),
     diff: entries.reduce((s, e) => s + (e.difference ?? 0), 0),
     settled: entries.filter((e) => e.settled).length,
     pending: entries.filter((e) => !e.settled && (e.receivedAmount == null)).length,
-    mismatch: entries.filter((e) => !e.settled && e.receivedAmount != null).length,
+    mdr: entries.filter((e) => !e.settled && mdrKind(e) != null).length,
+    mismatch: entries.filter((e) => !e.settled && e.receivedAmount != null && mdrKind(e) == null).length,
   };
 
   const exportCsv = () => {
@@ -297,7 +304,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
             <h2 className="text-xl font-black text-forest">{monthLabel}</h2>
-            <p className="text-xs text-forest/60">{entries.length} entries · {totals.settled} settled · {totals.mismatch} mismatch · {totals.pending} pending</p>
+            <p className="text-xs text-forest/60">{entries.length} entries · {totals.settled} settled · {totals.mdr} UPI MDR · {totals.mismatch} mismatch · {totals.pending} pending</p>
           </div>
           <div className="flex items-center gap-2">
             <label className="cursor-pointer rounded-full bg-mint border border-leaf/20 px-4 py-2 text-xs font-bold text-forest hover:bg-leaf/10 transition">
@@ -361,7 +368,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
             </thead>
             <tbody>
               {sortedEntries.map((e) => (
-                <tr key={e.id} className={`border-b border-forest/5 hover:bg-mint/20 transition-colors ${e.settled ? "bg-emerald-50/30" : e.difference != null ? "bg-amber-50/30" : ""}`}>
+                <tr key={e.id} className={`border-b border-forest/5 hover:bg-mint/20 transition-colors ${e.settled ? "bg-emerald-50/30" : mdrKind(e) ? "bg-mint/20" : e.difference != null ? "bg-amber-50/30" : ""}`}>
                   <td className="px-3 py-2 font-mono text-forest/80">{e.date}</td>
                   <td className="px-3 py-2 font-bold text-forest">{e.invoiceNo}</td>
                   <td className="px-3 py-2 text-forest/70">{e.customer}</td>
@@ -399,6 +406,10 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                   <td className="px-3 py-2">
                     {e.settled ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Settled</span>
+                    ) : mdrKind(e) ? (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-0.5 text-[10px] font-bold text-leaf" title="Shortfall matches 0.4% UPI MDR from 15 Oct 2026">
+                        UPI MDR{mdrKind(e) === "mdr_gst" ? " + GST" : ""}
+                      </span>
                     ) : e.difference != null ? (
                       <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⚠ Mismatch</span>
                     ) : (
@@ -413,6 +424,13 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
             </tbody>
           </table>
         </div>
+      )}
+
+      {entries.length > 0 && totals.mdr > 0 && (
+        <p className="text-xs font-semibold text-forest/70">
+          {totals.mdr} row{totals.mdr === 1 ? "" : "s"} match the 0.4% UPI MDR from 15 Oct 2026 (merchant-borne, not a short payment).{" "}
+          <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">MDR calculator</a>
+        </p>
       )}
 
       {/* Privacy badge */}
@@ -456,7 +474,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                   <td className="py-2 px-1">{e.receivedAmount != null ? `${symbol}${fRs(e.receivedAmount)}` : "—"}</td>
                   <td className="py-2 px-1">{e.utr}</td>
                   <td className="py-2 px-1 font-bold">{e.difference != null ? (e.difference >= 0 ? symbol : `-${symbol}`) + fRs(Math.abs(e.difference)) : "—"}</td>
-                  <td className="py-2 px-1">{e.settled ? "Settled" : e.difference != null ? "Mismatch" : "Pending"}</td>
+                  <td className="py-2 px-1">{e.settled ? "Settled" : mdrKind(e) ? "UPI MDR" : e.difference != null ? "Mismatch" : "Pending"}</td>
                 </tr>
               ))}
             </tbody>

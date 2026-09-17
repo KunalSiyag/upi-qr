@@ -30,7 +30,7 @@ While the basic QR code is free, the Soundbox is a paid add-on. Treat the figure
 
 * **One-time activation (historical range):** about ₹199–₹299.
 * **Monthly rental (historical range):** about ₹99–₹125 depending on model (basic, card-machine combo, or pocket size).
-* **MDR on non-UPI:** bank-to-bank UPI is 0% MDR. Paytm Wallet, corporate cards, and RuPay credit card on UPI above ₹2,000 may carry fees. Confirm on the settlement report, not on a sales flyer.
+* **MDR:** P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. Paytm Wallet, corporate cards, and RuPay credit card on UPI above ₹2,000 may carry extra fees. Confirm on the settlement report, not on a sales flyer.
 
 ---
 

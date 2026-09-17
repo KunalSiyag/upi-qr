@@ -106,7 +106,7 @@ Step-by-step sizing and paper: [create and print a UPI QR standee](/blog/how-to-
 
 - **QR activation:** PhonePe Support (July 2026) — no fee to activate the Business QR.
 - **Official stickers:** Play Store listing describes free QR sticker orders. Confirm in-app before you assume a particular standee size is free.
-- **Bank-to-bank UPI** into your account: **0% MDR**.
+- **Bank-to-bank UPI** into your account: **0% MDR** on P2P, on P2M of ₹2,000 or less, and on small QR (P2PM) shops under ₹1 lakh/month. Other P2M above ₹2,000 may take 0.4% from 15 October 2026. [MDR calculator](/upi-mdr-calculator/) · [Am I P2PM?](/blog/p2pm-small-merchant-upi-mdr/)
 - **RuPay credit card on UPI:** not the same as bank UPI. Transactions above ₹2,000 may carry interchange under NPCI rules. Under ₹2,000 is typically treated as zero-MDR for this rail. See [RuPay CC on UPI MDR](/blog/rupay-credit-card-upi-mdr-charges/).
 - **Soundbox / SmartSpeaker:** a separate hardware programme. Price and rental change by city and scheme — read the in-app offer, do not rely on a blog number. How the speaker works: [UPI soundbox safety](/blog/how-upi-soundboxes-work-and-their-safety/). Free phone alerts: [voice announcements without a box](/blog/setup-soundbox-announcements-for-shop-free/).
 

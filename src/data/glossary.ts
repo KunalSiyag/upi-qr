@@ -280,6 +280,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       { href: "/upi-mdr-calculator/", label: "UPI MDR calculator (Oct 2026)" },
       { href: "/blog/upi-mdr-charges-october-2026/", label: "What merchants actually pay" },
       { href: "/upi-calculator/", label: "UPI vs card gateway savings" },
+      { href: "/glossary/p2pm/", label: "P2PM small merchant" },
       { href: "/glossary/p2p-payment/", label: "P2P vs P2M payment types" }
     ]
   },
@@ -320,8 +321,31 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/glossary/mdr/", label: "MDR — merchant discount rate" },
+      { href: "/glossary/p2pm/", label: "P2PM small merchant" },
       { href: "/blog/p2m-meaning-in-banking-upi/", label: "P2M meaning in banking and UPI" },
       { href: "/split-bill-calculator/", label: "Split bills with per-person UPI links" }
+    ]
+  },
+  {
+    slug: "p2pm",
+    term: "P2PM",
+    full: "Person-to-Person-Merchant (small QR merchant)",
+    hindi: "छोटा QR मर्चेंट (P2PM)",
+    category: "Merchant & QR",
+    shortDef: "Bank tag for small UPI QR shops. Up to ₹1 lakh/month they stay at 0% MDR from 15 Oct 2026, even on bills above ₹2,000.",
+    body: [
+      "P2PM is the small-merchant QR class used by acquiring banks. Street vendors and neighbourhood shops that collect through UPI QR into their account, up to ₹1 lakh a month, stay in the zero-MDR net when the VPA is tagged this way. A single bill above ₹2,000 does not by itself end the exemption.",
+      "GSTIN is not required. Coverage of the NPCI FAQ said three consecutive months of inward UPI above ₹1 lakh typically moves the account into chargeable P2M. This site cannot see the tag from a VPA — ask the bank or app, then tick the box on the MDR calculator only if they confirmed it."
+    ],
+    faqs: [
+      { question: "Is every shop under ₹1 lakh/month automatically P2PM?", answer: "No. Volume is the band; the acquiring bank or PSP still has to classify the VPA. Confirm in writing." },
+      { question: "Do I reprint my QR if I am P2PM?", answer: "No. MDR is a settlement rule. Existing standees keep working." }
+    ],
+    related: [
+      { href: "/blog/p2pm-small-merchant-upi-mdr/", label: "How to check if you are P2PM" },
+      { href: "/upi-mdr-calculator/", label: "UPI MDR calculator" },
+      { href: "/glossary/mdr/", label: "MDR" },
+      { href: "/glossary/p2p-payment/", label: "P2P vs P2M" }
     ]
   },
   {

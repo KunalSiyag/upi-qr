@@ -57,7 +57,7 @@ Generate one sheet per amount (₹100, ₹200, ₹500) and label them on the pap
 
 ### Q3. Is there a licence fee?
 
-No. Pro UPI QR does not charge MDR. Bank-to-bank UPI is 0% MDR; RuPay credit card on UPI above ₹2,000 may carry interchange.
+No. Pro UPI QR does not charge MDR. P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit card on UPI above ₹2,000 may carry interchange.
 
 **[Print an A4 sticker sheet →](/qr-sticker-generator/)**
 

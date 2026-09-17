@@ -36,7 +36,7 @@ Here is a high-level look at how static UPI QR codes compare to paid merchant ga
 For small stores, micro-merchants, freelancers, and local service providers, static UPI QR codes are often the most profitable starting point.
 
 
-### 1. No Platform Commissions (Keep 100% of Revenue)
+### 1. Far lower fees than a gateway
 Payment gateways charge a standard MDR (Merchant Discount Rate) of **2% + GST** on domestic transactions. If your business collects ₹1,000, you pay ₹23 to the gateway. If you collect ₹1,00,000 monthly, you lose ₹2,300. 
 With direct UPI QR, most kirana scans still settle at **₹0**. From 15 October 2026 some person-to-merchant tickets **above ₹2,000** take a **0.4% MDR** (not a tax, capped at ₹300). That is still far below a 2% gateway. Work it: [UPI MDR calculator](/upi-mdr-calculator/).
 

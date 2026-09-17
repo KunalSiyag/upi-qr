@@ -48,9 +48,9 @@ Designed for street vendors, hawkers, and cart operators: an initial ₹10,000 l
 
 Registration plus invoicing discipline activates Section 16 rights: compound interest on delayed payments from any buyer, adjudicated cheaply by MSE Facilitation Councils via the SAMADHAAN portal. Compute exposure per bill with the [MSMED interest calculator](/msmed-interest-calculator/) and keep dated reminders as evidence using our [reminder templates](/blog/how-to-write-payment-reminder-message-overdue-invoice/).
 
-## 7. UPI merchant incentives — zero MDR, plus reimbursements
+## 7. UPI merchant incentives — most small QR still free
 
-Standard bank-to-bank UPI person-to-merchant payments carry zero MDR. Separately, the government has periodically reimbursed banks for handling low-value UPI transactions (₹2,000 and below) so that acquiring costs never trickle down to small merchants. RuPay credit card on UPI transactions above ₹2,000 may carry interchange fees per NPCI circulars. Net effect: accepting UPI remains genuinely free for kirana-level commerce in the vast majority of cases — print the standee, keep 100% of every bank-funded sale.
+From 15 October 2026, P2P and P2M of ₹2,000 or less stay at zero MDR, and small QR merchants (P2PM, up to ₹1 lakh/month) stay free. Other person-to-merchant tickets above ₹2,000 may take 0.4% MDR (cap ₹300). That is still far cheaper than card POS. Check whether your VPA is tagged P2PM: [Am I a P2PM small merchant?](/blog/p2pm-small-merchant-upi-mdr/). Run the numbers: [UPI MDR calculator](/upi-mdr-calculator/). RuPay credit card on UPI above ₹2,000 remains a separate interchange product.
 
 ## How to actually use this list
 

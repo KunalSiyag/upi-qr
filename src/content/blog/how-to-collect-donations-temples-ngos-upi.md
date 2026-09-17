@@ -83,7 +83,7 @@ By utilizing free UPI tools, your trust or NGO can redirect payment gateway fees
 ## Frequently Asked Questions
 
 ### Q1. How do I make a QR code for donations for free?
-You can create a free donation QR code using the [Pro UPI QR Donation Builder](/donation-qr-generator/). Enter your trust/NGO's registered name and merchant UPI ID, choose the **Temple Donation Poster** template, and download the high-resolution image to print or share. There are zero transaction fees or platform commissions.
+You can create a free donation QR code using the [Pro UPI QR Donation Builder](/donation-qr-generator/). Enter your trust/NGO's registered name and merchant UPI ID, choose the **Temple Donation Poster** template, and download the high-resolution image to print or share. This site charges no platform fee. Bank-to-bank UPI follows the Oct 2026 MDR schedule — most small donations stay free.
 
 ### Q2. Can I use a personal UPI ID for donation collection?
 It is highly recommended to use a registered **Merchant UPI ID** (linked to a dedicated bank account in the trust's name) rather than a personal UPI ID. Personal UPI accounts have lower daily transaction limits (typically ₹1 Lakh per day) and could cause compliance issues with tax authorities (e.g., Section 80G requirements).

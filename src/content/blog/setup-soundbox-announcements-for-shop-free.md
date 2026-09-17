@@ -50,7 +50,7 @@ If the customer paid **your PhonePe merchant VPA**, PhonePe Business can announc
 
 ### Q2. Does this cost MDR?
 
-No. Voice is a notification. Bank-to-bank UPI remains 0% MDR. RuPay credit card on UPI above ₹2,000 may carry interchange.
+No. Voice is a notification, not a fee. P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit card on UPI above ₹2,000 may carry interchange.
 
 ### Q3. Android killed the alerts overnight.
 

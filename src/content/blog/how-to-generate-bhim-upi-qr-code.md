@@ -32,7 +32,7 @@ BHIM is NPCI’s own UPI app. Its QR is a standard `upi://pay` code, usually on 
 
 <h2 id="print">Print it so it scans</h2>
 
-Matte 300 GSM, 300 DPI, quiet zone, two-app test. Full spec: [standee guide](/blog/how-to-create-print-upi-qr-code-standee/). Bank-to-bank UPI is 0% MDR; RuPay credit card on UPI above ₹2,000 may carry interchange.
+Matte 300 GSM, 300 DPI, quiet zone, two-app test. Full spec: [standee guide](/blog/how-to-create-print-upi-qr-code-standee/). P2P and P2M of ₹2,000 or less stay at 0% MDR; other P2M above ₹2,000 may take 0.4% from 15 Oct 2026. RuPay credit card on UPI above ₹2,000 may carry interchange.
 
 <h2 id="faq">Frequently asked questions</h2>
 

@@ -300,9 +300,16 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <span className="mt-1 block font-semibold text-forest/55">
                     Monthly UPI is under ₹1 lakh. Tick this only if the app/bank listed you as a small QR merchant.
                   </span>
+                ) : tab === "monthly" && !underLakh && monthlyPaise > 0 ? (
+                  <span className="mt-1 block font-semibold text-amber-800">
+                    Three consecutive months over ₹1 lakh typically moves a P2PM account into chargeable P2M.
+                  </span>
                 ) : null}
               </span>
             </label>
+            <a href="/blog/p2pm-small-merchant-upi-mdr/" className="block text-[11px] font-bold text-leaf underline underline-offset-2">
+              How to check if the bank tagged this VPA as P2PM →
+            </a>
             <label className="flex items-start gap-2 text-xs font-bold text-forest">
               <input
                 type="checkbox"
