@@ -1,4 +1,5 @@
 ---
+import "../styles/global.css";
 import { EmbedCard } from "../components/EmbedCard";
 ---
 
@@ -10,10 +11,12 @@ import { EmbedCard } from "../components/EmbedCard";
     <title>UPI Payment Embed Widget</title>
     <meta name="robots" content="noindex, nofollow" />
     <style>
+      html,
       body {
         margin: 0;
         padding: 0;
-        background: transparent;
+        min-height: 0;
+        background: transparent !important;
         overflow: hidden;
       }
     </style>

@@ -14,8 +14,7 @@ export function DeveloperConsole() {
   const [activeTab, setActiveTab] = useState<"iframe" | "link" | "js" | "react">("iframe");
   const [copied, setCopied] = useState(false);
 
-  const embedUrl = useMemo(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.proupiqr.in";
+  const embedQuery = useMemo(() => {
     const searchParams = new URLSearchParams();
     searchParams.set("pa", form.pa);
     searchParams.set("pn", form.pn);
@@ -23,8 +22,14 @@ export function DeveloperConsole() {
     if (form.tn) searchParams.set("tn", form.tn);
     searchParams.set("theme", form.theme.replace("#", ""));
     if (form.logo !== "none") searchParams.set("logo", form.logo);
-    return `${origin}/embed/?${searchParams.toString()}`;
+    return searchParams.toString();
   }, [form]);
+
+  const embedPath = `/embed/?${embedQuery}`;
+  const embedUrl = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://www.proupiqr.in";
+    return `${origin}${embedPath}`;
+  }, [embedPath]);
 
   const rawUpiLink = useMemo(() => {
     return buildUpiUri({ pa: form.pa, pn: form.pn, am: form.am || undefined, tn: form.tn || undefined, cu: "INR" });
@@ -200,7 +205,7 @@ export function UpiPayButton() {
         <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-forest/50">Live Sandbox Preview</h4>
         <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-full max-w-[340px] h-[480px]">
           <iframe
-            src={embedUrl}
+            src={embedPath}
             className="w-full h-full border-none bg-transparent overflow-hidden"
             title="UPI Payment Embed Widget Preview"
           />

@@ -69,9 +69,26 @@
       ]
     },
     {
+      "source": "/embed",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Cross-Origin-Resource-Policy", "value": "cross-origin" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors *" }
+      ]
+    },
+    {
+      "source": "/embed/",
+      "headers": [
+        { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Cross-Origin-Resource-Policy", "value": "cross-origin" },
+        { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors *" }
+      ]
+    },
+    {
       "source": "/embed/:path*",
       "headers": [
         { "key": "X-Robots-Tag", "value": "noindex, nofollow" },
+        { "key": "Cross-Origin-Resource-Policy", "value": "cross-origin" },
         { "key": "Content-Security-Policy", "value": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors *" }
       ]
     },

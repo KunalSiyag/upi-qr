@@ -273,16 +273,16 @@ const schema = {
         </div>
 
         <div class="rounded-2xl sm:rounded-3xl bg-[#fcf9f2] p-4 sm:p-6 md:p-8 border border-yellow-700/10 w-full min-w-0">
-          <h3 class="text-base sm:text-lg font-black text-forest">Zero commission explained</h3>
+          <h3 class="text-base sm:text-lg font-black text-forest">No gateway cut on the widget</h3>
           <p class="mt-3 text-xs leading-relaxed text-forest/70">
-            Unlike payment gateways that charge 2% to 3% transaction fees, our widget uses native UPI link protocols. Payments flow directly from the customer's bank app to your bank account over the NPCI network, entirely bypassing any third-party gateway processor.
+            The iframe and <code>upi://pay</code> link are not a payment gateway. Money goes bank-to-bank. That is not the same as “always 0% MDR”: from 15 Oct 2026 some P2M UPI above ₹2,000 may take 0.4% (cap ₹300). P2P, tickets of ₹2,000 or less, and small QR (P2PM) stay free.
           </p>
           <div class="mt-4 flex flex-wrap items-center gap-2">
             <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
-              ✓ No API Keys Required
+              ✓ No API key for the widget
             </span>
             <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
-              ✓ No SDKs to Install
+              ✓ No SDK to install
             </span>
           </div>
         </div>

@@ -62,6 +62,7 @@ const securityHeaders = defineMiddleware(async (context, next) => {
   response.headers.set("Cross-Origin-Resource-Policy", "same-origin");
 
   if (isEmbed) {
+    response.headers.set("Cross-Origin-Resource-Policy", "cross-origin");
     response.headers.set(
       "Content-Security-Policy",
       "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors *"
