@@ -316,6 +316,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       "For a small business the distinction matters for credibility and accounting: registering as a merchant (even free tiers) marks your inflows as business revenue cleanly rather than mixing them with personal transfers."
     ],
     faqs: [
+      { question: "What is the full form of P2M and P2P?", answer: "P2M is Person-to-Merchant — a customer paying a shop or business collect. P2P is Person-to-Person — a transfer between two individuals, like splitting a bill. P2PM is the related small-QR-merchant tag for shops under ₹1 lakh a month." },
       { question: "Do I need merchant registration to accept payments?", answer: "Technically no — customers can pay any VPA. Registering unlocks P2M rails, better limits, and cleaner books though." },
       { question: "Are P2M payments slower or costlier?", answer: "Same speed. Cost: P2P is free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026 unless you are a small QR merchant." }
     ],

@@ -1,7 +1,8 @@
 ---
-title: "P2M Meaning in Banking and UPI Payments"
-description: "P2M is person-to-merchant UPI. P2P is person-to-person. Learn the difference, refund TAT, MDR, and when a shop should use a merchant VPA instead of a personal UPI ID."
+title: "P2M Full Form & Meaning in Banking and UPI"
+description: "P2M full form is Person-to-Merchant. P2P is Person-to-Person. Learn the difference in UPI: refund TAT, MDR from Oct 2026, and when shops need a merchant VPA."
 pubDate: 2026-09-13
+updatedDate: 2026-09-17
 author: "Kunal Siyag"
 reviewedOn: 2026-09-13
 reviewIntervalDays: 180
@@ -15,11 +16,11 @@ image: "/images/blog/p2m-merchant-shop-counter.jpg"
 tags: ["Banking", "Merchant Setup", "Reference"]
 ---
 
-**P2M meaning in banking** is Person-to-Merchant: a customer paying a shop, clinic, or freelancer who is collecting as a business. **P2P** is Person-to-Person: splitting a bill with a friend. Same UPI rail, different metadata, limits, and dispute clocks.
+**P2M full form** is **Person-to-Merchant**: a customer paying a shop, clinic, or freelancer who is collecting as a business. **P2P full form** is **Person-to-Person**: splitting a bill with a friend. So **P2M meaning in banking** is simply a merchant collection, while P2P is a transfer between two individuals. Same UPI rail, different metadata, limits, and dispute clocks.
 
 NPCI’s UPI product page lists both P2P and merchant payments. Apps sometimes show “P2M” on a failed or pending tile. That label tells you which TAT and which bank queue apply — not that the QR is broken.
 
-*Last reviewed 13 September 2026.*
+*Last reviewed 17 September 2026.*
 
 ## P2P vs P2M in one table
 
@@ -63,6 +64,18 @@ Yes, within that bank’s personal limits. Switch to a merchant VPA when volume,
 ### Q4. Does printing a QR on this site make me a P2M merchant?
 
 No. The file encodes your VPA. Merchant registration still happens at the bank or TPAP. The print is compatible, not an official merchant kit.
+
+### Q5. What is the full form of P2M in banking?
+
+P2M stands for Person-to-Merchant. Its counterpart P2P stands for Person-to-Person. A related tag is P2PM — the small-QR-merchant class banks use for shops collecting up to ₹1 lakh a month over UPI QR, which stays at zero MDR from 15 October 2026. See [P2PM vs P2M](/glossary/p2pm/).
+
+### Q6. What is P2M payment meaning in UPI?
+
+A P2M payment in UPI means money moving from a customer's account to a merchant's collect — for example, scanning a kirana standee or paying a clinic's QR. The app tags it P2M so the correct limits, MDR rule, and the longer T+5 failed-credit reversal clock apply.
+
+### Q7. What is the difference between P2P and P2M?
+
+P2P is a transfer between two people (splitting dinner, sending pocket money) and stays free at any amount. P2M is a payment to a registered merchant flow (shop QR, business VPA): tickets of ₹2,000 or less stay free, small QR shops stay free, and only some larger P2M tickets take 0.4% MDR from 15 October 2026. The comparison table above covers limits, MDR, and TAT side by side.
 
 **[Print a shop UPI QR →](/)**
 
