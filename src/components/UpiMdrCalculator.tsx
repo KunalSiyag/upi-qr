@@ -12,23 +12,17 @@ import {
 } from "../lib/upiMdr";
 import { rupeesToPaise } from "../lib/gstMath";
 import type { DocLang } from "../data/documentLang";
+import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-upi-mdr-draft-v2";
 
-const CATEGORIES: { id: UpiMdrCategory; label: string; hint: string }[] = [
-  { id: "standard", label: "Shop / freelancer", hint: "0.4%, max ₹300" },
-  { id: "essential", label: "Fuel, rail, phone, school, power, insurance, agri", hint: "Flat ₹5" },
-  { id: "capital", label: "Mutual funds / stocks", hint: "0.02%, max ₹300" },
-  { id: "p2p", label: "Paying a person", hint: "Always ₹0" },
-];
-
 const AMOUNT_PRESETS = ["1500", "3000", "5000", "50000", "75000", "100000"];
 
-const MONTHLY_PRESETS = [
-  { label: "Kirana", monthly: "80000", ticket: "500", category: "standard" as const },
-  { label: "Salon", monthly: "300000", ticket: "4500", category: "standard" as const },
-  { label: "Electronics", monthly: "1500000", ticket: "18000", category: "standard" as const },
-  { label: "Petrol pump", monthly: "8000000", ticket: "4000", category: "essential" as const },
+const MONTHLY_PRESETS: { labelKey: string; monthly: string; ticket: string; category: "standard" | "essential" }[] = [
+  { labelKey: "Kirana", monthly: "80000", ticket: "500", category: "standard" },
+  { labelKey: "Salon", monthly: "300000", ticket: "4500", category: "standard" },
+  { labelKey: "Electronics", monthly: "1500000", ticket: "18000", category: "standard" },
+  { labelKey: "Petrol pump", monthly: "8000000", ticket: "4000", category: "essential" },
 ];
 
 const EXAMPLE_BILLS = [1500_00, 3000_00, 5000_00, 50000_00, 75000_00, 100000_00];
@@ -38,6 +32,7 @@ function fieldClass() {
 }
 
 export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
+  const { tr } = useToolLang(lang);
   const [tab, setTab] = useState<"single" | "monthly">("single");
   const [amount, setAmount] = useState("3000");
   const [monthly, setMonthly] = useState("300000");
@@ -50,6 +45,13 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   const monthlyId = useId();
   const ticketId = useId();
   const resultId = useId();
+
+  const CATEGORIES: { id: UpiMdrCategory; label: string; hint: string }[] = [
+    { id: "standard", label: tr("Shop / freelancer"), hint: tr("0.4%, max ₹300") },
+    { id: "essential", label: tr("Fuel, rail, phone, school, power, insurance, agri"), hint: tr("Flat ₹5") },
+    { id: "capital", label: tr("Mutual funds / stocks"), hint: tr("0.02%, max ₹300") },
+    { id: "p2p", label: tr("Paying a person"), hint: tr("Always ₹0") },
+  ];
 
   useEffect(() => {
     try {
@@ -124,24 +126,27 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
   const headlineMdr = tab === "single" ? single.mdrPaise : month.mdrPaise;
 
   function whyFreeSingle(): string {
-    if (single.amountPaise <= 0) return "Enter a bill amount.";
-    if (category === "p2p") return "Person-to-person transfers stay free at any amount.";
-    if (singleExempt) return "Small QR merchants (P2PM, up to ₹1 lakh/month) stay at zero MDR.";
-    if (single.amountPaise <= UPI_MDR.thresholdPaise) return "₹2,000 or less stays free.";
-    return "No MDR on this payment.";
+    if (single.amountPaise <= 0) return tr("Enter a bill amount.");
+    if (category === "p2p") return tr("Person-to-person transfers stay free at any amount.");
+    if (singleExempt) return tr("Small QR merchants (P2PM, up to ₹1 lakh/month) stay at zero MDR.");
+    if (single.amountPaise <= UPI_MDR.thresholdPaise) return tr("₹2,000 or less stays free.");
+    return tr("No MDR on this payment.");
   }
 
   function whyMonthly(): string {
     if (month.exempt) {
-      if (category === "p2p") return "Person-to-person stays free.";
-      return "Small QR merchant exemption — MDR stays ₹0 if your bank tagged this VPA as P2PM.";
+      if (category === "p2p") return tr("Person-to-person stays free.");
+      return tr("Small QR merchant exemption — MDR stays ₹0 if your bank tagged this VPA as P2PM.");
     }
     if (month.allUnderThreshold) {
-      return `Typical bills of ${formatInrPaise(month.typicalPaise)} are at or under ₹2,000, so this mix stays free.`;
+      return tr("Typical bills of {amount} are at or under ₹2,000, so this mix stays free.").replace(
+        "{amount}",
+        formatInrPaise(month.typicalPaise)
+      );
     }
-    if (month.chargedTxCount === 0) return "Nothing in this mix sits above ₹2,000.";
-    const bills = `${month.chargedTxCount} bill${month.chargedTxCount === 1 ? "" : "s"} above ₹2,000`;
-    return month.formula ? `${bills}. Each typical bill: ${month.formula}.` : bills;
+    if (month.chargedTxCount === 0) return tr("Nothing in this mix sits above ₹2,000.");
+    const bills = `${month.chargedTxCount} ${tr("bills above ₹2,000")}`;
+    return month.formula ? `${bills}. ${tr("Each typical bill:")} ${month.formula}.` : bills;
   }
 
   return (
@@ -149,10 +154,10 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="lg:col-span-6 space-y-5">
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm">
           <p className="rounded-2xl bg-amber-50 px-4 py-3 text-xs leading-5 font-semibold text-amber-950">
-            From 15 October 2026. This is <strong>not a tax</strong>. The merchant pays MDR; the customer always pays ₹0.
+            {tr("From 15 October 2026. This is not a tax. The merchant pays MDR; the customer always pays ₹0.")}
           </p>
 
-          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-mint/50 p-1.5" role="tablist" aria-label="Calculator mode">
+          <div className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-mint/50 p-1.5" role="tablist" aria-label={tr("Calculator mode")}>
             <button
               type="button"
               role="tab"
@@ -160,7 +165,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               onClick={() => setTab("single")}
               className={`rounded-xl py-2.5 text-sm font-bold transition-colors ${tab === "single" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
             >
-              One bill
+              {tr("One bill")}
             </button>
             <button
               type="button"
@@ -169,14 +174,14 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               onClick={() => setTab("monthly")}
               className={`rounded-xl py-2.5 text-sm font-bold transition-colors ${tab === "monthly" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
             >
-              This month
+              {tr("This month")}
             </button>
           </div>
 
           {tab === "single" ? (
             <div className="mt-5">
               <label htmlFor={amountId} className="block text-sm font-bold text-forest">
-                Customer paid ₹
+                {tr("Customer paid ₹")}
               </label>
               <input
                 id={amountId}
@@ -210,7 +215,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <div className="flex flex-wrap gap-2">
                 {MONTHLY_PRESETS.map((p) => (
                   <button
-                    key={p.label}
+                    key={p.labelKey}
                     type="button"
                     onClick={() => {
                       setMonthly(p.monthly);
@@ -220,13 +225,13 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                     }}
                     className="rounded-full border border-forest/15 bg-cream px-3 py-1.5 text-[11px] font-bold text-forest transition-colors hover:border-leaf"
                   >
-                    {p.label}
+                    {tr(p.labelKey)}
                   </button>
                 ))}
               </div>
               <div>
                 <label htmlFor={monthlyId} className="block text-sm font-bold text-forest">
-                  Monthly UPI collections ₹
+                  {tr("Monthly UPI collections ₹")}
                 </label>
                 <input
                   id={monthlyId}
@@ -244,7 +249,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               </div>
               <div>
                 <label htmlFor={ticketId} className="block text-sm font-bold text-forest">
-                  Typical bill ₹
+                  {tr("Typical bill ₹")}
                 </label>
                 <input
                   id={ticketId}
@@ -260,13 +265,13 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   className={fieldClass()}
                 />
                 <p className="mt-1.5 text-[11px] leading-5 text-forest/60">
-                  What a usual UPI scan is. We count how many of those fit in the month. For one large payment, use One bill.
+                  {tr("What a usual UPI scan is. We count how many of those fit in the month. For one large payment, use One bill.")}
                 </p>
               </div>
             </div>
           )}
 
-          <p className="mt-5 text-xs font-black uppercase tracking-wider text-forest/50">What kind of payment?</p>
+          <p className="mt-5 text-xs font-black uppercase tracking-wider text-forest/50">{tr("What kind of payment?")}</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {CATEGORIES.map((c) => (
               <button
@@ -291,24 +296,24 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                 className="mt-0.5 h-4 w-4 accent-[#15803d]"
               />
               <span>
-                Small QR merchant — bank tagged this VPA as P2PM, under ₹1 lakh/month
+                {tr("Small QR merchant — bank tagged this VPA as P2PM, under ₹1 lakh/month")}
                 {tab === "monthly" && smallMerchant && !underLakh ? (
                   <span className="mt-1 block font-semibold text-amber-800">
-                    Exemption only holds up to ₹1 lakh/month. This month is over that, so MDR is still applied.
+                    {tr("Exemption only holds up to ₹1 lakh/month. This month is over that, so MDR is still applied.")}
                   </span>
                 ) : tab === "monthly" && underLakh && !smallMerchant ? (
                   <span className="mt-1 block font-semibold text-forest/55">
-                    Monthly UPI is under ₹1 lakh. Tick this only if the app/bank listed you as a small QR merchant.
+                    {tr("Monthly UPI is under ₹1 lakh. Tick this only if the app/bank listed you as a small QR merchant.")}
                   </span>
                 ) : tab === "monthly" && !underLakh && monthlyPaise > 0 ? (
                   <span className="mt-1 block font-semibold text-amber-800">
-                    Three consecutive months over ₹1 lakh typically moves a P2PM account into chargeable P2M.
+                    {tr("Three consecutive months over ₹1 lakh typically moves a P2PM account into chargeable P2M.")}
                   </span>
                 ) : null}
               </span>
             </label>
             <a href="/blog/p2pm-small-merchant-upi-mdr/" className="block text-[11px] font-bold text-leaf underline underline-offset-2">
-              How to check if the bank tagged this VPA as P2PM →
+              {tr("How to check if the bank tagged this VPA as P2PM →")}
             </a>
             <label className="flex items-start gap-2 text-xs font-bold text-forest">
               <input
@@ -317,7 +322,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                 onChange={(e) => setGstRegistered(e.target.checked)}
                 className="mt-0.5 h-4 w-4 accent-[#15803d]"
               />
-              GST-registered — recover 18% GST charged on the MDR
+              {tr("GST-registered — recover 18% GST charged on the MDR")}
             </label>
           </div>
         </div>
@@ -326,13 +331,13 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="lg:col-span-6 space-y-5">
         <div className="rounded-3xl border border-forest/10 bg-forest p-6 text-white shadow-xl" aria-live="polite" id={resultId}>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-mint">
-            {tab === "single" ? "MDR on this bill" : "MDR this month"}
+            {tab === "single" ? tr("MDR on this bill") : tr("MDR this month")}
           </p>
           <p className="mt-2 font-black tabular-nums tracking-tight text-mint text-4xl sm:text-5xl">
             {formatInrPaise(headlineMdr)}
           </p>
           <p className="mt-1 text-xs text-white/70">
-            Customer pays ₹0. GST on the MDR is extra — see the lines below.
+            {tr("Customer pays ₹0. GST on the MDR is extra — see the lines below.")}
           </p>
           <p className="mt-3 text-sm leading-6 text-white/85">
             {tab === "single"
@@ -343,30 +348,30 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           {tab === "single" ? (
             <div className="mt-6 space-y-3 border-t border-white/10 pt-5 text-sm tabular-nums">
               <div className="flex justify-between gap-4"><span className="text-white/70">MDR</span><span>{formatInrPaise(single.mdrPaise)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">GST @ 18% on MDR</span><span>{formatInrPaise(single.gstPaise)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">{gstRegistered ? "Net cost after ITC" : "MDR + GST"}</span><span className="font-black">{formatInrPaise(single.deductedPaise)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">You receive</span><span className="font-black text-mint">{formatInrPaise(single.netPaise)}</span></div>
-              <div className="flex justify-between gap-4 border-t border-white/10 pt-3"><span className="text-white/70">Same bill on a 2.36% gateway</span><span className="text-red-300">{formatInrPaise(single.pgPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("GST @ 18% on MDR")}</span><span>{formatInrPaise(single.gstPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{gstRegistered ? tr("Net cost after ITC") : "MDR + GST"}</span><span className="font-black">{formatInrPaise(single.deductedPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("You receive")}</span><span className="font-black text-mint">{formatInrPaise(single.netPaise)}</span></div>
+              <div className="flex justify-between gap-4 border-t border-white/10 pt-3"><span className="text-white/70">{tr("Same bill on a 2.36% gateway")}</span><span className="text-red-300">{formatInrPaise(single.pgPaise)}</span></div>
             </div>
           ) : (
             <div className="mt-6 space-y-3 border-t border-white/10 pt-5 text-sm tabular-nums">
-              <div className="flex justify-between gap-4"><span className="text-white/70">About this many scans</span><span>{month.txCount.toLocaleString("en-IN")}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">MDR before GST</span><span>{formatInrPaise(month.mdrPaise)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">GST on MDR</span><span>{formatInrPaise(month.gstPaise)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">{gstRegistered ? "Net after ITC" : "You pay MDR + GST"}</span><span className="font-black">{formatInrPaise(month.deducted)}</span></div>
-              <div className="flex justify-between gap-4"><span className="text-white/70">Yearly at this mix</span><span>{formatInrPaise(month.yearlyPaise)}</span></div>
-              <div className="flex justify-between gap-4 border-t border-white/10 pt-3"><span className="text-white/70">Same month on a 2.36% PG</span><span className="text-red-300">{formatInrPaise(month.pgPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("About this many scans")}</span><span>{month.txCount.toLocaleString("en-IN")}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("MDR before GST")}</span><span>{formatInrPaise(month.mdrPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("GST on MDR")}</span><span>{formatInrPaise(month.gstPaise)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{gstRegistered ? tr("Net after ITC") : tr("You pay MDR + GST")}</span><span className="font-black">{formatInrPaise(month.deducted)}</span></div>
+              <div className="flex justify-between gap-4"><span className="text-white/70">{tr("Yearly at this mix")}</span><span>{formatInrPaise(month.yearlyPaise)}</span></div>
+              <div className="flex justify-between gap-4 border-t border-white/10 pt-3"><span className="text-white/70">{tr("Same month on a 2.36% PG")}</span><span className="text-red-300">{formatInrPaise(month.pgPaise)}</span></div>
             </div>
           )}
         </div>
 
         <div className="rounded-3xl border border-forest/10 bg-white p-5 text-sm leading-6 text-forest/75">
-          <h3 className="text-base font-black text-forest">Official examples — tap to try</h3>
+          <h3 className="text-base font-black text-forest">{tr("Official examples — tap to try")}</h3>
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-xs tabular-nums">
               <thead>
                 <tr className="text-forest/50">
-                  <th className="pb-2 font-bold">Bill</th>
+                  <th className="pb-2 font-bold">{tr("Bill")}</th>
                   <th className="pb-2 font-bold">MDR</th>
                 </tr>
               </thead>
@@ -392,9 +397,9 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             </table>
           </div>
           <p className="mt-3 text-xs">
-            Source: Finance Ministry / PIB 15 Sep 2026. Banks must not pass MDR to the customer. App providers cannot add a platform fee on UPI.
+            {tr("Source: Finance Ministry / PIB 15 Sep 2026. Banks must not pass MDR to the customer. App providers cannot add a platform fee on UPI.")}
           </p>
-          <a href="/blog/upi-mdr-charges-october-2026/" className="mt-3 inline-block text-xs font-black text-leaf underline">Read the full explainer →</a>
+          <a href="/blog/upi-mdr-charges-october-2026/" className="mt-3 inline-block text-xs font-black text-leaf underline">{tr("Read the full explainer →")}</a>
         </div>
       </div>
     </div>
