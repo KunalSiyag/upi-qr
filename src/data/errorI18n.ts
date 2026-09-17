@@ -298,10 +298,10 @@ export const ERROR_UI: Record<SiteLang, ErrorUiCopy> = {
 
 export const ERROR_PAGE: Record<Exclude<SiteLang, "en">, ErrorPageCopy> = {
   hi: {
-    title: "NPCI returned error? UPI कोड हल करें",
+    title: "UPI कोड U16, Z9, U09 — GPay PhonePe",
     description:
-      "GPay, PhonePe या BHIM पर NPCI returned error? U16, Z9, ZM व 30+ UPI कोड देखें, बैंक बनाम NPCI जानें, RBI रिफंड TAT देखें।",
-    h1: "NPCI returned error? पहले UPI कोड देखें",
+      "GPay, PhonePe या BHIM पर U16, Z9, U09, XY, ZM देखें। बैंक बनाम NPCI जानें, RBI रिफंड TAT देखें।",
+    h1: "UPI एरर कोड U16, Z9, U09 — पहले कोड देखें",
     intro:
       "Google Pay, PhonePe, Paytm या BHIM पर “NPCI returned error” एक आवरण वाक्य है, निदान नहीं। NPCI स्विच या कोई सहभागी बैंक ने अनुरोध अस्वीकार किया। असफल लेनदेन खोलें, सटीक कोड (U16, Z9, ZM, U30…) और 12 अंकों का UTR कॉपी करें, फिर नीचे खोजें। लंबित डेबिट पर दोबारा भुगतान न करें।",
     eyebrow: "NPCI कारण कोड और RBI रिफंड TAT",
@@ -388,10 +388,10 @@ export const ERROR_PAGE: Record<Exclude<SiteLang, "en">, ErrorPageCopy> = {
     ],
   },
   ta: {
-    title: "NPCI returned error? UPI குறியீடு தீர்வு",
+    title: "UPI குறியீடு U16, Z9, U09 — GPay",
     description:
-      "GPay, PhonePe அல்லது BHIM-இல் NPCI returned error? U16, Z9, ZM உள்ளிட்ட 30+ UPI குறியீடுகள், வங்கி vs NPCI, RBI ரீஃபண்ட் TAT.",
-    h1: "NPCI returned error? முதலில் UPI குறியீட்டைப் பாருங்கள்",
+      "GPay, PhonePe அல்லது BHIM-இல் U16, Z9, U09, XY, ZM. வங்கி vs NPCI, RBI ரீஃபண்ட் TAT.",
+    h1: "UPI பிழைக் குறியீடு U16, Z9, U09 — முதலில் குறியீடு",
     intro:
       "Google Pay, PhonePe, Paytm அல்லது BHIM-இல் “NPCI returned error” ஒரு உறை வாக்கியம். NPCI சுவிட்ச் அல்லது ஒரு வங்கி கோரிக்கையை மறுத்துள்ளது. தோல்வி பரிவர்த்தனையைத் திறந்து சரியான குறியீடு (U16, Z9, ZM…) மற்றும் 12 இலக்க UTR-ஐ நகலெடுத்து கீழே தேடுங்கள். நிலுவைப் பற்று இருந்தால் மீண்டும் செலுத்தாதீர்கள்.",
     eyebrow: "NPCI காரணக் குறியீடுகள் & RBI ரீஃபண்ட் TAT",
@@ -453,10 +453,10 @@ export const ERROR_PAGE: Record<Exclude<SiteLang, "en">, ErrorPageCopy> = {
     ],
   },
   te: {
-    title: "NPCI returned error? UPI కోడ్ పరిష్కారం",
+    title: "UPI కోడ్ U16, Z9, U09 — GPay PhonePe",
     description:
-      "GPay, PhonePe లేదా BHIMలో NPCI returned error? U16, Z9, ZMతో 30+ UPI కోడ్‌లు, బ్యాంక్ vs NPCI, RBI రీఫండ్ TAT చూడండి.",
-    h1: "NPCI returned error? ముందు UPI కోడ్ చూడండి",
+      "GPay, PhonePe లేదా BHIMలో U16, Z9, U09, XY, ZM. బ్యాంక్ vs NPCI, RBI రీఫండ్ TAT చూడండి.",
+    h1: "UPI ఎర్రర్ కోడ్ U16, Z9, U09 — ముందు కోడ్ చూడండి",
     intro:
       "Google Pay, PhonePe, Paytm లేదా BHIMలో “NPCI returned error” ఒక రాపర్ వాక్యం. NPCI స్విచ్ లేదా ఒక బ్యాంక్ అభ్యర్థనను తిరస్కరించింది. విఫల లావాదేవీని తెరిచి సరైన కోడ్ (U16, Z9, ZM…) మరియు 12 అంకెల UTR కాపీ చేసి కింద వెతకండి. పెండింగ్ డెబిట్ ఉంటే మళ్లీ చెల్లించవద్దు.",
     eyebrow: "NPCI కారణ కోడ్‌లు & RBI రీఫండ్ TAT",
@@ -518,10 +518,10 @@ export const ERROR_PAGE: Record<Exclude<SiteLang, "en">, ErrorPageCopy> = {
     ],
   },
   mr: {
-    title: "NPCI returned error? UPI कोड सोडवा",
+    title: "UPI कोड U16, Z9, U09 — GPay PhonePe",
     description:
-      "GPay, PhonePe किंवा BHIM वर NPCI returned error? U16, Z9, ZM व 30+ UPI कोड, बँक विरुद्ध NPCI, RBI रिफंड TAT पाहा.",
-    h1: "NPCI returned error? आधी UPI कोड पाहा",
+      "GPay, PhonePe किंवा BHIM वर U16, Z9, U09, XY, ZM. बँक विरुद्ध NPCI, RBI रिफंड TAT पाहा.",
+    h1: "UPI एरर कोड U16, Z9, U09 — आधी कोड पाहा",
     intro:
       "Google Pay, PhonePe, Paytm किंवा BHIM वर “NPCI returned error” आवरण वाक्य आहे. NPCI स्विच किंवा एखाद्या बँकेने विनंती नाकारली आहे. अयशस्वी व्यवहार उघडा, नेमका कोड (U16, Z9, ZM…) आणि १२ अंकी UTR कॉपी करून खाली शोधा. प्रलंबित डेबिट असेल तर पुन्हा पैसे देऊ नका.",
     eyebrow: "NPCI कारण कोड आणि RBI रिफंड TAT",

@@ -8,6 +8,9 @@ export interface GlossaryTerm {
   body: string[];
   faqs: { question: string; answer: string }[];
   related: { href: string; label: string }[];
+  pageTitle?: string;
+  h1?: string;
+  pointer?: { text: string; href: string; label: string };
 }
 
 export const GLOSSARY_CATEGORIES = [
@@ -310,6 +313,13 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     full: "Person-to-Person vs Person-to-Merchant",
     hindi: "P2P और P2M भुगतान",
     category: "Merchant & QR",
+    pageTitle: "P2P vs P2M in UPI — Limits, MDR & TAT",
+    h1: "P2P vs P2M in UPI",
+    pointer: {
+      text: "P2M full form is Person-to-Merchant. For the definition, refund TAT, and when a shop needs a merchant VPA, read",
+      href: "/blog/p2m-meaning-in-banking-upi/",
+      label: "P2M meaning in banking and UPI"
+    },
     shortDef: "Two UPI flows: casual transfers between people (P2P) versus structured payments to registered merchants (P2M).",
     body: [
       "When you split a dinner bill with a friend, that is P2P (always free). When you scan a shop's QR, that is P2M — merchant metadata, longer failed-credit TAT, and from 15 October 2026 a 0.4% MDR on some tickets above ₹2,000.",

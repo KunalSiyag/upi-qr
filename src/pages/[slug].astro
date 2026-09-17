@@ -52,11 +52,11 @@ export async function getStaticPaths() {
     {
       params: { slug: "bhim-qr-generator" },
       props: {
-        title: "BHIM UPI QR Code Generator - Free NPCI Print Standee",
-        headline: "Create a Free BHIM UPI QR Code Standee for Direct Bank Transfer",
+        title: "BHIM UPI QR Code Generator — Print Standee",
+        headline: "Create a Free BHIM UPI QR Code Standee",
         presetType: "bhim",
         intro:
-          "Generate an NPCI BHIM compliant payment QR code for your counter. Print instant standees and stickers with no signup or transaction fees."
+          "Print a BHIM-styled UPI QR from your VPA for the counter. Download standees and stickers with no signup or fees."
       }
     },
     {
@@ -422,11 +422,11 @@ const presetDetails: Record<string, { vpaFormats: string[]; targetAudience: stri
   },
   bhim: {
     vpaFormats: ["mobile@upi", "username@upi"],
-    targetAudience: "BHIM users and merchants who want an NPCI-native QR without a private-app brand.",
+    targetAudience: "BHIM users and shops that want a BHIM-styled standee without a private-app brand.",
     tip: "BHIM UPI IDs often use the @upi handle. The same printed QR still scans in PhonePe, GPay, and bank apps.",
     extraFaq: {
-      question: "Is a BHIM QR different from a PhonePe or GPay QR?",
-      answer: "The visual brand can differ, but the payment payload is the same NPCI URI. A BHIM-compatible QR generated here works in every major UPI app."
+      question: "Is this the official NPCI QR code generator?",
+      answer: "No. NPCI does not host a public shop QR form. This page prints a BHIM-styled standee from your VPA. The NPCI QR code generator explainer on this site covers what that search actually means."
     }
   },
   whatsapp: {
@@ -862,6 +862,15 @@ const seoTitle = (() => {
             {presetType === "gpay" ? "Google Pay QR sticker" : "PhonePe QR sticker"}
           </a>
           on A4 paper. It is not an official merchant kit.
+        </p>
+      )}
+      {presetType === "bhim" && (
+        <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/72">
+          BHIM is NPCI’s UPI app. NPCI does not host a public shop QR form. If that is what you searched, read
+          {" "}
+          <a href="/blog/npci-upi-qr-code-generator-explained/" class="font-bold text-leaf hover:underline">
+            NPCI QR code generator explained
+          </a>.
         </p>
       )}
       

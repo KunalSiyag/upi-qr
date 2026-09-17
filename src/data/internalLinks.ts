@@ -745,8 +745,8 @@ export const guides: GuideLink[] = [
   },
   {
     slug: "npci-upi-qr-code-generator-explained",
-    title: "NPCI UPI QR Code Generator Explained",
-    description: "NPCI has no public shop QR generator. Create a compliant upi://pay QR for every member app.",
+    title: "NPCI QR Code Generator — No Official Site",
+    description: "NPCI has no public shop QR form. Print a compliant upi://pay QR for every member app.",
     presetTypes: ["phonepe", "gpay", "paytm", "bhim", "sbi"],
     tags: ["NPCI", "Universal QR", "BHIM", "Tutorial"],
     featured: true,

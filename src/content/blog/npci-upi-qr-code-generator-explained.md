@@ -1,9 +1,10 @@
 ---
-title: "NPCI UPI QR Code Generator Explained"
-description: "NPCI has no public shop QR generator. Create an NPCI-compliant upi://pay QR for PhonePe, GPay, Paytm, and BHIM — and how Bharat QR differs."
+title: "NPCI QR Code Generator — No Official Site"
+description: "NPCI QR code generator: there is no official shop form. Print a compliant upi://pay QR for PhonePe, GPay, Paytm, and BHIM — Bharat QR is different."
 pubDate: 2026-09-13
+updatedDate: 2026-09-17
 author: "Kunal Siyag"
-reviewedOn: 2026-09-13
+reviewedOn: 2026-09-17
 reviewIntervalDays: 180
 testedApplications: ["BHIM", "PhonePe", "Google Pay", "Paytm"]
 sourceUrls:
@@ -17,7 +18,9 @@ tags: ["NPCI", "Universal QR", "BHIM", "Tutorial"]
 
 People search **NPCI QR code generator** expecting a government website that prints a shop standee. That page does not exist. NPCI writes the `upi://pay` rulebook; BHIM is NPCI’s own app; banks and TPAPs issue VPAs. A printable QR is just that URI encoded as a matrix.
 
-*Last reviewed 13 September 2026.*
+*Last reviewed 17 September 2026.*
+
+Want a BHIM-styled standee of the same VPA? Use the [BHIM QR generator](/bhim-qr-generator/). That print is compatible, not an NPCI-issued kit.
 
 ## What “NPCI QR” actually means
 
