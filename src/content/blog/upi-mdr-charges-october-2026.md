@@ -67,7 +67,7 @@ Essential-sector example: a ₹4,000 fuel payment is **₹5**, not ₹16.
 
 **2. Merchant bills of ₹2,000 or less.** Tea, groceries, medicines, a salon trim. This is most QR scans by *count*.
 
-**3. Small QR merchants up to ₹1 lakh a month.** Street vendors and neighbourhood shops collecting through UPI QR into their account, classified under the P2PM / small-merchant framework, stay at zero MDR. If your monthly UPI is ₹80,000, the calculator should show ₹0 even when a few bills cross ₹2,000.
+**3. Small QR merchants up to ₹1 lakh a month.** Street vendors and neighbourhood shops collecting through UPI QR into their account, classified under the P2PM / small-merchant framework, stay at zero MDR. Volume alone does not exempt you — the VPA has to be tagged as a small QR merchant. In the calculator, tick that box only if your bank or app listed you that way. If typical bills are ₹2,000 or less, MDR is ₹0 even without the tag.
 
 BBC, citing the government, also reported that **QR collections in rural and semi-urban areas stay outside MDR**. Treat that as a location carve-out to confirm with your acquiring bank — it is not something this site can see from a VPA.
 
@@ -85,8 +85,8 @@ The older [UPI vs gateway savings calculator](/upi-calculator/) now points here 
 
 ## What to do this week
 
-1. Sketch last month’s UPI: total value, and how much of that value sat on bills above ₹2,000. Paste it into the [MDR calculator](/upi-mdr-calculator/).
-2. If you are under ₹1 lakh/month on QR, keep the small-merchant box ticked and stop worrying.
+1. Sketch last month’s UPI: total value and a typical bill. Paste it into the [MDR calculator](/upi-mdr-calculator/).
+2. If you are under ₹1 lakh/month on QR *and* tagged as a small merchant (P2PM), tick that box and stop worrying.
 3. If you are a salon, clinic, electronics counter or wholesaler with fat tickets, price 0.4% into *your* margin — not as a line item on the customer bill.
 4. GST-registered? Ask your CA to map ITC on MDR invoices from the acquiring bank. The fee will show up in settlement reports, not in the UPI app chat.
 5. Reprint nothing. MDR is a settlement rule. Your [printed QR](/) does not change.
@@ -105,7 +105,7 @@ No. The threshold is **above** ₹2,000. ₹2,000 even is free. ₹2,001 on a re
 
 ### Q3. I collect ₹90,000 a month on a kirana QR. Do I pay?
 
-Under the small-merchant QR exemption (up to ₹1 lakh a month) you should stay at zero MDR. Confirm with the app or bank that tagged your VPA as P2PM / small merchant. The calculator’s exemption toggle models this.
+Under the small-merchant QR exemption (up to ₹1 lakh a month) you should stay at zero MDR. Confirm with the app or bank that tagged your VPA as P2PM / small merchant. Tick that box in the calculator — it does not assume the tag from volume alone.
 
 ### Q4. Will PhonePe or GPay deduct this from each scan?
 

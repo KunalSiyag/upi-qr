@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { gstExclusive, gstInclusive, gstLine, ratePercentToBps } from "../src/lib/gstMath.ts";
-import { mdrOnTransaction, monthlyMdrEstimate, UPI_MDR } from "../src/lib/upiMdr.ts";
+import { gatewayFeePaise, gstOnMdr, mdrFormula, mdrOnTransaction, monthlyMdrEstimate, UPI_MDR } from "../src/lib/upiMdr.ts";
 
 // Exclusive ₹1,000 @ 18% → ₹180 GST, ₹1,180 total
 {
@@ -45,13 +45,49 @@ assert.equal(mdrOnTransaction(5000_00, "standard", { smallMerchantExempt: true }
 {
   const est = monthlyMdrEstimate({
     monthlyUpiPaise: 80000_00,
-    valueShareAboveThreshold: 0.2,
-    typicalLargeTicketPaise: 3500_00,
+    typicalTicketPaise: 500_00,
     category: "standard",
+  });
+  assert.equal(est.exempt, false);
+  assert.equal(est.allUnderThreshold, true);
+  assert.equal(est.mdrPaise, 0);
+}
+
+{
+  const est = monthlyMdrEstimate({
+    monthlyUpiPaise: 80000_00,
+    typicalTicketPaise: 3500_00,
+    category: "standard",
+  });
+  // 22 × ₹3,500 + ₹3,000 remainder. Volume under ₹1 lakh is NOT auto-exempt.
+  assert.equal(est.exempt, false);
+  assert.equal(est.mdrPaise, 22 * 14_00 + 12_00);
+}
+
+{
+  const est = monthlyMdrEstimate({
+    monthlyUpiPaise: 80000_00,
+    typicalTicketPaise: 3500_00,
+    category: "standard",
+    smallMerchantExempt: true,
   });
   assert.equal(est.exempt, true);
   assert.equal(est.mdrPaise, 0);
 }
 
+{
+  const est = monthlyMdrEstimate({
+    monthlyUpiPaise: 300000_00,
+    typicalTicketPaise: 5000_00,
+    category: "standard",
+  });
+  assert.equal(est.txCount, 60);
+  assert.equal(est.mdrPaise, 60 * 20_00);
+}
+
+assert.equal(gstOnMdr(12_00), 216);
+assert.equal(gatewayFeePaise(10000_00), 236_00);
+assert.equal(mdrOnTransaction(100000_00, "capital"), 20_00);
+assert.match(mdrFormula(100000_00, "standard", 300_00), /capped/);
 assert.equal(UPI_MDR.thresholdPaise, 2000_00);
 console.log("gst-mdr-math.test.mjs: all assertions passed");

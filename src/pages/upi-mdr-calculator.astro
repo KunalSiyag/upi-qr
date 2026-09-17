@@ -56,10 +56,10 @@ const schema = {
       "@type": "HowTo",
       name: "How to estimate UPI MDR from 15 October 2026",
       step: [
-        { "@type": "HowToStep", name: "Enter monthly UPI collections or a single bill" },
-        { "@type": "HowToStep", name: "Pick regular shop, essential sector, capital markets, or P2P" },
-        { "@type": "HowToStep", name: "Mark the ₹1 lakh/month QR exemption if it applies" },
-        { "@type": "HowToStep", name: "Read MDR, GST, net after ITC, and the gateway comparison" }
+        { "@type": "HowToStep", name: "Type the bill amount — or monthly UPI plus a typical bill" },
+        { "@type": "HowToStep", name: "Pick shop, fuel/rail/utilities, mutual funds, or paying a person" },
+        { "@type": "HowToStep", name: "Tick small QR merchant only if the bank tagged this VPA as P2PM under ₹1 lakh/month" },
+        { "@type": "HowToStep", name: "Read MDR (matches the official examples), GST, and the gateway comparison" }
       ]
     }
   ]
@@ -82,7 +82,7 @@ const schema = {
           <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">From 15 Oct 2026 · not a tax</p>
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">UPI MDR calculator for merchant payments</h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">
-            Headlines called it a UPI tax. It is a 0.4% merchant fee on some P2M payments above ₹2,000. See whether your shop is in the 96% that stay free, and what the rest actually costs after GST.
+            Type a bill. ₹3,000 is ₹12. ₹2,000 is ₹0. Customer pays nothing. Monthly view uses your typical bill — not a “share of value” guess.
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#mdr-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Estimate my MDR</a>
