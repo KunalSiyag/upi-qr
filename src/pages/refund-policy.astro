@@ -1,0 +1,111 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { BUSINESS } from "../data/business";
+import { PRO_PRICES, REFUND_WINDOW_DAYS } from "../data/pricing";
+import { PENDING_GRACE_MS } from "../lib/billing/subscription";
+
+const title = "Cancellation & Refund Policy | Pro UPI QR";
+const description = "How to cancel the Pro plan, when Pro UPI QR refunds a payment, how refunds reach you through Razorpay, and who handles payments your own clients make.";
+const url = "https://www.proupiqr.in/refund-policy/";
+const graceDays = Math.round(PENDING_GRACE_MS / 86_400_000);
+const support = BUSINESS.emails.support;
+const link = "text-leaf underline font-semibold";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebPage", name: "Cancellation & Refund Policy", url, description },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Cancellation & Refund Policy", item: url },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/pricing/" class="text-sm font-bold text-leaf hover:underline">&larr; Pricing</a>
+
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Cancellation &amp; Refund Policy</h1>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: October 11, 2026</p>
+
+      <ul class="mt-6 space-y-2 rounded-2xl bg-mint/60 p-5 text-sm font-semibold text-forest">
+        <li>✓ Free tools and free accounts never charge you.</li>
+        <li>✓ Cancel Pro anytime. There are no further charges, and Pro stays on until the end of the period you paid for.</li>
+        {REFUND_WINDOW_DAYS > 0 && <li>✓ Changed your mind? Ask within {REFUND_WINDOW_DAYS} days of your first Pro payment, or of a yearly renewal, for a full refund.</li>}
+        <li>✓ Charged by mistake? Duplicate charges and charges after you cancelled are refunded in full.</li>
+      </ul>
+
+      <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">1. What you pay for</h2>
+          <p>
+            Every QR generator, document tool, calculator, the browser-only payment tracker, and free accounts cost nothing. The Pro plan is an optional subscription billed through Razorpay at {PRO_PRICES.monthly.label} per month or {PRO_PRICES.yearly.label} per year, as shown on the <a href="/pricing/" class={link}>pricing page</a>. You authorise each renewal through UPI AutoPay or your card when you subscribe.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">2. Cancelling Pro</h2>
+          <p>
+            Cancel at any time from the payment tracker: <strong>Settings → Plan → Cancel subscription</strong>. Renewals stop straight away and you are not charged again. Pro stays active until the end of the period you already paid for, then your account moves to the free plan. Your invoices, clients, and payment records stay in your account.
+          </p>
+          <p>
+            If you can't sign in, email <a href={`mailto:${support}`} class={link}>{support}</a> from your account's email address and we will cancel the subscription for you.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">3. When we refund</h2>
+          <ul class="list-disc space-y-2 pl-5">
+            {REFUND_WINDOW_DAYS > 0 && (
+              <li><strong>Within {REFUND_WINDOW_DAYS} days.</strong> If Pro isn't right for you, ask within {REFUND_WINDOW_DAYS} days of your first Pro payment, or of a yearly renewal you meant to cancel, and we refund that payment in full.</li>
+            )}
+            <li><strong>Mistaken charges.</strong> A duplicate charge, or a renewal charged after you cancelled, is refunded in full.</li>
+            <li><strong>Pro didn't turn on.</strong> If you were charged but Pro did not switch on and we can't fix it within three working days, we refund the charge in full.</li>
+            <li><strong>Other cases.</strong> {REFUND_WINDOW_DAYS > 0 ? "Outside these cases" : "Otherwise"}, we don't refund part of a month or year that has started, because you can cancel at any time before a renewal and keep Pro until the period ends.</li>
+          </ul>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. How to ask for a refund</h2>
+          <p>
+            Email <a href={`mailto:${support}`} class={link}>{support}</a> from your account's email address with the date and amount charged, and the Razorpay payment ID (it starts with pay_) if you have it. We reply within {BUSINESS.replyWithin}. Approved refunds go back to the original payment method through Razorpay; banks usually show them within 5–7 working days.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Failed renewals</h2>
+          <p>
+            If a renewal payment fails, you are not charged for it. Razorpay retries the payment, and Pro stays on for up to {graceDays} days in the meantime. If the payment still fails, your account moves to the free plan; nothing is deleted.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. Payments your clients make to you</h2>
+          <p>
+            Pay links and QR codes send money directly from your client's UPI app to your UPI ID. Pro UPI QR never receives, holds, or refunds those payments, and takes no commission on them. For a wrong, failed, or disputed payment, the payer should contact you or their bank, and you can contact your bank or UPI app.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">7. Hardware</h2>
+          <p>
+            We don't sell physical products. Our <a href="/products/" class={link}>product guides</a> link to sellers on Amazon.in, who handle orders, delivery, returns, and refunds for those products. See the <a href="/shipping-policy/" class={link}>shipping &amp; delivery policy</a>.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">8. Contact</h2>
+          <p>
+            Questions about a charge? Email <a href={`mailto:${support}`} class={link}>{support}</a> or see the <a href="/contact/" class={link}>contact page</a>. Plan terms are also in section 10 of the <a href="/terms/" class={link}>terms of service</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

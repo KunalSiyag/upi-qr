@@ -127,6 +127,25 @@ section("Founder metrics");
 const admins = (val("ADMIN_USER_IDS")).split(",").map((s) => s.trim()).filter((s) => /^user_[A-Za-z0-9]{6,64}$/.test(s));
 admins.length ? ok(`${admins.length} admin user id(s) for /admin/metrics/`) : warn("ADMIN_USER_IDS empty — /admin/metrics/ will 404 for everyone (find your id in Clerk → Users)");
 
+section("Razorpay website review (needed for live mode)");
+{
+  const statics = join(ROOT, ".vercel/output/static");
+  const pages = ["about", "contact", "pricing", "terms", "privacy", "refund-policy", "shipping-policy"];
+  const missing = pages.filter((p) => !existsSync(join(statics, p, "index.html")));
+  if (!existsSync(statics)) warn("No build output yet — run npx astro build first");
+  else if (missing.length) fail(`Policy pages missing from the build: ${missing.map((p) => `/${p}/`).join(", ")}`);
+  else {
+    const home = readFileSync(join(statics, "index.html"), "utf8");
+    const unlinked = ["contact", "pricing", "terms", "privacy", "refund-policy"].filter((p) => !home.includes(`href="/${p}/"`));
+    unlinked.length ? fail(`Footer doesn't link ${unlinked.map((p) => `/${p}/`).join(", ")}`) : ok("About, Contact, Pricing, Terms, Privacy, Refund and Shipping pages built and linked site-wide");
+  }
+  const business = readFileSync(join(ROOT, "src/data/business.ts"), "utf8");
+  const blank = ["phone", "address"].filter((field) => new RegExp(`^\\s*${field}: null`, "m").test(business));
+  if (blank.length) warn(`No ${blank.join(" or ")} in src/data/business.ts — Razorpay reviewers usually ask for a phone number and an operational address on the contact page`);
+  else ok("Contact page shows a phone number and address");
+  console.log("    Razorpay also asks for a sample invoice (PNG/JPG/PDF) and test login details, because upgrading needs sign-in.");
+}
+
 section("Build output");
 const config = join(ROOT, ".vercel/output/config.json");
 if (!existsSync(config)) warn("No build output yet — run npx astro build first");

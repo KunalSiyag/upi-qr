@@ -1,0 +1,76 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { BUSINESS } from "../data/business";
+
+const title = "Shipping & Delivery Policy | Pro UPI QR";
+const description = "Pro UPI QR sells a digital subscription and ships nothing. How Pro is delivered to your account after payment, and who ships products we review.";
+const url = "https://www.proupiqr.in/shipping-policy/";
+const support = BUSINESS.emails.support;
+const link = "text-leaf underline font-semibold";
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebPage", name: "Shipping & Delivery Policy", url, description },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Shipping & Delivery Policy", item: url },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/pricing/" class="text-sm font-bold text-leaf hover:underline">&larr; Pricing</a>
+
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Shipping &amp; Delivery Policy</h1>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: October 11, 2026</p>
+
+      <p class="mt-6 rounded-2xl bg-mint/60 p-5 text-sm font-semibold text-forest">
+        Pro UPI QR sells a digital subscription. Nothing is shipped: Pro is delivered online to your account.
+      </p>
+
+      <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">1. How Pro is delivered</h2>
+          <p>
+            You upgrade from Settings in the <a href="/payment-tracker/" class={link}>payment tracker</a> while signed in. Pro switches on for that account as soon as Razorpay confirms your payment, usually within a minute, and works on every device where you sign in. If Settings still says it is waiting for Razorpay to confirm your payment after 30 minutes, email <a href={`mailto:${support}`} class={link}>{support}</a> with the date and amount charged.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">2. Free tools</h2>
+          <p>
+            QR codes, invoices, receipts, and other documents are created in your browser and downloaded to your device straight away. There is nothing to wait for and nothing is sent by post or courier.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">3. Physical products</h2>
+          <p>
+            We don't sell or ship physical goods. Our <a href="/products/" class={link}>product guides</a> for standees, holders, and printers link to sellers on Amazon.in, who handle delivery, returns, and refunds for those orders.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">4. Where we serve</h2>
+          <p>
+            Pro UPI QR is built for businesses in India. Prices are in Indian rupees (INR) and payments are processed by Razorpay.
+          </p>
+        </section>
+
+        <section class="space-y-3">
+          <h2 class="text-xl font-bold text-forest">5. Contact</h2>
+          <p>
+            See the <a href="/refund-policy/" class={link}>cancellation &amp; refund policy</a> or the <a href="/contact/" class={link}>contact page</a>, or email <a href={`mailto:${support}`} class={link}>{support}</a>.
+          </p>
+        </section>
+      </div>
+    </div>
+  </main>
+</BaseLayout>

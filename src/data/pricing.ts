@@ -10,3 +10,10 @@ export const PRO_PRICES = {
 
 /** Whole-rupee saving of yearly vs 12 × monthly, for "save ₹X" copy. */
 export const YEARLY_SAVING_RUPEES = (PRO_PRICES.monthly.paise * 12 - PRO_PRICES.yearly.paise) / 100;
+
+/**
+ * Days after a customer's first Pro payment (and after a yearly renewal) in which they can
+ * ask for a full refund — shown on /pricing/ and /refund-policy/. Set to 0 to drop the
+ * guarantee from both pages.
+ */
+export const REFUND_WINDOW_DAYS = 7;

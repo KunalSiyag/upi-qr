@@ -1,0 +1,103 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { BUSINESS } from "../data/business";
+
+const title = "Contact Pro UPI QR — Support, Billing & Privacy";
+const description = "Email Pro UPI QR for help with the free tools, your account, Pro billing and refunds, privacy requests, or to report a fake payment QR or phishing page.";
+const url = "https://www.proupiqr.in/contact/";
+const link = "text-leaf underline font-semibold";
+
+const channels = [
+  { label: "Support, billing & refunds", email: BUSINESS.emails.support, note: "Free tools, your account, the payment tracker, and Pro subscriptions." },
+  { label: "Privacy requests", email: BUSINESS.emails.privacy, note: "Access or delete data held for your account." },
+  { label: "Corrections & feedback", email: BUSINESS.emails.feedback, note: "Something wrong in a guide or tool? Tell us." },
+  { label: "Report abuse", email: BUSINESS.emails.abuse, note: "A fake payment QR, phishing page, or misuse of a pay link." },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "ContactPage",
+      name: "Contact Pro UPI QR",
+      url,
+      description,
+      mainEntity: {
+        "@type": "Organization",
+        name: BUSINESS.name,
+        url: "https://www.proupiqr.in/",
+        email: BUSINESS.emails.support,
+        ...(BUSINESS.phone ? { telephone: BUSINESS.phone } : {}),
+        ...(BUSINESS.address ? { address: BUSINESS.address } : {}),
+        contactPoint: { "@type": "ContactPoint", contactType: "customer support", email: BUSINESS.emails.support, areaServed: "IN" },
+      },
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Contact", item: url },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
+    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+      <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Home</a>
+
+      <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Contact us</h1>
+      <p class="mt-4 max-w-2xl text-base leading-7 text-forest/75">
+        {BUSINESS.name} is an independent product run by <a href="/authors/kunal-siyag/" class={link}>{BUSINESS.owner}</a>. Email is the fastest way to reach us; we reply within {BUSINESS.replyWithin}.
+      </p>
+
+      <ul class="mt-8 grid gap-4 sm:grid-cols-2">
+        {channels.map((channel) => (
+          <li class="rounded-2xl border border-forest/10 bg-white p-5">
+            <p class="text-xs font-black uppercase tracking-wider text-leaf">{channel.label}</p>
+            <a href={`mailto:${channel.email}`} class="mt-2 block break-all text-lg font-black text-forest hover:text-leaf">{channel.email}</a>
+            <p class="mt-1 text-sm text-forest/70">{channel.note}</p>
+          </li>
+        ))}
+      </ul>
+
+      {(BUSINESS.phone || BUSINESS.address) && (
+        <dl class="mt-6 grid gap-4 rounded-2xl border border-forest/10 bg-white p-5 text-sm sm:grid-cols-2">
+          {BUSINESS.phone && (
+            <div>
+              <dt class="text-xs font-black uppercase tracking-wider text-leaf">Phone</dt>
+              <dd class="mt-1 font-bold text-forest"><a href={`tel:${BUSINESS.phone.replace(/\s+/g, "")}`}>{BUSINESS.phone}</a></dd>
+            </div>
+          )}
+          {BUSINESS.address && (
+            <div>
+              <dt class="text-xs font-black uppercase tracking-wider text-leaf">Address</dt>
+              <dd class="mt-1 font-bold text-forest">{BUSINESS.address}</dd>
+            </div>
+          )}
+        </dl>
+      )}
+
+      <section class="mt-8 rounded-2xl bg-sun/20 p-5 text-sm leading-relaxed text-forest/85">
+        <h2 class="text-base font-black text-forest">Paid a business through a pay link or QR code?</h2>
+        <p class="mt-2">
+          Your money went from your UPI app straight to that business's bank account. {BUSINESS.name} never receives or holds it, so we can't see, reverse, or refund the payment. Contact the business that sent you the link. If money left your account but the payment failed, contact your bank or UPI app with the UTR number.
+        </p>
+      </section>
+
+      <section class="mt-8 text-sm text-forest/80">
+        <h2 class="text-base font-black text-forest">Policies</h2>
+        <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+          <li><a href="/pricing/" class={link}>Pricing</a></li>
+          <li><a href="/refund-policy/" class={link}>Cancellation &amp; refunds</a></li>
+          <li><a href="/shipping-policy/" class={link}>Shipping &amp; delivery</a></li>
+          <li><a href="/terms/" class={link}>Terms of service</a></li>
+          <li><a href="/privacy/" class={link}>Privacy policy</a></li>
+          <li><a href="/about/" class={link}>About</a></li>
+        </ul>
+      </section>
+    </div>
+  </main>
+</BaseLayout>

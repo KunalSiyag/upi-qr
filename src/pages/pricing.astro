@@ -1,6 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../data/pricing";
+import { PRO_PRICES, REFUND_WINDOW_DAYS, YEARLY_SAVING_RUPEES } from "../data/pricing";
 import { FREE_ACTIVE_PAYLINKS } from "../lib/workspace/paylinks";
 
 const title = "Pricing — Free UPI Tools, Payment Tracker & Pro | Pro UPI QR";
@@ -79,6 +79,12 @@ const faqs = [
     answer: "Yes. Cancel from Settings. Renewals stop, and Pro stays on until the end of the period you already paid for. Your invoices, clients, and payments stay in your account.",
   },
   {
+    question: "Can I get a refund?",
+    answer: REFUND_WINDOW_DAYS > 0
+      ? `Yes. Ask within ${REFUND_WINDOW_DAYS} days of your first Pro payment, or of a yearly renewal, and we refund it in full. Duplicate charges and charges after you cancelled are always refunded. The cancellation and refund policy has the details.`
+      : "Duplicate charges and charges after you cancelled are always refunded in full. You can cancel before any renewal and keep Pro until the period ends. The cancellation and refund policy has the details.",
+  },
+  {
     question: "What happens to my pay links if I go back to Free?",
     answer: `Pay links you already shared keep working. You can't create new ones while more than ${FREE_ACTIVE_PAYLINKS} are active, so turn off links for paid invoices to make room.`,
   },
@@ -138,6 +144,11 @@ const schema = {
           </article>
         ))}
       </div>
+      <p class="mx-auto mt-6 max-w-6xl text-center text-sm text-forest/70">
+        Prices in Indian rupees, billed by Razorpay with UPI AutoPay or card. Cancel anytime{REFUND_WINDOW_DAYS > 0 ? ` · ${REFUND_WINDOW_DAYS}-day refund on your first payment` : ""}{" · "}
+        <a href="/refund-policy/" class="font-bold text-leaf underline">Cancellation &amp; refunds</a>{" · "}
+        <a href="/contact/" class="font-bold text-leaf underline">Contact</a>
+      </p>
     </section>
 
     <section class="px-4 py-14 md:px-6 lg:px-8">
@@ -153,7 +164,7 @@ const schema = {
           ))}
         </div>
         <p class="mt-8 text-sm text-forest/70">
-          See what's stored in the <a href="/privacy/" class="font-bold text-leaf underline">privacy policy</a> and the plan terms in the <a href="/terms/" class="font-bold text-leaf underline">terms of service</a>. Start with the <a href="/payment-tracker/" class="font-bold text-leaf underline">free payment tracker</a>.
+          See what's stored in the <a href="/privacy/" class="font-bold text-leaf underline">privacy policy</a>, the plan terms in the <a href="/terms/" class="font-bold text-leaf underline">terms of service</a>, and how cancelling and refunds work in the <a href="/refund-policy/" class="font-bold text-leaf underline">cancellation &amp; refund policy</a>. Start with the <a href="/payment-tracker/" class="font-bold text-leaf underline">free payment tracker</a>.
         </p>
       </div>
     </section>
