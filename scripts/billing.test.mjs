@@ -7,6 +7,8 @@ import { handleSubscriptionWebhook } from "../src/lib/billing/webhook.ts";
 import { memoryBillingStore } from "../src/lib/billing/store.ts";
 import { planFromSubscription, PLANS } from "../src/lib/workspace/entitlements.ts";
 import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../src/data/pricing.ts";
+import { readFileSync } from "node:fs";
+import { findOrCreatePlans, readPrices } from "./razorpay-plans.mjs";
 
 const DAY = 86_400_000;
 const now = 1_790_000_000_000;
@@ -235,4 +237,29 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   assert.deepEqual([late.checked, late.remaining], [0, 6]);
 }
 
-console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, lost-webhook and daily reconcile passed");
+// Plan setup script: plans must charge exactly what /pricing/ shows.
+{
+  const prices = readPrices(readFileSync(new URL("../src/data/pricing.ts", import.meta.url), "utf8"));
+  assert.deepEqual(prices, { monthly: PRO_PRICES.monthly.paise, yearly: PRO_PRICES.yearly.paise });
+  const plan = (id, period, amount, notes = {}) => ({ id, entity: "plan", period, interval: 1, item: { amount, currency: "INR", name: id }, notes });
+  const filler = Array.from({ length: 100 }, (_, i) => plan(`plan_fill${i}`, "weekly", 100));
+  const pages = [filler, [plan("plan_other1", "monthly", 14900), plan("plan_ours01", "monthly", 14900, { product: "proupiqr-pro" }), plan("plan_yearX1", "yearly", 99900)]];
+  const calls = [];
+  const fake = async (url, init = {}) => {
+    calls.push({ url, method: init.method ?? "GET", body: init.body ? JSON.parse(init.body) : null, auth: init.headers?.Authorization });
+    if ((init.method ?? "GET") === "GET") return new Response(JSON.stringify({ items: pages[Number(new URL(url).searchParams.get("skip")) / 100] ?? [] }));
+    const body = JSON.parse(init.body);
+    return new Response(JSON.stringify({ id: "plan_newyear1", entity: "plan", ...body }));
+  };
+  const look = await findOrCreatePlans({ keyId: "rzp_test_k", keySecret: "s", prices, fetchImpl: fake });
+  assert.deepEqual(look, { monthly: { id: "plan_ours01", created: false }, yearly: null }, "pages through, prefers our tagged plan, ignores wrong amounts");
+  assert.equal(calls[0].auth, `Basic ${Buffer.from("rzp_test_k:s").toString("base64")}`);
+  calls.length = 0;
+  const made = await findOrCreatePlans({ keyId: "rzp_test_k", keySecret: "s", prices, create: true, fetchImpl: fake });
+  assert.deepEqual(made.yearly, { id: "plan_newyear1", created: true });
+  const post = calls.find((c) => c.method === "POST");
+  assert.deepEqual([post.url, post.body.period, post.body.interval, post.body.item.amount, post.body.item.currency, post.body.notes.product], ["https://api.razorpay.com/v1/plans", "yearly", 1, 149900, "INR", "proupiqr-pro"]);
+  await assert.rejects(findOrCreatePlans({ keyId: "x", keySecret: "y", prices, fetchImpl: async () => new Response("{}", { status: 401 }) }), /HTTP 401/);
+}
+
+console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, lost-webhook and daily reconcile, plan setup passed");

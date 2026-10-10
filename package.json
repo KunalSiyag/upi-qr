@@ -13,6 +13,7 @@
     "security:check": "node --experimental-strip-types scripts/security-regression.test.mjs",
     "test:e2e": "node scripts/e2e/run.mjs",
     "launch:check": "node scripts/launch-check.mjs",
+    "razorpay:plans": "node scripts/razorpay-plans.mjs",
     "test:workspace": "node --experimental-strip-types scripts/workspace.test.mjs && node --experimental-strip-types scripts/workspace-cloud.test.mjs && node --experimental-strip-types scripts/paylinks.test.mjs && node --experimental-strip-types scripts/billing.test.mjs && node --experimental-strip-types scripts/statement.test.mjs && node --experimental-strip-types scripts/webpush.test.mjs && node --experimental-strip-types scripts/digest.test.mjs && node --experimental-strip-types scripts/metrics.test.mjs && node --experimental-strip-types scripts/workspace-i18n.test.mjs",
     "submit:sitemap": "node scripts/submit-to-search-engines.mjs",
     "submit:rss": "node scripts/ping-aggregators.mjs",

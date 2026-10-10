@@ -73,7 +73,7 @@ else {
 section("Pro billing (Razorpay)");
 const rzp = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"];
 const present = rzp.filter((k) => val(k));
-if (present.length === 0) warn("Billing is off — /pricing/ and Settings show a Pro early-access form instead of checkout");
+if (present.length === 0) warn("Billing is off — /pricing/ and Settings show a Pro early-access form instead of checkout. Plans: npm run razorpay:plans -- --env FILE --create");
 else if (present.length < rzp.length) fail(`Billing half-configured: missing ${rzp.filter((k) => !val(k)).join(", ")}`);
 else {
   ok("All Razorpay settings present");
@@ -95,7 +95,7 @@ else {
         const periodOk = plan?.period === interval && Number(plan?.interval) === 1;
         amount === expected[interval] && periodOk && plan?.item?.currency === "INR"
           ? ok(`${key} charges ₹${amount / 100} ${interval} — matches /pricing/`)
-          : fail(`${key} is ₹${amount / 100} every ${plan?.interval} ${plan?.period} (${plan?.item?.currency}); /pricing/ shows ₹${expected[interval] / 100} ${interval}`);
+          : fail(`${key} is ₹${amount / 100} every ${plan?.interval} ${plan?.period} (${plan?.item?.currency}); /pricing/ shows ₹${expected[interval] / 100} ${interval} — get matching ids with npm run razorpay:plans`);
       } catch { fail(`${key}: couldn't reach Razorpay`); }
     }
   }
