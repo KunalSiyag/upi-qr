@@ -1,3 +1,4 @@
+import { MSMED_INTEREST_PCT, RBI_BANK_RATE } from "./rbiRates";
 import {
   generators,
   generatorFamily,
@@ -594,7 +595,7 @@ export const TOPIC_HUBS: TopicHub[] = [
       {
         question: "Is MSMED delayed-payment interest still 15%?",
         answer:
-          "No. The calculator uses three times the RBI Bank Rate (currently 6.5% × 3 = 19.5% p.a.) as notified for MSMED claims. Confirm the live Bank Rate on rbi.org.in before you send a legal notice.",
+          `No. The calculator uses three times the RBI Bank Rate (${RBI_BANK_RATE.pct}% since ${RBI_BANK_RATE.label}, so ${MSMED_INTEREST_PCT}% p.a.) as notified for MSMED claims. Confirm the live Bank Rate on rbi.org.in before you send a legal notice.`,
       },
       {
         question: "Does the EMI figure include processing fees?",

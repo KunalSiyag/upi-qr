@@ -2,18 +2,19 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { MsmeReceivables } from "../components/MsmeReceivables";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { MSMED_INTEREST_PCT, RBI_BANK_RATE } from "../data/rbiRates";
 
 const title = "MSME Receivables — Invoice Aging & Demand Letters | Pro UPI QR";
-const description = "Track MSME invoices by age, compute 19.5% statutory interest under Section 16, and draft demand letters. Browser-only private processing.";
+const description = `Track MSME invoices by age, compute ${MSMED_INTEREST_PCT}% statutory interest under Section 16, and draft demand letters. Browser-only private processing.`;
 
 const faqs = [
   {
     question: "What does the MSME receivables tool do?",
-    answer: "It helps micro and small enterprise suppliers track unpaid invoices by age, calculate delayed-payment interest at 19.5% p.a. (3× the RBI Bank Rate), and generate a formal Section 16 demand letter that can be used before filing with an MSE Facilitation Council."
+    answer: `It helps micro and small enterprise suppliers track unpaid invoices by age, calculate delayed-payment interest at ${MSMED_INTEREST_PCT}% p.a. (3× the RBI Bank Rate), and generate a formal Section 16 demand letter that can be used before filing with an MSE Facilitation Council.`
   },
   {
     question: "How is MSMED interest calculated?",
-    answer: "The MSMED Act mandates compound interest at three times the RBI Bank Rate (currently 6.5% × 3 = 19.5% p.a. with monthly rests) on delayed payments beyond the agreed credit period, capped at 45 days. This tool uses exact integer arithmetic for every invoice and computes both simple and monthly-compounded figures."
+    answer: `The MSMED Act mandates compound interest at three times the RBI Bank Rate (${RBI_BANK_RATE.pct}% since ${RBI_BANK_RATE.label}, so ${MSMED_INTEREST_PCT}% p.a. with monthly rests) on delayed payments beyond the agreed credit period, capped at 45 days. This tool uses exact integer arithmetic for every invoice and computes both simple and monthly-compounded figures.`
   },
   {
     question: "Can I file the demand letter directly with the Council?",
@@ -38,7 +39,7 @@ const schema = {
       featureList: [
         "Invoice aging tracker with 5 buckets",
         "Section 16 demand letter generator",
-        "MSMED interest at 19.5% p.a. (3× RBI Bank Rate)",
+        `MSMED interest at ${MSMED_INTEREST_PCT}% p.a. (3× RBI Bank Rate)`,
         "45-day statutory credit cap enforcement",
         "CSV import/export",
         "PDF aging report and letter export"
@@ -94,7 +95,7 @@ const reviewer = "Kunal Siyag";
         <div class="max-w-4xl">
           <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">MSME toolkit</p>
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">MSME receivables — track aging, draft demand letters</h1>
-          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Waiting 90, 120, or 200 days for corporate payments? Upload your outstanding invoices, bucket them by age, compute statutory interest at 19.5% p.a., and generate a Section 16 demand letter — all in your browser, nothing uploaded.</p>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Waiting 90, 120, or 200 days for corporate payments? Upload your outstanding invoices, bucket them by age, compute statutory interest at {MSMED_INTEREST_PCT}% p.a., and generate a Section 16 demand letter — all in your browser, nothing uploaded.</p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#msme-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Start tracking</a>
             <a href="#faqs" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">How it works ↓</a>

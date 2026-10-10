@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { TOPIC_HUBS } from "../data/topicHubs";
+import { MSMED_INTEREST_PCT } from "../data/rbiRates";
 
 const title = "All Free Merchant Tools - QR, Billing, Invoices | Pro UPI QR";
 const description = "Browse every free tool: invoice and receipt generators, rent receipts, quotations, reminders, paid stamps, QR generators, GST calculators, and UPI guides.";
@@ -22,7 +23,7 @@ const categories = [
       { name: "Gratuity Calculator", href: "/gratuity-calculator/", desc: "Exit payout via the statutory 15/26 formula — eligibility, rounding, and ₹20L cap included." },
       { name: "SIP Calculator", href: "/sip-calculator/", desc: "Monthly SIP maturity projection with yearly growth table and inflation-adjusted value." },
       { name: "Salary Slip Generator", href: "/salary-slip-generator/", desc: "Monthly payslips with PF/PT/TDS breakdowns and amount in words." },
-      { name: "MSMED Interest Calculator", href: "/msmed-interest-calculator/", desc: "19.5% statutory interest on late B2B payments under Section 16 of the MSMED Act." },
+      { name: "MSMED Interest Calculator", href: "/msmed-interest-calculator/", desc: `${MSMED_INTEREST_PCT}% statutory interest on late B2B payments under Section 16 of the MSMED Act.` },
       { name: "Proforma Invoice Generator", href: "/proforma-invoice-generator/", desc: "Advance-payment documents with buyer PO reference and optional UPI QR." },
       { name: "Break-Even Calculator", href: "/break-even-calculator/", desc: "Survival-unit count, target-profit units, and margin of safety for any business." },
       { name: "TReDS Discounting Calculator", href: "/treds-calculator/", desc: "Net proceeds and effective cost when discounting large-buyer invoices." },

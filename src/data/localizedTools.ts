@@ -1,4 +1,5 @@
 import { INTERNATIONAL_TOOL_COPY, type GlobalLang, type InternationalLang } from "./internationalTranslations";
+import { MSMED_INTEREST_PCT } from "./rbiRates";
 
 export type RegionalToolLanguage = "hi" | "ta" | "te" | "mr";
 export type SupportedToolLanguage = RegionalToolLanguage | InternationalLang | GlobalLang;
@@ -1330,9 +1331,9 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
   tool("msme-receivables", "MSME Receivables Tracker", "msmeReceivables", {
     hi: {
       name: "MSME रिसीवेबल ट्रैकर",
-      title: "MSME बकाया बिल ट्रैकर — 19.5% ब्याज | मुफ्त",
+      title: `MSME बकाया बिल ट्रैकर — ${MSMED_INTEREST_PCT}% ब्याज | मुफ्त`,
       description: "लंबित बिलों की उम्र, 45-दिन की देयता, और Section 16 डिमांड लेटर — सब ब्राउज़र में, कुछ अपलोड नहीं।",
-      intro: "बड़े खरीदारों के बकाया बिलों को उम्र के हिसाब से बकेट करें, 19.5% ब्याज जोड़ें और कानूनी डिमांड लेटर बनाएं।",
+      intro: `बड़े खरीदारों के बकाया बिलों को उम्र के हिसाब से बकेट करें, ${MSMED_INTEREST_PCT}% ब्याज जोड़ें और कानूनी डिमांड लेटर बनाएं।`,
       steps: ["अपना Udyam नंबर भरें", "बिल एंट्री करें (खरीदार, तारीख, रकम)", "डिमांड लेटर कॉपी/PDF करें"],
       faqs: [
         { question: "क्या मैं डिमांड लेटर सीधे MSE काउंसिल में फाइल कर सकता हूं?", answer: "हां। Section 16 के तहत यह प्री-लिटिगेशन नोटिस है। न चुकाने पर SAMADHAAN पोर्टल पर शिकायत करें।" },
@@ -1341,7 +1342,7 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
     },
     ta: {
       name: "MSME பெறத்தக்கவை கருவி",
-      title: "MSME பெறத்தக்கவை — வயதாகும், 19.5% | இலவசம்",
+      title: `MSME பெறத்தக்கவை — வயதாகும், ${MSMED_INTEREST_PCT}% | இலவசம்`,
       description: "நிலுவை இன்வாய்ஸ்களை வயதின் படி வரிசைப்படுத்தி, Section 16 கோரிக்கை கடிதம் தயாரிக்கவும். எல்லாம் உலாவியில்.",
       intro: "கார்ப்பரேட் வாங்குபவர்களிடம் நிலுவையில் உள்ள தொகையை கண்காணிக்கவும்.",
       steps: ["Udyam எண் சேர்க்கவும்", "இன்வாய்ஸ்களை உள்ளிடவும்", "கோரிக்கை கடிதத்தை நகல்/PDF செய்யவும்"],
@@ -1349,7 +1350,7 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
     },
     te: {
       name: "MSME రాబడుల ట్రాకర్",
-      title: "MSME రాబడులు — వయసు, 19.5% | ఉచితం",
+      title: `MSME రాబడులు — వయసు, ${MSMED_INTEREST_PCT}% | ఉచితం`,
       description: "నిల్వ ఇన్వాయిస్‌లను వయసు ప్రకారం వర్గీకరించి, Section 16 డిమాండ్ లేఖను రూపొందించండి. అన్నీ బ్రౌజర్‌లోనే.",
       intro: "కార్పొరేట్ కొనుగోలుదారుల నుండి నిల్వ చెల్లింపులను ట్రాక్ చేయండి.",
       steps: ["Udyam నంబర్ నమోదు చేయండి", "ఇన్వాయిస్‌లను నమోదు చేయండి", "డిమాండ్ లేఖ కాపీ/PDF"],
@@ -1357,7 +1358,7 @@ export const LOCALIZED_TOOLS: LocalizedTool[] = [
     },
     mr: {
       name: "MSME प्राप्ती ट्रॅकर",
-      title: "MSME प्राप्ती — वय, 19.5% | मोफत",
+      title: `MSME प्राप्ती — वय, ${MSMED_INTEREST_PCT}% | मोफत`,
       description: "न भरलेली बिलं वयानुसार विभागून Section 16 मागणी पत्र तयार करा. सर्व ब्राउझरमध्ये.",
       intro: "कॉर्पोरेट खरेदीदारांकडील न भरलेली रक्कम ट्रॅक करा.",
       steps: ["Udyam क्रमांक भरा", "बिलं नोंदवा", "मागणी पत्र कॉपी/PDF"],

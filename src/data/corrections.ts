@@ -8,6 +8,18 @@ export interface CorrectionEntry {
 /** Public log of material corrections. Oldest last. */
 export const CORRECTIONS: CorrectionEntry[] = [
   {
+    date: "2026-10-11",
+    title: "MSMED interest now uses the 5.75% RBI Bank Rate",
+    summary:
+      "The MSME receivables tracker and its pages used a 6.5% Bank Rate (19.5% p.a.), and the MSMED interest calculator's title, intro and FAQ still said 15% p.a. The RBI set the Bank Rate at 5.75% on 7 October 2026, which makes statutory interest 17.25% p.a. with monthly rests. Demand letters drafted earlier overstated interest; recompute them before sending. The rate now lives in one place with its as-of date.",
+    hrefs: [
+      { href: "/msme-receivables/", label: "MSME receivables tracker" },
+      { href: "/msmed-interest-calculator/", label: "MSMED interest calculator" },
+      { href: "/blog/government-schemes-small-businesses-india-2026/", label: "Government schemes roundup" },
+      { href: "/blog/udyam-registration-guide-msme-benefits/", label: "Udyam registration guide" },
+    ],
+  },
+  {
     date: "2026-09-17",
     title: "P2PM is a bank tag, not automatic under ₹1 lakh",
     summary:

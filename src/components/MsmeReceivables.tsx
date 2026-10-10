@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MSMED_INTEREST_PCT, RBI_BANK_RATE } from "../data/rbiRates";
 import { safeToPng, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import type { DocLang } from "../data/documentLang";
@@ -6,8 +7,8 @@ import { useToolLang } from "../lib/useToolLang";
 
 const draftKey = "proupiqr-msme-receivables-draft";
 const EXPORT_TIMEOUT_MS = 20000;
-const RBI_BANK_RATE_PCT = 6.5;
-const RATE_PCT = Math.round(RBI_BANK_RATE_PCT * 3 * 10) / 10;
+const RBI_BANK_RATE_PCT = RBI_BANK_RATE.pct;
+const RATE_PCT = MSMED_INTEREST_PCT;
 const LAST_REVIEWED = "2026-08-29";
 const REVIEWER = "Kunal Siyag";
 const STATUTORY_CREDIT_DAYS = 45;
@@ -341,7 +342,7 @@ ${overdueStats.map(es => {
 }).join("\n")}
 
 Total principal outstanding: ₹${fmtRs(totalPrincipal)}
-Total interest @ ${RATE_PCT}% p.a. (3 × RBI Bank Rate of ${RBI_BANK_RATE_PCT}%): ₹${fmtRs(Math.round(totalInterest))}
+Total interest @ ${RATE_PCT}% p.a. (3 × RBI Bank Rate of ${RBI_BANK_RATE_PCT}%, as of ${RBI_BANK_RATE.label}): ₹${fmtRs(Math.round(totalInterest))}
 Total claimable: ₹${fmtRs(totalPrincipal + Math.round(totalInterest))}
 
 LEGAL BASIS
@@ -382,7 +383,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
         </div>
 
         <p className="mt-3 rounded-2xl bg-mint px-4 py-2.5 text-xs leading-5 font-semibold text-forest/75">
-          Track outstanding invoices across your buyers, bucket them by age, and create a Section 16 demand letter with statutory interest calculated at <strong>{RATE_PCT}% p.a.</strong> (3 × RBI bank rate {RBI_BANK_RATE_PCT}%). The maximum enforceable credit period is <strong>45 days</strong> regardless of longer contract terms.
+          Track outstanding invoices across your buyers, bucket them by age, and create a Section 16 demand letter with statutory interest calculated at <strong>{RATE_PCT}% p.a.</strong> (3 × RBI bank rate {RBI_BANK_RATE_PCT}% as of {RBI_BANK_RATE.label}). The maximum enforceable credit period is <strong>45 days</strong> regardless of longer contract terms.
         </p>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-3">

@@ -1,12 +1,13 @@
 ---
 title: "Udyam Registration Guide 2026 - MSME Benefits & How to Apply Free"
-description: "Register free on the Udyam portal in 10 minutes and unlock 15% late-payment interest rights, collateral-free loans, TReDS access, and procurement benefits."
+description: "Register free on the Udyam portal in 10 minutes and unlock 17.25% late-payment interest rights, collateral-free loans, TReDS access, and procurement benefits."
 pubDate: 2026-08-22
+updatedDate: 2026-10-11
 author: "Kunal Siyag"
 tags: ["MSME", "Government Schemes", "Business Setup", "Tutorial"]
 ---
 
-If you run a small business in India — a shop, a service practice, a tiny factory, or a freelance operation with turnover — Udyam registration is the single highest-value piece of paperwork you can complete this week. It takes about ten minutes online, costs nothing, and unlocks statutory powers like 15% annual interest on late payments that most small suppliers never claim simply because they are not registered.
+If you run a small business in India — a shop, a service practice, a tiny factory, or a freelance operation with turnover — Udyam registration is the single highest-value piece of paperwork you can complete this week. It takes about ten minutes online, costs nothing, and unlocks statutory powers like 17.25% annual interest on late payments that most small suppliers never claim simply because they are not registered.
 
 This guide covers who should register, what you need, how the process works, and every tangible benefit registration switches on.
 
@@ -45,7 +46,7 @@ Because everything is self-declared and verified against existing government dat
 
 ## Benefit 1: The big one — payment protection
 
-This is why we call registration the highest-value paperwork. Under Section 16 of the MSMED Act, buyers who pay a registered micro/small supplier beyond agreed terms (capped at 45 days) owe **compound interest at 15% per year** — enforceable through MSE Facilitation Councils without expensive litigation.
+This is why we call registration the highest-value paperwork. Under Section 16 of the MSMED Act, buyers who pay a registered micro/small supplier beyond agreed terms (capped at 45 days) owe **compound interest at three times the RBI Bank Rate — 17.25% per year since the Bank Rate became 5.75% on 7 October 2026** — enforceable through MSE Facilitation Councils without expensive litigation.
 
 Unregistered suppliers have no such statutory right. If corporate clients routinely stretch you past 90 days, registration converts frustration into a calculable, claimable amount. Run any delayed bill through our [MSMED interest calculator](/msmed-interest-calculator/) to see what late payments are actually costing you, then use [polite reminder templates](/blog/how-to-write-payment-reminder-message-overdue-invoice/) before escalating to the Council route.
 

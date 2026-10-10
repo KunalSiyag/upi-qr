@@ -2,6 +2,7 @@
 title: "Government Schemes for Small Businesses in India - 2026 Roundup"
 description: "Every scheme worth knowing: Udyam protections, Mudra loans, CGTMSE guarantees, TReDS invoice discounting, PM SVANidhi, and zero-MDR UPI merchant incentives."
 pubDate: 2026-08-23
+updatedDate: 2026-10-11
 author: "Kunal Siyag"
 tags: ["MSME", "Government Schemes", "Finance", "Reference"]
 ---
@@ -12,7 +13,7 @@ This roundup covers the schemes that matter for day-to-day business money — wh
 
 ## 1. Udyam Registration — the key that unlocks everything else
 
-Free, ten-minute, Aadhaar-based registration on udyamregistration.gov.in that classifies your enterprise as Micro/Small/Medium. It is the prerequisite for nearly every scheme below, and by itself grants statutory payment protection: buyers delaying beyond 45 days owe registered suppliers interest at three times the RBI bank rate (currently 19.5% p.a.) enforceable through MSE Facilitation Councils.
+Free, ten-minute, Aadhaar-based registration on udyamregistration.gov.in that classifies your enterprise as Micro/Small/Medium. It is the prerequisite for nearly every scheme below, and by itself grants statutory payment protection: buyers delaying beyond 45 days owe registered suppliers interest at three times the RBI bank rate (17.25% p.a. since the RBI set the Bank Rate at 5.75% on 7 October 2026, compounded monthly) enforceable through MSE Facilitation Councils.
 
 Full walkthrough in our [Udyam registration guide](/blog/udyam-registration-guide-msme-benefits/). If you register for nothing else this year, register for this.
 
