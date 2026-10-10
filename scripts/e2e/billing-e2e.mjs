@@ -51,6 +51,7 @@ try {
   let rec = await record();
   check("subscription stored as active with period end", rec?.status === "active" && rec.currentEnd === (now + 30 * 86400) * 1000, JSON.stringify(rec));
   check("subscription → owner index stored", (await admin("get", { key: "bill:sub:sub_PROTEST1" })).value === OWNER);
+  check("subscribed owner indexed for the daily reconcile", ((await admin("get", { set: "bill:owners" })).value ?? []).includes(OWNER));
   check("Pro owner's pay page drops promo line", !(await payPage()).includes("Send your own pay links free"));
 
   res = await send(activated, { eventId: "evt_ACTIVATE01" });

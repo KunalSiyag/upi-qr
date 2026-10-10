@@ -10,6 +10,8 @@ export interface BillingStore {
   markSeen(eventId: string): Promise<void>;
   /** True at most once per `seconds` per owner: throttles re-reading a subscription from Razorpay. */
   claimRefresh(owner: string, seconds: number, now: number): Promise<boolean>;
+  /** Every owner that has ever had a subscription record (for the daily reconcile). */
+  owners(): Promise<string[]>;
 }
 
 export function memoryBillingStore(): BillingStore {
@@ -20,6 +22,7 @@ export function memoryBillingStore(): BillingStore {
   return {
     async get(owner) { return parseSubscriptionRecord(records.get(owner) ?? null); },
     async put(owner, record) { records.set(owner, JSON.stringify(record)); },
+    async owners() { return [...records.keys()]; },
     async ownerFor(subscriptionId) { return owners.get(subscriptionId) ?? null; },
     async link(subscriptionId, owner) { owners.set(subscriptionId, owner); },
     async seen(eventId) { return events.has(eventId); },

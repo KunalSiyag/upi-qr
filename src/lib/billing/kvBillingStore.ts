@@ -6,10 +6,17 @@ const recordKey = (owner: string) => `bill:own:${owner}`;
 const subKey = (subscriptionId: string) => `bill:sub:${subscriptionId}`;
 const eventKey = (eventId: string) => `bill:evt:${eventId}`;
 const refreshKey = (owner: string) => `bill:chk:${owner}`;
+const OWNERS_KEY = "bill:owners";
 
 export const kvBillingStore: BillingStore = {
   async get(owner) { return parseSubscriptionRecord(await kv.get(recordKey(owner))); },
-  async put(owner, record) { await kv.set(recordKey(owner), JSON.stringify(record)); },
+  async put(owner, record) {
+    const pipe = kv.pipeline();
+    pipe.set(recordKey(owner), JSON.stringify(record));
+    pipe.sadd(OWNERS_KEY, owner);
+    await pipe.exec();
+  },
+  async owners() { return ((await kv.smembers(OWNERS_KEY)) ?? []).filter((o): o is string => typeof o === "string"); },
   async ownerFor(subscriptionId) {
     const owner = await kv.get(subKey(subscriptionId));
     return typeof owner === "string" ? owner : null;

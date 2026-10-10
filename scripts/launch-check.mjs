@@ -120,7 +120,7 @@ else {
   /^(mailto:|https:)/.test(subject) ? ok(`VAPID subject ${subject}`) : fail("VAPID_SUBJECT must start with mailto: or https:");
 }
 const cron = val("CRON_SECRET");
-if (!cron) (vpub ? fail : warn)("CRON_SECRET missing — the 09:00 digest endpoint refuses to run without it");
+if (!cron) (vpub || present.length ? fail : warn)("CRON_SECRET missing — the 09:00 cron (billing reconcile + morning digest) refuses to run without it");
 else cron.length >= 24 ? ok("CRON_SECRET set") : fail("CRON_SECRET is too short (use 32+ random characters)");
 
 section("Founder metrics");
@@ -151,7 +151,7 @@ const config = join(ROOT, ".vercel/output/config.json");
 if (!existsSync(config)) warn("No build output yet — run npx astro build first");
 else {
   const c = JSON.parse(readFileSync(config, "utf8"));
-  (c.crons ?? []).some((x) => x.path === "/api/cron/digest/") ? ok("Cron /api/cron/digest/ scheduled in build output (03:30 UTC = 09:00 IST)") : fail("Build output has no digest cron");
+  (c.crons ?? []).some((x) => x.path === "/api/cron/digest/") ? ok("Cron /api/cron/digest/ scheduled in build output (03:30 UTC = 09:00 IST): billing reconcile, then morning digest") : fail("Build output has no digest cron");
   const statics = join(ROOT, ".vercel/output/static");
   ["sw.js", "app.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "app/index.html", "pricing/index.html", "payment-tracker/index.html"]
     .every((f) => existsSync(join(statics, f))) ? ok("App shell, manifest, icons and pricing pages built") : fail("Missing built app assets — rebuild");

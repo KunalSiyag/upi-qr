@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { applySubscriptionEvent, hasProAccess, parseSubscriptionRecord, PENDING_GRACE_MS } from "../src/lib/billing/subscription.ts";
 import { cancelAtCycleEnd, createSubscription, fetchSubscription, parseSubscriptionWebhook, razorpayConfig, verifyWebhookSignature } from "../src/lib/billing/razorpay.ts";
-import { CHECKOUT_RECHECK_WINDOW_MS, RECHECK_SECONDS, recheckInterval, reconcileSubscription } from "../src/lib/billing/reconcile.ts";
+import { CHECKOUT_RECHECK_WINDOW_MS, dueForDailyCheck, PERIOD_END_GRACE_MS, RECHECK_SECONDS, recheckInterval, reconcileDueSubscriptions, reconcileSubscription } from "../src/lib/billing/reconcile.ts";
 import { handleSubscriptionWebhook } from "../src/lib/billing/webhook.ts";
 import { memoryBillingStore } from "../src/lib/billing/store.ts";
 import { planFromSubscription, PLANS } from "../src/lib/workspace/entitlements.ts";
@@ -184,4 +184,55 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   assert.deepEqual([result.record.status, result.activated], ["active", true]);
 }
 
-console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, and lost-webhook reconcile passed");
+// Daily reconcile: catch lost cancel/halt/renewal webhooks without re-reading healthy subscriptions.
+{
+  const N = now;
+  const HOUR = 3_600_000;
+  const r = (subscriptionId, status, currentEnd, extra = {}) => ({ provider: "razorpay", subscriptionId, interval: "monthly", status, currentEnd, cancelAtCycleEnd: false, shortUrl: null, eventAt: N - 40 * DAY, updatedAt: N - 40 * DAY, ...extra });
+  const owners = { a: "a".repeat(32), b: "b".repeat(32), c: "c".repeat(32), d: "d".repeat(32), e: "e".repeat(32), f: "f".repeat(32) };
+
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "active", N + 10 * DAY), N), false, "healthy active subscription is left alone");
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "active", N - PERIOD_END_GRACE_MS + HOUR), N), false, "renewal webhook gets 6 h");
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "active", N - PERIOD_END_GRACE_MS - HOUR), N), true, "period ended without a renewal");
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "authenticated", null, { updatedAt: N - 2 * DAY }), N), true, "authorized but never charged");
+  for (const status of ["pending", "halted", "paused"]) assert.equal(dueForDailyCheck(r("sub_X1111111", status, N - DAY), N), true, status);
+  for (const status of ["cancelled", "completed", "expired"]) assert.equal(dueForDailyCheck(r("sub_X1111111", status, N - DAY), N), false, status);
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "created", null, { updatedAt: N - 2 * DAY }), N), true);
+  assert.equal(dueForDailyCheck(r("sub_X1111111", "created", null, { updatedAt: N - 8 * DAY }), N), false, "abandoned checkout");
+
+  const store = memoryBillingStore();
+  await store.put(owners.a, r("sub_AAAA1111", "active", N - 8 * HOUR, { cancelAtCycleEnd: true }));
+  await store.put(owners.b, r("sub_BBBB1111", "active", N + 10 * DAY));
+  await store.put(owners.c, r("sub_CCCC1111", "halted", N - 10 * DAY));
+  await store.put(owners.d, r("sub_DDDD1111", "created", null, { updatedAt: N - 2 * DAY, shortUrl: "https://rzp.io/i/x" }));
+  await store.put(owners.e, r("sub_EEEE1111", "cancelled", N - DAY));
+  await store.put(owners.f, r("sub_FFFF1111", "pending", N - DAY));
+  assert.deepEqual((await store.owners()).sort(), Object.values(owners).sort(), "every subscribed owner is indexed");
+
+  const sec = (ms) => Math.floor(ms / 1000);
+  const truth = {
+    sub_AAAA1111: { status: "cancelled", current_end: sec(N - 8 * HOUR), notes: { owner: owners.a } },
+    sub_CCCC1111: { status: "active", current_end: sec(N + 20 * DAY), notes: { owner: owners.c } },
+    sub_DDDD1111: { status: "active", current_end: sec(N + 30 * DAY), notes: { owner: owners.d } },
+  };
+  const asked = [];
+  const razorpay = async (url) => {
+    const id = url.split("/").pop();
+    asked.push(id);
+    if (!truth[id]) return new Response('{"error":{"description":"down"}}', { status: 503 });
+    return new Response(JSON.stringify({ id, entity: "subscription", plan_id: "plan_month", ...truth[id] }), { status: 200 });
+  };
+  const out = await reconcileDueSubscriptions(store, config, N, { fetchImpl: razorpay, deadline: Infinity });
+  assert.deepEqual(asked.sort(), ["sub_AAAA1111", "sub_CCCC1111", "sub_DDDD1111", "sub_FFFF1111"], "only due subscriptions are read");
+  assert.deepEqual(out, { owners: 6, checked: 4, updated: 3, activated: 2, failed: 1, remaining: 0 });
+  assert.equal(hasProAccess(await store.get(owners.a), N), false, "a missed cancellation turns Pro off after the paid period");
+  assert.equal((await store.get(owners.c)).status, "active", "a fixed renewal comes back");
+  assert.equal((await store.get(owners.d)).status, "active", "a paid checkout whose webhook was lost is activated");
+  assert.equal((await store.get(owners.f)).status, "pending", "Razorpay unreachable: record untouched");
+
+  // Out of time before starting: nothing is read, everything is left for the next run.
+  const late = await reconcileDueSubscriptions(store, config, N, { fetchImpl: razorpay, deadline: 0, clock: () => 1 });
+  assert.deepEqual([late.checked, late.remaining], [0, 6]);
+}
+
+console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, lost-webhook and daily reconcile passed");

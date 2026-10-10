@@ -29,6 +29,32 @@ export interface ReconcileResult {
   record: SubscriptionRecord | null;
   /** True when this read moved the account from Free to Pro. */
   activated: boolean;
+  /** The stored record changed. */
+  changed?: boolean;
+  /** Razorpay couldn't be read (or answered for another account); nothing was written. */
+  failed?: boolean;
+}
+
+/** Re-reads one subscription from Razorpay and stores it if it moved. */
+async function applyLatest(
+  store: BillingStore,
+  config: RazorpayConfig,
+  owner: string,
+  existing: SubscriptionRecord,
+  now: number,
+  fetchImpl: typeof fetch,
+): Promise<ReconcileResult> {
+  let fetched: Awaited<ReturnType<typeof fetchSubscription>>;
+  try {
+    fetched = await fetchSubscription(config, existing.subscriptionId, now, fetchImpl);
+  } catch {
+    return { record: existing, activated: false, failed: true };
+  }
+  if (fetched.owner !== null && fetched.owner !== owner) return { record: existing, activated: false, failed: true };
+  const next = applySubscriptionEvent(existing, fetched.event, now);
+  if (!next || (next.status === existing.status && next.currentEnd === existing.currentEnd)) return { record: existing, activated: false };
+  await store.put(owner, next);
+  return { record: next, activated: !hasProAccess(existing, now) && hasProAccess(next, now), changed: true };
 }
 
 export async function reconcileSubscription(
@@ -41,15 +67,70 @@ export async function reconcileSubscription(
   const existing = await store.get(owner);
   const seconds = recheckInterval(existing, now);
   if (!existing || seconds === null || !(await store.claimRefresh(owner, seconds, now))) return { record: existing, activated: false };
-  let fetched: Awaited<ReturnType<typeof fetchSubscription>>;
-  try {
-    fetched = await fetchSubscription(config, existing.subscriptionId, now, fetchImpl);
-  } catch {
-    return { record: existing, activated: false };
+  return applyLatest(store, config, owner, existing, now, fetchImpl);
+}
+
+/* ---------- Daily reconcile (cron) ---------- */
+
+const HOUR = 3_600_000;
+/** Razorpay charges renewals around the period end; give its webhook this long before re-reading. */
+export const PERIOD_END_GRACE_MS = 6 * HOUR;
+
+/**
+ * Subscriptions where Razorpay should have moved on but we may have missed the
+ * webhook: a paid period that ended without a renewal (a lost charged,
+ * cancelled, or halted event would otherwise keep Pro on forever), failing or
+ * paused renewals, and recent unconfirmed checkouts. Final states are skipped.
+ */
+export function dueForDailyCheck(record: SubscriptionRecord | null, now: number): boolean {
+  if (!record) return false;
+  switch (record.status) {
+    case "created":
+      return now - record.updatedAt < CHECKOUT_RECHECK_WINDOW_MS;
+    case "pending":
+    case "halted":
+    case "paused":
+      return true;
+    case "authenticated":
+    case "active":
+      return record.currentEnd === null ? now - record.updatedAt > 24 * HOUR : now > record.currentEnd + PERIOD_END_GRACE_MS;
+    default:
+      return false;
   }
-  if (fetched.owner !== null && fetched.owner !== owner) return { record: existing, activated: false };
-  const next = applySubscriptionEvent(existing, fetched.event, now);
-  if (!next || (next.status === existing.status && next.currentEnd === existing.currentEnd)) return { record: existing, activated: false };
-  await store.put(owner, next);
-  return { record: next, activated: !hasProAccess(existing, now) && hasProAccess(next, now) };
+}
+
+export interface DailyReconcileResult {
+  owners: number;
+  checked: number;
+  updated: number;
+  activated: number;
+  failed: number;
+  /** Owners not reached before the deadline (picked up by the next run). */
+  remaining: number;
+}
+
+export async function reconcileDueSubscriptions(
+  store: BillingStore,
+  config: RazorpayConfig,
+  now: number,
+  { deadline = now + 10_000, concurrency = 5, fetchImpl = fetch, clock = Date.now }: { deadline?: number; concurrency?: number; fetchImpl?: typeof fetch; clock?: () => number } = {},
+): Promise<DailyReconcileResult> {
+  const owners = await store.owners();
+  const result: DailyReconcileResult = { owners: owners.length, checked: 0, updated: 0, activated: 0, failed: 0, remaining: 0 };
+  let next = 0;
+  async function worker() {
+    while (next < owners.length && clock() < deadline) {
+      const owner = owners[next++];
+      const record = await store.get(owner);
+      if (!record || !dueForDailyCheck(record, now)) continue;
+      result.checked++;
+      const outcome = await applyLatest(store, config, owner, record, now, fetchImpl);
+      if (outcome.failed) result.failed++;
+      if (outcome.changed) result.updated++;
+      if (outcome.activated) result.activated++;
+    }
+  }
+  await Promise.all(Array.from({ length: Math.max(1, concurrency) }, worker));
+  result.remaining = owners.length - next;
+  return result;
 }
