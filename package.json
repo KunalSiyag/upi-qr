@@ -26,7 +26,7 @@
       "path-to-regexp": "6.3.0"
     },
     "@clerk/astro": {
-      "nanoid": "5.1.6"
+      "nanoid": "5.1.16"
     }
   },
   "dependencies": {
@@ -37,7 +37,7 @@
     "@vercel/analytics": "^2.0.1",
     "@vercel/kv": "^3.0.0",
     "@vercel/speed-insights": "^2.0.0",
-    "astro": "^7.1.6",
+    "astro": "^7.3.5",
     "html-to-image": "^1.11.11",
     "jspdf": "^4.2.1",
     "jsqr": "^1.4.0",
