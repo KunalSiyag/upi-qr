@@ -4,6 +4,7 @@ import { isSubscriptionStatus, type BillingInterval, type SubscriptionEvent } fr
 /**
  * Minimal Razorpay Subscriptions client (docs checked 2026-10):
  *   POST /v1/subscriptions            { plan_id, total_count, customer_notify, notes }
+ *   GET  /v1/subscriptions/{id}        → the subscription entity
  *   POST /v1/subscriptions/{id}/cancel { cancel_at_cycle_end }
  * Webhooks: X-Razorpay-Signature = hex HMAC-SHA256(raw body, webhook secret);
  * x-razorpay-event-id is unique per event; data at payload.subscription.entity.
@@ -37,20 +38,13 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
   return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signature.toLowerCase(), "hex"));
 }
 
-/** Extracts a subscription event and the owner from our notes; null for anything else. */
-export function parseSubscriptionWebhook(rawBody: string, config: RazorpayConfig): { event: SubscriptionEvent; owner: string | null } | null {
-  let body: Record<string, unknown>;
-  try {
-    body = JSON.parse(rawBody);
-  } catch {
-    return null;
-  }
-  const event = typeof body.event === "string" ? body.event : "";
-  const entity = (body.payload as { subscription?: { entity?: Record<string, unknown> } } | undefined)?.subscription?.entity;
-  if (!event.startsWith("subscription.") || !entity || typeof entity.id !== "string" || !isSubscriptionStatus(entity.status)) return null;
+type ParsedSubscription = { event: SubscriptionEvent; owner: string | null };
+
+/** A subscription entity (webhook payload or API response) as an event; null if it isn't one. */
+function subscriptionFromEntity(entity: Record<string, unknown> | undefined, event: string, createdAt: number, config: RazorpayConfig): ParsedSubscription | null {
+  if (!entity || typeof entity.id !== "string" || !isSubscriptionStatus(entity.status)) return null;
   const notes = entity.notes && typeof entity.notes === "object" && !Array.isArray(entity.notes) ? entity.notes as Record<string, unknown> : {};
   const owner = typeof notes.owner === "string" && /^[a-f0-9]{32}$/.test(notes.owner) ? notes.owner : null;
-  const createdAt = typeof body.created_at === "number" ? body.created_at * 1000 : Date.now();
   return {
     owner,
     event: {
@@ -62,6 +56,21 @@ export function parseSubscriptionWebhook(rawBody: string, config: RazorpayConfig
       interval: entity.plan_id === config.plans.yearly ? "yearly" : "monthly",
     },
   };
+}
+
+/** Extracts a subscription event and the owner from our notes; null for anything else. */
+export function parseSubscriptionWebhook(rawBody: string, config: RazorpayConfig): ParsedSubscription | null {
+  let body: Record<string, unknown>;
+  try {
+    body = JSON.parse(rawBody);
+  } catch {
+    return null;
+  }
+  const event = typeof body.event === "string" ? body.event : "";
+  if (!event.startsWith("subscription.")) return null;
+  const entity = (body.payload as { subscription?: { entity?: Record<string, unknown> } } | undefined)?.subscription?.entity;
+  const createdAt = typeof body.created_at === "number" ? body.created_at * 1000 : Date.now();
+  return subscriptionFromEntity(entity, event, createdAt, config);
 }
 
 function authHeader(config: RazorpayConfig): string {
@@ -98,8 +107,34 @@ export async function createSubscription(
   return { id: body.id, shortUrl: body.short_url, status: String(body.status ?? "created") };
 }
 
+const SUBSCRIPTION_ID = /^sub_[A-Za-z0-9]{6,40}$/;
+
+/**
+ * The subscription as Razorpay sees it right now, shaped like a webhook event so
+ * it goes through the same applySubscriptionEvent rules. Its createdAt is the
+ * start of the previous whole second: webhook created_at only has whole seconds,
+ * so an event from the same second as this read still applies afterwards.
+ */
+export async function fetchSubscription(
+  config: RazorpayConfig,
+  subscriptionId: string,
+  now: number,
+  fetchImpl: typeof fetch = fetch,
+): Promise<ParsedSubscription> {
+  if (!SUBSCRIPTION_ID.test(subscriptionId)) throw new Error("Invalid subscription id");
+  const response = await fetchImpl(`${API}/subscriptions/${subscriptionId}`, {
+    headers: { Authorization: authHeader(config) },
+    signal: AbortSignal.timeout(5000),
+  });
+  if (!response.ok) throw new Error(`Razorpay subscription fetch failed (${response.status})`);
+  const entity = await response.json().catch(() => null) as Record<string, unknown> | null;
+  const parsed = subscriptionFromEntity(entity ?? undefined, "subscription.fetched", Math.floor(now / 1000) * 1000 - 1000, config);
+  if (!parsed || parsed.event.subscriptionId !== subscriptionId) throw new Error("Unexpected subscription from Razorpay");
+  return parsed;
+}
+
 export async function cancelAtCycleEnd(config: RazorpayConfig, subscriptionId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
-  if (!/^sub_[A-Za-z0-9]{6,40}$/.test(subscriptionId)) throw new Error("Invalid subscription id");
+  if (!SUBSCRIPTION_ID.test(subscriptionId)) throw new Error("Invalid subscription id");
   const response = await fetchImpl(`${API}/subscriptions/${subscriptionId}/cancel`, {
     method: "POST",
     headers: { Authorization: authHeader(config), "Content-Type": "application/json" },

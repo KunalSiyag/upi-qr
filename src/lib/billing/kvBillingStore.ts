@@ -5,6 +5,7 @@ import { parseSubscriptionRecord } from "./subscription.ts";
 const recordKey = (owner: string) => `bill:own:${owner}`;
 const subKey = (subscriptionId: string) => `bill:sub:${subscriptionId}`;
 const eventKey = (eventId: string) => `bill:evt:${eventId}`;
+const refreshKey = (owner: string) => `bill:chk:${owner}`;
 
 export const kvBillingStore: BillingStore = {
   async get(owner) { return parseSubscriptionRecord(await kv.get(recordKey(owner))); },
@@ -17,6 +18,7 @@ export const kvBillingStore: BillingStore = {
   async seen(eventId) { return (await kv.get(eventKey(eventId))) !== null; },
   // Razorpay retries for about a day; keep ids for a week.
   async markSeen(eventId) { await kv.set(eventKey(eventId), "1", { ex: 7 * 24 * 60 * 60 }); },
+  async claimRefresh(owner, seconds) { return (await kv.set(refreshKey(owner), "1", { nx: true, ex: seconds })) === "OK"; },
 };
 
 const devStore = memoryBillingStore();

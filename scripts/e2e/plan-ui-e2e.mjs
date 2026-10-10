@@ -130,6 +130,31 @@ try {
   await b.waitFor("location.search.includes('fake-razorpay-checkout=yearly')", 8000);
   check("yearly checkout redirects to provider URL", (await b.eval("location.search")) === "?fake-razorpay-checkout=yearly");
 
+  // Back from Razorpay before the webhook: a waiting state (not the upgrade buttons again), auto-recheck, then Pro.
+  const pending = (url = "https://rzp.io/i/e2etest") => `localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, checkout: { interval: 'monthly', url: '${url}' }, billingAvailable: true })); true`;
+  await b.eval(pending());
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/Waiting for Razorpay to confirm your payment/.test(document.body.innerText)", 8000);
+  check("pending checkout shows a waiting state", !(await b.eval("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))")));
+  check("continue-to-payment links to the Razorpay page", (await b.eval("[...document.querySelectorAll('#plan a')].find(a => a.textContent === 'Continue to payment')?.href")) === "https://rzp.io/i/e2etest");
+  await t("__t.click(/^Check again$/)");
+  await b.waitFor("/Not confirmed yet/.test(document.body.innerText)", 8000);
+  check("check again while unpaid says so", /Not confirmed yet/.test(await text()));
+  const getsBefore = await b.eval("window.__calls.filter(c => c.url.includes('/api/v1/billing') && c.method === 'GET').length");
+  await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${Date.UTC(2026, 10, 10)}, cancelAtCycleEnd: false }, checkout: null, billingAvailable: true })); true`);
+  const flipped = await b.waitFor("/Welcome to Pro!/.test(document.body.innerText)", 9000);
+  check("auto-recheck flips to Pro with a welcome", flipped && /Pro monthly · renews on 10 Nov 2026/.test(await text()));
+  check("recheck polled the billing API", (await b.eval("window.__calls.filter(c => c.url.includes('/api/v1/billing') && c.method === 'GET').length")) > getsBefore);
+  await b.eval(pending());
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/Choose a different plan/.test(document.body.innerText)", 8000);
+  await t("__t.click(/^Choose a different plan$/)");
+  check("choose a different plan brings back both upgrade buttons", await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))", 4000));
+  await b.eval(pending("https://evil.example/pay"));
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/Waiting for Razorpay/.test(document.body.innerText)", 8000);
+  check("non-Razorpay checkout URL is never linked", !(await b.eval("[...document.querySelectorAll('#plan a')].some(a => a.textContent === 'Continue to payment')")));
+
   // Pro: renewal date, cancel at period end.
   const end = Date.UTC(2026, 10, 10);
   await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true })); true`);

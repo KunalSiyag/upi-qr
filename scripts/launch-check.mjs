@@ -85,7 +85,10 @@ else {
       } catch { fail(`${key}: couldn't reach Razorpay`); }
     }
   }
-  console.log(`    Webhook: https://www.proupiqr.in/api/billing/razorpay-webhook/  events: subscription.* (activated, charged, pending, halted, cancelled, completed, paused, resumed)`);
+  console.log("    Webhook URL: https://www.proupiqr.in/api/billing/razorpay-webhook/");
+  console.log("      exactly this: www and the trailing slash (proupiqr.in and the no-slash path redirect, and a redirect is a failed delivery)");
+  console.log("    Events: subscription.* (activated, charged, pending, halted, cancelled, completed, paused, resumed)");
+  console.log("    Test and live mode each have their own webhook and secret; RAZORPAY_WEBHOOK_SECRET must match the mode of RAZORPAY_KEY_ID.");
 }
 
 section("Morning reminders (Web Push + cron)");

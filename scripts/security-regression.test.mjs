@@ -182,6 +182,17 @@ assert.equal(safeCheckoutUrl("https://checkout.razorpay.com/x"), "https://checko
 assert.equal(safeCheckoutUrl("https://razorpay.com.evil.example/x"), null);
 assert.equal(safeCheckoutUrl("http://rzp.io/i/abc"), null);
 assert.equal(safeCheckoutUrl("javascript:alert(1)"), null);
+// Re-reading subscriptions from Razorpay: only the signed-in owner's own record, throttled, and the
+// pending-checkout URL handed to the browser goes through the same allow-list.
+const reconcile = readFileSync(join(projectRoot, "src/lib/billing/reconcile.ts"), "utf8");
+assert.match(reconcile, /store\.claimRefresh\(owner, seconds, now\)/, "Razorpay re-reads must be throttled per account");
+assert.match(reconcile, /fetched\.owner !== owner/, "a re-read subscription naming another account must not be applied");
+const getHandler = billingApi.split("export const GET: APIRoute")[1]?.split("export const")[0] ?? "";
+assert.match(getHandler, /reconcileSubscription\(store, config, owner, now\)/);
+assert.match(getHandler, /safeCheckoutUrl\(record\.shortUrl\)/, "pending checkout URLs must be allow-listed");
+const razorpayClient = readFileSync(join(projectRoot, "src/lib/billing/razorpay.ts"), "utf8");
+assert.match(razorpayClient, /const API = "https:\/\/api\.razorpay\.com\/v1";/, "Razorpay API host must stay fixed");
+assert.match(razorpayClient.split("export async function fetchSubscription")[1] ?? "", /SUBSCRIPTION_ID\.test\(subscriptionId\)/, "subscription ids are validated before building the API path");
 
 const cronRoute = readFileSync(join(projectRoot, "src/pages/api/cron/digest.ts"), "utf8");
 assert.match(cronRoute, /timingSafeEqual/, "cron must check CRON_SECRET in constant time");

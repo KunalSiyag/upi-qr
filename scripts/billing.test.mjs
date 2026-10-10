@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import { applySubscriptionEvent, hasProAccess, parseSubscriptionRecord, PENDING_GRACE_MS } from "../src/lib/billing/subscription.ts";
-import { cancelAtCycleEnd, createSubscription, parseSubscriptionWebhook, razorpayConfig, verifyWebhookSignature } from "../src/lib/billing/razorpay.ts";
+import { cancelAtCycleEnd, createSubscription, fetchSubscription, parseSubscriptionWebhook, razorpayConfig, verifyWebhookSignature } from "../src/lib/billing/razorpay.ts";
+import { CHECKOUT_RECHECK_WINDOW_MS, RECHECK_SECONDS, recheckInterval, reconcileSubscription } from "../src/lib/billing/reconcile.ts";
 import { handleSubscriptionWebhook } from "../src/lib/billing/webhook.ts";
 import { memoryBillingStore } from "../src/lib/billing/store.ts";
 import { planFromSubscription, PLANS } from "../src/lib/workspace/entitlements.ts";
@@ -112,4 +113,75 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   await assert.rejects(createSubscription(config, "monthly", owner, failing));
 }
 
-console.log("[billing] access rules, event ordering, signatures, webhook handling, and Razorpay request checks passed");
+// Reconcile: a lost webhook can't leave a paying customer on Free.
+{
+  const T0 = now;
+  const auth = `Basic ${Buffer.from("rzp_test_key:secret").toString("base64")}`;
+  const checkout = { provider: "razorpay", subscriptionId: "sub_PAID1234", interval: "monthly", status: "created", currentEnd: null, cancelAtCycleEnd: false, shortUrl: "https://rzp.io/i/abc", eventAt: 0, updatedAt: T0 };
+  const entity = (status, extra = {}) => ({ id: "sub_PAID1234", entity: "subscription", plan_id: "plan_month", status, current_end: Math.floor((T0 + 30 * DAY) / 1000), notes: { owner, product: "proupiqr-pro" }, ...extra });
+  let calls = 0;
+  let reply = entity("active");
+  const razorpay = async (url, init) => {
+    calls++;
+    assert.equal(url, "https://api.razorpay.com/v1/subscriptions/sub_PAID1234");
+    assert.equal(init.headers.Authorization, auth);
+    return new Response(JSON.stringify(reply), { status: 200 });
+  };
+  const seeded = async (record) => { const store = memoryBillingStore(); await store.put(owner, record); return store; };
+
+  const read = await fetchSubscription(config, "sub_PAID1234", T0 + 1500, razorpay);
+  assert.deepEqual(read, { owner, event: { event: "subscription.fetched", createdAt: T0, subscriptionId: "sub_PAID1234", status: "active", currentEnd: Math.floor((T0 + 30 * DAY) / 1000) * 1000, interval: "monthly" } },
+    "a read counts from the previous whole second, so same-second webhooks still apply");
+  await assert.rejects(fetchSubscription(config, "../payments", T0, razorpay));
+  await assert.rejects(fetchSubscription(config, "sub_PAID1234", T0, async () => new Response("{}", { status: 404 })));
+  await assert.rejects(fetchSubscription(config, "sub_PAID1234", T0, async () => new Response(JSON.stringify({ ...entity("active"), id: "sub_OTHER123" }))), "must be the subscription we asked for");
+  await assert.rejects(fetchSubscription(config, "sub_PAID1234", T0, async () => new Response(JSON.stringify(entity("weird")))));
+
+  assert.equal(recheckInterval(null, T0), null);
+  assert.equal(recheckInterval(checkout, T0 + DAY), RECHECK_SECONDS.checkout);
+  assert.equal(recheckInterval(checkout, T0 + CHECKOUT_RECHECK_WINDOW_MS), null, "abandoned checkouts stop being re-read");
+  assert.equal(recheckInterval({ ...checkout, status: "active" }, T0), null, "active subscriptions rely on webhooks");
+  assert.equal(recheckInterval({ ...checkout, status: "cancelled" }, T0), null);
+  assert.equal(recheckInterval({ ...checkout, status: "halted" }, T0), RECHECK_SECONDS.renewal);
+
+  // Paid, webhook lost: the read activates Pro once, then active subscriptions aren't re-read.
+  calls = 0;
+  let store = await seeded(checkout);
+  let result = await reconcileSubscription(store, config, owner, T0 + 60_000, razorpay);
+  assert.deepEqual([result.activated, result.record.status, (await store.get(owner)).status, calls], [true, "active", "active", 1]);
+  result = await reconcileSubscription(store, config, owner, T0 + 120_000, razorpay);
+  assert.deepEqual([result.activated, calls], [false, 1]);
+  const afterRead = await store.get(owner);
+  assert.equal(applySubscriptionEvent(afterRead, ev("subscription.cancelled", "cancelled", T0 + 60_000, T0 + 30 * DAY, "sub_PAID1234"), T0 + 61_000)?.status, "cancelled", "webhook from the read's second applies");
+  assert.equal(applySubscriptionEvent(afterRead, ev("subscription.authenticated", "authenticated", T0 + 55_000, null, "sub_PAID1234"), T0 + 61_000), null, "older webhook ignored");
+
+  // Not paid yet: throttled reads, and no write while nothing changes (the abandon window keeps counting from checkout).
+  reply = entity("created", { current_end: null });
+  store = await seeded(checkout);
+  calls = 0;
+  await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
+  await reconcileSubscription(store, config, owner, T0 + 2000, razorpay);
+  assert.equal(calls, 1, "one Razorpay read per throttle window");
+  await reconcileSubscription(store, config, owner, T0 + 1000 + RECHECK_SECONDS.checkout * 1000, razorpay);
+  assert.equal(calls, 2);
+  assert.deepEqual(await store.get(owner), checkout);
+
+  // Razorpay unreachable: stored state, no throw.
+  store = await seeded(checkout);
+  result = await reconcileSubscription(store, config, owner, T0 + 1000, async () => { throw new Error("network"); });
+  assert.deepEqual([result.record.status, result.activated], ["created", false]);
+
+  // A subscription whose notes name another account is never applied.
+  reply = entity("active", { notes: { owner: "b".repeat(32) } });
+  store = await seeded(checkout);
+  await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
+  assert.equal((await store.get(owner)).status, "created");
+
+  // A failed renewal the customer fixed comes back without waiting for a webhook.
+  reply = entity("active");
+  store = await seeded({ ...checkout, status: "halted", currentEnd: T0 - DAY, shortUrl: null });
+  result = await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
+  assert.deepEqual([result.record.status, result.activated], ["active", true]);
+}
+
+console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, and lost-webhook reconcile passed");

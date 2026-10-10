@@ -4,7 +4,9 @@ import { consumeRateLimit, rateLimitHeaders } from "../../../../lib/rateLimit";
 import { billingConfig, safeCheckoutUrl } from "../../../../lib/billing/config";
 import { billingStore } from "../../../../lib/billing/kvBillingStore";
 import { cancelAtCycleEnd, createSubscription } from "../../../../lib/billing/razorpay";
+import { recheckInterval, reconcileSubscription } from "../../../../lib/billing/reconcile";
 import { hasProAccess, type BillingInterval } from "../../../../lib/billing/subscription";
+import { recordMetric } from "../../../../lib/metrics";
 import { planFromSubscription } from "../../../../lib/workspace/entitlements";
 import { rateLimitsAvailable, workspaceOwner } from "../../../../lib/workspace/kvCloudStore";
 import { PRO_PRICES } from "../../../../data/pricing";
@@ -17,14 +19,29 @@ export const GET: APIRoute = async ({ locals }) => {
   const userId = authenticatedUserId(locals);
   if (!userId) return jsonResponse({ error: "Sign in to see your plan." }, 401);
   try {
-    const record = await billingStore().get(workspaceOwner(userId));
-    const plan = planFromSubscription(record, Date.now());
+    const owner = workspaceOwner(userId);
+    const store = billingStore();
+    const config = billingConfig();
+    const now = Date.now();
+    let record = await store.get(owner);
+    // Waiting on Razorpay (unconfirmed checkout, failing renewal)? Re-read it in case a webhook was lost.
+    if (config && recheckInterval(record, now) !== null) {
+      const result = await reconcileSubscription(store, config, owner, now);
+      record = result.record;
+      if (result.activated) await recordMetric("pro_activated");
+    }
+    const plan = planFromSubscription(record, now);
+    const checkoutUrl = record?.status === "created" && record.shortUrl && now - record.updatedAt < PENDING_CHECKOUT_REUSE_MS
+      ? safeCheckoutUrl(record.shortUrl)
+      : null;
     return jsonResponse({
       plan: { id: plan.id, activePaylinks: plan.activePaylinks },
       subscription: record && record.status !== "created"
         ? { status: record.status, interval: record.interval, currentEnd: record.currentEnd, cancelAtCycleEnd: record.cancelAtCycleEnd }
         : null,
-      billingAvailable: billingConfig() !== null,
+      // A checkout the customer started but Razorpay hasn't confirmed yet.
+      checkout: checkoutUrl && plan.id === "free" && record ? { interval: record.interval, url: checkoutUrl } : null,
+      billingAvailable: config !== null,
       prices: PRO_PRICES,
     });
   } catch {
