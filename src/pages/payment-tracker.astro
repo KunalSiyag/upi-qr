@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { MSMED_INTEREST_PCT } from "../data/rbiRates";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
 const title = "Free Invoice Payment Tracker with WhatsApp Reminders | Pro UPI QR";
@@ -21,6 +22,8 @@ const features = [
   ["WhatsApp & SMS reminders", "Four ready messages with your UPI ID as plain text — no broken payment links in chat."],
   ["Aging by bucket", "Not due, 1–15, 16–30, 31–45, and 45+ days late. The 45-day line matters for MSMED Act interest."],
   ["Client balances", "See every client's open amount and overdue amount, then drill into their invoices."],
+  ["Receipts that settle dues", "Save a receipt from the free receipt generator and it marks that client's oldest unpaid invoices as paid — no double entry."],
+  ["MSME mode", "Registered on Udyam? Overdue invoices show when the 45-day MSMED deadline passed. Pro adds the Section 16 interest due and your payment rights to reminders."],
   ["Morning reminders", "With a free account, a 9 am notification lists who to chase that day — overdue first, with the top client and amount."],
   ["Pay links", "With a free account, share a link that shows the live amount due, a UPI button, and a QR. Clients can send their UTR back."],
   ["Sync & backup", "Optional free account syncs phone and laptop. Or stay offline and download a backup or CSV for your accountant."],
@@ -49,7 +52,7 @@ const faqs = [
   },
   {
     question: "Is a 45-day overdue invoice special?",
-    answer: "For Udyam-registered micro and small enterprises, the MSMED Act, 2006 caps agreed credit at 45 days for business buyers and makes late payments carry compound interest at three times the RBI bank rate. The tracker highlights 45+ day dues so you can use the MSMED interest calculator.",
+    answer: `For Udyam-registered micro and small enterprises, the MSMED Act, 2006 caps agreed credit at 45 days for business buyers and makes late payments carry compound interest at three times the RBI Bank Rate (${MSMED_INTEREST_PCT}% a year now). Under Section 43B(h) of the Income Tax Act, a business buyer can deduct a late payment only in the year it is paid. Add your Udyam number in Settings and overdue invoices show when the deadline passed; Pro adds the interest due and can put these rights in your reminders.`,
   },
 ];
 
