@@ -10,7 +10,8 @@ const text = () => b.eval("document.body.innerText");
 const local = () => b.eval("JSON.parse(localStorage.getItem('proupiqr-workspace-v1'))");
 
 const T = Date.now();
-const iso = (offset) => new Date(Date.now() + offset * 86_400_000).toISOString().slice(0, 10);
+// Local calendar day (the app's "today" is local time, not UTC; they differ 00:00–05:30 IST).
+const iso = (n) => { const d = new Date(Date.now() + n * 86_400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const dmy = (offset) => { const [y, m, d] = iso(offset).split("-"); return `${d}/${m}/${y.slice(2)}`; };
 const ws = {
   version: 1,

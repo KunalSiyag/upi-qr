@@ -6,7 +6,8 @@ const check = checker();
 const t = async (js) => { await b.eval(helpers); return b.eval(js); };
 const text = () => b.eval("document.body.innerText");
 const T = Date.now();
-const iso = (n) => new Date(Date.now() + n * 86_400_000).toISOString().slice(0, 10);
+// Local calendar day (the app's "today" is local time, not UTC; they differ 00:00–05:30 IST).
+const iso = (n) => { const d = new Date(Date.now() + n * 86_400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
 const ws = {
   version: 1,
   business: { name: "शर्मा ट्यूशन", upiId: "sharma@okaxis", phone: "", gstin: "", invoicePrefix: "TU-", updatedAt: T },

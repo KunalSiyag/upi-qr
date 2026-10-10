@@ -95,18 +95,20 @@ await waitFor(`[...document.querySelectorAll('button')].some(b => /PDF/.test(b.t
 check("card hidden before any export", !(await evaluate(cardVisible)));
 await clickButton("/PDF/");
 check("card appears after PDF export", await waitFor(cardVisible, 15000));
+check("card leads with the free tracker", (await evaluate(`[...document.querySelectorAll('aside a')].find(a => /Track payments free/.test(a.textContent))?.getAttribute('href')`)) === "/app/"
+  && /Know when this gets paid/.test(await evaluate(`document.querySelector('aside')?.textContent || ''`)));
 await shot("01-invoice-card-desktop.png");
 await stubFetch(503);
 await typeEmail("not-an-email");
-await clickButton("/Get early access/");
+await clickButton("/Notify me/");
 check("invalid email shows inline error, no request", (await evaluate(`document.getElementById('waitlist-error')?.textContent`)) === "Enter a valid email address." && (await evaluate(`window.__posts.length`)) === 0);
 await typeEmail("owner@example.com");
-await clickButton("/Get early access/");
+await clickButton("/Notify me/");
 await waitFor(`!!document.getElementById('waitlist-error')`);
 check("server failure shows retry message", (await evaluate(`document.getElementById('waitlist-error')?.textContent`)) === "Couldn't save right now. Please try again.");
 await stubFetch(200);
 await evaluate(`[...document.querySelectorAll('aside input[type=checkbox]')][0].click(); true`);
-await clickButton("/Get early access/");
+await clickButton("/Notify me/");
 check("success state shown", await waitFor(`/You're on the list/.test(document.querySelector('aside')?.textContent || '')`));
 const post = JSON.parse(await evaluate(`window.__posts[0].body`));
 check("payload is email+tool+lang+interview only", JSON.stringify(Object.keys(post).sort()) === JSON.stringify(["company", "email", "interview", "lang", "tool"]) && post.tool === "invoice" && post.interview === true && post.company === "", JSON.stringify(post));
@@ -129,7 +131,8 @@ await waitFor(`[...document.querySelectorAll('button')].some(b => /PDF/.test(b.t
 await clickButton("/PDF/");
 check("Hindi card appears after receipt PDF", await waitFor(cardVisible, 15000));
 check("Hindi copy rendered", /जानिए पेमेंट कब आया/.test(await evaluate(`document.querySelector('aside')?.textContent || ''`)));
-check("Hindi privacy link points to /hi/privacy/", (await evaluate(`document.querySelector('aside a')?.getAttribute('href')`)) === "/hi/privacy/#early-access");
+check("Hindi privacy link points to /hi/privacy/", (await evaluate(`document.querySelector('aside a[href*="privacy"]')?.getAttribute('href')`)) === "/hi/privacy/#early-access");
+check("Hindi tracker link opens the app in Hindi", (await evaluate(`document.querySelector('aside a[href^="/app/"]')?.getAttribute('href')`)) === "/app/?lang=hi");
 const box = await evaluate(`(() => { const r = document.querySelector('aside').getBoundingClientRect(); return { left: r.left, right: r.right, bottom: r.bottom, vw: innerWidth, vh: innerHeight }; })()`);
 check("card fits mobile viewport", box.left >= 8 && box.right <= box.vw - 8 && box.bottom <= box.vh, JSON.stringify(box));
 await shot("03-hi-receipt-card-mobile.png");
@@ -153,6 +156,46 @@ for (const [path, btn] of [["/quotation-generator/", "/PDF/"], ["/proforma-invoi
   await clickButton(btn);
   check(`card appears on ${path}`, await waitFor(cardVisible, 15000));
 }
+// QR generator (home): a real QR download shows shop-owner copy, and joining sends tool=upi-qr.
+await evaluate(`localStorage.removeItem('proupiqr-waitlist'); sessionStorage.clear(); true`);
+await go(STATIC + "/", 3000);
+const setInput = (expr, value) => evaluate(`(() => { const i = ${expr}; if (!i) return false; Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, ${JSON.stringify(value)}); i.dispatchEvent(new Event('input', { bubbles: true })); return true; })()`);
+const visibleInputs = `[...document.querySelectorAll('input')].filter(i => i.offsetParent && !['checkbox', 'color', 'radio', 'range', 'file'].includes(i.type))`;
+await evaluate(`${visibleInputs}.find(i => /@/.test(i.placeholder))?.scrollIntoView({ block: 'center' }); true`);
+// The generator is client:visible: fill it only after React has hydrated, or hydration resets the inputs.
+await waitFor(`!!document.querySelector('astro-island[component-url*="GeneratorForm"]:not([ssr])')`, 10000);
+const upiIndex = `${visibleInputs}.findIndex(i => /@/.test(i.placeholder))`;
+const filled = (await setInput(`${visibleInputs}[${upiIndex} - 1]`, "Shree Ganesh Store")) && (await setInput(`${visibleInputs}[${upiIndex}]`, "ganeshstore@oksbi"));
+await clickButton("/Generate UPI QR/");
+await waitFor(`[...document.querySelectorAll('button')].some(b => /Download QR Code/.test(b.textContent) && !b.disabled)`, 10000);
+check("QR generated on home page", filled && (await evaluate(`[...document.querySelectorAll('button')].some(b => /Download QR Code/.test(b.textContent) && !b.disabled)`)));
+check("card hidden before the QR download", !(await evaluate(cardVisible)));
+await clickButton("/Download QR Code/");
+check("card appears after QR download", await waitFor(cardVisible, 10000));
+check("QR card speaks to shops with credit customers", /Customers who pay later\?/.test(await evaluate(`document.querySelector('aside')?.textContent || ''`)));
+await shot("04-home-qr-card-desktop.png");
+await stubFetch(200);
+await typeEmail("shop@example.com");
+await clickButton("/Notify me/");
+await waitFor(`/You're on the list/.test(document.querySelector('aside')?.textContent || '')`);
+check("QR card joins with tool=upi-qr", JSON.parse((await evaluate(`window.__posts[0]?.body`)) || "{}").tool === "upi-qr");
+check("tracker link stays after joining", await evaluate(`!!document.querySelector('aside a[href="/app/"]') && /You're on the list/.test(document.querySelector('aside').textContent)`));
+
+// Hindi home: same card in Hindi. International home: the card isn't mounted at all.
+await evaluate(`localStorage.removeItem('proupiqr-waitlist'); sessionStorage.clear(); true`);
+await go(STATIC + "/hi/", 3500);
+await evaluate(`document.querySelector('input[placeholder*="@"]')?.scrollIntoView({ block: 'center' }); true`);
+await waitFor(`!!document.querySelector('astro-island[component-url*="GeneratorForm"]:not([ssr])')`, 10000);
+await evaluate(`window.dispatchEvent(new CustomEvent('proupiqr:tool-output', { detail: { tool: 'upi-qr' } })); true`);
+check("Hindi home shows the Hindi shop card", await waitFor(`/ग्राहक बाद में पैसे देते हैं/.test(document.querySelector('aside')?.textContent || '')`, 6000));
+await evaluate(`localStorage.removeItem('proupiqr-waitlist'); sessionStorage.clear(); true`);
+await go(STATIC + "/es/", 3500);
+await evaluate(`document.querySelector('input[placeholder*="@"]')?.scrollIntoView({ block: 'center' }); true`);
+await waitFor(`!!document.querySelector('astro-island[component-url*="GeneratorForm"]:not([ssr])')`, 10000);
+await evaluate(`window.dispatchEvent(new CustomEvent('proupiqr:tool-output', { detail: { tool: 'upi-qr' } })); true`);
+await sleep(1500);
+check("no tracker card on international pages (/es/)", !(await evaluate(cardVisible)));
+
 await go(STATIC + "/gst-calculator/", 2500);
 check("card not mounted on unrelated tool (/gst-calculator/)", (await evaluate(`document.querySelectorAll('astro-island[component-url*="WaitlistCard"]').length`)) === 0);
 
@@ -163,6 +206,8 @@ await go(DEV + "/invoice-generator/", 6000);
 const live = await evaluate(`fetch('/api/waitlist/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'owner@example.com', tool: 'invoice', lang: 'en' }) }).then(r => r.status)`);
 const kvUp = await fetch("http://127.0.0.1:8799/__admin/get", { method: "POST", body: JSON.stringify({ key: "waitlist:count:invoice" }) }).then((r) => r.json(), () => null);
 check("dev API saves to KV (or 503 without KV)", kvUp ? live === 200 && Number(kvUp.value) >= 1 : live === 503, `${live} ${JSON.stringify(kvUp)}`);
+const liveQr = await evaluate(`fetch('/api/waitlist/', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email: 'shop@example.com', tool: 'upi-qr', lang: 'en' }) }).then(r => r.status)`);
+check("dev API accepts tool=upi-qr", kvUp ? liveQr === 200 : liveQr === 503, String(liveQr));
 }
 
 console.log(results.join("\n"));

@@ -3,6 +3,8 @@ import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import { GENERATOR_COPY, TEMPLATE_COPY, type GeneratorLang } from "../data/generatorI18n";
+import { isWaitlistLang } from "../data/waitlist";
+import { WaitlistCard } from "./WaitlistCard";
 
 const presetLogos = {
   phonepe: "/phonepe.png", // Or SVG/PNG asset if added, default high quality SVG fallback
@@ -1948,6 +1950,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           )}
         </div>
       )}
+      {isWaitlistLang(lang) && <WaitlistCard tool="upi-qr" lang={lang} />}
     </div>
   );
 }

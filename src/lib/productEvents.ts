@@ -17,6 +17,7 @@ export const PRODUCT_EVENTS = [
   "waitlist_view",
   "waitlist_join",
   "waitlist_dismiss",
+  "tracker_opened",
   "invoice_tracked",
   "payment_recorded",
   "reminder_sent",
