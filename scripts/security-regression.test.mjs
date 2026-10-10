@@ -5,6 +5,7 @@ import { dirname, join } from "node:path";
 import {
   formatPaise,
   isTrustedMutation,
+  normalizeEmail,
   parseInrToPaise,
   requestFingerprint,
   safeDynamicDestination,
@@ -117,4 +118,88 @@ assert.match(syndicate, /zero-mdr-merchant-upi-qr-2026/);
 assert.match(syndicate, /Medium banned/);
 assert.doesNotMatch(syndicate, /publishToMedium|MEDIUM_CONFIG/);
 
-console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths passed");
+assert.equal(normalizeEmail("  Owner@Example.COM "), "owner@example.com");
+assert.equal(normalizeEmail("owner+tag@shop.co.in"), "owner+tag@shop.co.in");
+assert.equal(normalizeEmail("not-an-email"), null);
+assert.equal(normalizeEmail("a@b"), null);
+assert.equal(normalizeEmail("a..b@example.com"), null);
+assert.equal(normalizeEmail("<script>@example.com"), null);
+assert.equal(normalizeEmail(`${"a".repeat(250)}@example.com`), null);
+assert.equal(normalizeEmail(42), null);
+
+const waitlistApi = readFileSync(join(projectRoot, "src/pages/api/waitlist.ts"), "utf8");
+assert.match(waitlistApi, /isTrustedMutation\(request\)/);
+assert.match(waitlistApi, /consumeRateLimit\("waitlist"/);
+assert.match(waitlistApi, /readJsonObject\(request, 2048\)/);
+// "created" may feed an aggregate counter, but never the HTTP response (no email enumeration).
+assert.doesNotMatch(waitlistApi, /jsonResponse\([^)]*created/, "waitlist response must not depend on whether an email already exists");
+assert.match(waitlistApi, /if \(created\) await recordMetric\("waitlist_join"\);\n\s*\} catch/, "created is only used for the metric");
+assert.match(waitlistApi, /await addWaitlistEntry\(/);
+const waitlistStore = readFileSync(join(projectRoot, "src/lib/waitlistStore.ts"), "utf8");
+assert.match(waitlistStore, /'NX', 'EX'/);
+
+function kvStore_src() { return readFileSync(join(projectRoot, "src/lib/workspace/kvCloudStore.ts"), "utf8"); }
+const workspaceApi = readFileSync(join(projectRoot, "src/pages/api/v1/workspace/index.ts"), "utf8");
+for (const method of ["GET", "PUT", "DELETE"]) {
+  const handler = workspaceApi.split(`export const ${method}: APIRoute`)[1]?.split("export const")[0] ?? "";
+  assert.match(handler, /authenticatedUserId\(locals\)/, `${method} /api/v1/workspace must require sign-in`);
+  assert.match(handler, /workspaceOwner\(userId\)/, `${method} /api/v1/workspace must scope to the signed-in user`);
+  if (method !== "GET") assert.match(handler, /isTrustedMutation\(request\)/, `${method} /api/v1/workspace must reject cross-site requests`);
+}
+assert.match(workspaceApi, /readJsonObject\(request, MAX_WORKSPACE_BYTES/);
+assert.match(kvStore_src(), /!hasKv && import\.meta\.env\.DEV \? devStore : kvCloudStore/, "in-memory workspace store must be dev-only");
+const kvStore = kvStore_src();
+assert.match(kvStore, /createHash\("sha256"\)/, "workspace keys must hash the Clerk user id");
+const syncClient = readFileSync(join(projectRoot, "src/lib/workspace/sync.ts"), "utf8");
+assert.match(syncClient, /previousOwner && previousOwner !== body\.owner/, "another account's local data must never be uploaded");
+
+const payPage = readFileSync(join(projectRoot, "src/pages/i/[token].astro"), "utf8");
+assert.match(payPage, /script-src 'none'/, "pay page must forbid scripts");
+assert.match(payPage, /isTrustedMutation\(Astro\.request\)/, "pay page claims must reject cross-site posts");
+assert.match(payPage, /consumeRateLimit\("paylink-claim"/, "pay page claims must be rate limited");
+assert.doesNotMatch(payPage, /client\??\.name|clients\[/, "pay page must not render the payer's identity");
+for (const form of [payPage, readFileSync(join(projectRoot, "src/pages/c/[id].astro"), "utf8")]) {
+  assert.match(form, /headers\.set\("Referrer-Policy", "same-origin"\)/, "pages with POST forms need same-origin referrer policy (no-referrer sends Origin: null)");
+}
+const middleware = readFileSync(join(projectRoot, "src/middleware.ts"), "utf8");
+assert.match(middleware, /if \(!response\.headers\.has\(name\)\) response\.headers\.set\(name, value\)/, "middleware must not weaken page-level CSP");
+const paylinkApi = readFileSync(join(projectRoot, "src/pages/api/v1/paylinks/[token].ts"), "utf8");
+assert.match(paylinkApi, /record\.owner !== workspaceOwner\(userId\)/, "only the owner may revoke a pay link");
+
+const webhookCore = readFileSync(join(projectRoot, "src/lib/billing/webhook.ts"), "utf8");
+const firstStatement = webhookCore.split("now: number,\n): Promise<WebhookResult> {")[1]?.trim().split("\n")[0] ?? "";
+assert.match(firstStatement, /verifyWebhookSignature/, "billing webhook must verify the signature before anything else");
+const billingApi = readFileSync(join(projectRoot, "src/pages/api/v1/billing/index.ts"), "utf8");
+for (const method of ["GET", "POST"]) {
+  const handler = billingApi.split(`export const ${method}: APIRoute`)[1]?.split("export const")[0] ?? "";
+  assert.match(handler, /authenticatedUserId\(locals\)/, `${method} /api/v1/billing must require sign-in`);
+  if (method === "POST") assert.match(handler, /isTrustedMutation\(request\)/);
+}
+assert.match(billingApi, /safeCheckoutUrl\(/, "checkout URLs must be allow-listed before reaching the browser");
+const { safeCheckoutUrl } = await import("../src/lib/billing/config.ts");
+assert.equal(safeCheckoutUrl("https://rzp.io/i/abc"), "https://rzp.io/i/abc");
+assert.equal(safeCheckoutUrl("https://checkout.razorpay.com/x"), "https://checkout.razorpay.com/x");
+assert.equal(safeCheckoutUrl("https://razorpay.com.evil.example/x"), null);
+assert.equal(safeCheckoutUrl("http://rzp.io/i/abc"), null);
+assert.equal(safeCheckoutUrl("javascript:alert(1)"), null);
+
+const cronRoute = readFileSync(join(projectRoot, "src/pages/api/cron/digest.ts"), "utf8");
+assert.match(cronRoute, /timingSafeEqual/, "cron must check CRON_SECRET in constant time");
+assert.match(cronRoute, /if \(!secret\) return jsonResponse/, "cron must refuse to run without CRON_SECRET");
+const pushApi = readFileSync(join(projectRoot, "src/pages/api/v1/push/index.ts"), "utf8");
+assert.match(pushApi, /safePushEndpoint\(/, "push subscriptions must be allow-listed (SSRF)");
+for (const method of ["POST", "DELETE"]) {
+  const handler = pushApi.split(`export const ${method}: APIRoute`)[1]?.split("export const")[0] ?? "";
+  assert.match(handler, /authenticatedUserId\(locals\)/);
+  assert.match(handler, /isTrustedMutation\(request\)/);
+}
+const pushConfig = readFileSync(join(projectRoot, "src/lib/push/config.ts"), "utf8");
+assert.match(pushConfig, /allowLocalPushEndpoints = \(\): boolean => Boolean\(import\.meta\.env\.DEV\)/, "local push endpoints only in development");
+
+const adminPage = readFileSync(join(projectRoot, "src/pages/admin/metrics.astro"), "utf8");
+assert.match(adminPage, /parseAdminIds\(/, "admin page must check the ADMIN_USER_IDS allowlist");
+assert.match(adminPage, /status: 404/, "non-admins get a 404, not a hint that the page exists");
+const metricsLib = readFileSync(join(projectRoot, "src/lib/metricsCore.ts"), "utf8");
+assert.doesNotMatch(metricsLib, /email|owner|userId|vpa/i, "metrics are aggregate counters only");
+
+console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, and admin guards passed");

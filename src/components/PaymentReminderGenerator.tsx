@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import type { DocLang } from "../data/documentLang";
 import { useToolLang } from "../lib/useToolLang";
+import { trackProductEvent } from "../lib/productEvents";
 
 const draftKey = "proupiqr-payment-reminder-draft";
 
@@ -79,6 +80,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
     try {
       await navigator.clipboard.writeText(message);
       setCopied(true);
+      trackProductEvent("copy", "payment-reminder");
       setTimeout(() => setCopied(false), 2000);
     } catch {
       // Clipboard blocked; user can select manually.
@@ -87,6 +89,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
 
   function openWith(prefix: string) {
     window.open(`${prefix}${encodeURIComponent(message)}`, "_blank");
+    trackProductEvent("share", "payment-reminder");
   }
 
   return (

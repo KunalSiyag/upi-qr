@@ -220,3 +220,14 @@ export function requestFingerprint(request: Request): string {
   const address = request.headers.get("x-real-ip") || forwarded || "unknown";
   return createHash("sha256").update(address).digest("hex").slice(0, 24);
 }
+
+const EMAIL_RE = /^[A-Za-z0-9.!#$%&'*+/=?^_`{|}~-]{1,64}@[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?(?:\.[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$/;
+
+/** Trimmed, lower-cased address, or null if it is not a plausible email. */
+export function normalizeEmail(value: unknown): string | null {
+  if (typeof value !== "string") return null;
+  const email = value.trim().toLowerCase();
+  if (email.length > 254 || !EMAIL_RE.test(email)) return null;
+  if (email.split("@")[0].startsWith(".") || email.includes("..")) return null;
+  return email;
+}

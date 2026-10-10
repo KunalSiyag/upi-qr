@@ -3,6 +3,7 @@ import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { formatMoney, type DocLang } from "../data/documentLang";
 import { t } from "../data/phrases";
+import { trackProductEvent } from "../lib/productEvents";
 
 type QuoteItem = { id: number; name: string; qty: string; price: string };
 
@@ -146,6 +147,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
       pdf.save(`${safeFileName()}.pdf`);
       setPdfState("idle");
+      trackProductEvent("export_pdf", "quotation");
     } catch (err) {
       console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setPdfState("error");
@@ -157,6 +159,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       setPngState("busy");
       downloadDataUrl(await renderPaper(), `${safeFileName()}.png`);
       setPngState("idle");
+      trackProductEvent("export_png", "quotation");
     } catch (err) {
       console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setPngState("error");
@@ -194,6 +197,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(message)}`, "_blank");
       }
       setShareState("idle");
+      trackProductEvent("share", "quotation");
     } catch (err) {
       console.error("Share failed:", err);
       setShareState("idle");

@@ -2,12 +2,20 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { trackDocument } from "../lib/workspace/localStore";
 import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
 type InvoiceItem = { id: number; name: string; qty: string; price: string };
 
 const draftKey = "proupiqr-invoice-draft";
+const TRACK_LABEL: Partial<Record<DocLang, string>> = {
+  en: "Track payment",
+  hi: "पेमेंट ट्रैक करें",
+  ta: "பணத்தைக் கண்காணி",
+  te: "చెల్లింపు ట్రాక్ చేయండి",
+  mr: "पेमेंट ट्रॅक करा",
+};
 
 const EXPORT_TIMEOUT_MS = 20000;
 
@@ -302,10 +310,25 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
       downloadDataUrl(dataUrl, `${safeInvoiceNo()}.png`);
       setDownloadPngState("idle");
+      trackProductEvent("export_png", "invoice");
     } catch (err) {
       console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setDownloadPngState("error");
     }
+  }
+
+  function trackPayment() {
+    const description = items.map((item) => item.name).filter(Boolean).join(", ");
+    const result = trackDocument({
+      merchant, upiId, customer, invoiceNo, invoiceDate, dueDate,
+      totalPaise: Math.round(totals.total * 100), description,
+    });
+    if (!result) {
+      notifyExportError("Add a customer name, invoice number, date, and amount before tracking.");
+      return;
+    }
+    trackProductEvent("invoice_tracked", "invoice");
+    window.location.href = lang === "hi" ? "/app/?tab=invoices&lang=hi" : "/app/?tab=invoices";
   }
 
   function buildShareMessage() {
@@ -355,6 +378,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           console.error("Invoice image export failed:", err);
         }
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(buildShareMessage())}`, "_blank");
+        trackProductEvent("share", "invoice");
       }
 
       setShareState("idle");
@@ -388,6 +412,15 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             >
               {downloadPdfState === "busy" ? t.generating : `📄 ${t.downloadPdf}`}
             </button>
+            {template.currency === "INR" && (
+              <button
+                onClick={trackPayment}
+                title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
+                className="rounded-full border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-sun/30 transition"
+              >
+                {`📒 ${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
+              </button>
+            )}
             <button
               onClick={downloadInvoicePng}
               disabled={downloadPngState === "busy"}

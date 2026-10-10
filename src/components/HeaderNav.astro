@@ -144,6 +144,10 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
             <div class="text-xs font-bold text-forest">Invoice PDF</div>
             <div class="text-[10px] text-forest/60">GST invoices with a payment QR</div>
           </a>
+          <a href={p("payment-tracker")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">Payment tracker <span class="ml-1 rounded-full bg-sun/40 px-1.5 py-0.5 text-[9px] font-black">New</span></div>
+            <div class="text-[10px] text-forest/60">Who owes you + WhatsApp reminders</div>
+          </a>
           <a href={p("receipt-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
             <div class="text-xs font-bold text-forest">Payment receipt</div>
             <div class="text-[10px] text-forest/60">PAID stamp, UTR, and UPI QR</div>
@@ -260,6 +264,10 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
             <div class="text-xs font-bold text-forest">{chrome.developers}</div>
             <div class="text-[10px] text-forest/60">{isHindi ? "एम्बेड और API" : "Embed widget and payment API"}</div>
           </a>
+          <a href="/pricing/" class="block rounded-xl px-3 py-2 hover:bg-mint/60">
+            <div class="text-xs font-bold text-forest">{isHindi ? "प्राइसिंग" : "Pricing"}</div>
+            <div class="text-[10px] text-forest/60">{isHindi ? "मुफ्त टूल, Pro प्लान" : "Free tools, free account, Pro"}</div>
+          </a>
           <a href={p("about")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
             <div class="text-xs font-bold text-forest">{chrome.about}</div>
           </a>
@@ -330,6 +338,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
       <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.billing}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
         <a href={p("invoice-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Invoice PDF</a>
+        <a href={p("payment-tracker")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Payment Tracker</a>
         <a href={p("receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Receipt PDF</a>
         <a href={p("rent-receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Rent Receipt</a>
         <a href={p("quotation-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Quotation</a>
@@ -372,6 +381,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
       <a href={p("tools")} class="p-2 hover:text-leaf">{chrome.allTools}</a>
       <a href={p("blog")} class="p-2 hover:text-leaf">{chrome.guides}</a>
       <a href={p("developer")} class="p-2 hover:text-leaf">{chrome.developers}</a>
+      <a href="/pricing/" class="p-2 hover:text-leaf">{isHindi ? "प्राइसिंग" : "Pricing"}</a>
       <a href={p("about")} class="p-2 hover:text-leaf">{chrome.about}</a>
       <a href="/reviews/" class="p-2 hover:text-leaf">{chrome.reviews}</a>
     </div>

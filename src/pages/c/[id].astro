@@ -9,7 +9,8 @@ import QRCode from 'qrcode';
 Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 Astro.response.headers.set("Cache-Control", "no-store");
 Astro.response.headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
-Astro.response.headers.set("Referrer-Policy", "no-referrer");
+// same-origin keeps the session id private while letting the UTR form send a real Origin.
+Astro.response.headers.set("Referrer-Policy", "same-origin");
 Astro.response.headers.set("X-Frame-Options", "DENY");
 
 const { id } = Astro.params;

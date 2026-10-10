@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
+import { trackProductEvent } from "../lib/productEvents";
 import { formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
@@ -190,6 +191,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
       pdf.save(`${safeFileName("receipt")}.pdf`);
       setDownloadPdfState("idle");
+      trackProductEvent("export_pdf", "receipt");
     } catch (err) {
       console.error("PDF download failed:", err); notifyExportError("PDF export failed — please retry.");
       setDownloadPdfState("error");
@@ -203,6 +205,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
       downloadDataUrl(dataUrl, `${safeFileName("receipt")}.png`);
       setDownloadPngState("idle");
+      trackProductEvent("export_png", "receipt");
     } catch (err) {
       console.error("PNG download failed:", err); notifyExportError("PNG export failed — try the PDF instead.");
       setDownloadPngState("error");
@@ -264,6 +267,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       }
 
       setShareState("idle");
+      trackProductEvent("share", "receipt");
     } catch (err) {
       console.error("WhatsApp share failed:", err);
       setShareState("idle");

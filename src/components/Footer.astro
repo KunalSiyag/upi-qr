@@ -13,6 +13,7 @@ const flagshipTools = [
   { href: home, label: chrome.upiQrGenerator },
   { href: localeHref(lang, "universal-qr-generator"), label: "Universal QR" },
   { href: localeHref(lang, "invoice-generator"), label: "Invoice PDF" },
+  { href: localeHref(lang, "payment-tracker"), label: "Payment tracker" },
   { href: localeHref(lang, "upi-error-codes"), label: "UPI errors" },
   { href: localeHref(lang, "upi-limits"), label: "Bank UPI limits" },
   { href: localeHref(lang, "tools"), label: chrome.allTools },
@@ -71,6 +72,7 @@ const flagshipGenerators = [
         <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.legalCol}</h4>
         <ul class="space-y-2 text-xs font-medium text-forest/75">
           <li><a href="/about/" class="hover:text-leaf hover:underline">{chrome.about}</a></li>
+          <li><a href="/pricing/" class="hover:text-leaf hover:underline">Pricing</a></li>
           <li><a href="/reviews/" class="hover:text-leaf hover:underline">{chrome.reviews}</a></li>
           <li><a href="/authors/kunal-siyag/" class="hover:text-leaf hover:underline">{chrome.author}</a></li>
           <li><a href="/editorial-policy/" class="hover:text-leaf hover:underline">{chrome.editorial}</a></li>

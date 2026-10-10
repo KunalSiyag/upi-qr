@@ -1,0 +1,81 @@
+---
+export const prerender = false;
+import "../../styles/global.css";
+import { authenticatedUserId } from "../../lib/apiSecurity";
+import { lastDays, readMetricValues } from "../../lib/metrics";
+import { metricRows, parseAdminIds, type MetricRow } from "../../lib/metricsCore";
+import { WAITLIST_TOOLS } from "../../data/waitlist";
+import { kv } from "@vercel/kv";
+
+// Founder dashboard: aggregate daily counters only. Visible to ADMIN_USER_IDS; everyone else gets 404.
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+const userId = authenticatedUserId(Astro.locals);
+const admins = parseAdminIds((import.meta.env.ADMIN_USER_IDS as string | undefined) ?? process.env.ADMIN_USER_IDS);
+if (!userId || !admins.has(userId)) {
+  return new Response("Not found", { status: 404, headers: { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" } });
+}
+
+const now = Date.now();
+const days = lastDays(30, now);
+let rows: MetricRow[] = [];
+let waitlist: { tool: string; count: number }[] = [];
+let pushAccounts = 0;
+let error = "";
+try {
+  rows = metricRows(days, await readMetricValues(days));
+  const counts = await kv.mget<(string | number | null)[]>(...WAITLIST_TOOLS.map((tool) => `waitlist:count:${tool}`));
+  waitlist = WAITLIST_TOOLS.map((tool, i) => ({ tool, count: Number(counts[i] ?? 0) || 0 }));
+  pushAccounts = Number(await kv.scard("push:owners")) || 0;
+} catch {
+  error = "Couldn't read metrics from KV.";
+}
+const fmt = (n: number) => new Intl.NumberFormat("en-IN").format(n);
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Metrics · Pro UPI QR</title>
+  </head>
+  <body class="min-h-screen bg-[#fffdf6] px-4 py-8 font-sans text-forest">
+    <main class="mx-auto max-w-6xl">
+      <h1 class="text-3xl font-black">Founder metrics</h1>
+      <p class="mt-1 text-sm text-forest/60">Last 30 days, India time. Aggregate counters only. Product analytics (exports, tracker events) live in Vercel Web Analytics.</p>
+      {error && <p class="mt-4 rounded-xl bg-coral/15 p-3 text-sm font-bold text-[#a8321d]">{error}</p>}
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {rows.map((row) => {
+          const max = Math.max(1, ...row.series);
+          return (
+            <section class="rounded-2xl border border-forest/10 bg-white p-4">
+              <h2 class="text-xs font-bold text-forest/60">{row.label}</h2>
+              <p class="mt-1 text-2xl font-black tabular-nums">{fmt(row.last7)} <span class="text-xs font-bold text-forest/50">last 7 days</span></p>
+              <p class="text-xs text-forest/60">
+                {row.change === null ? "no prior week" : `${row.change >= 0 ? "+" : ""}${row.change}% vs previous 7`} · {fmt(row.total)} in 30 days
+              </p>
+              <div class="mt-3 flex h-10 items-end gap-[2px]" aria-hidden="true">
+                {row.series.map((v) => <span class="flex-1 rounded-sm bg-leaf/70" style={`height:${Math.max(4, (v / max) * 100)}%`}></span>)}
+              </div>
+            </section>
+          );
+        })}
+      </div>
+
+      <div class="mt-6 grid gap-3 sm:grid-cols-2">
+        <section class="rounded-2xl border border-forest/10 bg-white p-4">
+          <h2 class="text-sm font-black">Early-access list by tool (all time)</h2>
+          <ul class="mt-2 space-y-1 text-sm">
+            {waitlist.map((w) => <li class="flex justify-between"><span>{w.tool}</span><span class="font-bold tabular-nums">{fmt(w.count)}</span></li>)}
+          </ul>
+        </section>
+        <section class="rounded-2xl border border-forest/10 bg-white p-4">
+          <h2 class="text-sm font-black">Accounts with morning reminders on</h2>
+          <p class="mt-2 text-3xl font-black tabular-nums">{fmt(pushAccounts)}</p>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

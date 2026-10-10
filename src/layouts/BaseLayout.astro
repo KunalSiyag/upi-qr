@@ -16,11 +16,13 @@ interface Props {
   schema?: Record<string, unknown> | Record<string, unknown>[];
   image?: string;
   noindex?: boolean;
+  /** Web app manifest; /app/ installs as the payments app. */
+  manifest?: string;
   alternates?: { lang: string; url: string }[];
   preloadImage?: { href: string; type?: string };
 }
 
-const { title, description, canonical, schema, image, noindex = false, alternates, preloadImage } = Astro.props;
+const { title, description, canonical, schema, image, noindex = false, alternates, preloadImage, manifest = "/manifest.json" } = Astro.props;
 const normalizedPath = Astro.url.pathname.endsWith("/") ? Astro.url.pathname : Astro.url.pathname + "/";
 const canonicalUrl = canonical ?? new URL(normalizedPath, Astro.site).toString();
 const defaultOgImage = DEFAULT_OG_IMAGE.src;
@@ -138,8 +140,8 @@ if (cleanPath !== "/") {
     <link rel="preload" as="image" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="shortcut icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="apple-touch-icon" href="/favicon.svg" />
-    <link rel="manifest" href="/manifest.json" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href={manifest} />
     {alternates
       ? alternates.map((alt) => <link rel="alternate" hreflang={alt.lang} href={alt.url} />)
       : (

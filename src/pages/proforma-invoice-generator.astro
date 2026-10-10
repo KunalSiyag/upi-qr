@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { ProformaInvoiceGenerator } from "../components/ProformaInvoiceGenerator";
+import { WaitlistCard } from "../components/WaitlistCard";
 
 const title = "Proforma Invoice Generator - Advance Payment Format | Pro UPI QR";
 const description = "Create proforma invoice PDFs for advance payments and order confirmations — items, taxes, buyer PO reference, terms, and an optional UPI advance QR. Free, browser-only.";
@@ -93,6 +94,7 @@ const schema = {
     <section id="proforma-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
         <ProformaInvoiceGenerator client:visible />
+        <WaitlistCard client:idle tool="proforma" lang="en" />
       </div>
     </section>
 

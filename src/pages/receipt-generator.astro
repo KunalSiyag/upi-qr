@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { ReceiptGenerator } from "../components/ReceiptGenerator";
+import { WaitlistCard } from "../components/WaitlistCard";
 
 const title = "Free Payment Receipt Generator with UPI QR & PAID Stamp";
 const description = "Create a professional payment receipt PDF with PAID stamp and UPI QR in seconds. Ideal for shops, freelancers, tutors, and landlords. Browser-only, no signup.";
@@ -97,6 +98,7 @@ const schema = {
     <section id="receipt-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
         <ReceiptGenerator client:visible lang="en" />
+        <WaitlistCard client:idle tool="receipt" lang="en" />
       </div>
     </section>
 

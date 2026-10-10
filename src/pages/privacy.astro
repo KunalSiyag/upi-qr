@@ -11,7 +11,7 @@ const description = "Learn which Pro UPI QR tools stay local, what cloud QR and 
       <a href="/" class="text-sm font-bold text-leaf hover:underline">&larr; Back to Generator</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">Privacy Policy</h1>
-      <p class="mt-2 text-xs text-forest/50">Last Updated: August 28, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">Last Updated: October 10, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
@@ -31,7 +31,7 @@ const description = "Learn which Pro UPI QR tools stay local, what cloud QR and 
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">3. Browser Storage and Optional Groq Requests</h2>
           <p>
-            Many tools save drafts in localStorage on your device. Clearing site data removes those drafts. The menu tool can optionally call Groq directly from your browser using an API key you provide; when you use that option, the key is kept in browser storage and your menu prompt is sent directly to Groq under Groq's terms. It is not routed through or stored by our server.
+            Many tools save drafts in localStorage on your device. The payments workspace at /app/ (payment tracker) keeps your business details, clients, invoices, payments, and reminder history there too; it is not uploaded unless you sign in to sync (section 4). Clearing site data removes all of it, so use the workspace's backup download. Bank statement files you import into the tracker are read inside your browser and never uploaded; only the payments you choose to record are saved. The menu tool can optionally call Groq directly from your browser using an API key you provide; when you use that option, the key is kept in browser storage and your menu prompt is sent directly to Groq under Groq's terms. It is not routed through or stored by our server.
           </p>
         </section>
 
@@ -39,6 +39,18 @@ const description = "Learn which Pro UPI QR tools stay local, what cloud QR and 
           <h2 class="text-xl font-bold text-forest">4. Accounts and Dynamic QR Campaigns</h2>
           <p>
             Clerk processes account identity, authentication cookies, and session data for sign-in and dashboard features. Merchant profiles store an account identifier, merchant name, UPI ID, and secret API credential in Vercel KV. For a dynamic QR campaign, we store the account identifier, server-generated campaign ID, title, HTTPS or UPI destination, category, optional expiry date, pause state, and aggregate mobile/desktop scan counts. The destination is disclosed when someone follows that campaign's QR. Individual scan histories and precise locations are not retained by the campaign service.
+          </p>
+          <p>
+            <strong>Payments workspace sync (optional).</strong> If you sign in on the payment tracker, your workspace — business name, UPI ID, phone and GSTIN you entered, client names and contact details, invoice numbers, amounts, dates, descriptions, payments with any UTR you typed, and reminder timestamps — is stored in Vercel KV under a hashed account key so it can sync between your devices. Reminder messages themselves are not stored; WhatsApp and SMS open on your device. The cloud copy stays until you choose Settings → Delete cloud copy or ask us to delete your account. Deleting the cloud copy does not erase the copy saved in your browser.
+          </p>
+          <p>
+            <strong>Pay links.</strong> When you create a pay link for an invoice, anyone with the link can see your business name, UPI ID, the invoice number, description, due date, and the amount still due. The page never shows your client's name or contact details. A Pro statement link for a client shows, instead of one invoice, the number, dates, and amount due of each of that client's unpaid invoices and the total — never descriptions, names, or contact details. We store the link's random token with a hashed account key and invoice reference until you turn the link off. If a payer submits "I've paid", we store the UTR they typed, an optional amount, and the time until you confirm or dismiss it; a submitted UTR is never treated as proof of payment. Pro UPI QR never receives or holds the money — payments go directly to your UPI ID.
+          </p>
+          <p>
+            <strong>Pro subscriptions.</strong> Razorpay processes Pro plan payments on its own checkout page; we never receive your card number or UPI PIN. We store your Razorpay subscription ID, plan interval, subscription status, current period end, and whether you cancelled, under a hashed account key, plus webhook event IDs for seven days to ignore duplicate notifications. Razorpay keeps payment records under its own privacy policy and legal obligations.
+          </p>
+          <p>
+            <strong>Morning reminder notifications (optional).</strong> If you turn them on, we store your browser's push subscription (an endpoint URL issued by your browser's push service, such as Google, Apple, or Mozilla, and its encryption keys) under your hashed account key, for up to five devices. Each morning our server reads your synced workspace to build a short summary — how many invoices to chase, the overdue total, and the top client and amount — and sends it encrypted end to end, so the push service cannot read it. The notification appears on your device, including the lock screen. Turn it off in the tracker's Settings or your browser; expired subscriptions are deleted automatically.
           </p>
         </section>
 
@@ -49,29 +61,36 @@ const description = "Learn which Pro UPI QR tools stay local, what cloud QR and 
           </p>
         </section>
 
+        <section id="early-access" class="scroll-mt-28 space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. Early-Access List</h2>
+          <p>
+            After you download or share a document from the invoice, receipt, quotation, proforma, or payment-reminder tools, we may offer an optional early-access list for a future workspace (saved invoices and clients, payment reminders, paid tracking). Joining is never required to use any tool. If you join, we store only your email address, the tool you were using, your page language, whether you agreed to answer a few follow-up questions, and the sign-up date, in Vercel KV. Nothing from the document itself is sent. We use the address only to invite you and, if you opted in, to ask those questions. We do not sell or share it. Each entry is deleted automatically 12 months after sign-up, or earlier on request.
+          </p>
+        </section>
+
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">6. Hosting, Security, and Technical Logs</h2>
+          <h2 class="text-xl font-bold text-forest">7. Hosting, Security, and Technical Logs</h2>
           <p>
             Vercel hosts the site and server functions and may process standard request information such as IP address, user agent, timestamps, and error logs under its own privacy terms. We use short-lived hashed request fingerprints for abuse rate limits; the rate-limit keys expire with their configured windows. Clerk and Groq process data only for the features described above.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">7. Retention and Deletion</h2>
+          <h2 class="text-xl font-bold text-forest">8. Retention and Deletion</h2>
           <p>
-            Dynamic campaigns remain until their owner deletes them or we remove them for abuse. Checkout sessions expire after 24 hours, and signed payment-response records expire after 90 days. Merchant account settings remain while the account is active. To request account or merchant-profile deletion, email us from the address associated with your account. Provider security logs follow the provider's retention policy.
+            Dynamic campaigns remain until their owner deletes them or we remove them for abuse. Checkout sessions expire after 24 hours, and signed payment-response records expire after 90 days. Early-access entries expire 12 months after sign-up. Synced workspaces remain until you delete the cloud copy or your account; pay links remain until you turn them off, and payer claims until you confirm or dismiss them. Merchant account settings remain while the account is active. To request account, merchant-profile, or early-access deletion, email us from the address you used. Provider security logs follow the provider's retention policy.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">8. Analytics, Advertising, and External Links</h2>
+          <h2 class="text-xl font-bold text-forest">9. Analytics, Advertising, and External Links</h2>
           <p>
-            We do not run Google Analytics or Google AdSense. Vercel Speed Insights records cookie-free Core Web Vitals (LCP, INP, CLS) for the page, not form contents. Vercel Web Analytics records page views and named product events such as QR generated, PNG/PDF export, share, copy, and tool error. Those events include only an action name and a short tool slug. They never include a VPA, payee name, amount, invoice text, or uploaded file. Links to UPI apps, affiliate merchants, or other websites leave Pro UPI QR and are governed by those services.
+            We do not run Google Analytics or Google AdSense. Vercel Speed Insights records cookie-free Core Web Vitals (LCP, INP, CLS) for the page, not form contents. Vercel Web Analytics records page views and named product events such as QR generated, PNG/PDF export, share, copy, tool error, early-access card viewed, joined, or dismissed, and payment-tracker invoice added, payment recorded, or reminder opened. Those events include only an action name and a short tool slug. They never include a VPA, payee name, amount, invoice text, or uploaded file. Our server also keeps daily aggregate counts, such as how many pay links were created or digests delivered, with no account, device, or personal identifiers attached. Links to UPI apps, affiliate merchants, or other websites leave Pro UPI QR and are governed by those services.
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">9. Contact and Data Requests</h2>
+          <h2 class="text-xl font-bold text-forest">10. Contact and Data Requests</h2>
           <p>
             For privacy questions, access requests, deletion requests, or corrections, email <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a>. Include only the information needed to locate your account; never email a UPI PIN, OTP, or banking password.
           </p>

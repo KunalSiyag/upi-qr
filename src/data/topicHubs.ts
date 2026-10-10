@@ -456,6 +456,7 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/quotation-generator/", name: "Quotation / estimate generator", description: "Price quotes with validity dates, terms, and optional advance QR." },
           { href: "/proforma-invoice-generator/", name: "Proforma invoice generator", description: "Advance-payment documents with buyer PO reference." },
           { href: "/invoice-generator/", name: "Invoice PDF generator", description: "GST-ready invoices with country templates and an embedded UPI QR." },
+          { href: "/payment-tracker/", name: "Invoice payment tracker", description: "See who owes you, send WhatsApp reminders, and mark UPI payments received." },
           { href: "/payment-reminder-generator/", name: "Payment reminder generator", description: "Friendly, professional, or firm overdue copy for WhatsApp, SMS, email." },
           { href: "/receipt-generator/", name: "Payment receipt generator", description: "PAID-stamped receipts with mode, UTR, and UPI QR." },
           { href: "/paid-stamp-generator/", name: "Paid stamp generator", description: "Stamp PAID with date and signature on a bill photo, offline." },
@@ -565,12 +566,14 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/cash-denomination-calculator/", name: "Night-close till", description: "Count notes, add UPI and card, petty cash, bank deposit, variance PDF." },
           { href: "/upi-limits/", name: "Bank UPI limits", description: "Daily transfer caps before you accept a large payment." },
           { href: "/merchant-reconciliation/", name: "UPI reconciliation tool", description: "Match invoices to UTRs, spot short payments, export monthly reports." },
+          { href: "/payment-tracker/", name: "Invoice payment tracker", description: "Import your bank statement and match UPI credits to open invoices." },
           { href: "/msme-receivables/", name: "MSME receivables tracker", description: "Invoice aging, 45-day due tracker, and Section 16 demand letters." },
         ],
       },
       {
         heading: "MSME receivables",
         tools: [
+          { href: "/payment-tracker/", name: "Invoice payment tracker", description: "Aging buckets, 45-day flags, reminders, and part payments in one place." },
           { href: "/msmed-interest-calculator/", name: "MSMED interest calculator", description: "RBI-linked delayed-payment interest for MSME suppliers." },
           { href: "/treds-calculator/", name: "TReDS discounting calculator", description: "Net proceeds when you discount a large-buyer invoice." },
           { href: "/msme-receivables/", name: "MSME receivables tracker", description: "Invoice aging, 45-day due tracker, and Section 16 demand letters." },

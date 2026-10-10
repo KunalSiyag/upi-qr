@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { QuotationGenerator } from "../components/QuotationGenerator";
+import { WaitlistCard } from "../components/WaitlistCard";
 
 const title = "Free Quotation Generator with GST & UPI Advance QR | Pro UPI QR";
 const description = "Create professional quotation and estimate PDFs with items, tax, validity date, terms, and an optional UPI advance QR. Free, browser-only, no signup.";
@@ -93,6 +94,7 @@ const schema = {
     <section id="quotation-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
         <QuotationGenerator client:visible />
+        <WaitlistCard client:idle tool="quotation" lang="en" />
       </div>
     </section>
 

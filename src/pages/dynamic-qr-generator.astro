@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { DynamicQrGenerator } from "../components/DynamicQrGenerator";
+import ClerkClient from "../components/ClerkClient.astro";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
@@ -39,6 +40,7 @@ const schema = {
 
       <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <DynamicQrGenerator client:visible />
+        <ClerkClient />
       </div>
 
       <AffiliateProducts />

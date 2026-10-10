@@ -1,0 +1,161 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../data/pricing";
+import { FREE_ACTIVE_PAYLINKS } from "../lib/workspace/paylinks";
+
+const title = "Pricing — Free UPI Tools, Payment Tracker & Pro | Pro UPI QR";
+const description = `Every UPI QR, invoice and calculator stays free. A free account adds sync and ${FREE_ACTIVE_PAYLINKS} pay links. Pro is ${PRO_PRICES.monthly.label}/month for unlimited pay links. We take 0% of your payments.`;
+const url = "https://www.proupiqr.in/pricing/";
+const signUp = "/sign-up/?redirect_url=" + encodeURIComponent("/app/?tab=settings");
+
+const tiers = [
+  {
+    name: "Free",
+    tag: "No account",
+    price: "₹0",
+    per: "forever",
+    blurb: "Everything you need to get paid on UPI, saved in your browser.",
+    features: [
+      "All UPI QR generators, posters and stickers",
+      "Invoices, receipts, quotations and business calculators",
+      "Payment tracker: who owes you, overdue first",
+      "Monthly fees: invoices that repeat every month",
+      "WhatsApp and SMS reminders in one tap (English or Hindi)",
+      "Match bank statement credits to invoices",
+      "Backup file and CSV export",
+    ],
+    cta: { label: "Open the tracker", href: "/app/" },
+    featured: false,
+  },
+  {
+    name: "Free account",
+    tag: "Free sign-up",
+    price: "₹0",
+    per: "forever",
+    blurb: "Your tracker on phone and laptop, plus links clients can pay from.",
+    features: [
+      "Everything in Free",
+      "Sync between your devices",
+      `${FREE_ACTIVE_PAYLINKS} active pay links with live amount, UPI button and QR`,
+      "Clients send their UTR back; you confirm with one tap",
+      "Delete your cloud copy anytime",
+    ],
+    cta: { label: "Create free account", href: signUp },
+    featured: true,
+  },
+  {
+    name: "Pro",
+    tag: `or ${PRO_PRICES.yearly.label}/year — save ₹${YEARLY_SAVING_RUPEES}`,
+    price: PRO_PRICES.monthly.label,
+    per: "per month",
+    blurb: "For businesses sending lots of invoices every month.",
+    features: [
+      "Everything in Free account",
+      "Unlimited active pay links",
+      "Client statement links: all dues on one page with one UPI button",
+      "Pay pages without our “send your own pay links” line",
+      "Early access to automatic WhatsApp reminders (in development)",
+    ],
+    cta: { label: "Upgrade to Pro", href: "/app/?tab=settings&upgrade=monthly" },
+    featured: false,
+  },
+];
+
+const faqs = [
+  {
+    question: "Do you take a cut of my payments?",
+    answer: "No. Pro UPI QR takes 0% of your payments. Your client pays from their UPI app straight to your UPI ID. We never hold, route, or settle money, so there is no MDR or gateway fee from us.",
+  },
+  {
+    question: "Is Pro UPI QR really free?",
+    answer: "Yes. Every QR generator, document tool, calculator, and the payment tracker work without an account and without paying. A free account adds sync and pay links. Pro is only for businesses that need more than the free pay link limit.",
+  },
+  {
+    question: "How do I pay for Pro?",
+    answer: "Upgrade from Settings in the payment tracker. Checkout opens on Razorpay's secure page, where you can pay with UPI AutoPay or a card. Pro UPI QR never sees your card details or UPI PIN.",
+  },
+  {
+    question: "Can I cancel anytime?",
+    answer: "Yes. Cancel from Settings. Renewals stop, and Pro stays on until the end of the period you already paid for. Your invoices, clients, and payments stay in your account.",
+  },
+  {
+    question: "What happens to my pay links if I go back to Free?",
+    answer: `Pay links you already shared keep working. You can't create new ones while more than ${FREE_ACTIVE_PAYLINKS} are active, so turn off links for paid invoices to make room.`,
+  },
+  {
+    question: "Where is my data stored?",
+    answer: "Without an account, only in your browser. With an account, a synced copy is kept so your devices match; you can delete it from Settings at any time. See the privacy policy for exactly what is stored.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    { "@type": "WebPage", name: "Pro UPI QR pricing", url, description },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({ "@type": "Question", name: faq.question, acceptedAnswer: { "@type": "Answer", text: faq.answer } })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "Pricing", item: url },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-6 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-6xl text-center">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center justify-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span>/</span>
+          <span class="font-bold text-forest" aria-current="page">Pricing</span>
+        </nav>
+        <h1 class="mx-auto max-w-3xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free for every shop. Pro when you send a lot of invoices.</h1>
+        <p class="mx-auto mt-5 max-w-2xl text-lg leading-8 text-forest/75">No signup for the tools. No commission on payments — money goes straight from your client's UPI app to your bank.</p>
+        <p class="mx-auto mt-5 inline-flex rounded-full bg-forest px-5 py-2 text-sm font-black text-sun">0% of your payments. Always.</p>
+      </div>
+    </section>
+
+    <section class="px-4 py-8 md:px-6 lg:px-8" aria-label="Plans">
+      <div class="mx-auto grid max-w-6xl gap-5 md:grid-cols-3">
+        {tiers.map((tier) => (
+          <article class={`flex flex-col rounded-[2rem] border p-6 ${tier.featured ? "border-forest bg-forest text-white shadow-[0_18px_48px_rgba(17,59,44,0.25)]" : "border-white/75 bg-white/90 text-forest shadow-[0_18px_48px_rgba(17,59,44,0.08)]"}`}>
+            <h2 class="text-xl font-black">{tier.name}</h2>
+            <p class={`mt-1 text-xs font-bold ${tier.featured ? "text-sun" : "text-leaf"}`}>{tier.tag}</p>
+            <p class="mt-5"><span class="text-4xl font-black tabular-nums">{tier.price}</span> <span class={`text-sm ${tier.featured ? "text-white/70" : "text-forest/60"}`}>{tier.per}</span></p>
+            <p class={`mt-3 text-sm leading-6 ${tier.featured ? "text-white/80" : "text-forest/72"}`}>{tier.blurb}</p>
+            <ul class="mt-5 flex-1 space-y-2 text-sm">
+              {tier.features.map((feature) => <li class="flex gap-2"><span aria-hidden="true">✓</span><span>{feature}</span></li>)}
+            </ul>
+            <a href={tier.cta.href} class={`mt-6 block rounded-full px-5 py-3 text-center text-sm font-black transition ${tier.featured ? "bg-sun text-forest hover:bg-white" : "bg-forest text-white hover:bg-leaf"}`}>{tier.cta.label}</a>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Pricing questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+        <p class="mt-8 text-sm text-forest/70">
+          See what's stored in the <a href="/privacy/" class="font-bold text-leaf underline">privacy policy</a> and the plan terms in the <a href="/terms/" class="font-bold text-leaf underline">terms of service</a>. Start with the <a href="/payment-tracker/" class="font-bold text-leaf underline">free payment tracker</a>.
+        </p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

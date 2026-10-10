@@ -64,6 +64,9 @@ jobs:
       - name: Security regression checks
         run: npm run security:check
 
+      - name: Workspace model and sync tests
+        run: npm run test:workspace
+
       - name: RSS validity
         run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"
 

@@ -7,13 +7,35 @@
   "background_color": "#fffdf6",
   "theme_color": "#113b2c",
   "orientation": "portrait-primary",
-  "categories": ["business", "finance", "utilities"],
+  "categories": [
+    "business",
+    "finance",
+    "utilities"
+  ],
   "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
     {
       "src": "/favicon.svg",
       "sizes": "any",
       "type": "image/svg+xml",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ],
   "shortcuts": [
@@ -22,28 +44,52 @@
       "short_name": "PhonePe QR",
       "description": "Generate PhonePe compatible payment QR code",
       "url": "/phonepe-qr-generator/",
-      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Google Pay QR Generator",
       "short_name": "Google Pay QR",
       "description": "Generate GPay compatible payment QR code",
       "url": "/google-pay-qr-generator/",
-      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "Bulk QR Sheet Generator",
       "short_name": "Bulk QR",
       "description": "Generate printable A4 QR sticker sheets",
       "url": "/bulk-qr/",
-      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     },
     {
       "name": "GST Invoice QR Calculator",
       "short_name": "GST Calculator",
       "description": "Calculate GST and generate payment QR",
       "url": "/gst-calculator/",
-      "icons": [{ "src": "/favicon.svg", "sizes": "any" }]
+      "icons": [
+        {
+          "src": "/icons/icon-192.png",
+          "sizes": "192x192",
+          "type": "image/png"
+        }
+      ]
     }
   ]
 }

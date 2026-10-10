@@ -1,0 +1,17 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+import { PaymentsWorkspace } from "../../components/workspace/PaymentsWorkspace";
+import ClerkClient from "../../components/ClerkClient.astro";
+
+// Private, per-device workspace: never indexed. The public, indexable entry
+// point is /payment-tracker/.
+const title = "Payments workspace | Pro UPI QR";
+const description = "Track invoices, record UPI payments, and send WhatsApp payment reminders. Free, no signup, saved in your browser.";
+---
+
+<BaseLayout title={title} description={description} noindex={true} manifest="/app.webmanifest">
+  <main class="px-4 pb-16 pt-6 md:px-6 lg:px-8">
+    <PaymentsWorkspace client:load />
+    <ClerkClient />
+  </main>
+</BaseLayout>

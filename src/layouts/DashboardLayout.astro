@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "./BaseLayout.astro";
+import ClerkClient from "../components/ClerkClient.astro";
 
 interface Props {
   title: string;
@@ -12,4 +13,5 @@ Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
 
   <BaseLayout title={title} description={description} noindex={true}>
     <slot />
+    <ClerkClient />
   </BaseLayout>

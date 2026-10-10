@@ -1,6 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { InvoiceGenerator } from "../components/InvoiceGenerator";
+import { WaitlistCard } from "../components/WaitlistCard";
 
 const title = "Free UPI Invoice Generator with QR Code PDF | Pro UPI QR";
 const description = "Create a professional invoice PDF with an embedded UPI QR code for freelancers, shops, tuition teachers, and small businesses. Browser-only, no login required.";
@@ -98,6 +99,7 @@ const schema = {
     <section id="invoice-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
         <InvoiceGenerator client:visible lang="en" />
+        <WaitlistCard client:idle tool="invoice" lang="en" />
       </div>
     </section>
 

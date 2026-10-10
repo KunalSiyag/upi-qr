@@ -11,7 +11,7 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
       <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; जनरेटर पर वापस जाएं</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">गोपनीयता नीति (Privacy Policy)</h1>
-      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 28 अगस्त, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 10 अक्टूबर, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
@@ -31,7 +31,7 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">3. Browser Storage और वैकल्पिक Groq अनुरोध</h2>
           <p>
-            कई टूल draft को आपके device के localStorage में रखते हैं। Site data साफ करने पर ये draft हट जाते हैं। Menu tool में आप अपनी Groq API key देकर AI विकल्प चला सकते हैं। तब key browser storage में रहती है और menu prompt सीधे Groq को भेजा जाता है; वह हमारे server से होकर नहीं जाता और हमारे server पर store नहीं होता।
+            कई टूल draft को आपके device के localStorage में रखते हैं। /app/ पर payments workspace (payment tracker) आपके business details, ग्राहक, invoice, payment और reminder history भी वहीं रखता है; जब तक आप sync के लिए sign in न करें (section 4), यह upload नहीं होता। Site data साफ करने पर यह सब हट जाता है, इसलिए workspace का backup download करें। Tracker में import की गई bank statement file आपके browser में ही पढ़ी जाती है और कभी upload नहीं होती; सिर्फ वे payments save होते हैं जिन्हें आप दर्ज करना चुनते हैं। Menu tool में आप अपनी Groq API key देकर AI विकल्प चला सकते हैं। तब key browser storage में रहती है और menu prompt सीधे Groq को भेजा जाता है; वह हमारे server से होकर नहीं जाता और हमारे server पर store नहीं होता।
           </p>
         </section>
 
@@ -39,6 +39,18 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
           <h2 class="text-xl font-bold text-forest">4. Account और Dynamic QR Campaign</h2>
           <p>
             Clerk sign-in, account identity, authentication cookies और session data संभालता है। Merchant profile में account ID, merchant name, UPI ID और secret API credential Vercel KV में रखे जाते हैं। Dynamic QR के लिए account ID, server-generated campaign ID, title, HTTPS या UPI destination, category, optional expiry, pause status और कुल mobile/desktop scan counts store होते हैं। QR खोलने वाले व्यक्ति को destination मिलना आवश्यक है। Campaign service individual scan history या सटीक location store नहीं करती।
+          </p>
+          <p>
+            <strong>Payments workspace sync (वैकल्पिक)।</strong> Payment tracker में sign in करने पर आपका workspace — business name, UPI ID, आपके दिए phone और GSTIN, ग्राहकों के नाम और संपर्क, invoice number, राशि, तारीख, विवरण, payments और आपके लिखे UTR, तथा reminder का समय — devices के बीच sync के लिए hashed account key के साथ Vercel KV में रखा जाता है। Reminder message store नहीं होते; WhatsApp और SMS आपके device पर खुलते हैं। Cloud copy तब तक रहती है जब तक आप Settings → Delete cloud copy न चुनें या account हटाने को न कहें। Cloud copy हटाने से browser में रखी copy नहीं हटती।
+          </p>
+          <p>
+            <strong>Pay links।</strong> किसी invoice का pay link बनाने पर link वाला कोई भी व्यक्ति आपका business name, UPI ID, invoice number, विवरण, due date और बाकी राशि देख सकता है। Page पर आपके ग्राहक का नाम या संपर्क कभी नहीं दिखता। किसी ग्राहक का Pro statement link एक invoice की जगह उस ग्राहक के हर बकाया invoice का number, तारीखें और राशि तथा कुल बकाया दिखाता है — कभी विवरण, नाम या संपर्क नहीं। Link का random token, hashed account key और invoice reference तब तक रखे जाते हैं जब तक आप link बंद न करें। Payer के "I've paid" भेजने पर उसका लिखा UTR, वैकल्पिक राशि और समय तब तक रखे जाते हैं जब तक आप पुष्टि या खारिज न करें; जमा किया गया UTR कभी भुगतान का प्रमाण नहीं माना जाता। Pro UPI QR पैसे न लेता है न रखता है — भुगतान सीधे आपकी UPI ID पर जाता है।
+          </p>
+          <p>
+            <strong>Pro subscription।</strong> Pro plan का भुगतान Razorpay अपने checkout page पर process करता है; आपका card number या UPI PIN हमें कभी नहीं मिलता। हम hashed account key के साथ Razorpay subscription ID, plan interval, subscription status, मौजूदा अवधि की समाप्ति और cancel की जानकारी रखते हैं, साथ ही duplicate notification रोकने के लिए webhook event ID सात दिन तक। Razorpay भुगतान रिकॉर्ड अपनी privacy policy और कानूनी दायित्वों के अनुसार रखता है।
+          </p>
+          <p>
+            <strong>सुबह के reminder notification (वैकल्पिक)।</strong> इन्हें चालू करने पर हम आपके browser की push subscription (Google, Apple या Mozilla जैसी push service का endpoint URL और उसकी encryption keys) hashed account key के साथ, अधिकतम पाँच devices के लिए रखते हैं। हर सुबह हमारा server आपके sync किए workspace से एक छोटा सार बनाता है — कितने invoice पर follow-up करना है, कुल बकाया, और सबसे ऊपर वाला ग्राहक व राशि — और उसे end-to-end encrypted भेजता है, ताकि push service उसे पढ़ न सके। Notification आपके device पर, lock screen सहित, दिखता है। इसे tracker की Settings या browser से बंद करें; expired subscriptions अपने-आप हट जाती हैं।
           </p>
         </section>
 
@@ -49,29 +61,36 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
           </p>
         </section>
 
+        <section id="early-access" class="scroll-mt-28 space-y-3">
+          <h2 class="text-xl font-bold text-forest">6. Early-Access सूची</h2>
+          <p>
+            Invoice, receipt, quotation, proforma या payment-reminder टूल से document download या share करने के बाद हम एक भविष्य के workspace (सेव किए गए invoice और ग्राहक, payment reminder, paid tracking) की वैकल्पिक early-access सूची दिखा सकते हैं। किसी भी टूल को इस्तेमाल करने के लिए इसमें जुड़ना ज़रूरी नहीं है। जुड़ने पर हम Vercel KV में केवल आपका email address, आप कौन सा टूल इस्तेमाल कर रहे थे, page की भाषा, क्या आपने कुछ follow-up सवालों के जवाब देने की सहमति दी, और sign-up की तारीख रखते हैं। Document की कोई सामग्री नहीं भेजी जाती। Email का उपयोग केवल आपको आमंत्रित करने और (सहमति होने पर) वे सवाल पूछने के लिए होता है। हम इसे बेचते या साझा नहीं करते। हर entry sign-up के 12 महीने बाद अपने-आप हट जाती है, या अनुरोध पर पहले।
+          </p>
+        </section>
+
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">6. Hosting, Security और Technical Logs</h2>
+          <h2 class="text-xl font-bold text-forest">7. Hosting, Security और Technical Logs</h2>
           <p>
             Vercel site और server functions host करता है और अपनी privacy terms के अनुसार IP address, user agent, timestamp और error log जैसी सामान्य request information process कर सकता है। Abuse रोकने के लिए हम थोड़े समय वाले hashed request fingerprints उपयोग करते हैं; rate-limit key अपनी निर्धारित window के बाद expire हो जाती हैं।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">7. Data Retention और Deletion</h2>
+          <h2 class="text-xl font-bold text-forest">8. Data Retention और Deletion</h2>
           <p>
-            Dynamic campaign owner द्वारा delete किए जाने तक या abuse के कारण हटाए जाने तक रहती है। Checkout 24 घंटे और signed payment response 90 दिन में expire होते हैं। Merchant settings account active रहने तक रहती हैं। Account या merchant profile हटाने के लिए अपने account वाले email address से हमें लिखें।
+            Dynamic campaign owner द्वारा delete किए जाने तक या abuse के कारण हटाए जाने तक रहती है। Checkout 24 घंटे और signed payment response 90 दिन में expire होते हैं। Early-access entries sign-up के 12 महीने बाद expire होती हैं। Sync किया गया workspace तब तक रहता है जब तक आप cloud copy या account न हटाएं; pay link तब तक जब तक आप उसे बंद न करें, और payer के दावे तब तक जब तक आप पुष्टि या खारिज न करें। Merchant settings account active रहने तक रहती हैं। Account, merchant profile या early-access entry हटाने के लिए उसी email address से हमें लिखें।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">8. Analytics, Advertising और बाहरी लिंक</h2>
+          <h2 class="text-xl font-bold text-forest">9. Analytics, Advertising और बाहरी लिंक</h2>
           <p>
-            Google Analytics या Google AdSense नहीं चलता। Vercel Speed Insights cookie-free Core Web Vitals (LCP, INP, CLS) मापता है, फ़ॉर्म सामग्री नहीं। Vercel Web Analytics page views और नामित product events (QR generate, PNG/PDF export, share, copy, tool error) रिकॉर्ड करता है। इनमें केवल action नाम और छोटा tool slug होता है — VPA, payee नाम, राशि, invoice text या uploaded file नहीं। UPI apps या affiliate links Pro UPI QR से बाहर जाते हैं।
+            Google Analytics या Google AdSense नहीं चलता। Vercel Speed Insights cookie-free Core Web Vitals (LCP, INP, CLS) मापता है, फ़ॉर्म सामग्री नहीं। Vercel Web Analytics page views और नामित product events (QR generate, PNG/PDF export, share, copy, tool error, early-access card देखा, जुड़े या बंद किया, और payment tracker में invoice जोड़ा, payment दर्ज किया या reminder खोला) रिकॉर्ड करता है। इनमें केवल action नाम और छोटा tool slug होता है — VPA, payee नाम, राशि, invoice text या uploaded file नहीं। हमारा server रोज़ की कुल गिनती (जैसे कितने pay link बने या कितने digest भेजे गए) भी रखता है, जिसमें कोई account, device या निजी पहचान नहीं जुड़ी होती। UPI apps या affiliate links Pro UPI QR से बाहर जाते हैं।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">9. संपर्क और Data Requests</h2>
+          <h2 class="text-xl font-bold text-forest">10. संपर्क और Data Requests</h2>
           <p>
             Privacy, access, correction या deletion request के लिए <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a> पर संपर्क करें। UPI PIN, OTP या banking password कभी email न करें।
           </p>

@@ -1,0 +1,203 @@
+---
+export const prerender = false;
+import "../../styles/global.css";
+import QRCode from "qrcode";
+import { formatPaise as upiAmount, isTrustedMutation, readLimitedText, requestFingerprint, validUtr, validVpa } from "../../lib/apiSecurity";
+import { consumeRateLimit } from "../../lib/rateLimit";
+import { readWorkspace } from "../../lib/workspace/cloud";
+import { cloudStore, rateLimitsAvailable } from "../../lib/workspace/kvCloudStore";
+import { paylinkStore } from "../../lib/workspace/kvPaylinkStore";
+import { addClaim, snapshotFor, snapshotsForLinks, snapshotView, validPaylinkToken, type StatementView } from "../../lib/workspace/paylinks";
+import { formatPaise, parseRupeesToPaise } from "../../lib/workspace/model";
+import { planFor } from "../../lib/billing/plans";
+import { recordMetric } from "../../lib/metrics";
+
+const headers = {
+  "Cache-Control": "no-store",
+  "Referrer-Policy": "no-referrer",
+  "X-Robots-Tag": "noindex, nofollow",
+};
+for (const [key, value] of Object.entries(headers)) Astro.response.headers.set(key, value);
+// "same-origin", not "no-referrer": the token never leaks to other sites, but the
+// claim form's POST still carries a real Origin (no-referrer sends Origin: null,
+// which Astro's CSRF check and isTrustedMutation reject).
+Astro.response.headers.set("Referrer-Policy", "same-origin");
+Astro.response.headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");
+Astro.response.headers.set("X-Frame-Options", "DENY");
+
+const gone = (status: number, message: string) => new Response(message, { status, headers: { ...headers, "Content-Type": "text/plain; charset=utf-8" } });
+
+const { token } = Astro.params;
+if (!validPaylinkToken(token)) return gone(404, "This pay link is not valid.");
+
+let view: ReturnType<typeof payPageView> = null;
+let statement: StatementView | null = null;
+let branded = true;
+try {
+  const record = await paylinkStore().get(token);
+  if (!record) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+  // "Today" for due-date wording is India time.
+  const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
+  // Fast path: the snapshot written at the owner's last sync (a few hundred bytes).
+  let snapshot = await paylinkStore().getView(record.owner, token).catch(() => null);
+  if (!snapshot) {
+    // Older links or a missed write: read the workspace once and backfill every snapshot for this owner.
+    const { workspace } = await readWorkspace(cloudStore(), record.owner);
+    snapshot = snapshotFor(workspace, record.invoiceId);
+    const store = paylinkStore();
+    const views = snapshotsForLinks(workspace, await store.list(record.owner).catch(() => ({})));
+    if (snapshot) views[token] = snapshot;
+    await store.putViews(record.owner, views).catch(() => undefined);
+  }
+  const live = snapshot ? snapshotView(snapshot, today) : null;
+  if (live?.kind === "statement") {
+    statement = live.view;
+    // A statement is shown through the same layout: its "invoice" is the total due.
+    if (statement) view = {
+      merchantName: statement.merchantName, upiId: statement.upiId, invoiceNumber: "Statement",
+      amountPaise: statement.totalPaise, balancePaise: statement.totalPaise, dueDate: "", description: "",
+      state: statement.totalPaise > 0 ? (statement.overduePaise > 0 ? "overdue" : "due") : "paid",
+    };
+  } else if (live?.kind === "invoice") {
+    view = live.view;
+  }
+  branded = (await planFor(record.owner)).brandedPayPage;
+} catch {
+  return gone(503, "Pay links are temporarily unavailable. Please try again in a few minutes.");
+}
+if (!view) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+const upiOk = validVpa(view.upiId);
+
+let claimError = "";
+if (Astro.request.method === "POST") {
+  try {
+    if (!isTrustedMutation(Astro.request)) {
+      claimError = "Please submit the form from this page.";
+    } else if (rateLimitsAvailable() && !(await consumeRateLimit("paylink-claim", `${token}:${requestFingerprint(Astro.request)}`, 5, 900)).allowed) {
+      claimError = "Too many submissions. Try again in 15 minutes.";
+    } else {
+      const form = new URLSearchParams(await readLimitedText(Astro.request, 1024));
+      const utr = (form.get("utr") || "").trim();
+      const amountText = (form.get("amount") || "").trim();
+      const amountPaise = amountText ? parseRupeesToPaise(amountText) : null;
+      if (!validUtr(utr)) claimError = "Enter the 12-digit UTR / reference number shown in your UPI app.";
+      else if (statement && !amountPaise) claimError = "Enter the amount you paid, so it can be applied to your oldest dues first.";
+      else if (amountText && !amountPaise) claimError = "Enter the amount you paid, like 1500 or 1500.50, or leave it blank.";
+      else {
+        const result = await addClaim(paylinkStore(), token, { utr, amountPaise, at: Date.now() });
+        if (result === "full") claimError = "Several payments are already waiting for confirmation. Please contact the sender directly.";
+        else {
+          await recordMetric("claim_submitted");
+          return Astro.redirect(`/i/${token}/?claimed=1`, 303);
+        }
+      }
+    }
+  } catch {
+    claimError = "Couldn't send that right now. Please try again.";
+  }
+}
+
+const claimed = Astro.url.searchParams.get("claimed") === "1";
+const payable = upiOk && view.balancePaise > 0 && view.state !== "void" && view.state !== "paid";
+const upiIntent = payable
+  ? `upi://pay?${new URLSearchParams({ pa: view.upiId, pn: view.merchantName.slice(0, 50), am: upiAmount(view.balancePaise), cu: "INR", tn: (statement ? `Dues to ${view.merchantName}` : `Invoice ${view.invoiceNumber}`).slice(0, 50) }).toString()}`
+  : "";
+const qr = payable ? await QRCode.toDataURL(upiIntent, { width: 320, margin: 2, errorCorrectionLevel: "M", color: { dark: "#113b2c", light: "#ffffff" } }) : "";
+const dueText = view.dueDate
+  ? new Date(`${view.dueDate}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+  : "";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="same-origin" />
+    <title>{statement ? `Dues to ${view.merchantName}` : `Pay ${view.merchantName} · ${view.invoiceNumber}`}</title>
+  </head>
+  <body class="min-h-screen bg-[#fffdf6] px-4 py-8 font-sans text-forest">
+    <main class="mx-auto max-w-md">
+      <div class="overflow-hidden rounded-[2rem] border border-forest/10 bg-white shadow-[0_18px_48px_rgba(17,59,44,0.12)]">
+        <div class="bg-forest p-6 text-center text-white">
+          <p class="text-sm font-bold text-white/70">{view.merchantName}</p>
+          <p class="mt-1 text-xs text-white/60">{statement ? `Statement · ${statement.lines.length} unpaid invoice${statement.lines.length === 1 ? "" : "s"}` : `Invoice ${view.invoiceNumber}${dueText ? ` · due ${dueText}` : ""}`}</p>
+          {view.state === "paid" ? (
+            <p class="mt-4 text-3xl font-black">Paid ✓</p>
+          ) : view.state === "void" ? (
+            <p class="mt-4 text-2xl font-black">Cancelled</p>
+          ) : (
+            <>
+              <p class="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-sun">{statement ? "Total due" : "Amount due"}</p>
+              <p class="mt-1 text-4xl font-black tabular-nums">{formatPaise(view.balancePaise)}</p>
+              {!statement && view.balancePaise !== view.amountPaise && <p class="mt-1 text-xs text-white/60">of {formatPaise(view.amountPaise)} (part already paid)</p>}
+              {statement && statement.overduePaise > 0 && <p class="mt-1 text-xs text-white/70">{formatPaise(statement.overduePaise)} overdue</p>}
+            </>
+          )}
+          {view.description && <p class="mt-3 text-sm text-white/80">{view.description}</p>}
+        </div>
+
+        <div class="space-y-5 p-6">
+          {statement && statement.lines.length > 0 && (
+            <table class="w-full text-left text-sm">
+              <thead><tr class="text-xs text-forest/50"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
+              <tbody>
+                {statement.lines.map((line) => (
+                  <tr class="border-t border-forest/5">
+                    <td class="py-1.5 font-bold">{line.number}</td>
+                    <td class={`py-1.5 ${line.overdue ? "font-bold text-[#a8321d]" : "text-forest/70"}`}>{new Date(`${line.dueDate}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}{line.overdue ? " · overdue" : ""}</td>
+                    <td class="py-1.5 text-right tabular-nums">{formatPaise(line.balancePaise)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {view.state === "paid" && <p class="text-center text-sm text-forest/70">{statement ? "Nothing is due right now. Thank you!" : "This invoice is fully paid. Thank you!"}</p>}
+          {view.state === "void" && <p class="text-center text-sm text-forest/70">The sender cancelled this invoice. Nothing is due.</p>}
+          {!upiOk && view.state !== "paid" && view.state !== "void" && <p class="text-center text-sm text-forest/70">The sender hasn't added a UPI ID yet. Please contact them for payment details.</p>}
+
+          {claimed && (
+            <div role="status" class="rounded-2xl bg-mint p-4 text-sm">
+              <p class="font-black text-leaf">Thanks — reference sent to {view.merchantName}.</p>
+              <p class="mt-1 text-forest/70">They will check it against their bank statement and mark the invoice paid.</p>
+            </div>
+          )}
+
+          {payable && (
+            <>
+              <a href={upiIntent} class="block rounded-2xl bg-forest px-4 py-4 text-center text-base font-black text-white hover:bg-leaf">Pay {formatPaise(view.balancePaise)} with any UPI app</a>
+              <div class="text-center">
+                <p class="text-xs font-bold text-forest/60">On a computer? Scan with your phone</p>
+                <img src={qr} alt={`UPI QR code to pay ${formatPaise(view.balancePaise)} to ${view.merchantName}`} width="224" height="224" class="mx-auto mt-2 rounded-2xl border border-forest/10" />
+                <p class="mt-2 text-xs text-forest/60">UPI ID: <strong class="select-all font-mono text-forest">{view.upiId}</strong></p>
+                <p class="mt-1 text-[11px] text-forest/50">Check the payee name and amount in your UPI app before entering your PIN.</p>
+              </div>
+
+              {!claimed && (
+                <form method="POST" class="rounded-2xl border border-forest/10 bg-cream p-4">
+                  <p class="text-sm font-black">Already paid?</p>
+                  <p class="mt-1 text-xs text-forest/60">Send the UTR from your UPI app so {view.merchantName} can match your payment.</p>
+                  {claimError && <p role="alert" class="mt-2 text-xs font-bold text-[#a8321d]">{claimError}</p>}
+                  <label for="utr" class="mt-3 block text-xs font-bold text-forest/70">UTR / reference number</label>
+                  <input id="utr" name="utr" required minlength="10" maxlength="35" pattern="[A-Za-z0-9]{10,35}" inputmode="numeric" autocomplete="off" placeholder="412345678901" class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
+                  <label for="amount" class="mt-3 block text-xs font-bold text-forest/70">Amount paid{statement ? "" : " (optional)"}</label>
+                  <input id="amount" name="amount" inputmode="decimal" autocomplete="off" maxlength="14" required={Boolean(statement)} placeholder={upiAmount(view.balancePaise)} class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
+                  <button type="submit" class="mt-3 w-full rounded-xl bg-white px-4 py-2.5 text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Send payment reference</button>
+                </form>
+              )}
+            </>
+          )}
+        </div>
+
+        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
+          Money goes straight to {view.merchantName}'s UPI account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark {statement ? "these invoices" : "this invoice"} paid.
+        </div>
+      </div>
+      {branded && (
+        <p class="mt-6 text-center text-xs text-forest/60">
+          Send your own pay links free — <a href="/payment-tracker/" class="font-bold text-leaf underline">Pro UPI QR payment tracker</a>
+        </p>
+      )}
+    </main>
+  </body>
+</html>
