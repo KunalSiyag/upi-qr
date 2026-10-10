@@ -96,7 +96,15 @@ function Workspace() {
     const params = new URLSearchParams(location.search);
     const tabParam = params.get("tab");
     if (tabParam && TABS.some((t) => t.id === tabParam)) setTab(tabParam as Tab);
+    const filterParam = params.get("filter");
+    if (filterParam === "unpaid" || filterParam === "overdue" || filterParam === "paid" || filterParam === "all") setFilter(filterParam);
     if (params.get("new") === "1") setSheet({ kind: "invoice" });
+    if (params.get("saved") === "receipt") {
+      setFlash(tr("Receipt saved to your payment book."));
+      params.delete("saved");
+      const rest = params.toString();
+      history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
+    }
     return onExternalChange(() => wsRef.current, setWs);
   }, []);
 

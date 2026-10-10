@@ -14,7 +14,7 @@ const STATE_KEY = "proupiqr-waitlist";
 const DISMISS_DAYS = 30;
 
 type CopyKey =
-  | "eyebrow" | "title" | "body" | "titleShop" | "bodyShop" | "trackNow" | "notify" | "placeholder" | "cta" | "sending"
+  | "eyebrow" | "title" | "body" | "titleShop" | "bodyShop" | "titleReceipt" | "bodyReceipt" | "trackNow" | "notify" | "placeholder" | "cta" | "sending"
   | "interview" | "fine" | "privacy" | "doneTitle" | "doneBody" | "notNow" | "close" | "emailLabel" | "invalid" | "failed";
 
 const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
@@ -24,6 +24,8 @@ const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
     body: "Track who owes you, send clients a UPI pay link, and remind them on WhatsApp in one tap.",
     titleShop: "Customers who pay later?",
     bodyShop: "Keep a list of who owes you, send each one a UPI pay link with your QR, and remind them on WhatsApp in one tap.",
+    titleReceipt: "Who else still owes you?",
+    bodyReceipt: "Save receipts to a free payment book, see who still owes you, and send them a UPI pay link and a WhatsApp reminder in one tap.",
     trackNow: "Track payments free →",
     notify: "Automatic WhatsApp reminders are coming to Pro. Get an email when they launch:",
     placeholder: "you@example.com",
@@ -46,6 +48,8 @@ const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
     body: "किसका पैसा बाकी है, देखें; ग्राहकों को UPI पेमेंट लिंक भेजें और WhatsApp पर एक टैप में याद दिलाएं।",
     titleShop: "ग्राहक बाद में पैसे देते हैं?",
     bodyShop: "उधार वाले ग्राहकों की लिस्ट रखें, हर एक को आपके QR के साथ UPI पेमेंट लिंक भेजें और WhatsApp पर एक टैप में याद दिलाएं।",
+    titleReceipt: "और किसका पैसा बाकी है?",
+    bodyReceipt: "रसीदें मुफ़्त पेमेंट बुक में सेव करें, देखें किसका पैसा बाकी है, और उन्हें एक टैप में UPI पेमेंट लिंक व WhatsApp रिमाइंडर भेजें।",
     trackNow: "मुफ़्त में पेमेंट ट्रैक करें →",
     notify: "WhatsApp पर अपने-आप रिमाइंडर जल्द Pro में आ रहे हैं। शुरू होने पर ईमेल पाएं:",
     placeholder: "you@example.com",
@@ -68,6 +72,8 @@ const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
     body: "யார் பணம் தர வேண்டும் என்று கண்காணியுங்கள், வாடிக்கையாளர்களுக்கு UPI கட்டண இணைப்பை அனுப்புங்கள், WhatsApp-இல் ஒரே தட்டலில் நினைவூட்டுங்கள்.",
     titleShop: "வாடிக்கையாளர்கள் பின்னர் பணம் தருகிறார்களா?",
     bodyShop: "கடனில் வாங்கும் வாடிக்கையாளர்களின் பட்டியலை வைத்திருங்கள், உங்கள் QR உடன் UPI கட்டண இணைப்பை அனுப்புங்கள், WhatsApp-இல் ஒரே தட்டலில் நினைவூட்டுங்கள்.",
+    titleReceipt: "வேறு யார் இன்னும் பணம் தர வேண்டும்?",
+    bodyReceipt: "ரசீதுகளை இலவச பணப் புத்தகத்தில் சேமியுங்கள், யார் இன்னும் தர வேண்டும் என்று பாருங்கள், ஒரே தட்டலில் UPI கட்டண இணைப்பும் WhatsApp நினைவூட்டலும் அனுப்புங்கள்.",
     trackNow: "இப்போதே இலவசமாகப் பணத்தைக் கண்காணிக்கவும் →",
     notify: "தானியங்கி WhatsApp நினைவூட்டல்கள் விரைவில் Pro-வில் வருகின்றன. தொடங்கும்போது மின்னஞ்சல் பெறுங்கள்:",
     placeholder: "you@example.com",
@@ -90,6 +96,8 @@ const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
     body: "ఎవరు డబ్బు ఇవ్వాలో ట్రాక్ చేయండి, కస్టమర్‌లకు UPI పేమెంట్ లింక్ పంపండి, WhatsAppలో ఒక్క ట్యాప్‌తో గుర్తు చేయండి.",
     titleShop: "కస్టమర్‌లు తర్వాత డబ్బు ఇస్తారా?",
     bodyShop: "అప్పుపై కొనే కస్టమర్‌ల జాబితా ఉంచండి, మీ QRతో UPI పేమెంట్ లింక్ పంపండి, WhatsAppలో ఒక్క ట్యాప్‌తో గుర్తు చేయండి.",
+    titleReceipt: "ఇంకా ఎవరు డబ్బు ఇవ్వాలి?",
+    bodyReceipt: "రసీదులను ఉచిత చెల్లింపుల పుస్తకంలో సేవ్ చేయండి, ఇంకా ఎవరు ఇవ్వాలో చూడండి, ఒక్క ట్యాప్‌తో UPI పేమెంట్ లింక్, WhatsApp రిమైండర్ పంపండి.",
     trackNow: "ఇప్పుడే ఉచితంగా చెల్లింపులు ట్రాక్ చేయండి →",
     notify: "ఆటోమేటిక్ WhatsApp రిమైండర్‌లు త్వరలో Proలో వస్తున్నాయి. ప్రారంభమైనప్పుడు ఈమెయిల్ పొందండి:",
     placeholder: "you@example.com",
@@ -112,6 +120,8 @@ const COPY: Record<WaitlistLang, Record<CopyKey, string>> = {
     body: "कोणाचे पैसे बाकी आहेत ते पाहा, ग्राहकांना UPI पेमेंट लिंक पाठवा आणि WhatsApp वर एका टॅपमध्ये आठवण करून द्या.",
     titleShop: "ग्राहक नंतर पैसे देतात?",
     bodyShop: "उधारीवरच्या ग्राहकांची यादी ठेवा, तुमच्या QR सोबत UPI पेमेंट लिंक पाठवा आणि WhatsApp वर एका टॅपमध्ये आठवण करून द्या.",
+    titleReceipt: "अजून कोणाचे पैसे बाकी आहेत?",
+    bodyReceipt: "पावत्या मोफत पेमेंट बुकमध्ये सेव्ह करा, अजून कोणाचे पैसे बाकी आहेत ते पाहा आणि एका टॅपमध्ये UPI पेमेंट लिंक व WhatsApp रिमाइंडर पाठवा.",
     trackNow: "आत्ताच मोफत पेमेंट ट्रॅक करा →",
     notify: "WhatsApp वर आपोआप रिमाइंडर लवकरच Pro मध्ये येत आहेत. सुरू झाल्यावर ईमेल मिळवा:",
     placeholder: "you@example.com",
@@ -232,6 +242,7 @@ export function WaitlistCard({ tool, lang = "en" }: { tool: WaitlistTool; lang?:
   // Letter-spacing breaks Indic conjuncts; keep the spaced caps look for English only.
   const eyebrow = `text-xs font-black text-leaf ${lang === "en" ? "uppercase tracking-[0.2em]" : ""}`;
   const shop = tool === "upi-qr";
+  const receipt = tool === "receipt";
   const trackerButton = (
     <a
       href={trackerHref}
@@ -258,8 +269,8 @@ export function WaitlistCard({ tool, lang = "en" }: { tool: WaitlistTool; lang?:
       </button>
 
       <p className={`pr-8 ${eyebrow}`}>{t.eyebrow}</p>
-      <h2 id="waitlist-title" className="mt-2 pr-6 text-lg font-black leading-snug">{shop ? t.titleShop : t.title}</h2>
-      <p className="mt-1 text-sm leading-6 text-forest/75">{shop ? t.bodyShop : t.body}</p>
+      <h2 id="waitlist-title" className="mt-2 pr-6 text-lg font-black leading-snug">{shop ? t.titleShop : receipt ? t.titleReceipt : t.title}</h2>
+      <p className="mt-1 text-sm leading-6 text-forest/75">{shop ? t.bodyShop : receipt ? t.bodyReceipt : t.body}</p>
       {trackerButton}
 
       {status === "done" ? (

@@ -130,7 +130,7 @@ await evaluate(`document.getElementById('tool').scrollIntoView(); true`);
 await waitFor(`[...document.querySelectorAll('button')].some(b => /PDF/.test(b.textContent) && b.offsetParent)`);
 await clickButton("/PDF/");
 check("Hindi card appears after receipt PDF", await waitFor(cardVisible, 15000));
-check("Hindi copy rendered", /जानिए पेमेंट कब आया/.test(await evaluate(`document.querySelector('aside')?.textContent || ''`)));
+check("Hindi receipt copy rendered", /और किसका पैसा बाकी है/.test(await evaluate(`document.querySelector('aside')?.textContent || ''`)));
 check("Hindi privacy link points to /hi/privacy/", (await evaluate(`document.querySelector('aside a[href*="privacy"]')?.getAttribute('href')`)) === "/hi/privacy/#early-access");
 check("Hindi tracker link opens the app in Hindi", (await evaluate(`document.querySelector('aside a[href^="/app/"]')?.getAttribute('href')`)) === "/app/?lang=hi");
 const box = await evaluate(`(() => { const r = document.querySelector('aside').getBoundingClientRect(); return { left: r.left, right: r.right, bottom: r.bottom, vw: innerWidth, vh: innerHeight }; })()`);

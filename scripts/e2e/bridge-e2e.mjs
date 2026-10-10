@@ -63,6 +63,43 @@ try {
   await sleep(300);
   check("Track payment hidden for non-INR templates", !(await b.eval("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))")));
 
+  // Bridge from the receipt generator: settles the client's open invoice first, keeps the rest as a paid entry, never twice.
+  const T0 = Date.now();
+  const seeded = {
+    version: 1,
+    business: { name: "Sharma Tuition", upiId: "sharma@okaxis", phone: "", gstin: "", invoicePrefix: "TU-", updatedAt: T0 },
+    clients: { cli_riya0001: { id: "cli_riya0001", name: "Riya Sharma", phone: "", email: "", gstin: "", createdAt: T0, updatedAt: T0 } },
+    invoices: { inv_open0001: { id: "inv_open0001", number: "TU-0008", clientId: "cli_riya0001", issueDate: "2026-09-01", dueDate: "2026-09-10", amountPaise: 150000, description: "September fees", payments: [], reminders: [], voided: false, createdAt: T0, updatedAt: T0 } },
+  };
+  const receiptDraft = { merchant: "Sharma Tuition", upiId: "sharma@okaxis", customer: "Riya Sharma", customerPhone: "", receiptNo: "RCPT-0007", receiptDate: "2026-10-05", paymentMode: "UPI", referenceNo: "412345678901", receivedBy: "", notes: "", items: [{ id: 1, name: "Tuition fees", qty: "1", price: "3000" }] };
+  const saveReceipt = async () => {
+    await b.go(BASE + "/receipt-generator/", 1500);
+    await b.eval("document.getElementById('receipt-tool').scrollIntoView(); true");
+    await b.waitFor("[...document.querySelectorAll('button')].some(b => /Save to payment book/.test(b.textContent))", 10000);
+    await t("__t.click(/Save to payment book/)");
+  };
+  await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(seeded))}); localStorage.setItem('proupiqr-receipt-draft', ${JSON.stringify(JSON.stringify(receiptDraft))}); true`);
+  await saveReceipt();
+  await b.waitFor("location.pathname === '/app/'", 8000);
+  await sleep(1500);
+  check("receipt opens all invoices in the tracker (saved flag removed)", (await b.eval("location.pathname + location.search")) === "/app/?tab=invoices&filter=all");
+  check("receipt save is confirmed", /Receipt saved to your payment book/.test(await text()));
+  data = await ws();
+  const settled = data.invoices.inv_open0001;
+  const entry = Object.values(data.invoices).find((i) => i.number === "RCPT-0007");
+  check("receipt settles the open invoice first, with the UTR as reference", settled.payments.length === 1 && settled.payments[0].amountPaise === 150000 && settled.payments[0].reference === "412345678901", JSON.stringify(settled.payments));
+  check("rest of the receipt is a paid entry", !!entry && entry.amountPaise === 150000 && entry.payments.length === 1 && entry.payments[0].amountPaise === 150000 && entry.payments[0].mode === "upi");
+  check("both show in the invoice list", /TU-0008/.test(await text()) && /RCPT-0007/.test(await text()));
+  await saveReceipt();
+  await b.waitFor("location.pathname === '/app/'", 8000);
+  await sleep(800);
+  data = await ws();
+  check("saving the same receipt again records nothing", Object.values(data.invoices).reduce((n, i) => n + i.payments.length, 0) === 2, JSON.stringify(Object.values(data.invoices).map((i) => [i.number, i.payments.length])));
+  await b.eval("localStorage.removeItem('proupiqr-receipt-draft'); true");
+  await saveReceipt();
+  await sleep(800);
+  check("the untouched sample receipt is refused", (await b.eval("location.pathname")) === "/receipt-generator/" && /Add who paid/.test(await b.eval("document.getElementById('proupiqr-export-toast')?.textContent || ''")));
+
   // Waitlist card now links to the tracker.
   await b.eval("localStorage.removeItem('proupiqr-waitlist'); sessionStorage.clear(); true");
   await b.go(BASE + "/receipt-generator/", 1500);

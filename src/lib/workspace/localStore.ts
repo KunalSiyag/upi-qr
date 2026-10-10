@@ -1,6 +1,6 @@
 import {
-  canonicalJson, emptyWorkspace, findClient, isIsoDate, liveInvoices, mergeWorkspaces, newId, pruneTombstones, restoreFrom,
-  sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice, type Workspace,
+  canonicalJson, emptyWorkspace, findClient, isIsoDate, liveInvoices, localToday, mergeWorkspaces, newId, pruneTombstones,
+  recordReceiptPayment, restoreFrom, sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice, type ReceiptPayment, type Workspace,
 } from "./model";
 
 /**
@@ -87,6 +87,25 @@ export interface DocumentToTrack {
  * invoice number) an invoice in the local workspace. Payments already recorded
  * against that invoice are kept. Returns null if the document is unusable.
  */
+/**
+ * "Save to payment book" from the receipt generator: settles the client's open
+ * invoices (oldest first) and records any rest as a paid entry; see
+ * recordReceiptPayment. Seeds the business from the receipt like trackDocument.
+ */
+export function recordReceipt(
+  receipt: ReceiptPayment & { merchant: string; upiId: string },
+): { appliedPaise: number; entryId: string | null; duplicate: boolean } | null {
+  const now = Date.now();
+  let ws = loadWorkspace();
+  if (!ws.business.name && receipt.merchant.trim() && receipt.merchant !== "ABC Solutions") {
+    ws = updateBusiness(ws, { name: receipt.merchant.trim().slice(0, 80), upiId: receipt.upiId === "merchant@upi" ? ws.business.upiId : receipt.upiId.trim().slice(0, 100) }, now);
+  }
+  const result = recordReceiptPayment(ws, receipt, localToday(), now);
+  if (!result) return null;
+  if (result.duplicate) return { appliedPaise: 0, entryId: null, duplicate: true };
+  return saveWorkspace(result.ws) ? { appliedPaise: result.appliedPaise, entryId: result.entryId, duplicate: false } : null;
+}
+
 export function trackDocument(doc: DocumentToTrack): { invoiceId: string; created: boolean } | null {
   const number = doc.invoiceNo.trim().slice(0, 40);
   const customer = doc.customer.trim().slice(0, 80);

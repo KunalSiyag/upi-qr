@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { addSampleData, hasSampleData, removeSampleData } from "../src/lib/workspace/sample.ts";
 import { generateRecurring, liveRecurring, MAX_BACKFILL_MONTHS, recurringInvoiceId, upsertPlan } from "../src/lib/workspace/model.ts";
+import { liveInvoices, recordReceiptPayment } from "../src/lib/workspace/model.ts";
+import { matchCredits } from "../src/lib/workspace/statement.ts";
 import {
   addDays, addPayment, canonicalJson, eraseWorkspace, restoreFrom, agingBuckets, chaseList, clientBalances, daysBetween, deleteClient, deleteInvoice,
   emptyWorkspace, findClient, formatPaise, invoiceViews, invoicesCsv, isIsoDate, mergeWorkspaces, nextInvoiceNumber,
@@ -213,4 +215,50 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   assert.equal(liveRecurring(restoreFrom(erased, g.ws, T + 40)).length, 1);
 }
 
-console.log("[workspace] money, dates, aging, reminders, CSV, merge, and sanitizer checks passed");
+// Receipts from the receipt generator settle open invoices first (oldest due), then record the rest as a paid entry.
+{
+  const R = 1_790_500_000_000;
+  const receipt = (over = {}) => ({ receiptNo: "RCPT-0007", date: "2026-10-11", customer: "Riya Sharma", customerPhone: "", amountPaise: 300000, mode: "upi", reference: "", description: "October fees", ...over });
+  const open = (id, number, dueDate, amountPaise, clientId) => ({ id, number, clientId, issueDate: "2026-09-01", dueDate, amountPaise, description: "", payments: [], reminders: [], voided: false, createdAt: R, updatedAt: R });
+  const paidOf = (w, id) => w.invoices[id].payments.reduce((sum, p) => sum + p.amountPaise, 0);
+
+  // New client, nothing open: one paid entry numbered like the receipt.
+  let out = recordReceiptPayment(emptyWorkspace(), receipt(), "2026-10-11", R);
+  assert.equal(out.duplicate, false);
+  assert.equal(out.appliedPaise, 0);
+  const entry = out.ws.invoices[out.entryId];
+  assert.deepEqual([entry.number, entry.amountPaise, paidOf(out.ws, out.entryId), entry.payments[0].mode, entry.payments[0].reference], ["RCPT-0007", 300000, 300000, "upi", "Receipt RCPT-0007"]);
+  assert.equal(viewInvoice(entry, out.ws.clients, "2026-10-11").balancePaise, 0);
+  assert.equal(out.ws.clients[out.clientId].name, "Riya Sharma");
+  // Saving the same receipt again changes nothing.
+  const again = recordReceiptPayment(out.ws, receipt(), "2026-10-11", R + 1);
+  assert.deepEqual([again.duplicate, again.ws === out.ws], [true, true]);
+
+  // Existing client (case-insensitive name) with two open invoices: oldest due is paid first; the rest becomes an entry.
+  let ws0 = upsertClient(emptyWorkspace(), { id: "cli_riya0001", name: "riya sharma", phone: "", email: "", gstin: "", createdAt: R, updatedAt: R }, R);
+  ws0 = upsertInvoice(ws0, open("inv_newer001", "INV-9", "2026-10-20", 200000, "cli_riya0001"), R);
+  ws0 = upsertInvoice(ws0, open("inv_older001", "INV-8", "2026-10-05", 150000, "cli_riya0001"), R);
+  out = recordReceiptPayment(ws0, receipt({ amountPaise: 300000, customerPhone: "+91 98765 43210" }), "2026-10-11", R);
+  assert.equal(out.clientId, "cli_riya0001");
+  assert.deepEqual([paidOf(out.ws, "inv_older001"), paidOf(out.ws, "inv_newer001"), out.appliedPaise, out.entryId], [150000, 150000, 300000, null]);
+  assert.equal(out.ws.clients.cli_riya0001.phone, "+919876543210", "a phone on the receipt fills in a client that had none");
+  out = recordReceiptPayment(ws0, receipt({ amountPaise: 400000 }), "2026-10-11", R);
+  assert.deepEqual([out.appliedPaise, out.ws.invoices[out.entryId].amountPaise], [350000, 50000], "overpayment beyond open dues is kept as its own paid entry");
+  assert.equal(liveInvoices(out.ws).reduce((sum, inv) => sum + inv.payments.reduce((a, p) => a + p.amountPaise, 0), 0), 400000, "every paisa of the receipt is recorded exactly once");
+
+  // A phone match wins over a different spelling of the name.
+  const byPhone = upsertClient(emptyWorkspace(), { id: "cli_phone001", name: "Riya S.", phone: "9876543210", email: "", gstin: "", createdAt: R, updatedAt: R }, R);
+  assert.equal(recordReceiptPayment(byPhone, receipt({ customerPhone: "+91-98765-43210" }), "2026-10-11", R).clientId, "cli_phone001");
+
+  // A UTR on the receipt becomes the payment reference, so importing the bank statement later skips that credit.
+  out = recordReceiptPayment(emptyWorkspace(), receipt({ reference: "412345678901" }), "2026-10-11", R);
+  const credit = { key: "k1", date: "2026-10-11", amountPaise: 300000, narration: "UPI/412345678901/RIYA", utr: "412345678901", reference: "" };
+  assert.equal(matchCredits([credit], invoiceViews(out.ws, "2026-10-11")).alreadyRecorded, 1);
+
+  // Invalid receipts are refused.
+  for (const bad of [{ customer: " " }, { receiptNo: "" }, { amountPaise: 0 }, { amountPaise: 12.5 }, { date: "2026-02-30" }]) {
+    assert.equal(recordReceiptPayment(emptyWorkspace(), receipt(bad), "2026-10-11", R), null, JSON.stringify(bad));
+  }
+}
+
+console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, and receipt checks passed");

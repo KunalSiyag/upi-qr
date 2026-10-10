@@ -365,6 +365,66 @@ export function allocatePayment(
   return { ws: next, allocations, unallocatedPaise: left };
 }
 
+export interface ReceiptPayment {
+  receiptNo: string;
+  date: string;
+  customer: string;
+  customerPhone: string;
+  amountPaise: number;
+  mode: PaymentMode;
+  /** UTR, cheque, or bank reference printed on the receipt; may be empty. */
+  reference: string;
+  description: string;
+}
+
+/**
+ * Records a receipt from the receipt generator. The payment first settles the
+ * client's open invoices, oldest due first (so a receipt marks what you were
+ * chasing as paid); anything left over becomes a paid entry numbered like the
+ * receipt. The payment reference is the receipt's UTR/cheque number when it has
+ * one (so a bank statement import later skips that credit), else
+ * "Receipt <no>"; the same reference on the same client means it's already
+ * recorded, and nothing changes.
+ */
+export function recordReceiptPayment(
+  ws: Workspace,
+  receipt: ReceiptPayment,
+  today: string,
+  now: number,
+): { ws: Workspace; clientId: string; appliedPaise: number; entryId: string | null; duplicate: boolean } | null {
+  const number = receipt.receiptNo.trim().slice(0, 40);
+  const name = receipt.customer.trim().slice(0, 80);
+  if (!number || !name || !isIsoDate(receipt.date) || !Number.isSafeInteger(receipt.amountPaise) || receipt.amountPaise <= 0) return null;
+  const phone = receipt.customerPhone.replace(/[^\d+]/g, "").slice(0, 15);
+  let next = ws;
+  let client = findClient(next, name, phone);
+  if (!client) {
+    client = { id: newId("cli"), name, phone, email: "", gstin: "", createdAt: now, updatedAt: now };
+    next = upsertClient(next, client, now);
+  } else if (!client.phone && phone) {
+    client = { ...client, phone, updatedAt: now };
+    next = upsertClient(next, client, now);
+  }
+  const reference = (receipt.reference.trim() || `Receipt ${number}`).slice(0, 60);
+  const clientId = client.id;
+  const recorded = liveInvoices(next).some((inv) => inv.clientId === clientId && inv.payments.some((p) => p.reference.trim() === reference));
+  if (recorded) return { ws, clientId, appliedPaise: 0, entryId: null, duplicate: true };
+
+  const payment = { date: receipt.date, mode: receipt.mode, reference };
+  const allocated = allocatePayment(next, clientId, receipt.amountPaise, payment, today, now);
+  next = allocated.ws;
+  let entryId: string | null = null;
+  if (allocated.unallocatedPaise > 0) {
+    entryId = newId("inv");
+    next = upsertInvoice(next, {
+      id: entryId, number, clientId, issueDate: receipt.date, dueDate: receipt.date, amountPaise: allocated.unallocatedPaise,
+      description: receipt.description.trim().slice(0, 300), payments: [], reminders: [], voided: false, createdAt: now, updatedAt: now,
+    }, now);
+    next = addPayment(next, entryId, { ...payment, amountPaise: allocated.unallocatedPaise }, now);
+  }
+  return { ws: next, clientId, appliedPaise: receipt.amountPaise - allocated.unallocatedPaise, entryId, duplicate: false };
+}
+
 export function removePayment(ws: Workspace, invoiceId: string, paymentId: string, now: number): Workspace {
   const invoice = ws.invoices[invoiceId];
   if (!invoice) return ws;

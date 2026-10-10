@@ -240,6 +240,7 @@ export const WS_HI: Record<string, string> = {
   "Pro yearly": "Pro वार्षिक",
   "Read {n} incoming payment ({range}).": "{n} आने वाला पेमेंट पढ़ा ({range})।",
   "Read {n} incoming payments ({range}).": "{n} आने वाले पेमेंट पढ़े ({range})।",
+  "Receipt saved to your payment book.": "रसीद आपकी पेमेंट बुक में सेव हो गई।",
   "Received": "मिला",
   "Received on": "मिलने की तारीख",
   "Record a payment you received": "मिला हुआ पेमेंट दर्ज करें",

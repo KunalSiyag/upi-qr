@@ -2,13 +2,24 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import { formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
+import { displayCurrency, formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
+import { recordReceipt } from "../lib/workspace/localStore";
+import type { PaymentMode } from "../lib/workspace/model";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
 type ReceiptItem = { id: number; name: string; qty: string; price: string };
 
 const draftKey = "proupiqr-receipt-draft";
 const paymentModes = ["UPI", "Cash", "Card", "Bank Transfer", "Cheque"] as const;
+
+const SAVE_LABEL: Partial<Record<DocLang, string>> = {
+  en: "Save to payment book",
+  hi: "पेमेंट बुक में सेव करें",
+  ta: "பணப் புத்தகத்தில் சேமி",
+  te: "చెల్లింపుల పుస్తకంలో సేవ్ చేయండి",
+  mr: "पेमेंट बुकमध्ये सेव्ह करा",
+};
+const RECEIPT_MODE: Record<(typeof paymentModes)[number], PaymentMode> = { UPI: "upi", Cash: "cash", Card: "card", "Bank Transfer": "bank", Cheque: "cheque" };
 
 const EXPORT_TIMEOUT_MS = 20000;
 
@@ -172,6 +183,21 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       .replace(/^-|-$/g, "");
   }
 
+  /** Records this receipt in the local payment tracker (settling the client's open invoices first) and opens it. */
+  function saveToPaymentBook() {
+    const result = customer.trim() === "Client Name" ? null : recordReceipt({
+      merchant, upiId, receiptNo, date: receiptDate, customer, customerPhone,
+      amountPaise: Math.round(totals.subtotal * 100), mode: RECEIPT_MODE[paymentMode], reference: referenceNo,
+      description: items.map((item) => item.name).filter(Boolean).join(", "),
+    });
+    if (!result) {
+      notifyExportError("Add who paid, a receipt number, the date, and an amount before saving.");
+      return;
+    }
+    if (!result.duplicate) trackProductEvent("payment_recorded", "receipt");
+    window.location.href = `/app/?tab=invoices&filter=all&saved=receipt${lang === "hi" ? "&lang=hi" : ""}`;
+  }
+
   async function downloadReceiptPdf() {
     try {
       setDownloadPdfState("busy");
@@ -305,6 +331,15 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             >
               {downloadPngState === "busy" ? t.generating : `🖼️ ${t.downloadPng}`}
             </button>
+            {displayCurrency(lang).code === "INR" && (
+              <button
+                onClick={saveToPaymentBook}
+                title={SAVE_LABEL[lang] ?? SAVE_LABEL.en}
+                className="rounded-full border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-sun/30 transition"
+              >
+                {`📒 ${SAVE_LABEL[lang] ?? SAVE_LABEL.en}`}
+              </button>
+            )}
           </div>
         </div>
 
