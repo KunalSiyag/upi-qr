@@ -3,7 +3,6 @@ import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
 import vercel from "@astrojs/vercel";
 import clerk from "@clerk/astro";
-import { existsSync, readFileSync, writeFileSync } from "node:fs";
 
 // @clerk/astro still injects the deprecated Vite option
 // optimizeDeps.esbuildOptions (Vite 7 / Rolldown no longer uses esbuild for dep
@@ -60,30 +59,6 @@ function clerkOnlyWhereNeeded() {
   };
 }
 
-// The Vercel adapter writes .vercel/output/config.json but ignores vercel.json
-// "crons". Copy them in after the adapter finishes so the 09:00 IST digest
-// (/api/cron/digest/) is part of the deployment. vercel.json stays the single
-// source; the digest is idempotent per account per day, so a duplicate merge is harmless.
-function withVercelCrons(adapter) {
-  const buildDone = adapter.hooks["astro:build:done"];
-  return {
-    ...adapter,
-    hooks: {
-      ...adapter.hooks,
-      "astro:build:done": async (options) => {
-        await buildDone?.(options);
-        const outputConfig = ".vercel/output/config.json";
-        if (!existsSync(outputConfig) || !existsSync("vercel.json")) return;
-        const crons = JSON.parse(readFileSync("vercel.json", "utf8")).crons;
-        if (!Array.isArray(crons) || crons.length === 0) return;
-        const config = JSON.parse(readFileSync(outputConfig, "utf8"));
-        config.crons = crons;
-        writeFileSync(outputConfig, JSON.stringify(config, null, 2));
-      }
-    }
-  };
-}
-
 export default defineConfig({
   site: "https://www.proupiqr.in",
   trailingSlash: "always",
@@ -94,7 +69,7 @@ export default defineConfig({
       prefixDefaultLocale: false
     }
   },
-  adapter: withVercelCrons(vercel()),
+  adapter: vercel(),
   integrations: [react(), tailwind({ applyBaseStyles: false }), clerkOnlyWhereNeeded()],
   build: {
     inlineStylesheets: "auto"

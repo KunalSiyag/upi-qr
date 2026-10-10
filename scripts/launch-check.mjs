@@ -151,7 +151,12 @@ const config = join(ROOT, ".vercel/output/config.json");
 if (!existsSync(config)) warn("No build output yet — run npx astro build first");
 else {
   const c = JSON.parse(readFileSync(config, "utf8"));
-  (c.crons ?? []).some((x) => x.path === "/api/cron/digest/") ? ok("Cron /api/cron/digest/ scheduled in build output (03:30 UTC = 09:00 IST): billing reconcile, then morning digest") : fail("Build output has no digest cron");
+  // Vercel reads vercel.json "crons" at deploy time; the same job in the build output fails the deploy as a duplicate.
+  const digest = (list) => (list ?? []).filter((x) => x.path === "/api/cron/digest/");
+  const scheduled = digest(JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")).crons);
+  if (scheduled.length !== 1) fail(`vercel.json must schedule /api/cron/digest/ exactly once (found ${scheduled.length})`);
+  else if (digest(c.crons).length) fail("Build output also defines the digest cron — Vercel rejects the duplicate; keep it only in vercel.json");
+  else ok(`Cron /api/cron/digest/ in vercel.json (${scheduled[0].schedule} UTC = 09:00 IST): billing reconcile, then morning digest`);
   const statics = join(ROOT, ".vercel/output/static");
   ["sw.js", "app.webmanifest", "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-512.png", "app/index.html", "pricing/index.html", "payment-tracker/index.html"]
     .every((f) => existsSync(join(statics, f))) ? ok("App shell, manifest, icons and pricing pages built") : fail("Missing built app assets — rebuild");

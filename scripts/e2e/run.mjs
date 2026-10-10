@@ -86,9 +86,12 @@ try {
   await waitFor("http://localhost:4400/app/");
   await waitFor(PROD ? "http://localhost:4500/pricing/" : "http://localhost:4321/pricing/");
   if (PROD) {
+    // Vercel applies vercel.json "crons" at deploy time; a copy in the build output is a duplicate and fails the deploy.
+    const vercelJson = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));
     const config = JSON.parse(readFileSync(join(ROOT, ".vercel/output/config.json"), "utf8"));
-    const cronOk = (config.crons ?? []).some((c) => c.path === "/api/cron/digest/" && c.schedule === "30 3 * * *");
-    console.log(`${cronOk ? "✓" : "✗"} build output schedules /api/cron/digest/ at 09:00 IST`);
+    const digest = (list) => (list ?? []).filter((c) => c.path === "/api/cron/digest/");
+    const cronOk = digest(vercelJson.crons).length === 1 && digest(vercelJson.crons)[0].schedule === "30 3 * * *" && digest(config.crons).length === 0;
+    console.log(`${cronOk ? "✓" : "✗"} vercel.json schedules /api/cron/digest/ once at 09:00 IST, not duplicated in the build output`);
     if (!cronOk) failed += 1;
   }
 
