@@ -39,7 +39,7 @@ export const WS_HI: Record<string, string> = {
   "Another device is syncing. Retrying shortly.": "दूसरा डिवाइस सिंक कर रहा है। थोड़ी देर में फिर कोशिश होगी।",
   "Applied {amount} to {n} invoice": "{amount} को {n} इनवॉइस में जोड़ा गया",
   "Applied {amount} to {n} invoices": "{amount} को {n} इनवॉइस में बाँटकर जोड़ा गया",
-  "At 9 am, a notification on this device lists the invoices to chase that day. It shows the top client and amount, so turn it off on shared devices.": "सुबह 9 बजे इस डिवाइस पर एक नोटिफ़िकेशन आएगा, जिसमें उस दिन के बकाया इनवॉइस होंगे। इसमें सबसे ऊपर वाले ग्राहक का नाम और राशि दिखती है, इसलिए साझा डिवाइस पर इसे बंद रखें।",
+  "At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.": "सुबह 9 बजे इस डिवाइस पर एक नोटिफ़िकेशन आएगा, जिसमें उस दिन के बकाया इनवॉइस होंगे, और जैसे ही कोई ग्राहक पेमेंट लिंक से भुगतान कर देने की बात बताए, एक और नोटिफ़िकेशन आएगा। इनमें नाम और राशि दिखती है, इसलिए साझा डिवाइस पर इन्हें बंद रखें।",
   "Automatic WhatsApp reminders to clients on the due date": "देय तिथि पर ग्राहकों को अपने-आप WhatsApp रिमाइंडर",
   "Back up or sync across devices": "बैकअप लें या सभी डिवाइस पर सिंक करें",
   "Backup merged into this workspace.": "बैकअप इस वर्कस्पेस में जोड़ दिया गया।",

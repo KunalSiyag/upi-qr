@@ -11,6 +11,9 @@ import { addClaim, snapshotFor, snapshotsForLinks, snapshotView, validPaylinkTok
 import { formatPaise, parseRupeesToPaise } from "../../lib/workspace/model";
 import { planFor } from "../../lib/billing/plans";
 import { recordMetric } from "../../lib/metrics";
+import { allowLocalPushEndpoints, vapidConfig } from "../../lib/push/config";
+import { pushStore } from "../../lib/push/kvPushStore";
+import { sendClaimAlert } from "../../lib/push/claimAlert";
 
 const headers = {
   "Cache-Control": "no-store",
@@ -33,9 +36,11 @@ if (!validPaylinkToken(token)) return gone(404, "This pay link is not valid.");
 let view: ReturnType<typeof payPageView> = null;
 let statement: StatementView | null = null;
 let branded = true;
+let owner = "";
 try {
   const record = await paylinkStore().get(token);
   if (!record) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+  owner = record.owner;
   // "Today" for due-date wording is India time.
   const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   // Fast path: the snapshot written at the owner's last sync (a few hundred bytes).
@@ -88,6 +93,13 @@ if (Astro.request.method === "POST") {
         if (result === "full") claimError = "Several payments are already waiting for confirmation. Please contact the sender directly.";
         else {
           await recordMetric("claim_submitted");
+          // Tell the merchant now, on devices with notifications on (best effort, ≤2.5 s).
+          const vapid = vapidConfig();
+          if (vapid) {
+            await sendClaimAlert({ push: pushStore(), vapid, allowLocalEndpoints: allowLocalPushEndpoints() }, owner, token, {
+              invoiceNumber: view.invoiceNumber, amountPaise, utr, statement: Boolean(statement),
+            }).catch(() => undefined);
+          }
           return Astro.redirect(`/i/${token}/?claimed=1`, 303);
         }
       }

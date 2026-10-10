@@ -103,7 +103,7 @@ export function NotificationsPanel({ signedIn, standalone, ios, onFlash }: {
   return (
     <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
       <h2 className="text-lg font-black text-forest">{tr("Morning reminders")}</h2>
-      <p className="mt-1 text-sm text-forest/70">{tr("At 9 am, a notification on this device lists the invoices to chase that day. It shows the top client and amount, so turn it off on shared devices.")}</p>
+      <p className="mt-1 text-sm text-forest/70">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2" role="status">
         {status === "loading" && <span className="text-sm text-forest/60">{tr("Checking…")}</span>}
         {status === "unsupported" && <span className="text-sm text-forest/70">{tr("This browser doesn't support notifications.")}</span>}

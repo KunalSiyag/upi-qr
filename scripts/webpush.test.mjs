@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { createDecipheriv, createECDH, createPublicKey, hkdfSync, verify } from "node:crypto";
 import { b64u, encryptPayload, fromB64u, safePushEndpoint, sendPush, validSubscriptionKeys, vapidAuthorization } from "../src/lib/push/webpush.ts";
+import { claimNotification, sendClaimAlert } from "../src/lib/push/claimAlert.ts";
+import { memoryPushStore } from "../src/lib/push/store.ts";
 
 // RFC 8291 Appendix A test vector.
 const V = {
@@ -89,4 +91,31 @@ assert.equal(validSubscriptionKeys({ p256dh: uaPub, auth: b64u(Buffer.alloc(8)) 
   assert.equal(await sendPush(sub, { title: "t" }, vapid, boom, now), "failed");
 }
 
-console.log("[webpush] RFC 8291 vector, round trip, VAPID JWT, endpoint allowlist, and send outcomes passed");
+// Claim alerts: a client's UTR on a pay link reaches the merchant's devices at once.
+{
+  assert.deepEqual(claimNotification({ invoiceNumber: "INV-7", amountPaise: 300000, utr: "412345678901", statement: false }, "Tok1"),
+    { title: "A client says they've paid", body: "₹3,000 for INV-7 · UTR …8901. Check your bank, then confirm it in the tracker.", url: "/app/", tag: "claim-Tok1" });
+  assert.equal(claimNotification({ invoiceNumber: "INV-7", amountPaise: null, utr: "412345678901", statement: false }, "T").body, "For INV-7 · UTR …8901. Check your bank, then confirm it in the tracker.");
+  assert.match(claimNotification({ invoiceNumber: "Statement", amountPaise: 150050, utr: "412345678901", statement: true }, "T").body, /^₹1,500\.50 for their statement · /);
+  assert.ok(!JSON.stringify(claimNotification({ invoiceNumber: "X", amountPaise: null, utr: "412345678901", statement: false }, "T")).includes("41234567"), "only the last four UTR digits");
+
+  const owner = "o".repeat(32);
+  const store = memoryPushStore();
+  const keys = { p256dh: uaPub, auth };
+  await store.add(owner, { endpoint: "https://fcm.googleapis.com/fcm/send/phone", keys, createdAt: 1 });
+  await store.add(owner, { endpoint: "https://web.push.apple.com/old", keys, createdAt: 2 });
+  await store.add(owner, { endpoint: "http://169.254.169.254/latest", keys, createdAt: 3 });
+  const seen = [];
+  const pushService = async (url, init) => { seen.push({ url, body: Buffer.from(init.body) }); return new Response(null, { status: url.includes("apple") ? 410 : 201 }); };
+  const out = await sendClaimAlert({ push: store, vapid, allowLocalEndpoints: false, fetchImpl: pushService, now }, owner, "Tok1", { invoiceNumber: "INV-7", amountPaise: 300000, utr: "412345678901", statement: false });
+  assert.deepEqual(out, { sent: 1, expired: 1, failed: 0 });
+  assert.deepEqual(seen.map((x) => x.url).sort(), ["https://fcm.googleapis.com/fcm/send/phone", "https://web.push.apple.com/old"], "a non-push-service endpoint is never called");
+  assert.equal(JSON.parse(decrypt(seen.find((x) => x.url.includes("fcm")).body, uaPriv, uaPub, auth)).title, "A client says they've paid");
+  assert.deepEqual((await store.list(owner)).map((x) => x.endpoint), ["https://fcm.googleapis.com/fcm/send/phone"], "expired and unsafe devices are pruned");
+  assert.deepEqual(await sendClaimAlert({ push: store, vapid, allowLocalEndpoints: false, fetchImpl: pushService, now }, "n".repeat(32), "T", { invoiceNumber: "X", amountPaise: null, utr: "412345678901", statement: false }), { sent: 0, expired: 0, failed: 0 }, "no devices, no sends");
+  const started = Date.now();
+  const hung = await sendClaimAlert({ push: store, vapid, allowLocalEndpoints: false, fetchImpl: () => new Promise(() => {}), now, timeoutMs: 50 }, owner, "T", { invoiceNumber: "X", amountPaise: null, utr: "412345678901", statement: false });
+  assert.ok(Date.now() - started < 1000 && hung.sent === 0, "a hung push service never holds the payer's request");
+}
+
+console.log("[webpush] RFC 8291 vector, round trip, VAPID JWT, endpoint allowlist, send outcomes, and claim alerts passed");

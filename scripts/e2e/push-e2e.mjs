@@ -96,6 +96,18 @@ try {
   const left = (await admin("get", { hash: `push:subs:${OWNER}` })).value;
   check("410 Gone prunes the device", body.expired === 1 && Object.keys(left).length === 0, JSON.stringify({ body, left }));
   check("owner with no devices leaves the push index", !((await admin("get", { set: "push:owners" })).value || []).includes(OWNER));
+
+  // A client's UTR claim on a pay link pushes to the owner's devices right away.
+  respondWith = 201;
+  await admin("set", { hash: `push:subs:${OWNER}`, field: "phone", value: JSON.stringify(sub) });
+  const PAY_TOKEN = "Pa7pQ2xYz9AbCdEfGhIjKl";
+  await admin("set", { key: `pl:tok:${PAY_TOKEN}`, value: JSON.stringify({ owner: OWNER, invoiceId: "inv_00000001", createdAt: T }) });
+  await admin("set", { hash: `pl:own:${OWNER}`, field: "inv_00000001", value: PAY_TOKEN });
+  const before = received.length;
+  const claim = await fetch(`${DEV}/i/${PAY_TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV }, body: "utr=412345678901&amount=25000" });
+  check("claim accepted", claim.status === 303, String(claim.status));
+  const alert = received.length > before ? decrypt(received.at(-1).body) : null;
+  check("claim alert pushed at once, with only the last UTR digits", alert?.title === "A client says they've paid" && alert.body === "₹25,000 for A-1 · UTR …8901. Check your bank, then confirm it in the tracker." && alert.url === "/app/", JSON.stringify(alert));
 } catch (error) {
   if (String(error).includes("__prod_done__")) { /* production branch finished */ }
   else check("test script ran to completion", false, String(error).slice(0, 500));

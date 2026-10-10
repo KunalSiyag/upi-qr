@@ -211,6 +211,11 @@ assert.match(razorpayClient.split("export async function fetchSubscription")[1] 
 const cronRoute = readFileSync(join(projectRoot, "src/pages/api/cron/digest.ts"), "utf8");
 assert.match(cronRoute, /timingSafeEqual/, "cron must check CRON_SECRET in constant time");
 assert.ok(cronRoute.indexOf("authorized(request.headers") < cronRoute.indexOf("reconcileDueSubscriptions("), "cron must authenticate before touching billing");
+const claimAlert = readFileSync(join(projectRoot, "src/lib/push/claimAlert.ts"), "utf8");
+assert.match(claimAlert, /safePushEndpoint\(subscription\.endpoint, deps\.allowLocalEndpoints\)/, "claim alerts must re-check push endpoints (SSRF)");
+const payPageSource = readFileSync(join(projectRoot, "src/pages/i/[token].astro"), "utf8");
+assert.match(payPageSource, /allowLocalEndpoints: allowLocalPushEndpoints\(\)/, "pay page may only allow local push endpoints in development");
+assert.ok(payPageSource.indexOf("addClaim(") < payPageSource.indexOf("sendClaimAlert("), "a claim is stored before anyone is notified");
 assert.match(cronRoute, /if \(!secret\) return jsonResponse/, "cron must refuse to run without CRON_SECRET");
 const pushApi = readFileSync(join(projectRoot, "src/pages/api/v1/push/index.ts"), "utf8");
 assert.match(pushApi, /safePushEndpoint\(/, "push subscriptions must be allow-listed (SSRF)");
