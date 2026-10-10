@@ -163,6 +163,20 @@ for (const form of [payPage, readFileSync(join(projectRoot, "src/pages/c/[id].as
 }
 const middleware = readFileSync(join(projectRoot, "src/middleware.ts"), "utf8");
 assert.match(middleware, /if \(!response\.headers\.has\(name\)\) response\.headers\.set\(name, value\)/, "middleware must not weaken page-level CSP");
+// Static pages get the vercel.json CSP and SSR pages the middleware default: keep them identical, and
+// complete for Clerk (clerk.com/docs/security/clerk-csp) or sign-in/sign-up breaks with a production instance.
+const mainCsp = JSON.parse(vercelConfig).headers.find((h) => h.source === "/((?!embed).*)").headers.find((h) => h.key === "Content-Security-Policy").value;
+assert.ok(middleware.includes(`"${mainCsp}"`), "middleware default CSP must match the vercel.json page CSP");
+const cspDirective = (name) => mainCsp.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) ?? "";
+for (const [name, sources] of Object.entries({
+  "script-src": ["https://clerk.proupiqr.in", "https://*.clerk.accounts.dev", "https://challenges.cloudflare.com"],
+  "connect-src": ["https://clerk.proupiqr.in", "https://*.clerk.accounts.dev", "https://*.protect.clerk.com:*"],
+  "frame-src": ["https://challenges.cloudflare.com", "https://*.clerk.com"],
+  "worker-src": ["'self'", "blob:"],
+})) {
+  for (const source of sources) assert.ok(cspDirective(name).split(/\s+/).includes(source), `CSP ${name} must allow ${source} for Clerk`);
+}
+assert.ok(!/(^|\s)(https:|\*)(\s|$)/.test(cspDirective("script-src")), "script-src must not allow any host");
 const paylinkApi = readFileSync(join(projectRoot, "src/pages/api/v1/paylinks/[token].ts"), "utf8");
 assert.match(paylinkApi, /record\.owner !== workspaceOwner\(userId\)/, "only the owner may revoke a pay link");
 

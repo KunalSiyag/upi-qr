@@ -40,6 +40,20 @@ const sk = val("CLERK_SECRET_KEY");
 if (!pk || !sk) fail("PUBLIC_CLERK_PUBLISHABLE_KEY and CLERK_SECRET_KEY are required for sign-in, sync, pay links and billing");
 else if (pk.startsWith("pk_live_") && sk.startsWith("sk_live_")) ok("Clerk production keys present");
 else warn("Clerk keys are development/test keys (pk_test_/sk_test_) — use the production instance for launch");
+// The publishable key encodes the Frontend API host (public: it ships in every page). The CSP must allow it.
+const fapi = pk ? Buffer.from(pk.replace(/^pk_(test|live)_/, ""), "base64").toString().replace(/\$$/, "") : "";
+if (/^[a-z0-9.-]+\.[a-z]{2,}$/i.test(fapi)) {
+  const csp = (JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8")).headers ?? [])
+    .find((h) => h.source === "/((?!embed).*)")?.headers.find((x) => x.key === "Content-Security-Policy")?.value ?? "";
+  const directive = (name) => csp.split(";").map((d) => d.trim()).find((d) => d.startsWith(`${name} `)) ?? "";
+  const allows = (name) => directive(name).split(/\s+/).some((source) => {
+    const host = /^https:\/\/([^/:]+)(?::[\d*]+)?$/.exec(source)?.[1];
+    return host !== undefined && (host.startsWith("*.") ? fapi.endsWith(host.slice(1)) : fapi === host);
+  });
+  allows("script-src") && allows("connect-src")
+    ? ok(`CSP allows Clerk's frontend API (${fapi})`)
+    : fail(`CSP doesn't allow https://${fapi} in script-src and connect-src — sign-in would break. Add it in vercel.json and src/middleware.ts`);
+} else if (pk) fail("PUBLIC_CLERK_PUBLISHABLE_KEY doesn't decode to a Clerk frontend API host — check the value");
 
 section("Database (Vercel KV)");
 const kvUrl = val("KV_REST_API_URL");
