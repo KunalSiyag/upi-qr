@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { addSampleData, hasSampleData, removeSampleData } from "../src/lib/workspace/sample.ts";
 import { generateRecurring, liveRecurring, MAX_BACKFILL_MONTHS, recurringInvoiceId, upsertPlan } from "../src/lib/workspace/model.ts";
-import { liveInvoices, recordReceiptPayment } from "../src/lib/workspace/model.ts";
+import { isUdyam, liveInvoices, msmeDeadline, msmeInterestPaise, normalizeUdyam, recordReceiptPayment } from "../src/lib/workspace/model.ts";
 import { matchCredits } from "../src/lib/workspace/statement.ts";
 import {
   addDays, addPayment, canonicalJson, eraseWorkspace, restoreFrom, agingBuckets, chaseList, clientBalances, daysBetween, deleteClient, deleteInvoice,
@@ -261,4 +261,35 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   }
 }
 
-console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, and receipt checks passed");
+// MSME mode: Udyam numbers, the Section 15 deadline (agreed days, capped at 45), Section 16 interest, and the reminder line.
+{
+  assert.equal(normalizeUdyam(" udyam-mh-12-1234567 "), "UDYAM-MH-12-1234567");
+  for (const bad of ["UDYAM-12", "UDYAM-MH-1-1234567", "UDYAM-MH-12-123456", "MH-12-1234567", ""]) assert.equal(normalizeUdyam(bad), "", bad);
+  assert.equal(isUdyam("UDYAM-MH-12-1234567"), true);
+  assert.equal(sanitizeWorkspace({ business: { name: "A", udyam: "udyam-ka-03-0000123" } }).business.udyam, "UDYAM-KA-03-0000123");
+  assert.equal(sanitizeWorkspace({ business: { name: "A", udyam: "<script>" } }).business.udyam, "", "invalid Udyam is dropped");
+  assert.equal(sanitizeWorkspace({ business: { name: "A" } }).business.udyam, "", "older workspaces get an empty Udyam");
+
+  assert.equal(msmeDeadline({ issueDate: "2026-09-01", dueDate: "2026-10-01" }), "2026-10-01", "agreed 30 days");
+  assert.equal(msmeDeadline({ issueDate: "2026-09-01", dueDate: "2026-12-01" }), "2026-10-16", "agreed 91 days is capped at 45");
+  assert.equal(msmeDeadline({ issueDate: "2026-09-01", dueDate: "2026-08-20" }), "2026-09-01", "a due date before the invoice means pay on receipt");
+  assert.equal(msmeInterestPaise(10_000_000, "2026-08-27", "2026-10-11", 17.25), 216398, "₹1,00,000, 45 days late at 17.25% → ₹2,163.98");
+  assert.equal(msmeInterestPaise(10_000_000, "2026-10-10", "2026-10-11", 17.25), 4759);
+  assert.equal(msmeInterestPaise(10_000_000, "2026-10-11", "2026-10-11", 17.25), 0, "no interest on the deadline itself");
+  assert.equal(msmeInterestPaise(0, "2026-08-27", "2026-10-11", 17.25), 0);
+
+  const M = 1_790_600_000_000;
+  let mw = updateBusiness(emptyWorkspace(), { name: "Mehta Fab", upiId: "mehta@okaxis", udyam: "UDYAM-GJ-01-7654321" }, M);
+  mw = upsertClient(mw, { id: "cli_buyer001", name: "Acme Retail", phone: "", email: "", gstin: "", createdAt: M, updatedAt: M }, M);
+  mw = upsertInvoice(mw, { id: "inv_msme0001", number: "MF-21", clientId: "cli_buyer001", issueDate: "2026-08-01", dueDate: "2026-08-31", amountPaise: 5_000_000, description: "", payments: [], reminders: [], voided: false, createdAt: M, updatedAt: M }, M);
+  const mv = viewInvoice(mw.invoices.inv_msme0001, mw.clients, "2026-10-11");
+  const en = reminderMessage(mv, mw.business, "overdue", undefined, "en", true);
+  assert.ok(en.includes("We are a registered micro/small enterprise (Udyam UDYAM-GJ-01-7654321).") && en.includes("Section 43B(h)") && en.includes("Section 16"), en);
+  assert.ok(en.indexOf("Pay by UPI to") < en.indexOf("We are a registered") && en.indexOf("We are a registered") < en.indexOf("If you have already paid"), "rights line sits between the pay line and the sign-off");
+  const hi = reminderMessage(mv, mw.business, "overdue", undefined, "hi", true);
+  assert.ok(hi.includes("Udyam UDYAM-GJ-01-7654321") && hi.includes("43B(h)") && hi.includes("धारा 16"), hi);
+  assert.ok(!reminderMessage(mv, mw.business, "overdue", undefined, "en").includes("Udyam"), "only when asked");
+  assert.ok(!reminderMessage(mv, { ...mw.business, udyam: "" }, "overdue", undefined, "en", true).includes("Udyam"), "never without a Udyam number");
+}
+
+console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");

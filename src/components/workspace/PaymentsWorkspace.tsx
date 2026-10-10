@@ -3,8 +3,11 @@ import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
   liveRecurring, upsertPlan, allocatePayment,
   invoicesCsv, liveClients, localToday, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
+  daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
+import { PLANS } from "../../lib/workspace/entitlements";
+import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import { backupJson, loadWorkspace, onExternalChange, restoreBackup, saveWorkspace } from "../../lib/workspace/localStore";
 import { createSync, STASH_KEY, type SyncState } from "../../lib/workspace/sync";
 import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type PaylinkList } from "../../lib/workspace/paylinkClient";
@@ -220,6 +223,15 @@ function Workspace() {
     [statementLinks],
   );
   const isPro = paylinks?.plan?.id === "pro";
+  const entitlement = PLANS[isPro ? "pro" : "free"];
+  /** MSMED deadline status for an unpaid invoice of a Udyam-registered business; interest only on plans with MSME tools. */
+  const msmeFor = (v: InvoiceView) => {
+    if (!isUdyam(ws.business.udyam) || v.balancePaise <= 0 || v.state === "void") return undefined;
+    const deadline = msmeDeadline(v.invoice);
+    const daysLate = daysBetween(deadline, today);
+    if (daysLate <= 0) return undefined;
+    return { deadline, daysLate, interestPaise: entitlement.msmeTools ? msmeInterestPaise(v.balancePaise, deadline, today, MSMED_INTEREST_PCT) : null };
+  };
 
   async function makeStatementLink(clientId: string) {
     setLinkBusy(clientId);
@@ -480,6 +492,7 @@ function Workspace() {
                   <InvoiceRow
                     key={v.invoice.id}
                     view={v}
+                    msme={msmeFor(v)}
                     signedIn={signedIn}
                     payLink={paylinks?.byInvoice[v.invoice.id] ? paylinkUrl(paylinks.byInvoice[v.invoice.id].token) : undefined}
                     linkBusy={linkBusy === v.invoice.id}
@@ -629,7 +642,7 @@ function Workspace() {
         }} />
       )}
       {sheet?.kind === "remind" && ws.invoices[sheet.id] && (
-        <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} payLink={paylinks?.byInvoice[sheet.id] ? paylinkUrl(paylinks.byInvoice[sheet.id].token) : undefined} onClose={closeSheet} onSent={(next) => {
+        <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={paylinks?.byInvoice[sheet.id] ? paylinkUrl(paylinks.byInvoice[sheet.id].token) : undefined} onClose={closeSheet} onSent={(next) => {
           setWs(next);
           trackProductEvent("reminder_sent", "workspace");
         }} />
@@ -666,8 +679,10 @@ function Stat({ label, value, note, tone }: { label: string; value: string; note
   );
 }
 
-function InvoiceRow({ view, signedIn, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment }: {
+function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment }: {
   view: InvoiceView;
+  /** Set when a Udyam-registered business's invoice is past its MSMED deadline; interest is null without MSME tools. */
+  msme?: { deadline: string; daysLate: number; interestPaise: number | null };
   signedIn: boolean;
   payLink?: string;
   linkBusy: boolean;
@@ -715,6 +730,14 @@ function InvoiceRow({ view, signedIn, payLink, linkBusy, onCreateLink, onRevokeL
                 </li>
               ))}
             </ul>
+          )}
+          {msme && (
+            <p className="mt-3 rounded-xl bg-sun/20 px-3 py-2 text-xs leading-5 text-forest">
+              <strong>{tr(msme.daysLate === 1 ? "MSME deadline passed {n} day ago ({date})." : "MSME deadline passed {n} days ago ({date}).", { n: msme.daysLate, date: shortDate(msme.deadline, dateLocale) })}</strong>{" "}
+              {msme.interestPaise !== null
+                ? tr("Section 16 interest so far: about {amount} at {rate}% a year.", { amount: formatPaise(msme.interestPaise), rate: MSMED_INTEREST_PCT })
+                : tr("Pro shows the Section 16 interest due and adds your MSME rights to reminders.")}
+            </p>
           )}
           {view.balancePaise > 0 && (
             <div className="mt-3 rounded-xl bg-cream p-3">
@@ -828,6 +851,7 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
   const [phone, setPhone] = useState(ws.business.phone);
   const [gstin, setGstin] = useState(ws.business.gstin);
   const [prefix, setPrefix] = useState(ws.business.invoicePrefix);
+  const [udyam, setUdyam] = useState(ws.business.udyam);
   const [error, setError] = useState("");
   const [confirmErase, setConfirmErase] = useState(false);
   const { tr } = useWs();
@@ -854,14 +878,18 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
           if (!name.trim()) return setError(tr("Business name is required."));
           if (upiId.trim() && !isValidVpa(upiId.trim())) return setError(tr("That UPI ID doesn't look right (example: name@okaxis)."));
           if (!/^[A-Za-z0-9/_-]{0,12}$/.test(prefix)) return setError(tr("Invoice prefix can use letters, numbers, / _ - (max 12)."));
+          if (udyam.trim() && !normalizeUdyam(udyam)) return setError(tr("That Udyam number doesn't look right (example: UDYAM-MH-12-1234567)."));
           setError("");
-          onChange(updateBusiness(ws, { name: name.trim(), upiId: upiId.trim(), phone: phone.trim(), gstin: gstin.trim().toUpperCase(), invoicePrefix: prefix }, Date.now()), tr("Settings saved."));
+          setUdyam(normalizeUdyam(udyam));
+          onChange(updateBusiness(ws, { name: name.trim(), upiId: upiId.trim(), phone: phone.trim(), gstin: gstin.trim().toUpperCase(), invoicePrefix: prefix, udyam: normalizeUdyam(udyam) }, Date.now()), tr("Settings saved."));
         }}>
           <Field label={tr("Business name")} htmlFor="ws-s-name"><input id="ws-s-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
           <Field label={tr("UPI ID for payments")} htmlFor="ws-s-upi"><input id="ws-s-upi" className={inputClass} value={upiId} onChange={(e) => setUpiId(e.target.value)} maxLength={100} autoCapitalize="none" /></Field>
           <Field label={tr("Your phone (optional)")} htmlFor="ws-s-phone"><input id="ws-s-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} /></Field>
           <Field label={tr("GSTIN (optional)")} htmlFor="ws-s-gstin"><input id="ws-s-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} /></Field>
           <Field label={tr("Invoice number prefix")} htmlFor="ws-s-prefix"><input id="ws-s-prefix" className={inputClass} value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={12} /></Field>
+          <Field label={tr("Udyam number (micro/small enterprise, optional)")} htmlFor="ws-s-udyam"><input id="ws-s-udyam" className={inputClass} value={udyam} onChange={(e) => setUdyam(e.target.value)} maxLength={30} placeholder="UDYAM-MH-12-1234567" autoCapitalize="characters" /></Field>
+          <p className="text-[11px] leading-4 text-forest/60 sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the 45-day MSMED deadline on overdue invoices.")}</p>
           <div className="flex items-end"><button type="submit" className={`${primaryButton} w-full`}>{tr("Save settings")}</button></div>
         </form>
         {error && <p role="alert" className="mt-2 text-xs font-bold text-[#a8321d]">{error}</p>}

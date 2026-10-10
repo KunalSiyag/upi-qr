@@ -49,7 +49,7 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
       if (!cfg().signedIn) return new Response('{"error":"Sign in"}', { status: 401 });
       const links = JSON.parse(localStorage.getItem('__links') || '{}');
       const save = () => localStorage.setItem('__links', JSON.stringify(links));
-      if (method === 'GET') return new Response(JSON.stringify({ links: Object.entries(links).map(([invoiceId, l]) => ({ invoiceId, token: l.token, claims: l.claims })), plan: { id: 'free', activePaylinks: 10, used: Object.keys(links).length } }), { status: 200 });
+      if (method === 'GET') return new Response(JSON.stringify({ links: Object.entries(links).map(([invoiceId, l]) => ({ invoiceId, token: l.token, claims: l.claims })), plan: { id: localStorage.getItem('__plan') || 'free', activePaylinks: 10, used: Object.keys(links).length } }), { status: 200 });
       if (method === 'POST') {
         const { invoiceId } = JSON.parse(init.body);
         const doc = JSON.parse(localStorage.getItem('__srvdoc') || 'null');
@@ -166,6 +166,34 @@ try {
   await b.waitFor("/Pro stays on until/.test(document.body.innerText)", 8000);
   check("cancel shows paid-through date", /Cancelled — Pro stays on until 10 Nov 2026/.test(await text()));
   check("cancel sent to API", await b.eval("window.__calls.some(c => c.url.includes('/api/v1/billing') && c.method === 'POST' && c.body.includes('cancel'))"));
+  // MSME mode: a Udyam number shows the MSMED deadline on overdue invoices; Pro adds Section 16 interest and the rights line.
+  const day = (n) => { const d = new Date(Date.now() + n * 86_400_000); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`; };
+  const msmeWs = { ...guest, invoices: { inv_msme0001: { id: "inv_msme0001", number: "MF-21", clientId: "cli_aaaaaaaa", issueDate: day(-75), dueDate: day(-45), amountPaise: 10000000, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T } } };
+  await setup({ signedIn: false, owner: "owner-a" }, msmeWs);
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("!!document.getElementById('ws-s-udyam')", 8000);
+  await t("__t.set('ws-s-udyam', 'UDYAM-12'), __t.click(/^Save settings$/), true");
+  check("MSME: an invalid Udyam number is refused", await b.waitFor("/doesn't look right \\(example: UDYAM/.test(document.body.innerText)", 4000));
+  await t("__t.set('ws-s-udyam', 'udyam-mh-12-1234567'), __t.click(/^Save settings$/), true");
+  await b.waitFor("/Settings saved/.test(document.body.innerText)", 4000);
+  check("MSME: Udyam number saved normalized", (await b.eval("JSON.parse(localStorage.getItem('proupiqr-workspace-v1')).business.udyam")) === "UDYAM-MH-12-1234567");
+  await b.go(BASE + "/app/?tab=invoices", 3000);
+  await t("[...document.querySelectorAll('li [aria-expanded]')][0].click(), true");
+  check("MSME free: overdue invoice shows the MSMED deadline and a Pro hint", await b.waitFor("/MSME deadline passed 45 days ago/.test(document.body.innerText) && /Pro shows the Section 16 interest due/.test(document.body.innerText)", 4000));
+  await t("__t.click(/^Remind$/)");
+  check("MSME free: reminder sheet points to Pro for the rights line", await b.waitFor("/Pro can add your MSME payment rights/.test(document.body.innerText)", 4000));
+  await b.eval("localStorage.setItem('__plan', 'pro'); const c = JSON.parse(localStorage.getItem('__srvcfg')); c.signedIn = true; localStorage.setItem('__srvcfg', JSON.stringify(c)); true");
+  await b.go(BASE + "/app/?tab=invoices", 3500);
+  await b.waitFor("[...document.querySelectorAll('li [aria-expanded]')].length > 0", 6000);
+  await t("[...document.querySelectorAll('li [aria-expanded]')][0].click(), true");
+  check("MSME Pro: Section 16 interest shown to the paisa", await b.waitFor("/Section 16 interest so far: about ₹2,163\\.98 at 17\\.25% a year/.test(document.body.innerText)", 8000), (await text()).match(/MSME[^\n]*/)?.[0] ?? "");
+  await t("__t.click(/^Remind$/)");
+  await b.waitFor("[...document.querySelectorAll('label')].some(l => /Add my MSME payment rights/.test(l.textContent))", 4000);
+  await b.eval("[...document.querySelectorAll('label')].find(l => /Add my MSME payment rights/.test(l.textContent)).querySelector('input').click(); true");
+  const msmeMsg = await b.eval("document.getElementById('ws-reminder').value");
+  check("MSME Pro: reminder gains the MSMED rights line", msmeMsg.includes("Udyam UDYAM-MH-12-1234567") && msmeMsg.includes("43B(h)"), msmeMsg.slice(0, 300));
+  await b.eval("localStorage.removeItem('__plan'); true");
+
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));

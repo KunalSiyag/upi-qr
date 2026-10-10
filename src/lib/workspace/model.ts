@@ -23,6 +23,8 @@ export interface Business {
   phone: string;
   gstin: string;
   invoicePrefix: string;
+  /** Udyam registration number (UDYAM-XX-00-0000000) of a micro/small enterprise; "" if none. */
+  udyam: string;
   updatedAt: number;
 }
 
@@ -112,7 +114,7 @@ export interface InvoiceView {
 // Construction
 
 export function emptyBusiness(now = 0): Business {
-  return { name: "", upiId: "", phone: "", gstin: "", invoicePrefix: "INV-", updatedAt: now };
+  return { name: "", upiId: "", phone: "", gstin: "", invoicePrefix: "INV-", udyam: "", updatedAt: now };
 }
 
 export function emptyWorkspace(now = 0): Workspace {
@@ -363,6 +365,42 @@ export function allocatePayment(
     left -= part;
   }
   return { ws: next, allocations, unallocatedPaise: left };
+}
+
+/* ---------- MSME (MSMED Act) ---------- */
+
+/** Section 15 MSMED Act: a buyer must pay a micro/small supplier within the agreed period, at most 45 days. */
+export const MSME_MAX_CREDIT_DAYS = 45;
+
+export function isUdyam(value: string): boolean {
+  return /^UDYAM-[A-Z]{2}-\d{2}-\d{7}$/.test(value);
+}
+
+/** "udyam-mh-12-1234567 " → "UDYAM-MH-12-1234567"; anything else → "". */
+export function normalizeUdyam(value: string): string {
+  const v = value.trim().toUpperCase().replace(/\s+/g, "");
+  return isUdyam(v) ? v : "";
+}
+
+/**
+ * Last day to pay under Section 15: the agreed due date, capped at 45 days.
+ * The Act counts from the day goods or services are accepted; the invoice date
+ * stands in for that here.
+ */
+export function msmeDeadline(invoice: Pick<Invoice, "issueDate" | "dueDate">): string {
+  const agreed = Math.max(0, daysBetween(invoice.issueDate, invoice.dueDate));
+  return addDays(invoice.issueDate, Math.min(MSME_MAX_CREDIT_DAYS, agreed));
+}
+
+/**
+ * Section 16 interest on an unpaid balance after the deadline: compound with
+ * monthly rests at `ratePct` a year (three times the RBI Bank Rate), in paise.
+ * Months are days / 30, matching the MSMED interest calculator.
+ */
+export function msmeInterestPaise(balancePaise: number, deadline: string, today: string, ratePct: number): number {
+  const days = daysBetween(deadline, today);
+  if (days <= 0 || balancePaise <= 0 || !(ratePct > 0)) return 0;
+  return Math.round(balancePaise * (Math.pow(1 + ratePct / 1200, days / 30) - 1));
 }
 
 export interface ReceiptPayment {
@@ -633,7 +671,7 @@ export function sanitizeWorkspace(raw: unknown): Workspace {
   const b = (r.business && typeof r.business === "object" ? r.business : {}) as Record<string, unknown>;
   ws.business = {
     name: str(b.name, 80), upiId: str(b.upiId, 100), phone: str(b.phone, 20), gstin: str(b.gstin, 15),
-    invoicePrefix: str(b.invoicePrefix, 12) || "INV-", updatedAt: num(b.updatedAt),
+    invoicePrefix: str(b.invoicePrefix, 12) || "INV-", udyam: normalizeUdyam(str(b.udyam, 30)), updatedAt: num(b.updatedAt),
   };
   const clients = (r.clients && typeof r.clients === "object" ? r.clients : {}) as Record<string, unknown>;
   for (const [id, value] of Object.entries(clients).slice(0, 5000)) {
@@ -746,7 +784,16 @@ function displayDate(iso: string, lang: ReminderLang = "en"): string {
  * Plain-text reminder for WhatsApp/SMS, in English or Hindi. Shares the UPI ID
  * as text, never a raw upi://pay link (chat apps mangle them; see AGENTS.md).
  */
-export function reminderMessage(view: InvoiceView, business: Business, tone: ReminderTone, payLink?: string, lang: ReminderLang = "en"): string {
+/** A factual note of the supplier's MSMED rights, for business buyers; only with a valid Udyam number. */
+export function msmeRightsLine(business: Business, lang: ReminderLang): string {
+  if (!isUdyam(business.udyam)) return "";
+  return lang === "hi"
+    ? `हम एक पंजीकृत सूक्ष्म/लघु उद्यम हैं (Udyam ${business.udyam})। MSMED Act के तहत भुगतान तय क्रेडिट अवधि (अधिकतम 45 दिन) में देय है; देर से भुगतान पर चक्रवृद्धि ब्याज लगता है (धारा 16), और व्यावसायिक खरीदार MSE को देर से किया गया भुगतान उसी वर्ष घटा सकता है जिसमें भुगतान किया गया हो (आयकर अधिनियम, धारा 43B(h))।`
+    : `We are a registered micro/small enterprise (Udyam ${business.udyam}). Under the MSMED Act, payment is due within the agreed credit period of up to 45 days; later payments carry compound interest (Section 16), and a business buyer can deduct a late payment to an MSE only in the year it is paid (Income Tax Act, Section 43B(h)).`;
+}
+
+export function reminderMessage(view: InvoiceView, business: Business, tone: ReminderTone, payLink?: string, lang: ReminderLang = "en", msmeRights = false): string {
+  const rights = msmeRights ? msmeRightsLine(business, lang) : "";
   const amount = formatPaise(view.balancePaise);
   const number = view.invoice.number;
   const due = displayDate(view.invoice.dueDate, lang);
@@ -764,6 +811,7 @@ export function reminderMessage(view: InvoiceView, business: Business, tone: Rem
     lines.push(opening[tone]);
     if (payLink) lines.push(`यहाँ सुरक्षित भुगतान करें: ${payLink}`);
     else if (business.upiId) lines.push(`UPI से भुगतान करें: ${business.upiId}`);
+    if (rights) lines.push(rights);
     lines.push(tone === "friendly" ? "धन्यवाद!" : "अगर आपने भुगतान कर दिया है, तो कृपया UTR भेज दें ताकि हम रिकॉर्ड अपडेट कर सकें। धन्यवाद!");
     lines.push(`— ${from}`);
     return lines.join("\n");
@@ -779,6 +827,7 @@ export function reminderMessage(view: InvoiceView, business: Business, tone: Rem
   lines.push(opening[tone]);
   if (payLink) lines.push(`Pay securely here: ${payLink}`);
   else if (business.upiId) lines.push(`Pay by UPI to: ${business.upiId}`);
+  if (rights) lines.push(rights);
   lines.push(tone === "friendly" ? "Thank you!" : "If you have already paid, please share the UTR so we can update our records. Thank you!");
   lines.push(`— ${from}`);
   return lines.join("\n");

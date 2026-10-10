@@ -14,11 +14,13 @@ export interface Plan {
   brandedPayPage: boolean;
   /** One link per client listing all their dues. */
   statementLinks: boolean;
+  /** MSME mode: Section 16 interest on overdue invoices and the MSMED rights line in reminders. */
+  msmeTools: boolean;
 }
 
 export const PLANS: Record<PlanId, Plan> = {
-  free: { id: "free", activePaylinks: FREE_ACTIVE_PAYLINKS, brandedPayPage: true, statementLinks: false },
-  pro: { id: "pro", activePaylinks: 10_000, brandedPayPage: false, statementLinks: true },
+  free: { id: "free", activePaylinks: FREE_ACTIVE_PAYLINKS, brandedPayPage: true, statementLinks: false, msmeTools: false },
+  pro: { id: "pro", activePaylinks: 10_000, brandedPayPage: false, statementLinks: true, msmeTools: true },
 };
 
 export function planFromSubscription(record: SubscriptionRecord | null, now: number): Plan {

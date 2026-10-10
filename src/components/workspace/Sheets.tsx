@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, findClient, formatPaise, isIsoDate, liveClients, logReminder, newId, nextInvoiceNumber,
   paiseToDecimal, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, suggestedTone, upsertClient, upsertInvoice,
-  upsertPlan, viewInvoice, whatsappLink, type Invoice, type PaymentMode, type ReminderLang, type ReminderTone, type Workspace,
+  upsertPlan, viewInvoice, whatsappLink, isUdyam, type Invoice, type PaymentMode, type ReminderLang, type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
 import { Field, inputClass, primaryButton, secondaryButton, Sheet } from "./ui";
 import { useWs } from "./i18n";
@@ -245,10 +245,12 @@ const TONES: { id: ReminderTone; label: string }[] = [
   { id: "final", label: "Firm" },
 ];
 
-export function ReminderSheet({ ws, today, invoiceId, payLink, onSent, onClose }: {
+export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent, onClose }: {
   ws: Workspace;
   today: string;
   invoiceId: string;
+  /** Plan includes MSME tools (the MSMED rights line). */
+  msmeTools: boolean;
   payLink?: string;
   onSent: (next: Workspace, channel: "whatsapp" | "sms" | "copy") => void;
   onClose: () => void;
@@ -263,20 +265,27 @@ export function ReminderSheet({ ws, today, invoiceId, payLink, onSent, onClose }
       return saved === "hi" || saved === "en" ? saved : uiLang;
     } catch { return uiLang; }
   });
+  const [msmeRights, setMsmeRights] = useState(false);
   const [message, setMessage] = useState(() => reminderMessage(view, ws.business, suggestedTone(view), payLink, lang));
+  const udyam = isUdyam(ws.business.udyam);
   const [copied, setCopied] = useState(false);
   const phone = view.client?.phone ?? "";
   const last = view.invoice.reminders.at(-1);
 
   function chooseTone(next: ReminderTone) {
     setTone(next);
-    setMessage(reminderMessage(view, ws.business, next, payLink, lang));
+    setMessage(reminderMessage(view, ws.business, next, payLink, lang, msmeRights));
   }
 
   function chooseLang(next: ReminderLang) {
     setLang(next);
     try { localStorage.setItem(REMINDER_LANG_KEY, next); } catch { /* not remembered */ }
-    setMessage(reminderMessage(view, ws.business, tone, payLink, next));
+    setMessage(reminderMessage(view, ws.business, tone, payLink, next, msmeRights));
+  }
+
+  function chooseRights(next: boolean) {
+    setMsmeRights(next);
+    setMessage(reminderMessage(view, ws.business, tone, payLink, lang, next));
   }
 
   function send(channel: "whatsapp" | "sms") {
@@ -322,6 +331,17 @@ export function ReminderSheet({ ws, today, invoiceId, payLink, onSent, onClose }
       </div>
       <label htmlFor="ws-reminder" className="sr-only">{tr("Message")}</label>
       <textarea id="ws-reminder" className={`${inputClass} min-h-[11rem] leading-6`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} />
+      {udyam && (msmeTools ? (
+        <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs leading-5 text-forest">
+          <input type="checkbox" checked={msmeRights} onChange={(e) => chooseRights(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" />
+          {tr("Add my MSME payment rights (Section 16 and 43B(h))")}
+        </label>
+      ) : (
+        <p className="mt-2 text-xs text-forest/70">
+          {tr("Pro can add your MSME payment rights (Section 16 and 43B(h)) to this message.")}{" "}
+          <a href="/app/?tab=settings&upgrade=monthly" className="font-bold text-leaf underline">{tr("See Pro")}</a>
+        </p>
+      ))}
       {payLink && <p className="mt-2 text-xs text-leaf">{tr("Includes your pay link — the client sees the live amount and a UPI button.")}</p>}
       {!ws.business.upiId && <p className="mt-2 text-xs font-bold text-[#7a4b00]">{tr("Add your UPI ID in Settings so reminders tell clients where to pay.")}</p>}
       {!phone && <p className="mt-2 text-xs text-forest/60">{tr("No number saved for this client — WhatsApp will ask you to pick a chat.")}</p>}

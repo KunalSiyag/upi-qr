@@ -23,6 +23,7 @@ const PRO_FEATURES = [
   "Unlimited active pay links (Free: 10)",
   "Client statement links: all of a client's dues with one UPI button",
   "Pay pages without the “send your own pay links” line",
+  "MSME mode: 45-day MSMED deadlines, Section 16 interest, and your rights in reminders",
   "Early access to automatic WhatsApp reminders, now in development",
 ];
 
