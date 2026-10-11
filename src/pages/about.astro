@@ -1,27 +1,83 @@
 ---
-import TrustPage from "../components/TrustPage.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 import { DEFAULT_AUTHOR } from "../data/authors";
+import { BUSINESS } from "../data/business";
+import { LOCALIZED_TOOLS } from "../data/localizedTools";
+import { PRO_PRICES } from "../data/pricing";
 
-const title = "About Pro UPI QR - Independent UPI Tools | Pro UPI QR";
+const title = "About Pro UPI QR — Helping Indian Businesses Get Paid";
 const description =
-  "Pro UPI QR is an independent, local-first UPI QR and merchant-tools site founded by Kunal Siyag. Not NPCI, not a bank, not a payment gateway.";
+  "Pro UPI QR builds free UPI QR codes, billing tools and a payment tracker that help India's shops and freelancers get paid on time. We take 0% of payments.";
 const pageUrl = "https://www.proupiqr.in/about/";
+const toolCount = LOCALIZED_TOOLS.length;
+const link = "font-bold text-leaf underline";
+
+const facts = [
+  { value: "0%", label: "of your payments. Money goes from your client's UPI app to your bank." },
+  { value: `${toolCount}`, label: "free tools: QR codes, invoices, receipts and calculators." },
+  { value: "₹0", label: "to start. No sign-up, no watermark, no trial clock." },
+  { value: PRO_PRICES.monthly.label, label: "a month for Pro. Everything else is free." },
+];
+
+const products = [
+  {
+    name: "Free UPI tools",
+    href: "/tools/",
+    cta: "Browse the tools",
+    body: "A standard NPCI upi://pay QR for any UPI ID, plus posters, stickers, invoices, receipts, quotations and business calculators, in English, Hindi, Tamil, Telugu and Marathi. They run in your browser, so what you type stays on your device.",
+  },
+  {
+    name: "Payment tracker",
+    href: "/payment-tracker/",
+    cta: "See the tracker",
+    body: "Who owes you, overdue first. Invoices and monthly fees, one-tap WhatsApp reminders in English or Hindi, and bank-statement matching. Works without an account; a free account adds sync and pay links your clients can pay from.",
+  },
+  {
+    name: "Pro",
+    href: "/pricing/",
+    cta: "See pricing",
+    body: `For businesses that send a lot of invoices: unlimited pay links, client statement links, and MSME mode with 45-day deadlines and Section 16 interest. ${PRO_PRICES.monthly.label}/month or ${PRO_PRICES.yearly.label}/year.`,
+  },
+];
+
+const principles = [
+  {
+    title: "Free stays free",
+    body: "Every generator, document and calculator works without an account. An account is an upgrade, never a gate in front of a download.",
+  },
+  {
+    title: "We never touch the money",
+    body: "UPI payments go straight from your client's app to your bank account. We don't hold, route or settle funds, and we never see a UPI PIN.",
+  },
+  {
+    title: "Your data is yours",
+    body: "The tools and the tracker keep your data in your browser. Sign in and it syncs to your account; you can delete that cloud copy whenever you like.",
+  },
+  {
+    title: "Facts with sources",
+    body: "Bank limits, MDR, refund timelines and MSMED interest are sourced and dated. When we get one wrong, the fix goes on a public corrections log.",
+  },
+];
 
 const faqs = [
   {
     question: "Is Pro UPI QR an official NPCI or PhonePe product?",
     answer:
-      "No. It is an independent web utility. It is not affiliated with NPCI, BHIM, PhonePe, Google Pay, Paytm, or any bank. Official merchant QR, KYC, and soundboxes still come from those apps or your bank.",
+      "No. Pro UPI QR is independent. It is not affiliated with NPCI, BHIM, PhonePe, Google Pay, Paytm, or any bank. Official merchant QRs, KYC, and soundboxes still come from those apps or your bank.",
+  },
+  {
+    question: "How does Pro UPI QR make money?",
+    answer: `From Pro subscriptions (${PRO_PRICES.monthly.label}/month or ${PRO_PRICES.yearly.label}/year), and from Amazon Associate links on some product guides, which are labelled. We don't take a cut of your payments, we don't show ads on the tools, and we don't sell your data.`,
   },
   {
     question: "Who writes the guides?",
     answer:
-      "Kunal Siyag, the founder. There is no separate unnamed research desk. Sources, review dates, and corrections are listed on the article and on the corrections log.",
+      "Kunal Siyag, the founder. There is no separate unnamed research desk. Sources, review dates, and corrections are listed on each article and on the corrections log.",
   },
   {
     question: "Do you hold customer money or UPI PINs?",
     answer:
-      "No. Static tools stay in the browser. Actual UPI payments happen in the payer’s bank app. Optional dynamic QR and checkout features store only the limited records described in the privacy policy.",
+      "No. Payments happen in the payer's UPI app and settle in your bank account. Optional account features store only the limited records described in the privacy policy.",
   },
 ];
 
@@ -57,71 +113,147 @@ const schema = {
 };
 ---
 
-<TrustPage title={title} description={description} h1="About Pro UPI QR" eyebrow="Who we are" lastUpdated="28 August 2026" schema={schema}>
-  <span slot="crumb" class="text-forest font-bold" aria-current="page">About</span>
-
-  <section>
-    <h2>What this site is</h2>
-    <p>
-      Pro UPI QR is a free set of merchant tools for Indian shops, freelancers, and donation counters. The core product is a standard NPCI <code>upi://pay</code> QR you can print as a standee or sticker. Around that sit invoices, receipts, calculators, an error-code resolver, and setup guides.
-    </p>
-    <p>
-      Static generators, documents, and calculators run in your browser. Optional account-backed features — dynamic redirects, hosted checkout, signed payment-status records — are labelled, rate-limited, and described in the <a href="/privacy/">privacy policy</a>.
-    </p>
-  </section>
-
-  <section>
-    <h2>What this site is not</h2>
-    <ul>
-      <li>Not NPCI, BHIM, or a government service.</li>
-      <li>Not PhonePe, Google Pay, Paytm, or any bank.</li>
-      <li>Not a payment aggregator, escrow, or wallet. We do not hold funds or UPI PINs.</li>
-      <li>Not a substitute for a CA, lawyer, or your bank’s current circular.</li>
-    </ul>
-    <p>
-      A QR printed here is a <strong>compatible</strong> UPI QR for the VPA you type. An official PhonePe Business or Google Pay for Business QR — with that app’s KYC, dashboard, and soundbox pairing — still comes from that app. The <a href="/merchant-setup/">merchant setup hub</a> keeps that distinction in one place.
-    </p>
-  </section>
-
-  <section>
-    <h2>Who runs it</h2>
-    <p>
-      <a href={DEFAULT_AUTHOR.path}>{DEFAULT_AUTHOR.name}</a> founded Pro UPI QR and writes the guides. There is no hidden editorial board. Contact, GitHub, and the full bio are on the <a href="/authors/">authors</a> page.
-    </p>
-  </section>
-
-  <section>
-    <h2>How we treat facts</h2>
-    <p>
-      Bank limits, MDR, refund TAT, and MSMED interest are sourced and dated. When we get one wrong, it goes on the <a href="/corrections/">corrections log</a>. The rules are in the <a href="/editorial-policy/">editorial policy</a> and <a href="/accuracy-policy/">accuracy policy</a>.
-    </p>
-  </section>
-
-  <section>
-    <h2>Reviews and listings</h2>
-    <p>
-      Public ratings live on <a href="https://www.producthunt.com/products/pro-upi-qr" rel="noopener noreferrer">Product Hunt</a>. Named merchant quotes — when someone emails a review we can verify — go on the <a href="/reviews/">reviews page</a>. Startup-directory outreach is not a review and is not listed there.
-    </p>
-  </section>
-
-  <section>
-    <h2>Contact</h2>
-    <ul>
-      <li>Support: <a href="mailto:support@proupiqr.in">support@proupiqr.in</a></li>
-      <li>Corrections and feedback: <a href="mailto:feedback@proupiqr.in">feedback@proupiqr.in</a></li>
-      <li>Privacy: <a href="mailto:privacy@proupiqr.in">privacy@proupiqr.in</a></li>
-      <li>Abuse / phishing: <a href="mailto:abuse@proupiqr.in">abuse@proupiqr.in</a></li>
-    </ul>
-    <p>All of these, plus our billing policies, are on the <a href="/contact/">contact page</a>. Pro plan refunds follow the <a href="/refund-policy/">cancellation &amp; refund policy</a>.</p>
-  </section>
-
-  <section id="faq">
-    <h2>Frequently asked questions</h2>
-    {faqs.map((faq) => (
-      <div>
-        <h3>{faq.question}</h3>
-        <p>{faq.answer}</p>
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
+      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
+      <div class="relative mx-auto max-w-5xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span>/</span>
+          <span class="font-bold text-forest" aria-current="page">About</span>
+        </nav>
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">About us</p>
+        <h1 class="mt-3 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">We help India's small businesses get paid.</h1>
+        <p class="mt-6 max-w-3xl text-lg leading-8 text-forest/75">
+          UPI made taking money free. Getting paid on time still isn't. Pro UPI QR builds everything around the payment: the QR on your counter, the invoice and the receipt, the reminder, and a tracker that shows who still owes you.
+        </p>
+        <div class="mt-8 flex flex-wrap gap-3">
+          <a href="/app/" class="rounded-full bg-forest px-6 py-3 text-sm font-black text-white transition hover:bg-leaf">Open the payment tracker</a>
+          <a href="/pricing/" class="rounded-full border border-forest/15 bg-white/80 px-6 py-3 text-sm font-black text-forest transition hover:border-leaf hover:text-leaf">See pricing</a>
+        </div>
       </div>
-    ))}
-  </section>
-</TrustPage>
+    </section>
+
+    <section class="px-4 pb-6 md:px-6 lg:px-8" aria-label="Pro UPI QR in numbers">
+      <dl class="mx-auto grid max-w-5xl gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {facts.map((fact) => (
+          <div class="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+            <dt class="text-3xl font-black tabular-nums text-forest">{fact.value}</dt>
+            <dd class="mt-2 text-sm leading-6 text-forest/70">{fact.label}</dd>
+          </div>
+        ))}
+      </dl>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we build</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Start free. Grow into the tracker.</h2>
+        <div class="mt-8 grid gap-5 md:grid-cols-3">
+          {products.map((product) => (
+            <article class="flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+              <h3 class="text-xl font-black text-forest">{product.name}</h3>
+              <p class="mt-3 flex-1 text-sm leading-6 text-forest/72">{product.body}</p>
+              <a href={product.href} class="mt-5 text-sm font-black text-leaf hover:underline">{product.cta} &rarr;</a>
+            </article>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl rounded-[2rem] bg-forest p-6 text-white md:p-10">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">How we make money</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight md:text-4xl">Pro pays for everything else.</h2>
+        <p class="mt-4 max-w-3xl text-base leading-7 text-white/80">
+          Businesses that need more than the free plan pay {PRO_PRICES.monthly.label} a month or {PRO_PRICES.yearly.label} a year for Pro. Some product guides link to Amazon.in as an Amazon Associate, and those links are labelled. That's the whole business model. No ads on the tools, no selling your data, and no cut of your payments.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we believe</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Four rules we build by</h2>
+        <div class="mt-8 grid gap-4 sm:grid-cols-2">
+          {principles.map((principle) => (
+            <div class="rounded-[1.5rem] border border-white/75 bg-white/90 p-5">
+              <h3 class="text-lg font-black text-forest">{principle.title}</h3>
+              <p class="mt-2 text-sm leading-6 text-forest/72">{principle.body}</p>
+            </div>
+          ))}
+        </div>
+        <p class="mt-6 text-sm text-forest/70">
+          The details are in our <a href="/privacy/" class={link}>privacy policy</a>, <a href="/editorial-policy/" class={link}>editorial policy</a>, <a href="/accuracy-policy/" class={link}>accuracy policy</a> and <a href="/corrections/" class={link}>corrections log</a>.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-5xl gap-5 md:grid-cols-2">
+        <div class="rounded-[2rem] border border-white/75 bg-white/90 p-6">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Who's building it</p>
+          <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">Independent and founder-led</h2>
+          <p class="mt-3 text-sm leading-6 text-forest/72">
+            <a href={DEFAULT_AUTHOR.path} class={link}>{DEFAULT_AUTHOR.name}</a> founded Pro UPI QR in 2026, builds the product and writes the guides. There's no hidden editorial board. Follow along on <a href="https://x.com/proupiqr" rel="noopener noreferrer" class={link}>X</a> and <a href="https://github.com/KunalSiyag/upi-qr" rel="noopener noreferrer" class={link}>GitHub</a>, or read the reviews on <a href="https://www.producthunt.com/products/pro-upi-qr" rel="noopener noreferrer" class={link}>Product Hunt</a> and our <a href="/reviews/" class={link}>reviews page</a>.
+          </p>
+        </div>
+        <div class="rounded-[2rem] border border-white/75 bg-white/90 p-6">
+          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What's next</p>
+          <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">Reminders that send themselves</h2>
+          <p class="mt-3 text-sm leading-6 text-forest/72">
+            We're building automatic WhatsApp reminders, so overdue invoices follow up without you. Pro members get early access. See <a href="/changelog/" class={link}>everything we've shipped so far</a>, and tell us what to build next: <a href={`mailto:${BUSINESS.emails.feedback}`} class={link}>{BUSINESS.emails.feedback}</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we're not</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">So nobody is confused</h2>
+        <ul class="mt-5 grid gap-2 text-sm leading-6 text-forest/75 sm:grid-cols-2">
+          <li class="rounded-xl bg-white/80 px-4 py-3">Not NPCI, BHIM, or a government service.</li>
+          <li class="rounded-xl bg-white/80 px-4 py-3">Not PhonePe, Google Pay, Paytm, or any bank.</li>
+          <li class="rounded-xl bg-white/80 px-4 py-3">Not a payment aggregator, escrow, or wallet.</li>
+          <li class="rounded-xl bg-white/80 px-4 py-3">Not a substitute for a CA, a lawyer, or your bank's current circular.</li>
+        </ul>
+        <p class="mt-4 text-sm leading-6 text-forest/70">
+          A QR made here is a <strong class="text-forest">compatible</strong> UPI QR for the UPI ID you type. An official PhonePe Business or Google Pay for Business QR, with that app's KYC, dashboard and soundbox pairing, still comes from that app. The <a href="/merchant-setup/" class={link}>merchant setup hub</a> explains the difference.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Talk to us</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">A real person reads every email</h2>
+        <ul class="mt-5 grid gap-2 text-sm text-forest/75 sm:grid-cols-2">
+          <li>Support and billing: <a href={`mailto:${BUSINESS.emails.support}`} class={link}>{BUSINESS.emails.support}</a></li>
+          <li>Feedback and corrections: <a href={`mailto:${BUSINESS.emails.feedback}`} class={link}>{BUSINESS.emails.feedback}</a></li>
+          <li>Privacy: <a href={`mailto:${BUSINESS.emails.privacy}`} class={link}>{BUSINESS.emails.privacy}</a></li>
+          <li>Abuse and phishing: <a href={`mailto:${BUSINESS.emails.abuse}`} class={link}>{BUSINESS.emails.abuse}</a></li>
+        </ul>
+        <p class="mt-4 text-sm text-forest/70">
+          We reply within {BUSINESS.replyWithin}. Everything else, including our billing policies, is on the <a href="/contact/" class={link}>contact page</a>; Pro refunds follow the <a href="/refund-policy/" class={link}>cancellation &amp; refund policy</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="faq" class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest">Frequently asked questions</h2>
+        <div class="mt-6 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

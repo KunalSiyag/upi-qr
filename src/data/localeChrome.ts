@@ -18,6 +18,7 @@ export type ChromeCopy = {
   blog: string;
   toolsCol: string;
   legalCol: string;
+  companyCol: string;
   brandBlurb: string;
   npciDisclaimer: string;
   brands: string;
@@ -66,11 +67,12 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Tools",
     legalCol: "Legal",
-    brandBlurb: "Printable UPI payment posters, counter standees, and table cards for local merchants and freelancers.",
+    companyCol: "Company",
+    brandBlurb: "Free UPI QR codes, invoices and a payment tracker that help India's shops and freelancers get paid on time.",
     npciDisclaimer:
       "Pro UPI QR is an independent utility and is not affiliated with NPCI, BHIM, or any government authority. The official NPCI site is npci.org.in.",
     brands: "Paytm, PhonePe, Google Pay, and other marks belong to their owners. Use does not imply endorsement.",
-    madeFor: "Made for local businesses.",
+    madeFor: "Made in India for small businesses.",
     paymentsFollow: "Payments follow your VPA bank’s terms.",
     author: "Author",
     editorial: "Editorial policy",
@@ -115,11 +117,12 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "ब्लॉग",
     toolsCol: "उपकरण",
     legalCol: "कानूनी",
-    brandBlurb: "कस्टम, प्रिंट करने योग्य UPI भुगतान पोस्टर, काउंटर स्टैंडी और टेबल कार्ड। स्थानीय व्यापारियों और फ्रीलांसरों के लिए।",
+    companyCol: "कंपनी",
+    brandBlurb: "मुफ्त UPI QR कोड, इनवॉइस और पेमेंट ट्रैकर, ताकि भारत की दुकानें और फ्रीलांसर समय पर भुगतान पाएं।",
     npciDisclaimer:
       "Pro UPI QR एक मुफ्त स्वतंत्र उपयोगिता है और NPCI, BHIM या किसी सरकारी प्राधिकरण से संबद्ध नहीं है। आधिकारिक साइट npci.org.in है।",
     brands: "Paytm, PhonePe, Google Pay और अन्य चिह्न उनके स्वामियों की संपत्ति हैं।",
-    madeFor: "स्थानीय व्यवसायों के लिए।",
+    madeFor: "भारत में, छोटे व्यवसायों के लिए बनाया गया।",
     paymentsFollow: "भुगतान आपके VPA बैंक की शर्तों के अधीन हैं।",
     author: "लेखक",
     editorial: "संपादकीय नीति",
@@ -164,6 +167,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "வலைப்பதிவு",
     toolsCol: "கருவிகள்",
     legalCol: "சட்டம்",
+    companyCol: "நிறுவனம்",
     brandBlurb: "கடைகள் மற்றும் தனிப்பணியாளர்களுக்கான அச்சிடக்கூடிய UPI கட்டண போஸ்டர்கள் மற்றும் ஸ்டாண்டிகள்.",
     npciDisclaimer:
       "Pro UPI QR ஒரு சுயாதீன கருவி. NPCI, BHIM அல்லது அரசு அமைப்புடன் இணைக்கப்படவில்லை. அதிகாரப்பூர்வ தளம் npci.org.in.",
@@ -213,6 +217,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "బ్లాగ్",
     toolsCol: "సాధనాలు",
     legalCol: "చట్టం",
+    companyCol: "సంస్థ",
     brandBlurb: "దుకాణాలు మరియు ఫ్రీలాన్సర్‌ల కోసం ప్రింట్ చేయగల UPI చెల్లింపు పోస్టర్లు.",
     npciDisclaimer:
       "Pro UPI QR స్వతంత్ర సాధనం. NPCI, BHIM లేదా ప్రభుత్వ సంస్థతో అనుబంధం లేదు. అధికారిక సైట్ npci.org.in.",
@@ -262,6 +267,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "ब्लॉग",
     toolsCol: "साधने",
     legalCol: "कायदेशीर",
+    companyCol: "कंपनी",
     brandBlurb: "दुकाने आणि फ्रीलान्सरसाठी प्रिंट करता येणारे UPI पेमेंट पोस्टर आणि स्टँडी.",
     npciDisclaimer:
       "Pro UPI QR स्वतंत्र साधन आहे आणि NPCI, BHIM किंवा कोणत्याही शासकीय संस्थेशी संलग्न नाही. अधिकृत साइट npci.org.in.",
@@ -311,6 +317,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Herramientas",
     legalCol: "Legal",
+    companyCol: "Empresa",
     brandBlurb: "Generadores gratuitos de códigos QR, facturas, recibos, presupuestos y calculadoras comerciales para autónomos y pymes.",
     npciDisclaimer:
       "Pro UPI QR es una utilidad web independiente de procesamiento local y privado en el navegador.",
@@ -360,6 +367,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Ferramentas",
     legalCol: "Legal",
+    companyCol: "Empresa",
     brandBlurb: "Geradores gratuitos de faturas, recibos, orçamentos, códigos QR e calculadoras financeiras para autônomos e empresas.",
     npciDisclaimer:
       "Pro UPI QR é uma plataforma web independente com processamento local e seguro no navegador.",
@@ -409,6 +417,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Outils",
     legalCol: "Mentions légales",
+    companyCol: "Entreprise",
     brandBlurb: "Générateurs gratuits de factures, reçus, devis, QR codes et calculateurs de gestion pour freelances et commerçants.",
     npciDisclaimer:
       "Pro UPI QR est un service web indépendant avec traitement local et privé dans le navigateur.",
@@ -458,6 +467,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Tools",
     legalCol: "Rechtliches",
+    companyCol: "Unternehmen",
     brandBlurb: "Kostenlose Generatoren für Rechnungen, Quittungen, Angebote, QR-Codes und Finanzrechner für Selbstständige und KMU.",
     npciDisclaimer:
       "Pro UPI QR ist ein unabhängiges Webtool mit lokaler und sicherer Verarbeitung direkt im Browser.",
@@ -507,6 +517,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Alat",
     legalCol: "Legalitas",
+    companyCol: "Perusahaan",
     brandBlurb: "Generator faktur, kuitansi, surat penawaran, QR code, dan kalkulator bisnis gratis untuk UMKM dan pekerja lepas.",
     npciDisclaimer:
       "Pro UPI QR adalah utilitas web independen dengan pemrosesan lokal dan privat langsung di browser.",
@@ -556,6 +567,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "المدونة",
     toolsCol: "أدوات",
     legalCol: "قانوني",
+    companyCol: "الشركة",
     brandBlurb: "مولّدات مجانية للفواتير والإيصالات ورموز QR للمستقلين والمتاجر.",
     npciDisclaimer: "Pro UPI QR أداة مستقلة تُعالج البيانات محليًا في المتصفح.",
     brands: "العلامات المذكورة ملك لأصحابها.",
@@ -602,6 +614,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "Blog",
     toolsCol: "Strumenti",
     legalCol: "Note legali",
+    companyCol: "Azienda",
     brandBlurb: "Generatori gratuiti di fatture, ricevute, preventivi e QR code per freelance e negozi.",
     npciDisclaimer: "Pro UPI QR è uno strumento indipendente con elaborazione locale nel browser.",
     brands: "I marchi citati appartengono ai rispettivi titolari.",
@@ -648,6 +661,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "ブログ",
     toolsCol: "ツール",
     legalCol: "法務",
+    companyCol: "会社情報",
     brandBlurb: "請求書・領収書・見積・QRコードを無料で作成。フリーランスと店舗向け。",
     npciDisclaimer: "Pro UPI QR はブラウザ内で処理する独立したツールです。",
     brands: "記載の商標は各権利者に帰属します。",
@@ -694,6 +708,7 @@ export const LOCALE_CHROME: Record<SiteLang, ChromeCopy> = {
     blog: "博客",
     toolsCol: "工具",
     legalCol: "法律",
+    companyCol: "公司",
     brandBlurb: "免费生成发票、收据、报价和二维码，适合自由职业者和店铺。",
     npciDisclaimer: "Pro UPI QR 是独立工具，在浏览器本地处理。",
     brands: "所述商标归其权利人所有。",

@@ -280,6 +280,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
   </nav>
 
   <div class="flex items-center gap-2 sm:gap-3">
+    <a href="/app/" class="hidden min-h-11 shrink-0 items-center rounded-full bg-forest px-4 text-xs font-black text-white transition-colors hover:bg-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf sm:inline-flex">{isHindi ? "पेमेंट ट्रैक करें" : "Track payments"}</a>
     <!-- Language Dropdown Selector -->
     <div class="relative group">
       <button type="button" class="flex min-h-11 items-center gap-1.5 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200 shrink-0 focus:outline-none">
@@ -321,6 +322,10 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
 <!-- Mobile Dropdown Menu (opens below the navbar) -->
   <nav id="mobile-menu" aria-label="Mobile navigation" hidden class="xl:hidden pointer-events-auto absolute inset-x-0 top-[calc(100%+0.5rem)] z-40 max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain rounded-3xl border border-forest/10 bg-white shadow-2xl">
     <div class="space-y-3 p-4" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
+    <a href="/app/" class="flex items-center justify-between rounded-2xl bg-forest px-4 py-3 text-sm font-black text-white hover:bg-leaf">
+      <span>{isHindi ? "पेमेंट ट्रैक करें — मुफ्त" : "Track payments — free"}</span>
+      <span aria-hidden="true">&rarr;</span>
+    </a>
     <div>
       <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.qrGenerators}</div>
       <div class="grid grid-cols-2 gap-1 text-xs">
