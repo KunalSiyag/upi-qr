@@ -9,7 +9,8 @@ import type { BillingInterval, ParsedSubscription, SubscriptionStatus } from "./
  *   POST  /checkouts                               { product_cart, customer, … }    → { session_id, checkout_url }
  *   GET   /checkouts/{id} → payment_id;   GET /payments/{id} → subscription_id
  *   GET   /subscriptions/{id};            PATCH /subscriptions/{id} { cancel_at_next_billing_date }
- *   POST  /customers/{id}/customer-portal/session  { return_url }                   → { link }
+ *   GET   /subscriptions?customer_id&created_at_gte → { items }   (a free trial may start without a payment)
+ *   POST  /customers/{id}/customer-portal/session?return_url=…                     → { link }
  * Webhooks follow Standard Webhooks: headers webhook-id, webhook-timestamp,
  * webhook-signature = "v1,<base64 HMAC-SHA256(key, `${id}.${timestamp}.${body}`)>",
  * key = base64 after the "whsec_" prefix.
@@ -96,6 +97,8 @@ export function parseDodoSubscription(raw: unknown, event: string, createdAt: nu
   if (typeof sub.subscription_id !== "string" || !ID.sub.test(sub.subscription_id) || !status) return null;
   const customer = sub.customer && typeof sub.customer === "object" ? sub.customer as Record<string, unknown> : {};
   const end = typeof sub.next_billing_date === "string" ? Date.parse(sub.next_billing_date) : NaN;
+  const started = typeof sub.created_at === "string" ? Date.parse(sub.created_at) : NaN;
+  const trialDays = typeof sub.trial_period_days === "number" && sub.trial_period_days > 0 ? sub.trial_period_days : 0;
   const yearly = sub.product_id === config.products.yearly || (sub.product_id !== config.products.monthly && sub.payment_frequency_interval === "Year");
   return {
     owner: ownerFrom(customer.metadata) ?? ownerFrom(sub.metadata),
@@ -109,6 +112,7 @@ export function parseDodoSubscription(raw: unknown, event: string, createdAt: nu
       interval: yearly ? "yearly" : "monthly",
       provider: "dodo",
       cancelAtPeriodEnd: sub.cancel_at_next_billing_date === true,
+      trialEndsAt: trialDays && Number.isFinite(started) ? started + trialDays * 86_400_000 : null,
     },
   };
 }
@@ -155,7 +159,7 @@ export async function createDodoCustomer(config: DodoConfig, input: { owner: str
 /** Hosted checkout for a Pro subscription. Returns the session id (cks_…) until the subscription exists. */
 export async function createDodoCheckout(
   config: DodoConfig,
-  input: { interval: BillingInterval; owner: string; customerId: string; returnUrl: string; cancelUrl: string },
+  input: { interval: BillingInterval; owner: string; customerId: string; returnUrl: string; cancelUrl: string; trialDays?: number },
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ id: string; url: string }> {
   const session = await call<{ session_id?: unknown; checkout_url?: unknown }>(config, fetchImpl, "POST", "/checkouts", {
@@ -167,6 +171,8 @@ export async function createDodoCheckout(
     // Charge exactly the INR price on /pricing/: no currency switch, no coupon box (we have no codes).
     // GST-registered buyers can still add their GSTIN for the invoice. Return straight to Settings.
     feature_flags: { allow_currency_selection: false, allow_discount_code: false, allow_tax_id: true, redirect_immediately: true },
+    // Free trial: the payment method is taken now and the first charge happens when the trial ends.
+    ...(input.trialDays && input.trialDays > 0 ? { subscription_data: { trial_period_days: Math.floor(input.trialDays) } } : {}),
     return_url: input.returnUrl,
     cancel_url: input.cancelUrl,
   });
@@ -176,26 +182,61 @@ export async function createDodoCheckout(
   return { id: session.session_id, url: session.checkout_url };
 }
 
+/** Where to look for a checkout's subscription when the session has no payment yet (a free trial). */
+export interface DodoLookupHint {
+  /** The account's Dodo customer. */
+  customerId?: string | null;
+  /** When the checkout started, epoch ms. */
+  since?: number;
+}
+
 /**
  * The subscription as Dodo sees it now, shaped like a webhook event. Accepts a
  * subscription id or, while a checkout is unconfirmed, its checkout session id
- * (session → payment → subscription). Its createdAt is the previous whole
- * second, like the Razorpay re-read, so a webhook from the same second still applies.
+ * (session → payment → subscription; for a free trial with no payment, the
+ * customer's newest Pro subscription created since the checkout started). Its
+ * createdAt is the previous whole second, like the Razorpay re-read, so a
+ * webhook from the same second still applies.
  */
-export async function fetchDodoSubscription(config: DodoConfig, id: string, now: number, fetchImpl: typeof fetch = fetch): Promise<ParsedSubscription> {
+export async function fetchDodoSubscription(config: DodoConfig, id: string, now: number, fetchImpl: typeof fetch = fetch, hint: DodoLookupHint = {}): Promise<ParsedSubscription> {
+  const createdAt = Math.floor(now / 1000) * 1000 - 1000;
   let subscriptionId = id;
   if (ID.cks.test(id)) {
     const session = await call<{ payment_id?: unknown }>(config, fetchImpl, "GET", `/checkouts/${id}`);
-    if (typeof session.payment_id !== "string" || !ID.pay.test(session.payment_id)) throw new Error("Checkout not paid yet");
-    const payment = await call<{ subscription_id?: unknown }>(config, fetchImpl, "GET", `/payments/${session.payment_id}`);
-    if (typeof payment.subscription_id !== "string") throw new Error("Payment has no subscription yet");
-    subscriptionId = payment.subscription_id;
+    let found: string | null = null;
+    if (typeof session.payment_id === "string" && ID.pay.test(session.payment_id)) {
+      const payment = await call<{ subscription_id?: unknown }>(config, fetchImpl, "GET", `/payments/${session.payment_id}`);
+      if (typeof payment.subscription_id === "string") found = payment.subscription_id;
+    }
+    if (!found) {
+      const listed = await newestProSubscription(config, hint, createdAt, fetchImpl);
+      if (listed) return listed;
+      throw new Error("Checkout not completed yet");
+    }
+    subscriptionId = found;
   }
   if (!ID.sub.test(subscriptionId)) throw new Error("Invalid subscription id");
   const sub = await call<unknown>(config, fetchImpl, "GET", `/subscriptions/${subscriptionId}`);
-  const parsed = parseDodoSubscription(sub, "subscription.fetched", Math.floor(now / 1000) * 1000 - 1000, config);
+  const parsed = parseDodoSubscription(sub, "subscription.fetched", createdAt, config);
   if (!parsed || parsed.event.subscriptionId !== subscriptionId) throw new Error("Unexpected subscription from Dodo");
   return parsed;
+}
+
+/** The customer's newest subscription to one of our products, created since the checkout started. */
+async function newestProSubscription(config: DodoConfig, hint: DodoLookupHint, createdAt: number, fetchImpl: typeof fetch): Promise<ParsedSubscription | null> {
+  if (!hint.customerId || !ID.cus.test(hint.customerId) || !hint.since) return null;
+  // A few minutes of slack for clock differences between us and Dodo.
+  const since = new Date(hint.since - 10 * 60_000).toISOString();
+  const page = await call<{ items?: unknown }>(config, fetchImpl, "GET", `/subscriptions?customer_id=${hint.customerId}&created_at_gte=${encodeURIComponent(since)}&page_size=20`);
+  const products = new Set(Object.values(config.products));
+  const ours = (Array.isArray(page.items) ? page.items : [])
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && products.has((item as Record<string, unknown>).product_id as string))
+    .sort((a, b) => Date.parse(String(b.created_at)) - Date.parse(String(a.created_at)));
+  for (const item of ours) {
+    const parsed = parseDodoSubscription(item, "subscription.fetched", createdAt, config);
+    if (parsed) return { ...parsed, customerId: parsed.customerId ?? hint.customerId };
+  }
+  return null;
 }
 
 export async function cancelDodoAtPeriodEnd(config: DodoConfig, subscriptionId: string, fetchImpl: typeof fetch = fetch): Promise<void> {

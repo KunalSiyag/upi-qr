@@ -5,16 +5,21 @@ import { billingProviders, safeCheckoutUrl } from "../../../../lib/billing/confi
 import { billingStore } from "../../../../lib/billing/kvBillingStore";
 import { CheckoutNeedsEmail, checkoutProvider, providerFor } from "../../../../lib/billing/provider";
 import { recheckInterval, reconcileSubscription } from "../../../../lib/billing/reconcile";
-import { hasProAccess, type BillingInterval } from "../../../../lib/billing/subscription";
+import { hasProAccess, inTrial, trialEligible, type BillingInterval, type SubscriptionRecord } from "../../../../lib/billing/subscription";
 import { recordMetric } from "../../../../lib/metrics";
 import { planFromSubscription } from "../../../../lib/workspace/entitlements";
 import { rateLimitsAvailable, workspaceOwner } from "../../../../lib/workspace/kvCloudStore";
-import { PRO_PRICES } from "../../../../data/pricing";
+import { PRO_PRICES, PRO_TRIAL_DAYS } from "../../../../data/pricing";
 
 export const prerender = false;
 
 const PENDING_CHECKOUT_REUSE_MS = 24 * 60 * 60 * 1000;
+
 const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+
+/** Free trial days a new checkout gets: Dodo only (it takes the payment method now and charges at the end), once per account. */
+const trialDaysFor = (providerId: string | undefined, record: SubscriptionRecord | null): number =>
+  providerId === "dodo" && PRO_TRIAL_DAYS > 0 && trialEligible(record) ? PRO_TRIAL_DAYS : 0;
 
 /** The signed-in account's email and name from Clerk (for the provider's customer record and receipt). */
 async function accountContact(locals: unknown, fallbackEmail: unknown): Promise<{ email: string | null; name: string | null }> {
@@ -52,12 +57,14 @@ export const GET: APIRoute = async ({ locals }) => {
     return jsonResponse({
       plan: { id: plan.id, activePaylinks: plan.activePaylinks },
       subscription: record && record.status !== "created"
-        ? { status: record.status, interval: record.interval, currentEnd: record.currentEnd, cancelAtCycleEnd: record.cancelAtCycleEnd }
+        ? { status: record.status, interval: record.interval, currentEnd: record.currentEnd, cancelAtCycleEnd: record.cancelAtCycleEnd, trialEndsAt: inTrial(record, now) ? record.trialEndsAt : null }
         : null,
       // A checkout the customer started but the provider hasn't confirmed yet.
       checkout: checkoutUrl && plan.id === "free" && record ? { interval: record.interval, url: checkoutUrl } : null,
       billingAvailable: provider !== null,
       provider: provider?.id ?? null,
+      // Days free before the first charge if this account checks out now (0: charged at checkout).
+      trialDays: trialDaysFor(provider?.id, record),
       // Dodo's customer portal (payment method, invoices) for subscriptions it manages.
       manageAvailable: Boolean(record && record.status !== "created" && record.provider === "dodo" && providers.dodo),
       prices: PRO_PRICES,
@@ -104,17 +111,21 @@ export const POST: APIRoute = async ({ request, locals }) => {
         if (url) return jsonResponse({ url });
       }
       const { email, name } = await accountContact(locals, body.email);
-      const started = await provider.startCheckout({ interval, owner, email, name, origin }, store);
+      const trialDays = trialDaysFor(provider.id, existing);
+      const started = await provider.startCheckout({ interval, owner, email, name, origin, trialDays }, store);
       const url = safeCheckoutUrl(started.url);
       if (!url) return jsonResponse({ error: "Unexpected checkout address from the payment provider." }, 502);
       await store.link(started.subscriptionId, owner);
       if (!hasProAccess(existing, now)) {
+        // Keep the account's subscription history so a past subscriber can't take the free trial again.
+        const hadSubscription = Boolean(existing?.hadSubscription) || Boolean(existing && existing.status !== "created");
         await store.put(owner, {
           provider: provider.id, subscriptionId: started.subscriptionId, interval, status: "created", currentEnd: null,
-          cancelAtCycleEnd: false, shortUrl: url, eventAt: 0, updatedAt: now,
+          cancelAtCycleEnd: false, shortUrl: url, eventAt: 0, updatedAt: now, ...(hadSubscription ? { hadSubscription: true } : {}),
         });
       }
-      return jsonResponse({ url });
+      await recordMetric("checkout_started");
+      return jsonResponse({ url, trialDays });
     }
 
     if (body.action === "cancel") {

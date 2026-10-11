@@ -18,3 +18,11 @@ export const YEARLY_SAVING_RUPEES = (PRO_PRICES.monthly.paise * 12 - PRO_PRICES.
  * guarantee from both pages.
  */
 export const REFUND_WINDOW_DAYS = 7;
+
+/**
+ * Free Pro trial for an account's first subscription, in days — Dodo Payments only:
+ * the payment method is taken at checkout and the first charge happens when the
+ * trial ends (cancel before then and nothing is charged). Shown on /pricing/,
+ * /terms/ and in Settings. Set to 0 to charge at checkout and drop the trial copy.
+ */
+export const PRO_TRIAL_DAYS = 14;

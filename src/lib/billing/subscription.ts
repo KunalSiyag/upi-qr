@@ -31,6 +31,10 @@ export interface SubscriptionRecord {
   /** created_at of the last applied webhook event, epoch ms. */
   eventAt: number;
   updatedAt: number;
+  /** End of a free trial (the first charge), epoch ms, when the subscription started with one. */
+  trialEndsAt?: number | null;
+  /** Set once the account has had a real subscription; free trials are offered only before that. */
+  hadSubscription?: boolean;
 }
 
 export function isSubscriptionStatus(value: unknown): value is SubscriptionStatus {
@@ -69,6 +73,8 @@ export interface SubscriptionEvent {
   provider?: BillingProviderId;
   /** Set when the provider reports it (Dodo's cancel_at_next_billing_date); otherwise kept from the stored record. */
   cancelAtPeriodEnd?: boolean;
+  /** End of the subscription's free trial, epoch ms, when it has one. */
+  trialEndsAt?: number | null;
 }
 
 /** A provider's view of one subscription, plus the account it belongs to when the provider knows it. */
@@ -95,6 +101,8 @@ export function applySubscriptionEvent(existing: SubscriptionRecord | null, even
   }
   const same = existing?.subscriptionId === event.subscriptionId ? existing : null;
   const running = event.status === "active" || event.status === "authenticated";
+  const trialEndsAt = event.trialEndsAt ?? same?.trialEndsAt ?? null;
+  const hadSubscription = Boolean(existing?.hadSubscription) || (existing !== null && existing.status !== "created") || event.status !== "created";
   return {
     provider: event.provider ?? "razorpay",
     subscriptionId: event.subscriptionId,
@@ -105,7 +113,19 @@ export function applySubscriptionEvent(existing: SubscriptionRecord | null, even
     shortUrl: event.status === "created" ? (same?.shortUrl ?? null) : null,
     eventAt: event.createdAt,
     updatedAt: now,
+    ...(trialEndsAt ? { trialEndsAt } : {}),
+    ...(hadSubscription ? { hadSubscription: true } : {}),
   };
+}
+
+/** A free trial is offered once per account: never to anyone who has had a subscription. */
+export function trialEligible(record: SubscriptionRecord | null): boolean {
+  return !record || (!record.hadSubscription && record.status === "created");
+}
+
+/** Pro through a free trial that hasn't ended (no payment taken yet). */
+export function inTrial(record: SubscriptionRecord | null, now: number): boolean {
+  return Boolean(record?.trialEndsAt) && now < (record!.trialEndsAt as number) && hasProAccess(record, now);
 }
 
 export function parseSubscriptionRecord(raw: unknown): SubscriptionRecord | null {
@@ -123,5 +143,7 @@ export function parseSubscriptionRecord(raw: unknown): SubscriptionRecord | null
     shortUrl: typeof r.shortUrl === "string" ? r.shortUrl : null,
     eventAt: typeof r.eventAt === "number" ? r.eventAt : 0,
     updatedAt: typeof r.updatedAt === "number" ? r.updatedAt : 0,
+    ...(typeof r.trialEndsAt === "number" ? { trialEndsAt: r.trialEndsAt } : {}),
+    ...(r.hadSubscription === true ? { hadSubscription: true } : {}),
   };
 }

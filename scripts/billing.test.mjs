@@ -1,12 +1,12 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
-import { applySubscriptionEvent, hasProAccess, parseSubscriptionRecord, PENDING_GRACE_MS } from "../src/lib/billing/subscription.ts";
+import { applySubscriptionEvent, hasProAccess, inTrial, parseSubscriptionRecord, PENDING_GRACE_MS, trialEligible } from "../src/lib/billing/subscription.ts";
 import { cancelAtCycleEnd, createSubscription, fetchSubscription, parseSubscriptionWebhook, razorpayConfig, verifyWebhookSignature } from "../src/lib/billing/razorpay.ts";
 import { CHECKOUT_RECHECK_WINDOW_MS, dueForDailyCheck, PERIOD_END_GRACE_MS, RECHECK_SECONDS, recheckInterval, reconcileDueSubscriptions, reconcileSubscription } from "../src/lib/billing/reconcile.ts";
 import { handleSubscriptionWebhook } from "../src/lib/billing/webhook.ts";
 import { memoryBillingStore } from "../src/lib/billing/store.ts";
 import { CheckoutNeedsEmail, dodoProvider, razorpayProvider } from "../src/lib/billing/provider.ts";
-import { cancelDodoAtPeriodEnd, dodoConfig, dodoPortalLink, fetchDodoSubscription, parseDodoSubscription, parseDodoWebhook, verifyStandardWebhook } from "../src/lib/billing/dodo.ts";
+import { cancelDodoAtPeriodEnd, createDodoCheckout, dodoConfig, dodoPortalLink, fetchDodoSubscription, parseDodoSubscription, parseDodoWebhook, verifyStandardWebhook } from "../src/lib/billing/dodo.ts";
 import { handleDodoWebhook } from "../src/lib/billing/webhook.ts";
 import { planFromSubscription, PLANS } from "../src/lib/workspace/entitlements.ts";
 import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../src/data/pricing.ts";
@@ -421,4 +421,63 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   assert.equal(rzCalls, 1);
 }
 
-console.log("[billing] access rules, ordering, signatures (Razorpay + Standard Webhooks), webhooks, Razorpay + Dodo requests, lost-webhook and daily reconcile, plan + product setup passed");
+// ---------- Free trial (Dodo takes the payment method now and charges when the trial ends) ----------
+{
+  const DAY_MS = 86_400_000;
+  const dcfg = dodoConfig({ DODO_PAYMENTS_API_KEY: "dodo_test_key", DODO_PAYMENTS_WEBHOOK_KEY: "whsec_" + Buffer.from("dodo-webhook-secret").toString("base64"), DODO_PRODUCT_MONTHLY: "pdt_MonthlyAAAAAAAAAAAAA", DODO_PRODUCT_YEARLY: "pdt_YearlyBBBBBBBBBBBBBB" });
+  // One trial per account.
+  const created = { provider: "dodo", subscriptionId: "cks_TrialSessionAAAAAAAA", interval: "monthly", status: "created", currentEnd: null, cancelAtCycleEnd: false, shortUrl: null, eventAt: 0, updatedAt: now };
+  assert.equal(trialEligible(null), true, "new account");
+  assert.equal(trialEligible(created), true, "abandoned first checkout");
+  assert.equal(trialEligible({ ...created, hadSubscription: true }), false, "a past subscriber starting a new checkout");
+  const activeEvt = { event: "subscription.active", createdAt: now, subscriptionId: "sub_TrialSubAAAAAAAAAAAAA", status: "active", currentEnd: now + 14 * DAY_MS, interval: "monthly", provider: "dodo", trialEndsAt: now + 14 * DAY_MS };
+  const activeRec = applySubscriptionEvent(created, activeEvt, now);
+  assert.deepEqual([activeRec.hadSubscription, activeRec.trialEndsAt, trialEligible(activeRec)], [true, now + 14 * DAY_MS, false]);
+  assert.equal(inTrial(activeRec, now + DAY_MS), true);
+  assert.equal(inTrial(activeRec, now + 15 * DAY_MS), false, "trial over");
+  const cancelled = applySubscriptionEvent(activeRec, { ...activeEvt, event: "subscription.cancelled", status: "cancelled", createdAt: now + 1000, trialEndsAt: undefined }, now + 1000);
+  assert.deepEqual([cancelled.hadSubscription, cancelled.trialEndsAt, trialEligible(cancelled), hasProAccess(cancelled, now + 13 * DAY_MS), hasProAccess(cancelled, now + 15 * DAY_MS)], [true, now + 14 * DAY_MS, false, true, false], "cancelled during the trial: Pro until it ends, then Free, and no second trial");
+  assert.equal(parseSubscriptionRecord(JSON.stringify(activeRec)).trialEndsAt, now + 14 * DAY_MS, "stored and read back");
+  assert.equal("trialEndsAt" in applySubscriptionEvent(null, { ...activeEvt, trialEndsAt: null }, now), false, "no trial field when there is none");
+
+  // A Dodo subscription with a trial ends it at created_at + trial days.
+  const trialSub = { subscription_id: "sub_TrialSubAAAAAAAAAAAAA", status: "active", product_id: "pdt_MonthlyAAAAAAAAAAAAA", next_billing_date: new Date(now + 14 * DAY_MS).toISOString(), created_at: new Date(now).toISOString(), trial_period_days: 14, payment_frequency_interval: "Month", cancel_at_next_billing_date: false, customer: { customer_id: "cus_TrialCustomerAAAAAA", email: "t@x.in", name: "T" }, metadata: { owner } };
+  assert.equal(parseDodoSubscription(trialSub, "subscription.active", now, dcfg).event.trialEndsAt, now + 14 * DAY_MS);
+  assert.equal(parseDodoSubscription({ ...trialSub, trial_period_days: 0 }, "subscription.active", now, dcfg).event.trialEndsAt, null);
+
+  // Checkout asks Dodo for a trial only when there is one.
+  const bodies = [];
+  const checkoutApi = async (url, init = {}) => { bodies.push(JSON.parse(init.body)); return new Response(JSON.stringify({ session_id: "cks_TrialSessionAAAAAAAA", checkout_url: "https://test.checkout.dodopayments.com/buy/cks_TrialSessionAAAAAAAA" })); };
+  const input = { interval: "monthly", owner, customerId: "cus_TrialCustomerAAAAAA", returnUrl: "https://www.proupiqr.in/app/", cancelUrl: "https://www.proupiqr.in/app/" };
+  await createDodoCheckout(dcfg, { ...input, trialDays: 14 }, checkoutApi);
+  await createDodoCheckout(dcfg, { ...input, trialDays: 0 }, checkoutApi);
+  await createDodoCheckout(dcfg, input, checkoutApi);
+  assert.deepEqual(bodies.map((b) => b.subscription_data ?? null), [{ trial_period_days: 14 }, null, null]);
+
+  // Lost webhook during a free trial: the session has no payment, so the re-check finds
+  // the customer's newest Pro subscription created since the checkout started.
+  const calls = [];
+  const listApi = async (url) => {
+    const u = new URL(url);
+    calls.push(u.pathname + u.search);
+    if (u.pathname === "/checkouts/cks_TrialSessionAAAAAAAA") return new Response(JSON.stringify({ id: "cks_TrialSessionAAAAAAAA", payment_id: null, payment_status: null }));
+    if (u.pathname === "/subscriptions") return new Response(JSON.stringify({ items: [
+      { ...trialSub, subscription_id: "sub_OtherProductAAAAAAAAA", product_id: "pdt_SomethingElseAAAAAA", created_at: new Date(now + 5000).toISOString() },
+      { ...trialSub, subscription_id: "sub_OlderAAAAAAAAAAAAAAA", created_at: new Date(now - 2000).toISOString() },
+      trialSub,
+    ] }));
+    return new Response("{}", { status: 404 });
+  };
+  await assert.rejects(fetchDodoSubscription(dcfg, "cks_TrialSessionAAAAAAAA", now, listApi), /not completed/, "nothing to look up without the customer");
+  const trialStore = memoryBillingStore();
+  await trialStore.put(owner, created);
+  await trialStore.linkCustomer(owner, "cus_TrialCustomerAAAAAA");
+  calls.length = 0;
+  const rec = await reconcileSubscription(trialStore, { dodo: dodoProvider(dcfg, listApi), razorpay: null }, owner, now + 60_000);
+  assert.deepEqual([rec.activated, rec.record.subscriptionId, rec.record.trialEndsAt, rec.record.hadSubscription], [true, "sub_TrialSubAAAAAAAAAAAAA", now + 14 * DAY_MS, true], "newest of our products, not another product's");
+  const listCall = calls.find((c) => c.startsWith("/subscriptions?")) ?? "";
+  assert.ok(listCall.includes("customer_id=cus_TrialCustomerAAAAAA") && listCall.includes("created_at_gte="), listCall);
+  assert.equal(await trialStore.ownerFor("sub_TrialSubAAAAAAAAAAAAA"), owner, "the trial subscription's webhooks find the account");
+}
+
+console.log("[billing] access rules, ordering, signatures (Razorpay + Standard Webhooks), webhooks, Razorpay + Dodo requests, lost-webhook and daily reconcile, plan + product setup, and free trials passed");

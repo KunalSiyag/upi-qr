@@ -1,7 +1,7 @@
 import type { BillingStore } from "./store.ts";
 import type { BillingInterval, BillingProviderId, ParsedSubscription, SubscriptionRecord } from "./subscription.ts";
 import { cancelAtCycleEnd, createSubscription, fetchSubscription, type RazorpayConfig } from "./razorpay.ts";
-import { cancelDodoAtPeriodEnd, createDodoCheckout, createDodoCustomer, dodoPortalLink, fetchDodoSubscription, type DodoConfig } from "./dodo.ts";
+import { cancelDodoAtPeriodEnd, createDodoCheckout, createDodoCustomer, dodoPortalLink, fetchDodoSubscription, type DodoConfig, type DodoLookupHint } from "./dodo.ts";
 
 /**
  * One interface over the payment providers. New checkouts go to Dodo Payments
@@ -13,7 +13,7 @@ export interface BillingProvider {
   /** Starts a hosted checkout. `subscriptionId` is what to store while unconfirmed (Dodo: the checkout session id). */
   startCheckout(input: CheckoutInput, store: BillingStore): Promise<{ subscriptionId: string; url: string }>;
   /** The subscription as the provider sees it now (accepts what startCheckout returned). */
-  fetch(subscriptionId: string, now: number): Promise<ParsedSubscription>;
+  fetch(subscriptionId: string, now: number, hint?: DodoLookupHint): Promise<ParsedSubscription>;
   cancelAtPeriodEnd(subscriptionId: string): Promise<void>;
   /** Hosted page for payment method and invoices, when the provider has one. */
   manageUrl(owner: string, origin: string, store: BillingStore): Promise<string | null>;
@@ -26,6 +26,8 @@ export interface CheckoutInput {
   name: string | null;
   /** Origin of the request, so a preview deployment returns to itself. */
   origin: string;
+  /** Free trial length for this checkout (0 or absent: charge now). Only Dodo supports trials here. */
+  trialDays?: number;
 }
 
 /** Thrown when a provider needs the account's email (for the customer record and receipt) and we don't have it. */
@@ -47,7 +49,7 @@ export function razorpayProvider(config: RazorpayConfig, fetchImpl: typeof fetch
 export function dodoProvider(config: DodoConfig, fetchImpl: typeof fetch = fetch): BillingProvider {
   return {
     id: "dodo",
-    async startCheckout({ interval, owner, email, name, origin }, store) {
+    async startCheckout({ interval, owner, email, name, origin, trialDays }, store) {
       let customerId = await store.customerFor(owner);
       if (!customerId) {
         if (!email) throw new CheckoutNeedsEmail("An email address is needed for your receipt.");
@@ -55,13 +57,13 @@ export function dodoProvider(config: DodoConfig, fetchImpl: typeof fetch = fetch
         await store.linkCustomer(owner, customerId);
       }
       const session = await createDodoCheckout(config, {
-        interval, owner, customerId,
+        interval, owner, customerId, trialDays,
         returnUrl: `${origin}/app/?tab=settings&checkout=done`,
         cancelUrl: `${origin}/app/?tab=settings`,
       }, fetchImpl);
       return { subscriptionId: session.id, url: session.url };
     },
-    fetch: (id, now) => fetchDodoSubscription(config, id, now, fetchImpl),
+    fetch: (id, now, hint) => fetchDodoSubscription(config, id, now, fetchImpl, hint),
     cancelAtPeriodEnd: (id) => cancelDodoAtPeriodEnd(config, id, fetchImpl),
     async manageUrl(owner, origin, store) {
       const customerId = await store.customerFor(owner);

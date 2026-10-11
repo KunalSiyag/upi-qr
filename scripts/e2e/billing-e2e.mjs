@@ -149,6 +149,10 @@ try {
   const pricing = await (await fetch(`${DEV}/pricing/`)).text();
   check("pricing page shows ₹149 and ₹1,499 and 0%", pricing.includes("₹149") && pricing.includes("₹1,499") && pricing.includes("0% of your payments"));
   check("pricing upgrade CTA deep-links into settings", pricing.includes('href="/app/?tab=settings&amp;upgrade=monthly"'));
+  // Static pricing is built per deployment: the local build has no Dodo keys; the dev server does (fake, test mode).
+  const cta = process.env.E2E_MODE === "prod" ? "Get early access" : "Start 14-day free trial";
+  check(`pricing Pro CTA matches whether checkout is open (${cta})`, pricing.includes(`>${cta}</a>`));
+  check("pricing FAQ explains the free trial", pricing.includes("Is there a free trial?") && pricing.includes("One trial per account."));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));
 }

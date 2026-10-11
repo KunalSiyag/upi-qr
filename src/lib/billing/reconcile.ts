@@ -39,7 +39,9 @@ export interface ReconcileResult {
 async function applyLatest(store: BillingStore, provider: BillingProvider, owner: string, existing: SubscriptionRecord, now: number): Promise<ReconcileResult> {
   let fetched: Awaited<ReturnType<BillingProvider["fetch"]>>;
   try {
-    fetched = await provider.fetch(existing.subscriptionId, now);
+    // An unconfirmed checkout may be a free trial with no payment: let the provider look it up by customer.
+    const hint = existing.status === "created" ? { customerId: await store.customerFor(owner), since: existing.updatedAt } : undefined;
+    fetched = await provider.fetch(existing.subscriptionId, now, hint);
   } catch {
     return { record: existing, activated: false, failed: true };
   }
@@ -49,7 +51,7 @@ async function applyLatest(store: BillingStore, provider: BillingProvider, owner
     : Boolean(fetched.customerId) && (await store.customerFor(owner)) !== fetched.customerId;
   if (foreign) return { record: existing, activated: false, failed: true };
   const next = applySubscriptionEvent(existing, fetched.event, now);
-  if (!next || (next.subscriptionId === existing.subscriptionId && next.status === existing.status && next.currentEnd === existing.currentEnd && next.cancelAtCycleEnd === existing.cancelAtCycleEnd)) {
+  if (!next || (next.subscriptionId === existing.subscriptionId && next.status === existing.status && next.currentEnd === existing.currentEnd && next.cancelAtCycleEnd === existing.cancelAtCycleEnd && (next.trialEndsAt ?? null) === (existing.trialEndsAt ?? null))) {
     return { record: existing, activated: false };
   }
   await store.put(owner, next);

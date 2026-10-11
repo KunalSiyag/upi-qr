@@ -1,7 +1,7 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { BUSINESS } from "../data/business";
-import { PRO_PRICES, REFUND_WINDOW_DAYS } from "../data/pricing";
+import { PRO_PRICES, PRO_TRIAL_DAYS, REFUND_WINDOW_DAYS } from "../data/pricing";
 import { PENDING_GRACE_MS } from "../lib/billing/subscription";
 
 const title = "Cancellation & Refund Policy | Pro UPI QR";
@@ -47,6 +47,11 @@ const schema = {
           <p>
             Every QR generator, document tool, calculator, the browser-only payment tracker, and free accounts cost nothing. The Pro plan is an optional subscription sold through Dodo Payments, our merchant of record, at {PRO_PRICES.monthly.label} per month or {PRO_PRICES.yearly.label} per year with GST included, as shown on the <a href="/pricing/" class={link}>pricing page</a>. Dodo charges each renewal to the payment method you choose at checkout and emails your invoice.
           </p>
+          {PRO_TRIAL_DAYS > 0 && (
+            <p>
+              Your first Pro subscription starts with a {PRO_TRIAL_DAYS}-day free trial. You add a payment method at checkout and pay ₹0 that day; your first payment is taken when the trial ends. Cancel during the trial and you are never charged. The refund window below counts from that first payment.
+            </p>
+          )}
         </section>
 
         <section class="space-y-3">

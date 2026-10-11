@@ -115,7 +115,7 @@ try {
   await b.eval("localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, billingAvailable: false })); true");
   await b.go(BASE + "/app/?tab=settings", 3000);
   await b.waitFor("!!document.getElementById('pro-email')", 8000);
-  check("billing-unavailable shows Pro early access form", /Pro opens soon at ₹149\/month/.test(await text()));
+  check("billing-unavailable shows Pro early access form", /Pro opens soon at ₹149\/month, with a 14-day free trial/.test(await text()));
   check("email prefilled from the signed-in account", (await b.eval("document.getElementById('pro-email').value")) === "owner@example.com");
   await t("__t.click(/^Notify me$/)");
   await b.waitFor("/Pro early-access list/.test(document.body.innerText)");
@@ -137,6 +137,13 @@ try {
   await b.waitFor("location.search.includes('fake-razorpay-checkout=yearly')", 8000);
   check("yearly checkout redirects to provider URL", (await b.eval("location.search")) === "?fake-razorpay-checkout=yearly");
   const sent = await b.eval("JSON.parse(localStorage.getItem('__lastCheckout') || '{}')");
+  // First subscription with Dodo: a free trial — ₹0 today, first payment when it ends.
+  await b.eval("localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, billingAvailable: true, provider: 'dodo', trialDays: 14 })); true");
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  const trialShown = await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'Start free trial · then ₹149 / month') && [...document.querySelectorAll('button')].some(b => b.textContent === 'Start free trial · then ₹1,499 / year (save ₹289)')", 8000);
+  check("trial: both buttons start a free trial and name the price after it", trialShown);
+  const firstPayment = new Date(Date.now() + 14 * 86_400_000).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" });
+  check("trial: ₹0 today, first payment date, cancel before then", (await text()).includes(`Try Pro free for 14 days: ₹0 today, first payment on ${firstPayment}. Cancel before then and you pay nothing.`));
   check("checkout sends the interval and the account email for the receipt", sent.action === "checkout" && sent.interval === "yearly" && sent.email === "owner@example.com", JSON.stringify(sent));
 
   // Back from Razorpay before the webhook: a waiting state (not the upgrade buttons again), auto-recheck, then Pro.
@@ -175,6 +182,9 @@ try {
   await b.waitFor("/renews on/.test(document.body.innerText)", 8000);
   check("Pro shows renewal date", /Pro monthly · renews on 10 Nov 2026/.test(await text()));
   check("no Manage billing without a provider portal (Razorpay subscriptions)", !/Manage billing/.test(await text()));
+  await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${end}, cancelAtCycleEnd: false, trialEndsAt: ${end} }, billingAvailable: true, provider: 'dodo', manageAvailable: true })); true`);
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  check("in trial: first payment amount and date, and how to avoid it", await b.waitFor("/Free trial · first payment of ₹149 on 10 Nov 2026\\. Cancel before then and you won't be charged\\./.test(document.body.innerText)", 8000), (await text()).match(/Free trial[^\n]*/)?.[0] ?? "");
   const proDodo = (status = "active") => `localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: '${status}', interval: 'yearly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true, provider: 'dodo', manageAvailable: true })); true`;
   await b.eval(proDodo("pending") + "; localStorage.setItem('__manageUrl', 'https://evil.example/portal'); true");
   await b.go(BASE + "/app/?tab=settings", 3000);

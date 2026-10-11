@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent } from "react";
 import { authedFetch } from "../../lib/workspace/sync";
 import { trackProductEvent } from "../../lib/productEvents";
-import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../../data/pricing";
+import { PRO_PRICES, PRO_TRIAL_DAYS, YEARLY_SAVING_RUPEES } from "../../data/pricing";
 import { inputClass, primaryButton, secondaryButton } from "./ui";
 import { useWs } from "./i18n";
 
 interface BillingState {
   plan: { id: "free" | "pro"; activePaylinks: number };
-  subscription: { status: string; interval: "monthly" | "yearly"; currentEnd: number | null; cancelAtCycleEnd: boolean } | null;
+  subscription: { status: string; interval: "monthly" | "yearly"; currentEnd: number | null; cancelAtCycleEnd: boolean; trialEndsAt?: number | null } | null;
   /** A checkout the customer started that the payment provider hasn't confirmed yet. */
   checkout?: { interval: "monthly" | "yearly"; url: string } | null;
   billingAvailable: boolean;
@@ -15,6 +15,8 @@ interface BillingState {
   provider?: "dodo" | "razorpay" | null;
   /** Dodo's customer portal (payment method, invoices) is available for this subscription. */
   manageAvailable?: boolean;
+  /** Free days before the first charge if this account checks out now (0: charged at checkout). */
+  trialDays?: number;
 }
 
 // After returning from checkout, re-check every 5 s for two minutes (the server
@@ -210,6 +212,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
 
   const isPro = billing?.plan.id === "pro";
   const sub = billing?.subscription;
+  const trialDays = billing?.trialDays ?? 0;
 
   return (
     <section ref={panel} id="plan" className={`rounded-[1.5rem] border bg-white/90 p-5 shadow-sm ${intent && !isPro ? "border-sun ring-2 ring-sun/50" : "border-white/75"}`}>
@@ -224,7 +227,9 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             ? <p>{tr("Cancelled — Pro stays on until {date}, then you move to Free. Your data stays.", { date: longDate(sub.currentEnd, dateLocale) })}</p>
             : sub.status === "pending"
               ? <p>{tr("Your last renewal payment failed. Update your payment method to keep Pro.")}</p>
-              : <p>{tr(sub.interval === "yearly" ? "Pro yearly" : "Pro monthly")}{sub.currentEnd ? tr(" · renews on {date}", { date: longDate(sub.currentEnd, dateLocale) }) : null}.</p>}
+              : sub.trialEndsAt
+                ? <p>{tr("Free trial · first payment of {price} on {date}.", { price: PRO_PRICES[sub.interval].label, date: longDate(sub.trialEndsAt, dateLocale) })} {tr("Cancel before then and you won't be charged.")}</p>
+                : <p>{tr(sub.interval === "yearly" ? "Pro yearly" : "Pro monthly")}{sub.currentEnd ? tr(" · renews on {date}", { date: longDate(sub.currentEnd, dateLocale) }) : null}.</p>}
           {!sub.cancelAtCycleEnd && (sub.status === "active" || sub.status === "authenticated") && (
             confirmCancel ? (
               <p className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-[#a8321d]">
@@ -262,11 +267,20 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             </div>
           ) : billing?.billingAvailable ? (
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
+              {trialDays > 0 && (
+                <p className="text-sm font-bold text-forest sm:col-span-2">
+                  {tr("Try Pro free for {days} days: ₹0 today, first payment on {date}. Cancel before then and you pay nothing.", { days: trialDays, date: longDate(Date.now() + trialDays * 86_400_000, dateLocale) })}
+                </p>
+              )}
               <button type="button" disabled={busy} onClick={() => checkout("monthly")} className={intent === "yearly" ? secondaryButton : primaryButton}>
-                {tr("{price} / month", { price: PRO_PRICES.monthly.label })}
+                {trialDays > 0
+                  ? tr("Start free trial · then {price} / month", { price: PRO_PRICES.monthly.label })
+                  : tr("{price} / month", { price: PRO_PRICES.monthly.label })}
               </button>
               <button type="button" disabled={busy} onClick={() => checkout("yearly")} className={intent === "yearly" ? primaryButton : secondaryButton}>
-                {tr("{price} / year · save ₹{saving}", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })}
+                {trialDays > 0
+                  ? tr("Start free trial · then {price} / year (save ₹{saving})", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })
+                  : tr("{price} / year · save ₹{saving}", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })}
               </button>
               <p className="text-[11px] text-forest/55 sm:col-span-2">{billing.provider === "dodo"
                   ? tr("Secure checkout by Dodo Payments, our merchant of record: UPI or card, GST included. Cancel anytime; Pro runs to the end of the paid period.")
@@ -277,7 +291,9 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
               <p role="status" className="mt-4 rounded-xl bg-mint px-3 py-2 text-sm font-bold text-leaf">{tr("You're on the Pro early-access list. We'll email you when it opens.")}</p>
             ) : (
               <form onSubmit={joinWaitlist} noValidate className="mt-4">
-                <p className="text-sm text-forest/70">{tr("Pro opens soon at {price}/month. Get an email when it does:", { price: PRO_PRICES.monthly.label })}</p>
+                <p className="text-sm text-forest/70">{PRO_TRIAL_DAYS > 0
+                  ? tr("Pro opens soon at {price}/month, with a {days}-day free trial. Get an email when it does:", { price: PRO_PRICES.monthly.label, days: PRO_TRIAL_DAYS })
+                  : tr("Pro opens soon at {price}/month. Get an email when it does:", { price: PRO_PRICES.monthly.label })}</p>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
                   <label htmlFor="pro-email" className="sr-only">{tr("Email address")}</label>
                   <input id="pro-email" type="email" autoComplete="email" value={email} onChange={(e) => setEmail(e.target.value)} className={`${inputClass} flex-1`} placeholder="you@example.com" />

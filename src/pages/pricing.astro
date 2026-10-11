@@ -1,7 +1,13 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-import { PRO_PRICES, REFUND_WINDOW_DAYS, YEARLY_SAVING_RUPEES } from "../data/pricing";
+import { PRO_PRICES, PRO_TRIAL_DAYS, REFUND_WINDOW_DAYS, YEARLY_SAVING_RUPEES } from "../data/pricing";
 import { FREE_ACTIVE_PAYLINKS } from "../lib/workspace/paylinks";
+import { billingProviders } from "../lib/billing/config";
+import { checkoutProvider } from "../lib/billing/provider";
+
+// Built per deployment: Pro checkout is open once the payment provider's keys are set (then redeploy).
+const checkout = checkoutProvider(billingProviders());
+const trialDays = checkout?.id === "dodo" ? PRO_TRIAL_DAYS : 0;
 
 const title = "Pricing — Free UPI Tools, Payment Tracker & Pro | Pro UPI QR";
 const description = `Every UPI QR, invoice and calculator stays free. A free account adds sync and ${FREE_ACTIVE_PAYLINKS} pay links. Pro is ${PRO_PRICES.monthly.label}/month for unlimited pay links. We take 0% of your payments.`;
@@ -45,7 +51,11 @@ const tiers = [
   },
   {
     name: "Pro",
-    tag: `or ${PRO_PRICES.yearly.label}/year — save ₹${YEARLY_SAVING_RUPEES}`,
+    tag: !checkout
+      ? `Opening soon · or ${PRO_PRICES.yearly.label}/year — save ₹${YEARLY_SAVING_RUPEES}`
+      : trialDays > 0
+        ? `${trialDays} days free · then ${PRO_PRICES.monthly.label}/month or ${PRO_PRICES.yearly.label}/year`
+        : `or ${PRO_PRICES.yearly.label}/year — save ₹${YEARLY_SAVING_RUPEES}`,
     price: PRO_PRICES.monthly.label,
     per: "per month",
     blurb: "For businesses sending lots of invoices every month.",
@@ -57,7 +67,7 @@ const tiers = [
       "MSME mode: 45-day MSMED deadlines, Section 16 interest, and your rights in reminders",
       "Early access to automatic WhatsApp reminders (in development)",
     ],
-    cta: { label: "Upgrade to Pro", href: "/app/?tab=settings&upgrade=monthly" },
+    cta: { label: !checkout ? "Get early access" : trialDays > 0 ? `Start ${trialDays}-day free trial` : "Upgrade to Pro", href: "/app/?tab=settings&upgrade=monthly" },
     featured: false,
   },
 ];
@@ -75,6 +85,10 @@ const faqs = [
     question: "How do I pay for Pro?",
     answer: "Upgrade from Settings in the payment tracker. Checkout opens on Dodo Payments' secure page, where you can pay with UPI or a card. Dodo is our merchant of record: it handles GST and emails your invoice. GST-registered? Buy as a business and add your GSTIN at checkout. Pro UPI QR never sees your card details or UPI PIN.",
   },
+  ...(PRO_TRIAL_DAYS > 0 ? [{
+    question: "Is there a free trial?",
+    answer: `Yes. Your first Pro subscription starts with ${PRO_TRIAL_DAYS} days free. You add a payment method at checkout and pay ₹0 that day; the first payment is taken when the trial ends. Cancel from Settings before then and you pay nothing. One trial per account.${checkout ? "" : " Pro checkout opens soon; join early access in Settings to hear when."}`,
+  }] : []),
   {
     question: "Can I cancel anytime?",
     answer: "Yes. Cancel from Settings. Renewals stop, and Pro stays on until the end of the period you already paid for. Your invoices, clients, and payments stay in your account.",
