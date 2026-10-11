@@ -21,7 +21,7 @@ export type HomeCopy = {
 
 export const HOME_COPY: Record<Exclude<SiteLang, "en" | "hi">, HomeCopy> = {
   ta: {
-    title: "இலவச UPI QR ஜெனரேட்டர் | PhonePe, GPay",
+    title: "இலவச UPI QR ஜெனரேட்டர் — Universal QR",
     description:
       "கடை அல்லது வங்கிக் கணக்கிற்கு இலவச UPI QR உருவாக்குங்கள். PhonePe, Google Pay, Paytm போஸ்டர்களை பதிவு இல்லாமல் பதிவிறக்குங்கள்.",
     eyebrow: "இலவச UPI QR ஜெனரேட்டர் (தமிழ்)",
@@ -62,7 +62,7 @@ export const HOME_COPY: Record<Exclude<SiteLang, "en" | "hi">, HomeCopy> = {
     ],
   },
   te: {
-    title: "ఉచిత UPI QR జనరేటర్ | PhonePe, GPay",
+    title: "ఉచిత UPI QR జనరేటర్ — Universal QR",
     description:
       "దుకాణం లేదా బ్యాంక్ ఖాతా కోసం ఉచిత UPI QR సృష్టించండి. PhonePe, Google Pay, Paytm పోస్టర్లు సైన్అప్ లేకుండా డౌన్‌లోడ్ చేయండి.",
     eyebrow: "ఉచిత UPI QR జనరేటర్ (తెలుగు)",
@@ -103,7 +103,7 @@ export const HOME_COPY: Record<Exclude<SiteLang, "en" | "hi">, HomeCopy> = {
     ],
   },
   mr: {
-    title: "मोफत UPI QR जनरेटर | PhonePe, GPay",
+    title: "मोफत UPI QR जनरेटर — Universal QR",
     description:
       "दुकान किंवा बँक खात्यासाठी मोफत UPI QR तयार करा. PhonePe, Google Pay, Paytm पोस्टर साइनअपशिवाय डाउनलोड करा.",
     eyebrow: "मोफत UPI QR जनरेटर (मराठी)",

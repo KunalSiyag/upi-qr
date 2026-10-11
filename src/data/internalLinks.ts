@@ -105,7 +105,7 @@ export const generators: GeneratorLink[] = [
     presetType: "phonepe",
     label: "PhonePe QR Generator",
     shortLabel: "PhonePe QR",
-    description: "Create a PhonePe-compatible UPI QR with optional amount and note.",
+    description: "Create a PhonePe QR from an @ybl, @ibl, or @axl UPI ID.",
     accent: "#5f259f",
   },
   {
@@ -137,7 +137,7 @@ export const generators: GeneratorLink[] = [
     presetType: "bhim",
     label: "BHIM UPI QR Generator",
     shortLabel: "BHIM QR",
-    description: "Generate standard BHIM UPI QR codes for instant direct bank payments.",
+    description: "Print a free NPCI-format BHIM UPI standee from your VPA.",
     accent: "#e55523",
   },
   {
@@ -709,7 +709,7 @@ export const guides: GuideLink[] = [
   {
     slug: "udyam-registration-guide-msme-benefits",
     title: "Udyam Registration Guide - MSME Benefits & How to Apply",
-    description: "Free Udyam registration walkthrough plus every benefit it unlocks: 15% late-payment interest rights, collateral-free loans, TReDS access.",
+    description: "Free Udyam registration walkthrough plus every benefit it unlocks: late-payment interest at 3× the RBI bank rate, collateral-free loans, TReDS access.",
     presetTypes: ["phonepe", "gpay", "paytm", "freelance"],
     tags: ["MSME", "Government Schemes", "Billing"],
     featured: true,
@@ -745,8 +745,8 @@ export const guides: GuideLink[] = [
   },
   {
     slug: "npci-upi-qr-code-generator-explained",
-    title: "NPCI QR Code Generator — No Official Site",
-    description: "NPCI has no public shop QR form. Print a compliant upi://pay QR for every member app.",
+    title: "NPCI UPI QR vs Bharat QR",
+    description: "How an NPCI UPI QR differs from bank-issued Bharat QR, and where to print a standee.",
     presetTypes: ["phonepe", "gpay", "paytm", "bhim", "sbi"],
     tags: ["NPCI", "Universal QR", "BHIM", "Tutorial"],
     featured: true,

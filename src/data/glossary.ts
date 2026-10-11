@@ -80,7 +80,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/upi-error-codes/", label: "NPCI UPI error code resolver" },
-      { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI QR generator explained" },
+      { href: "/bhim-qr-generator/", label: "NPCI QR generator" },
+      { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR vs Bharat QR" },
       { href: "/upi-limits/", label: "Bank-wise UPI limits checker" }
     ]
   },
@@ -100,7 +101,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       { question: "Can my customers use any app to pay my QR?", answer: "Yes — UPI QRs are interoperable. A standee generated once works identically in every UPI app." }
     ],
     related: [
-      { href: "/bhim-qr-generator/", label: "BHIM-compatible QR generator" },
+      { href: "/bhim-qr-generator/", label: "BHIM UPI QR generator" },
       { href: "/blog/how-to-generate-bhim-upi-qr-code/", label: "How to generate a BHIM UPI QR" }
     ]
   },
@@ -316,23 +317,23 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     pageTitle: "P2P vs P2M in UPI — Limits, MDR & TAT",
     h1: "P2P vs P2M in UPI",
     pointer: {
-      text: "P2M full form is Person-to-Merchant. For the definition, refund TAT, and when a shop needs a merchant VPA, read",
+      text: "Refund time, the Oct 2026 MDR rule, and when a shop needs a merchant VPA are on",
       href: "/blog/p2m-meaning-in-banking-upi/",
       label: "P2M meaning in banking and UPI"
     },
-    shortDef: "Two UPI flows: casual transfers between people (P2P) versus structured payments to registered merchants (P2M).",
+    shortDef: "P2P vs P2M compares a transfer between two people with a payment to a shop, including limits, MDR, and how long a failed credit takes to return.",
     body: [
       "When you split a dinner bill with a friend, that is P2P (always free). When you scan a shop's QR, that is P2M — merchant metadata, longer failed-credit TAT, and from 15 October 2026 a 0.4% MDR on some tickets above ₹2,000.",
       "For a small business the distinction matters for credibility and accounting: registering as a merchant (even free tiers) marks your inflows as business revenue cleanly rather than mixing them with personal transfers."
     ],
     faqs: [
-      { question: "What is the full form of P2M and P2P?", answer: "P2M is Person-to-Merchant — a customer paying a shop or business collect. P2P is Person-to-Person — a transfer between two individuals, like splitting a bill. P2PM is the related small-QR-merchant tag for shops under ₹1 lakh a month." },
+      { question: "How do P2P and P2M differ on cost?", answer: "P2P stays free at any amount. Some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026 unless the VPA is tagged as a small QR merchant. The full form and the refund clock are on the P2M meaning page." },
       { question: "Do I need merchant registration to accept payments?", answer: "Technically no — customers can pay any VPA. Registering unlocks P2M rails, better limits, and cleaner books though." },
       { question: "Are P2M payments slower or costlier?", answer: "Same speed. Cost: P2P is free; some P2M above ₹2,000 take 0.4% MDR from 15 Oct 2026 unless you are a small QR merchant." }
     ],
     related: [
       { href: "/glossary/mdr/", label: "MDR — merchant discount rate" },
-      { href: "/glossary/p2pm/", label: "P2PM small merchant" },
+      { href: "/glossary/p2pm/", label: "P2PM meaning" },
       { href: "/blog/p2m-meaning-in-banking-upi/", label: "P2M meaning in banking and UPI" },
       { href: "/split-bill-calculator/", label: "Split bills with per-person UPI links" }
     ]
@@ -343,7 +344,9 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     full: "Person-to-Person-Merchant (small QR merchant)",
     hindi: "छोटा QR मर्चेंट (P2PM)",
     category: "Merchant & QR",
-    shortDef: "Bank tag for small UPI QR shops. Up to ₹1 lakh/month they stay at 0% MDR from 15 Oct 2026, even on bills above ₹2,000.",
+    pageTitle: "P2PM Meaning in UPI & Banking",
+    h1: "P2PM Meaning in UPI",
+    shortDef: "P2PM meaning: the bank tag for a small UPI QR shop. Up to ₹1 lakh a month, those payments stay at 0% MDR from 15 Oct 2026.",
     body: [
       "P2PM is the small-merchant QR class used by acquiring banks. Street vendors and neighbourhood shops that collect through UPI QR into their account, up to ₹1 lakh a month, stay in the zero-MDR net when the VPA is tagged this way. A single bill above ₹2,000 does not by itself end the exemption.",
       "GSTIN is not required. Coverage of the NPCI FAQ said three consecutive months of inward UPI above ₹1 lakh typically moves the account into chargeable P2M. This site cannot see the tag from a VPA — ask the bank or app, then tick the box on the MDR calculator only if they confirmed it."
@@ -377,7 +380,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR vs Bharat QR" },
-      { href: "/", label: "Print a UPI QR standee" }
+      { href: "/bhim-qr-generator/", label: "NPCI QR generator" },
+      { href: "/", label: "UPI QR code generator" }
     ]
   },
   {

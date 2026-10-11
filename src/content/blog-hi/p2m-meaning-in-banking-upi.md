@@ -1,6 +1,6 @@
 ---
 title: "P2M फुल फॉर्म और मतलब — बैंकिंग और UPI में"
-description: "P2M यानी Person-to-Merchant — ग्राहक का दुकानदार को UPI भुगतान। P2P यानी Person-to-Person। दोनों का अंतर, रिफंड TAT, MDR नियम और मर्चेंट VPA कब चाहिए, जानें।"
+description: "UPI और बैंकिंग में P2M का मतलब और फुल फॉर्म: P2P से अंतर, रिफंड के दिन, अक्टूबर 2026 का MDR, और मर्चेंट VPA कब चाहिए।"
 pubDate: 2026-09-17
 author: "Kunal Siyag"
 reviewedOn: 2026-09-17

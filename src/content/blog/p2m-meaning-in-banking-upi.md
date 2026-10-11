@@ -1,6 +1,6 @@
 ---
 title: "P2M Full Form & Meaning in Banking and UPI"
-description: "P2M full form is Person-to-Merchant. P2P is Person-to-Person. Learn the difference in UPI: refund TAT, MDR from Oct 2026, and when shops need a merchant VPA."
+description: "P2M meaning and full form in UPI and banking: how it differs from P2P, refund days, Oct 2026 MDR, and when a shop needs a merchant VPA."
 pubDate: 2026-09-13
 updatedDate: 2026-09-17
 author: "Kunal Siyag"
@@ -67,7 +67,7 @@ No. The file encodes your VPA. Merchant registration still happens at the bank o
 
 ### Q5. What is the full form of P2M in banking?
 
-P2M stands for Person-to-Merchant. Its counterpart P2P stands for Person-to-Person. A related tag is P2PM — the small-QR-merchant class banks use for shops collecting up to ₹1 lakh a month over UPI QR, which stays at zero MDR from 15 October 2026. See [P2PM vs P2M](/glossary/p2pm/).
+P2M stands for Person-to-Merchant. Its counterpart P2P stands for Person-to-Person. A related tag is P2PM — the small-QR-merchant class banks use for shops collecting up to ₹1 lakh a month over UPI QR, which stays at zero MDR from 15 October 2026. See [P2PM meaning](/glossary/p2pm/).
 
 ### Q6. What is P2M payment meaning in UPI?
 
@@ -75,7 +75,7 @@ A P2M payment in UPI means money moving from a customer's account to a merchant'
 
 ### Q7. What is the difference between P2P and P2M?
 
-P2P is a transfer between two people (splitting dinner, sending pocket money) and stays free at any amount. P2M is a payment to a registered merchant flow (shop QR, business VPA): tickets of ₹2,000 or less stay free, small QR shops stay free, and only some larger P2M tickets take 0.4% MDR from 15 October 2026. The comparison table above covers limits, MDR, and TAT side by side.
+P2P is a transfer between two people (splitting dinner, sending pocket money) and stays free at any amount. P2M is a payment to a registered merchant flow (shop QR, business VPA): tickets of ₹2,000 or less stay free, small QR shops stay free, and only some larger P2M tickets take 0.4% MDR from 15 October 2026. The comparison table above covers limits, MDR, and TAT side by side. The short version lives at [P2P vs P2M](/glossary/p2p-payment/).
 
 **[Print a shop UPI QR →](/)**
 

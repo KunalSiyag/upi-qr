@@ -1,10 +1,10 @@
 ---
-title: "NPCI QR Code Generator — No Official Site"
-description: "NPCI QR code generator: there is no official shop form. Print a compliant upi://pay QR for PhonePe, GPay, Paytm, and BHIM — Bharat QR is different."
+title: "NPCI UPI QR vs Bharat QR"
+description: "NPCI UPI QR is a upi://pay code any UPI app can scan. Bharat QR is issued by a bank. Print a free standee from your VPA."
 pubDate: 2026-09-13
-updatedDate: 2026-09-17
+updatedDate: 2026-09-24
 author: "Kunal Siyag"
-reviewedOn: 2026-09-17
+reviewedOn: 2026-09-24
 reviewIntervalDays: 180
 testedApplications: ["BHIM", "PhonePe", "Google Pay", "Paytm"]
 sourceUrls:
@@ -18,9 +18,9 @@ tags: ["NPCI", "Universal QR", "BHIM", "Tutorial"]
 
 People search **NPCI QR code generator** expecting a government website that prints a shop standee. That page does not exist. NPCI writes the `upi://pay` rulebook; BHIM is NPCI’s own app; banks and TPAPs issue VPAs. A printable QR is just that URI encoded as a matrix.
 
-*Last reviewed 17 September 2026.*
+*Last reviewed 24 September 2026.*
 
-Want a BHIM-styled standee of the same VPA? Use the [BHIM QR generator](/bhim-qr-generator/). That print is compatible, not an NPCI-issued kit.
+Want the standee now? Use the [NPCI QR generator](/bhim-qr-generator/). It prints a BHIM-styled `upi://pay` code from your VPA. That file is compatible with every member app. It is not a bank-issued Bharat QR.
 
 ## What “NPCI QR” actually means
 
@@ -34,12 +34,12 @@ Three different things get lumped under the same search:
 
 NPCI’s own product page lists **QR code and intent-based payments** as a UPI feature. It does not host a public “generate my shop QR” form. If a site claims to be the official NPCI generator, treat it as marketing copy.
 
-**[Create an NPCI-compliant UPI QR →](/)**
+**[Open the NPCI QR generator →](/bhim-qr-generator/)**
 
 ## How to generate an NPCI-compliant UPI QR
 
 1. Open your bank or UPI app and copy the **primary VPA** (for example `shop@oksbi` or `mobile@ybl`) and the **payee name** the app shows.
-2. Paste both into the [UPI QR generator](/). Optional: lock an amount with the `am` field.
+2. Paste both into the [UPI QR code generator](/). Optional: lock an amount with the `am` field. For a BHIM-styled print, use the [NPCI QR generator](/bhim-qr-generator/).
 3. Download PNG or PDF. Do not screenshot the preview.
 4. Test-scan with BHIM and one other app (PhonePe or GPay) before you print.
 5. Decode the file with the [UPI QR decoder](/upi-qr-decoder/) and confirm `pa=` still matches your VPA.

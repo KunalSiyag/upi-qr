@@ -12,9 +12,9 @@ import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
 import { ogImageForPath } from "../data/siteImages";
 import { softwareApplicationSchema } from "../data/reviews";
 
-const title = "Free UPI QR Code Generator — PhonePe, GPay, Paytm";
+const title = "Free UPI QR Code Generator — Universal QR";
 const description =
-  "Create a free UPI QR code for your shop or bank account. Works on PhonePe, Google Pay, Paytm, and BHIM. Print a standee, sticker, invoice, or receipt. No signup.";
+  "Create a free universal UPI QR code for your shop or bank account. Works on PhonePe, Google Pay, Paytm, and BHIM. Print a standee or sticker. No signup.";
 
 const faqs = [
   {
@@ -53,8 +53,8 @@ const faqs = [
   {
     question: "Is there an official NPCI QR code generator?",
     answer:
-      "No public NPCI shop form. NPCI writes the upi://pay rulebook and runs BHIM. Paste your VPA here to print a compliant QR. Read NPCI UPI QR explained for Bharat QR vs UPI QR.",
-    answerLink: { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR explained" }
+      "No official one exists: NPCI writes the upi://pay rules and does not host a public shop form. Use the NPCI QR generator here to print a BHIM standee from your VPA. Bharat QR is a separate bank-issued code.",
+    answerLink: { href: "/bhim-qr-generator/", label: "NPCI QR generator" }
   },
   {
     question: "Can I generate a UPI QR from a bank account number?",
@@ -237,6 +237,7 @@ const merchantTools = [
   { title: "Cash Memo Generator", href: "/cash-memo-generator/", copy: "Simple retail billing slips for kirana shops and walk-in counter sales.", status: "New" },
   { title: "Influencer Contract Generator", href: "/influencer-contract-generator/", copy: "Brand collaboration agreements with deliverables, ASCI rules, and advance UPI QR.", status: "New" },
   { title: "Freelance Contract Generator", href: "/freelance-contract-generator/", copy: "Service agreements with milestone deliverables, IP ownership, and revision limits.", status: "New" },
+  { title: "Payment Tracker", href: "/payment-tracker/", copy: "Who owes you, what is overdue, one-tap WhatsApp reminders, and part payments. No signup.", status: "New" },
   { title: "MSME Receivables Tracker", href: "/msme-receivables/", copy: "Invoice aging buckets, 45-day due alerts, and Section 16 demand letters with interest.", status: "New" },
   { title: "Developer API", href: "/developer/", copy: "Embed UPI QR widgets, payment links, and authenticated checkout sessions.", status: "Live now" }
 ];
@@ -260,13 +261,13 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
         <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
           <div class="pt-4 min-w-0">
             <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
-              Free UPI QR for shops and bank accounts
+              Free universal UPI QR for shops and bank accounts
             </p>
             <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
               Free UPI QR Code Generator
             </h1>
             <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
-              Enter your UPI ID and download a payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
+              Enter your UPI ID and download a universal payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
             </p>
             <SocialProofBar compact />
 
