@@ -280,6 +280,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
   </nav>
 
   <div class="flex items-center gap-2 sm:gap-3">
+    <a href={"/sign-in/?redirect_url=" + encodeURIComponent("/app/")} class="hidden min-h-11 shrink-0 items-center px-1 text-xs font-bold text-forest transition-colors hover:text-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf md:inline-flex">{isHindi ? "लॉग इन" : "Log in"}</a>
     <a href="/app/" class="hidden min-h-11 shrink-0 items-center rounded-full bg-forest px-4 text-xs font-black text-white transition-colors hover:bg-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf sm:inline-flex">{isHindi ? "पेमेंट ट्रैक करें" : "Track payments"}</a>
     <!-- Language Dropdown Selector -->
     <div class="relative group">
@@ -387,6 +388,7 @@ const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
       <a href={p("blog")} class="p-2 hover:text-leaf">{chrome.guides}</a>
       <a href={p("developer")} class="p-2 hover:text-leaf">{chrome.developers}</a>
       <a href="/pricing/" class="p-2 hover:text-leaf">{isHindi ? "प्राइसिंग" : "Pricing"}</a>
+      <a href={"/sign-in/?redirect_url=" + encodeURIComponent("/app/")} class="p-2 hover:text-leaf">{isHindi ? "लॉग इन" : "Log in"}</a>
       <a href={p("about")} class="p-2 hover:text-leaf">{chrome.about}</a>
       <a href="/reviews/" class="p-2 hover:text-leaf">{chrome.reviews}</a>
     </div>
