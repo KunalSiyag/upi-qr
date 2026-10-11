@@ -44,6 +44,8 @@ try {
   res = await send(activated, { secret: "wrong" });
   check("wrong-secret webhook → 401", res.status === 401);
   check("rejected webhooks change nothing", (await record()) === null);
+  const istDay = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
+  check("rejected webhooks are counted for /admin/metrics/", Number((await admin("get", { key: `metrics:webhook_rejected:${istDay}` })).value) >= 2);
 
   res = await send(activated, { eventId: "evt_ACTIVATE01" });
   const body = await res.json();

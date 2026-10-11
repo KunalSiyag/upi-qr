@@ -12,6 +12,8 @@ export const METRICS = [
   "pro_cancelled",
   "push_enabled",
   "digest_sent",
+  "webhook_rejected",
+  "billing_reconciled",
 ] as const;
 export type MetricName = (typeof METRICS)[number];
 
@@ -25,6 +27,8 @@ export const METRIC_LABELS: Record<MetricName, string> = {
   pro_cancelled: "Pro cancellations",
   push_enabled: "Devices with morning reminders",
   digest_sent: "Morning digests delivered",
+  webhook_rejected: "Billing webhooks rejected (bad signature — check RAZORPAY_WEBHOOK_SECRET)",
+  billing_reconciled: "Billing records fixed by re-reading Razorpay (lost webhooks)",
 };
 
 export const metricKey = (name: MetricName, day: string) => `metrics:${name}:${day}`;

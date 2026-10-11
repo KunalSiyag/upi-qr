@@ -34,6 +34,7 @@ export const GET: APIRoute = async ({ request }) => {
     try {
       const result = await reconcileDueSubscriptions(billingStore(), config, now, { deadline: now + 10_000 });
       if (result.activated) await recordMetric("pro_activated", result.activated, now);
+      if (result.updated) await recordMetric("billing_reconciled", result.updated, now);
       billing = { ...result };
     } catch {
       billing = { error: "Billing reconcile failed." };

@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
     );
     const transition = result.body.transition;
     if (transition === "pro_activated" || transition === "pro_cancelled") await recordMetric(transition);
+    if (result.status === 401) await recordMetric("webhook_rejected");
     return jsonResponse(result.body, result.status);
   } catch {
     // Storage failed: a 5xx makes Razorpay retry the delivery later.

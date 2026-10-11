@@ -99,6 +99,16 @@ else {
       } catch { fail(`${key}: couldn't reach Razorpay`); }
     }
   }
+  if (online) {
+    // One unsigned POST to the exact URL Razorpay will call (shows once as webhook_rejected in /admin/metrics/).
+    try {
+      const res = await fetch("https://www.proupiqr.in/api/billing/razorpay-webhook/", { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json" }, body: "{}" });
+      if (res.status === 401) ok("Live webhook URL is deployed and rejects unsigned calls (401)");
+      else if (res.status === 503) fail("Live webhook URL is deployed, but billing isn't configured in the Production environment (503)");
+      else if (res.status >= 300 && res.status < 400) fail(`Live webhook URL redirects (HTTP ${res.status}); Razorpay counts a redirect as a failed delivery`);
+      else fail(`Live webhook URL returned HTTP ${res.status}; deploy the billing code to production first`);
+    } catch { fail("Couldn't reach https://www.proupiqr.in/api/billing/razorpay-webhook/"); }
+  }
   console.log("    Webhook URL: https://www.proupiqr.in/api/billing/razorpay-webhook/");
   console.log("      exactly this: www and the trailing slash (proupiqr.in and the no-slash path redirect, and a redirect is a failed delivery)");
   console.log("    Events: subscription.* (activated, charged, pending, halted, cancelled, completed, paused, resumed)");

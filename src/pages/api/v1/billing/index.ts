@@ -29,6 +29,7 @@ export const GET: APIRoute = async ({ locals }) => {
       const result = await reconcileSubscription(store, config, owner, now);
       record = result.record;
       if (result.activated) await recordMetric("pro_activated");
+      if (result.changed) await recordMetric("billing_reconciled");
     }
     const plan = planFromSubscription(record, now);
     const checkoutUrl = record?.status === "created" && record.shortUrl && now - record.updatedAt < PENDING_CHECKOUT_REUSE_MS
