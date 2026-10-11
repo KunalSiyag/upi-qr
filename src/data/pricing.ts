@@ -1,7 +1,8 @@
 /**
- * Pro plan prices shown on /pricing/ and in the workspace. The Razorpay plans
- * (RAZORPAY_PLAN_MONTHLY / RAZORPAY_PLAN_YEARLY) must be created with these
- * same amounts — the page cannot read them from Razorpay.
+ * Pro plan prices shown on /pricing/ and in the workspace (GST included). The
+ * Dodo Payments products (DODO_PRODUCT_MONTHLY / DODO_PRODUCT_YEARLY, created
+ * tax-inclusive by `npm run dodo:products`) must charge these same amounts; so
+ * must the Razorpay plans if that fallback is used. launch:check --online verifies.
  */
 export const PRO_PRICES = {
   monthly: { paise: 14_900, label: "₹149", per: "month" },

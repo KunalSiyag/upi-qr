@@ -1,8 +1,9 @@
 /**
  * Who runs Pro UPI QR and how to reach us — /contact/ and the policy pages read this.
  *
- * Razorpay checks for a contact page before turning on live payments, and reviewers
- * often ask for a phone number and an operational address too. Fill those in as you
+ * Payment providers (Dodo Payments, Razorpay) review the site's contact and policy
+ * pages before turning on live payments, and often ask for a phone number and an
+ * operational address too. Fill those in as you
  * want them published; `npm run launch:check` warns while they are empty.
  */
 export const BUSINESS = {

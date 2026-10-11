@@ -73,7 +73,7 @@ const faqs = [
   },
   {
     question: "How do I pay for Pro?",
-    answer: "Upgrade from Settings in the payment tracker. Checkout opens on Razorpay's secure page, where you can pay with UPI AutoPay or a card. Pro UPI QR never sees your card details or UPI PIN.",
+    answer: "Upgrade from Settings in the payment tracker. Checkout opens on Dodo Payments' secure page, where you can pay with UPI or a card. Dodo is our merchant of record: it handles GST and emails your invoice. GST-registered? Buy as a business and add your GSTIN at checkout. Pro UPI QR never sees your card details or UPI PIN.",
   },
   {
     question: "Can I cancel anytime?",
@@ -146,7 +146,7 @@ const schema = {
         ))}
       </div>
       <p class="mx-auto mt-6 max-w-6xl text-center text-sm text-forest/70">
-        Prices in Indian rupees, billed by Razorpay with UPI AutoPay or card. Cancel anytime{REFUND_WINDOW_DAYS > 0 ? ` · ${REFUND_WINDOW_DAYS}-day refund on your first payment` : ""}{" · "}
+        Prices in Indian rupees, GST included. Billed by Dodo Payments, our merchant of record, with UPI or card. Cancel anytime{REFUND_WINDOW_DAYS > 0 ? ` · ${REFUND_WINDOW_DAYS}-day refund on your first payment` : ""}{" · "}
         <a href="/refund-policy/" class="font-bold text-leaf underline">Cancellation &amp; refunds</a>{" · "}
         <a href="/contact/" class="font-bold text-leaf underline">Contact</a>
       </p>

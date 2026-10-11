@@ -5,7 +5,7 @@ import { PRO_PRICES, REFUND_WINDOW_DAYS } from "../data/pricing";
 import { PENDING_GRACE_MS } from "../lib/billing/subscription";
 
 const title = "Cancellation & Refund Policy | Pro UPI QR";
-const description = "How to cancel the Pro plan, when Pro UPI QR refunds a payment, how refunds reach you through Razorpay, and who handles payments your own clients make.";
+const description = "How to cancel the Pro plan, when Pro UPI QR refunds a payment, how refunds reach you through Dodo Payments, and who handles payments your own clients make.";
 const url = "https://www.proupiqr.in/refund-policy/";
 const graceDays = Math.round(PENDING_GRACE_MS / 86_400_000);
 const support = BUSINESS.emails.support;
@@ -45,7 +45,7 @@ const schema = {
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">1. What you pay for</h2>
           <p>
-            Every QR generator, document tool, calculator, the browser-only payment tracker, and free accounts cost nothing. The Pro plan is an optional subscription billed through Razorpay at {PRO_PRICES.monthly.label} per month or {PRO_PRICES.yearly.label} per year, as shown on the <a href="/pricing/" class={link}>pricing page</a>. You authorise each renewal through UPI AutoPay or your card when you subscribe.
+            Every QR generator, document tool, calculator, the browser-only payment tracker, and free accounts cost nothing. The Pro plan is an optional subscription sold through Dodo Payments, our merchant of record, at {PRO_PRICES.monthly.label} per month or {PRO_PRICES.yearly.label} per year with GST included, as shown on the <a href="/pricing/" class={link}>pricing page</a>. Dodo charges each renewal to the payment method you choose at checkout and emails your invoice.
           </p>
         </section>
 
@@ -74,14 +74,14 @@ const schema = {
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">4. How to ask for a refund</h2>
           <p>
-            Email <a href={`mailto:${support}`} class={link}>{support}</a> from your account's email address with the date and amount charged, and the Razorpay payment ID (it starts with pay_) if you have it. We reply within {BUSINESS.replyWithin}. Approved refunds go back to the original payment method through Razorpay; banks usually show them within 5–7 working days.
+            Email <a href={`mailto:${support}`} class={link}>{support}</a> from your account's email address with the date and amount charged, and the payment ID from Dodo's receipt email (it starts with pay_) if you have it. We reply within {BUSINESS.replyWithin}. Approved refunds are issued through Dodo Payments to the original payment method; banks usually show them within 5–7 working days.
           </p>
         </section>
 
         <section class="space-y-3">
           <h2 class="text-xl font-bold text-forest">5. Failed renewals</h2>
           <p>
-            If a renewal payment fails, you are not charged for it. Razorpay retries the payment, and Pro stays on for up to {graceDays} days in the meantime. If the payment still fails, your account moves to the free plan; nothing is deleted.
+            If a renewal payment fails, you are not charged for it. Dodo Payments retries the payment and emails you to update your payment method (Settings → Plan → Manage billing), and Pro stays on for up to {graceDays} days in the meantime. If the payment still fails, your account moves to the free plan; nothing is deleted.
           </p>
         </section>
 
