@@ -8,7 +8,7 @@ const text = () => b.eval("document.body.innerText");
 
 // Block the real Clerk SDK; install a controllable Clerk stub and an emulated
 // /api/v1/workspace/ that merges per record (newest updatedAt wins, tombstones win ties).
-await b.send("Network.setBlockedURLs", { urls: ["*clerk.accounts.dev*", "*clerk.browser.js*", "*@clerk/clerk-js*"] });
+await b.send("Network.setBlockedURLs", { urls: ["*clerk.accounts.dev*", "*clerk.browser.js*", "*@clerk/clerk-js*", "*dodopayments.com*"] });
 await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
 (() => {
   const cfg = () => JSON.parse(localStorage.getItem('__srvcfg') || '{"signedIn":false,"owner":"owner-a"}');
@@ -36,8 +36,9 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
       const st = JSON.parse(localStorage.getItem('__billing') || '{"plan":{"id":"free","activePaylinks":10},"subscription":null,"billingAvailable":false}');
       if (method === 'GET') return new Response(JSON.stringify(st), { status: 200 });
       const action = JSON.parse(init.body).action;
-      if (action === 'checkout') return new Response(JSON.stringify({ url: location.origin + '/pricing/?fake-razorpay-checkout=' + JSON.parse(init.body).interval }), { status: 200 });
+      if (action === 'checkout') { localStorage.setItem('__lastCheckout', init.body); return new Response(JSON.stringify({ url: location.origin + '/pricing/?fake-razorpay-checkout=' + JSON.parse(init.body).interval }), { status: 200 }); }
       if (action === 'cancel') { st.subscription.cancelAtCycleEnd = true; localStorage.setItem('__billing', JSON.stringify(st)); return new Response('{"ok":true}', { status: 200 }); }
+      if (action === 'manage') return new Response(JSON.stringify({ url: localStorage.getItem('__manageUrl') || 'https://customer.dodopayments.com/session/e2e' }), { status: 200 });
     }
     if (String(url).includes('/api/waitlist')) {
       window.__calls.push({ method: 'POST', url: String(url), body: init.body });
@@ -121,22 +122,34 @@ try {
   const wl = await b.eval("JSON.parse(window.__calls.find(c => c.url.includes('/api/waitlist')).body)");
   check("Pro waitlist posts tool=pro", wl.tool === "pro" && wl.email === "owner@example.com", JSON.stringify(wl));
 
-  // Billing configured: checkout goes to the provider URL.
-  await b.eval("localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, billingAvailable: true })); true");
+  // Billing configured (Razorpay): its checkout note.
+  await b.eval("localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, billingAvailable: true, provider: 'razorpay' })); true");
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  check("Razorpay checkout explains UPI AutoPay", await b.waitFor("/UPI AutoPay or card on Razorpay's secure page/.test(document.body.innerText)", 8000));
+
+  // Billing configured (Dodo): checkout goes to the provider URL.
+  await b.eval("localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, billingAvailable: true, provider: 'dodo' })); true");
   await b.go(BASE + "/app/?tab=settings", 3000);
   const shown = await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹1,499 / year · save ₹289')) && [...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))", 8000);
   check("upgrade buttons show both intervals with saving", shown);
+  check("Dodo checkout names the merchant of record and GST", /Secure checkout by Dodo Payments, our merchant of record: UPI or card, GST included/.test(await text()));
   await b.eval("[...document.querySelectorAll('button')].find(b => b.textContent.includes('₹1,499 / year')).click(), true");
   await b.waitFor("location.search.includes('fake-razorpay-checkout=yearly')", 8000);
   check("yearly checkout redirects to provider URL", (await b.eval("location.search")) === "?fake-razorpay-checkout=yearly");
+  const sent = await b.eval("JSON.parse(localStorage.getItem('__lastCheckout') || '{}')");
+  check("checkout sends the interval and the account email for the receipt", sent.action === "checkout" && sent.interval === "yearly" && sent.email === "owner@example.com", JSON.stringify(sent));
 
   // Back from Razorpay before the webhook: a waiting state (not the upgrade buttons again), auto-recheck, then Pro.
-  const pending = (url = "https://rzp.io/i/e2etest") => `localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, checkout: { interval: 'monthly', url: '${url}' }, billingAvailable: true })); true`;
+  const pending = (url = "https://test.checkout.dodopayments.com/session/cks_e2etest") => `localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'free', activePaylinks: 10 }, subscription: null, checkout: { interval: 'monthly', url: '${url}' }, billingAvailable: true, provider: 'dodo' })); true`;
   await b.eval(pending());
+  await b.go(BASE + "/app/?tab=settings&checkout=done", 3000);
+  const waitingShown = await b.waitFor("/Waiting for your payment to be confirmed/.test(document.body.innerText)", 8000);
+  check("back from checkout: a waiting state instead of the upgrade buttons", waitingShown && !(await b.eval("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))")));
+  check("continue-to-payment links to the Dodo checkout page", (await b.eval("[...document.querySelectorAll('#plan a')].find(a => a.textContent === 'Continue to payment')?.href")) === "https://test.checkout.dodopayments.com/session/cks_e2etest");
+  await b.eval(pending("https://rzp.io/i/e2etest"));
   await b.go(BASE + "/app/?tab=settings", 3000);
-  await b.waitFor("/Waiting for Razorpay to confirm your payment/.test(document.body.innerText)", 8000);
-  check("pending checkout shows a waiting state", !(await b.eval("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))")));
-  check("continue-to-payment links to the Razorpay page", (await b.eval("[...document.querySelectorAll('#plan a')].find(a => a.textContent === 'Continue to payment')?.href")) === "https://rzp.io/i/e2etest");
+  await b.waitFor("/Waiting for your payment to be confirmed/.test(document.body.innerText)", 8000);
+  check("a Razorpay checkout page is linked too", (await b.eval("[...document.querySelectorAll('#plan a')].find(a => a.textContent === 'Continue to payment')?.href")) === "https://rzp.io/i/e2etest");
   await t("__t.click(/^Check again$/)");
   await b.waitFor("/Not confirmed yet/.test(document.body.innerText)", 8000);
   check("check again while unpaid says so", /Not confirmed yet/.test(await text()));
@@ -152,15 +165,32 @@ try {
   check("choose a different plan brings back both upgrade buttons", await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent.includes('₹149 / month'))", 4000));
   await b.eval(pending("https://evil.example/pay"));
   await b.go(BASE + "/app/?tab=settings", 3000);
-  await b.waitFor("/Waiting for Razorpay/.test(document.body.innerText)", 8000);
-  check("non-Razorpay checkout URL is never linked", !(await b.eval("[...document.querySelectorAll('#plan a')].some(a => a.textContent === 'Continue to payment')")));
+  await b.waitFor("/Waiting for your payment to be confirmed/.test(document.body.innerText)", 8000);
+  check("a checkout URL off the payment providers is never linked", !(await b.eval("[...document.querySelectorAll('#plan a')].some(a => a.textContent === 'Continue to payment')")));
 
   // Pro: renewal date, cancel at period end.
   const end = Date.UTC(2026, 10, 10);
-  await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true })); true`);
+  await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true, provider: 'dodo', manageAvailable: false })); true`);
   await b.go(BASE + "/app/?tab=settings", 3000);
   await b.waitFor("/renews on/.test(document.body.innerText)", 8000);
   check("Pro shows renewal date", /Pro monthly · renews on 10 Nov 2026/.test(await text()));
+  check("no Manage billing without a provider portal (Razorpay subscriptions)", !/Manage billing/.test(await text()));
+  const proDodo = (status = "active") => `localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: '${status}', interval: 'yearly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true, provider: 'dodo', manageAvailable: true })); true`;
+  await b.eval(proDodo("pending") + "; localStorage.setItem('__manageUrl', 'https://evil.example/portal'); true");
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/Manage billing/.test(document.body.innerText)", 8000);
+  check("failed renewal asks for a new payment method, with Manage billing", /Your last renewal payment failed\. Update your payment method to keep Pro\./.test(await text()));
+  await t("__t.click(/^Manage billing$/)");
+  check("a portal URL off the payment providers is refused", await b.waitFor("/Couldn't open billing/.test(document.body.innerText)", 4000) && (await b.eval("location.pathname")) === "/app/");
+  await b.eval(proDodo() + "; localStorage.removeItem('__manageUrl'); true");
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/Manage billing/.test(document.body.innerText)", 8000);
+  await t("__t.click(/^Manage billing$/)");
+  await sleep(1500);
+  check("Manage billing opens the Dodo customer portal", b.requests.includes("https://customer.dodopayments.com/session/e2e"), b.requests.filter((u) => !u.startsWith(BASE)).join(" "));
+  await b.eval(`localStorage.setItem('__billing', JSON.stringify({ plan: { id: 'pro', activePaylinks: 10000 }, subscription: { status: 'active', interval: 'monthly', currentEnd: ${end}, cancelAtCycleEnd: false }, billingAvailable: true, provider: 'dodo', manageAvailable: false })); true`);
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("/renews on/.test(document.body.innerText)", 8000);
   await t("__t.click(/^Cancel subscription…$/)");
   await t("__t.click(/^Yes, cancel$/)");
   await b.waitFor("/Pro stays on until/.test(document.body.innerText)", 8000);

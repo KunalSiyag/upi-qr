@@ -4,7 +4,8 @@
 //
 // Starts: fake Upstash REST (127.0.0.1:8799), static server for the production
 // build (:4400), and `astro dev` (:4321) pointed at the fake KV with fake
-// Razorpay settings. Nothing here talks to production KV, Clerk, or Razorpay.
+// Dodo Payments + Razorpay settings. Nothing here talks to production KV, Clerk,
+// Dodo Payments or Razorpay.
 // Needs google-chrome and python3 on PATH.
 import { spawn, spawnSync } from "node:child_process";
 import { createECDH } from "node:crypto";
@@ -36,6 +37,7 @@ vapid.generateKeys();
 process.env.E2E_VAPID_PUBLIC_KEY = vapid.getPublicKey().toString("base64url");
 process.env.E2E_VAPID_PRIVATE_KEY = vapid.getPrivateKey().toString("base64url");
 process.env.E2E_CRON_SECRET = "cron-secret-for-e2e";
+process.env.E2E_DODO_WEBHOOK_KEY = `whsec_${Buffer.from("proupiqr-e2e-dodo-signing-key-32").toString("base64")}`;
 
 const children = [];
 function start(cmd, args, env = {}) {
@@ -70,6 +72,10 @@ try {
     RAZORPAY_WEBHOOK_SECRET: "whsec_test",
     RAZORPAY_PLAN_MONTHLY: "plan_month",
     RAZORPAY_PLAN_YEARLY: "plan_year",
+    DODO_PAYMENTS_API_KEY: "dodo_test_fake",
+    DODO_PAYMENTS_WEBHOOK_KEY: process.env.E2E_DODO_WEBHOOK_KEY,
+    DODO_PRODUCT_MONTHLY: "pdt_E2eMonthly000000000",
+    DODO_PRODUCT_YEARLY: "pdt_E2eYearly0000000000",
     VAPID_PUBLIC_KEY: process.env.E2E_VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY: process.env.E2E_VAPID_PRIVATE_KEY,
     CRON_SECRET: process.env.E2E_CRON_SECRET,
