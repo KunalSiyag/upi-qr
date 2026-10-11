@@ -3,7 +3,7 @@ export const prerender = false;
 import "../../styles/global.css";
 import { authenticatedUserId } from "../../lib/apiSecurity";
 import { lastDays, readMetricValues } from "../../lib/metrics";
-import { metricRows, parseAdminIds, type MetricRow } from "../../lib/metricsCore";
+import { funnelSteps, metricRows, parseAdminIds, type MetricRow } from "../../lib/metricsCore";
 import { WAITLIST_TOOLS } from "../../data/waitlist";
 import { kv } from "@vercel/kv";
 
@@ -31,6 +31,7 @@ try {
   error = "Couldn't read metrics from KV.";
 }
 const fmt = (n: number) => new Intl.NumberFormat("en-IN").format(n);
+const funnel = funnelSteps(rows);
 ---
 
 <html lang="en">
@@ -43,8 +44,21 @@ const fmt = (n: number) => new Intl.NumberFormat("en-IN").format(n);
   <body class="min-h-screen bg-[#fffdf6] px-4 py-8 font-sans text-forest">
     <main class="mx-auto max-w-6xl">
       <h1 class="text-3xl font-black">Founder metrics</h1>
-      <p class="mt-1 text-sm text-forest/60">Last 30 days, India time. Aggregate counters only. Product analytics (exports, tracker events) live in Vercel Web Analytics.</p>
+      <p class="mt-1 text-sm text-forest/60">Last 30 days, India time. Aggregate counters only: browser steps count each visit once, with no identifiers.</p>
       {error && <p class="mt-4 rounded-xl bg-coral/15 p-3 text-sm font-bold text-[#a8321d]">{error}</p>}
+
+      <section class="mt-6 rounded-2xl border border-forest/10 bg-white p-4" aria-labelledby="funnel-title">
+        <h2 id="funnel-title" class="text-sm font-black">Free → paid funnel (30 days)</h2>
+        <ol class="mt-3 grid gap-2 sm:grid-cols-5">
+          {funnel.map((step) => (
+            <li class="rounded-xl bg-mint/40 p-3">
+              <p class="text-2xl font-black tabular-nums">{fmt(step.value)}</p>
+              <p class="mt-1 text-xs font-bold text-forest/70">{step.label}</p>
+              {step.rate !== null && <p class="mt-1 text-xs text-leaf">{step.rate}% of the step before</p>}
+            </li>
+          ))}
+        </ol>
+      </section>
 
       <div class="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {rows.map((row) => {

@@ -37,7 +37,7 @@ export const POST: APIRoute = async ({ request }) => {
       interview: body.interview === true,
       createdAt: new Date().toISOString(),
     });
-    if (created) await recordMetric("waitlist_join");
+    if (created) await recordMetric(body.tool === "pro" ? "pro_interest" : "waitlist_join");
   } catch {
     return jsonResponse({ error: "Early-access list is unavailable right now." }, 503);
   }

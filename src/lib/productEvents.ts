@@ -47,10 +47,37 @@ function signalToolOutput(tool: string): void {
   window.dispatchEvent(new CustomEvent(TOOL_OUTPUT_EVENT, { detail: { tool } }));
 }
 
+const FUNNEL_ENDPOINT = "/api/v1/events/";
+const FUNNEL_SESSION_PREFIX = "proupiqr-funnel-";
+
+/**
+ * Tells our server that this browser session reached a funnel step (once per session),
+ * so /admin/metrics/ can show how many tool visits move on to the tracker. Only the step
+ * name is sent; the server keeps daily totals.
+ */
+function reportFunnelStep(step: "tool_output" | "tracker_opened"): void {
+  try {
+    if (sessionStorage.getItem(FUNNEL_SESSION_PREFIX + step)) return;
+    sessionStorage.setItem(FUNNEL_SESSION_PREFIX + step, "1");
+  } catch {
+    // Storage blocked: report anyway; the server caps what one visitor can add.
+  }
+  const body = JSON.stringify({ step });
+  try {
+    // A beacon survives the navigation that usually follows (tool → tracker).
+    if (navigator.sendBeacon?.(FUNNEL_ENDPOINT, new Blob([body], { type: "application/json" }))) return;
+  } catch {
+    // Fall back to fetch below.
+  }
+  fetch(FUNNEL_ENDPOINT, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => undefined);
+}
+
 export function trackProductEvent(name: ProductEventName, tool?: string): void {
   if (typeof window === "undefined") return;
   if (!ALLOWED.has(name)) return;
   if (OUTPUT_EVENTS.has(name) && tool && TOOL_RE.test(tool)) signalToolOutput(tool.toLowerCase());
+  if (OUTPUT_EVENTS.has(name)) reportFunnelStep("tool_output");
+  if (name === "tracker_opened") reportFunnelStep("tracker_opened");
 
   const payload: Record<string, string> = {};
   if (tool && TOOL_RE.test(tool)) payload.tool = tool.toLowerCase();

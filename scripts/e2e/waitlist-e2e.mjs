@@ -199,6 +199,38 @@ check("no tracker card on international pages (/es/)", !(await evaluate(cardVisi
 await go(STATIC + "/gst-calculator/", 2500);
 check("card not mounted on unrelated tool (/gst-calculator/)", (await evaluate(`document.querySelectorAll('astro-island[component-url*="WaitlistCard"]').length`)) === 0);
 
+// 6. Funnel steps: a browser session reports a free-tool output and a tracker open once each,
+// with nothing but the step name (the static server can't take the POST; only the request is checked).
+const beacons = [];
+// Intercept the reports (the static server has no API) and read each body before answering 204.
+listeners.push((m) => {
+  if (m.method !== "Fetch.requestPaused") return;
+  const { postData, postDataEntries } = m.params.request;
+  beacons.push(postData ?? (postDataEntries ?? []).map((e) => Buffer.from(e.bytes ?? "", "base64").toString()).join(""));
+  send("Fetch.fulfillRequest", { requestId: m.params.requestId, responseCode: 204 });
+});
+await send("Fetch.enable", { patterns: [{ urlPattern: "*/api/v1/events/*", requestStage: "Request" }] });
+const beaconBodies = async () => beacons.slice();
+await go(STATIC + "/invoice-generator/", 1000);
+await evaluate(`localStorage.removeItem('proupiqr-waitlist'); sessionStorage.clear(); true`);
+await go(STATIC + "/invoice-generator/", 1500);
+beacons.length = 0;
+await evaluate(`document.getElementById('invoice-tool').scrollIntoView(); true`);
+await waitFor(`[...document.querySelectorAll('button')].some(b => /PDF/.test(b.textContent) && b.offsetParent)`);
+await clickButton("/PDF/");
+await waitFor(cardVisible, 15000);
+await sleep(800);
+await clickButton("/PDF/");
+await sleep(1500);
+const afterExports = await beaconBodies();
+check("two exports in one visit report tool_output once", afterExports.filter((b) => b.includes("tool_output")).length === 1, JSON.stringify(afterExports));
+await evaluate(`[...document.querySelectorAll('aside a')].find(a => /Track payments free/.test(a.textContent)).click(); true`);
+await sleep(2500);
+const afterTracker = await beaconBodies();
+check("opening the tracker from the card reports tracker_opened", afterTracker.some((b) => b.includes("tracker_opened")), JSON.stringify(afterTracker));
+check("funnel reports carry only the step name", afterTracker.length > 0 && afterTracker.every((b) => /^\{"step":"(tool_output|tracker_opened)"\}$/.test(b)), JSON.stringify(afterTracker));
+await send("Fetch.disable");
+
 // 5. Live API through the dev server (no KV locally -> 503 path).
 const devUp = await fetch(DEV + '/').then(() => true, () => false);
 if (devUp) {

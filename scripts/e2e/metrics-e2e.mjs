@@ -28,11 +28,23 @@ try {
   await admin("set", { key: `ws:rev:${OWNER}`, value: "1" });
   await admin("set", { key: `pl:tok:${TOKEN}`, value: JSON.stringify({ owner: OWNER, invoiceId: "inv_00000001", createdAt: T }) });
 
-  const join = (email) => fetch(`${DEV}/api/waitlist/`, { method: "POST", headers: { "Content-Type": "application/json", Origin: DEV, "X-Real-IP": "198.51.100.77" }, body: JSON.stringify({ email, tool: "pro", lang: "en" }) });
+  const join = (email, tool = "pro") => fetch(`${DEV}/api/waitlist/`, { method: "POST", headers: { "Content-Type": "application/json", Origin: DEV, "X-Real-IP": "198.51.100.77" }, body: JSON.stringify({ email, tool, lang: "en" }) });
   await join("first@example.com");
   await join("first@example.com");
   await join("second@example.com");
-  check("waitlist_join counts new addresses only", (await metric("waitlist_join")) === 2);
+  check("pro_interest counts new Pro early-access addresses only", (await metric("pro_interest")) === 2);
+  await join("third@example.com", "invoice");
+  check("waitlist_join counts the tools' early-access list separately", (await metric("waitlist_join")) === 1);
+
+  // Funnel steps reported by the browser: aggregate counts only, capped per visitor.
+  const step = (body, headers = {}) => fetch(`${DEV}/api/v1/events/`, { method: "POST", headers: { "Content-Type": "application/json", Origin: DEV, "X-Real-IP": "198.51.100.79", ...headers }, body: JSON.stringify(body) });
+  check("tool_output step accepted (204)", (await step({ step: "tool_output" })).status === 204);
+  await step({ step: "tracker_opened" });
+  check("funnel steps counted", (await metric("tool_output")) === 1 && (await metric("tracker_opened")) === 1);
+  check("unknown funnel step refused", (await step({ step: "pro_activated" })).status === 400 && (await metric("pro_activated")) === 0);
+  check("cross-site funnel step refused", (await step({ step: "tool_output" }, { Origin: "https://evil.example", "Sec-Fetch-Site": "cross-site" })).status === 403);
+  for (let i = 0; i < 40; i++) await step({ step: "tool_output" }, { "X-Real-IP": "198.51.100.80" });
+  check("one visitor can add at most 30 per hour", (await metric("tool_output")) === 31, String(await metric("tool_output")));
 
   const claim = await fetch(`${DEV}/i/${TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.78" }, body: "utr=412345678901&amount=1000" });
   check("claim accepted", claim.status === 303);

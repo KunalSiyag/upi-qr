@@ -133,7 +133,18 @@ assert.match(waitlistApi, /consumeRateLimit\("waitlist"/);
 assert.match(waitlistApi, /readJsonObject\(request, 2048\)/);
 // "created" may feed an aggregate counter, but never the HTTP response (no email enumeration).
 assert.doesNotMatch(waitlistApi, /jsonResponse\([^)]*created/, "waitlist response must not depend on whether an email already exists");
-assert.match(waitlistApi, /if \(created\) await recordMetric\("waitlist_join"\);\n\s*\} catch/, "created is only used for the metric");
+assert.match(waitlistApi, /if \(created\) await recordMetric\(body\.tool === "pro" \? "pro_interest" : "waitlist_join"\);\n\s*\} catch/, "created is only used for the metric");
+
+// Funnel steps from the browser: same-site only, allow-listed names, tiny bodies, a per-visitor
+// cap, and nothing stored per visitor beyond the rate-limit window.
+const eventsApi = readFileSync(join(projectRoot, "src/pages/api/v1/events.ts"), "utf8");
+assert.match(eventsApi, /if \(!isTrustedMutation\(request\)\) return/, "funnel steps refuse cross-site posts");
+assert.match(eventsApi, /CLIENT_STEPS\.has\(body\.step\)/, "only allow-listed funnel steps are counted");
+assert.match(eventsApi, /readJsonObject\(request, 256\)/, "funnel step bodies are tiny");
+assert.match(eventsApi, /consumeRateLimit\("funnel-step", requestFingerprint\(request\)/, "one visitor can only add so much");
+assert.doesNotMatch(eventsApi, /kv\.|from "@vercel\/kv"/, "no direct KV writes: only the aggregate recordMetric counter");
+const productEventsClient = readFileSync(join(projectRoot, "src/lib/productEvents.ts"), "utf8");
+assert.match(productEventsClient, /JSON\.stringify\(\{ step \}\)/, "the browser sends only the step name");
 assert.match(waitlistApi, /await addWaitlistEntry\(/);
 const waitlistStore = readFileSync(join(projectRoot, "src/lib/waitlistStore.ts"), "utf8");
 assert.match(waitlistStore, /'NX', 'EX'/);
