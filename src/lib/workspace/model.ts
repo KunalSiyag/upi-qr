@@ -788,8 +788,8 @@ function displayDate(iso: string, lang: ReminderLang = "en"): string {
 export function msmeRightsLine(business: Business, lang: ReminderLang): string {
   if (!isUdyam(business.udyam)) return "";
   return lang === "hi"
-    ? `हम एक पंजीकृत सूक्ष्म/लघु उद्यम हैं (Udyam ${business.udyam})। MSMED Act के तहत भुगतान तय क्रेडिट अवधि (अधिकतम 45 दिन) में देय है; देर से भुगतान पर चक्रवृद्धि ब्याज लगता है (धारा 16), और व्यावसायिक खरीदार MSE को देर से किया गया भुगतान उसी वर्ष घटा सकता है जिसमें भुगतान किया गया हो (आयकर अधिनियम, धारा 43B(h))।`
-    : `We are a registered micro/small enterprise (Udyam ${business.udyam}). Under the MSMED Act, payment is due within the agreed credit period of up to 45 days; later payments carry compound interest (Section 16), and a business buyer can deduct a late payment to an MSE only in the year it is paid (Income Tax Act, Section 43B(h)).`;
+    ? `हम एक पंजीकृत सूक्ष्म/लघु उद्यम हैं (Udyam ${business.udyam})। MSMED Act के तहत भुगतान तय क्रेडिट अवधि (अधिकतम 45 दिन; लिखित समझौता न हो तो 15 दिन) में देय है; देर से भुगतान पर चक्रवृद्धि ब्याज लगता है (धारा 16), और व्यावसायिक खरीदार MSE को देर से किया गया भुगतान उसी वर्ष घटा सकता है जिसमें भुगतान किया गया हो (आयकर अधिनियम का 43B(h) नियम, जो 2025 के अधिनियम में भी जारी है)।`
+    : `We are a registered micro/small enterprise (Udyam ${business.udyam}). Under the MSMED Act, payment is due within the agreed credit period of up to 45 days (15 days without a written agreement); later payments carry compound interest (Section 16), and a business buyer can deduct a late payment to an MSE only in the year it is paid (the Income-tax Act's 43B(h) rule, carried into the 2025 Act).`;
 }
 
 export function reminderMessage(view: InvoiceView, business: Business, tone: ReminderTone, payLink?: string, lang: ReminderLang = "en", msmeRights = false): string {

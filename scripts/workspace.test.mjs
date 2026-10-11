@@ -284,7 +284,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   mw = upsertInvoice(mw, { id: "inv_msme0001", number: "MF-21", clientId: "cli_buyer001", issueDate: "2026-08-01", dueDate: "2026-08-31", amountPaise: 5_000_000, description: "", payments: [], reminders: [], voided: false, createdAt: M, updatedAt: M }, M);
   const mv = viewInvoice(mw.invoices.inv_msme0001, mw.clients, "2026-10-11");
   const en = reminderMessage(mv, mw.business, "overdue", undefined, "en", true);
-  assert.ok(en.includes("We are a registered micro/small enterprise (Udyam UDYAM-GJ-01-7654321).") && en.includes("Section 43B(h)") && en.includes("Section 16"), en);
+  assert.ok(en.includes("We are a registered micro/small enterprise (Udyam UDYAM-GJ-01-7654321).") && en.includes("43B(h) rule, carried into the 2025 Act") && en.includes("15 days without a written agreement") && en.includes("Section 16"), en);
   assert.ok(en.indexOf("Pay by UPI to") < en.indexOf("We are a registered") && en.indexOf("We are a registered") < en.indexOf("If you have already paid"), "rights line sits between the pay line and the sign-off");
   const hi = reminderMessage(mv, mw.business, "overdue", undefined, "hi", true);
   assert.ok(hi.includes("Udyam UDYAM-GJ-01-7654321") && hi.includes("43B(h)") && hi.includes("धारा 16"), hi);

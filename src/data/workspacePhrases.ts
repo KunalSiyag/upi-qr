@@ -257,7 +257,7 @@ export const WS_HI: Record<string, string> = {
   "Recorded {n} payment from your statement.": "स्टेटमेंट से {n} पेमेंट दर्ज हुआ।",
   "Recorded {n} payments from your statement.": "स्टेटमेंट से {n} पेमेंट दर्ज हुए।",
   "Reference (optional)": "रेफ़रेंस (वैकल्पिक)",
-  "Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the 45-day MSMED deadline on overdue invoices.": "Udyam पर सूक्ष्म या लघु निर्माता/सेवा प्रदाता के रूप में पंजीकृत हैं? बकाया इनवॉइस पर MSMED की 45-दिन की समय-सीमा देखने के लिए अपना नंबर जोड़ें।",
+  "Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the MSMED deadline on overdue invoices. We treat your invoice due date as the agreed date, capped at 45 days; without a written agreement the law allows only 15.": "Udyam पर सूक्ष्म या लघु निर्माता/सेवा प्रदाता के रूप में पंजीकृत हैं? बकाया इनवॉइस पर MSMED की समय-सीमा देखने के लिए अपना नंबर जोड़ें। हम इनवॉइस की देय तिथि को तय तारीख मानते हैं (अधिकतम 45 दिन); लिखित समझौता न हो तो कानून सिर्फ 15 दिन देता है।",
   "Remind": "याद दिलाएँ",
   "Remind {name}": "{name} को याद दिलाएँ",
   "Remove client": "ग्राहक हटाएँ",

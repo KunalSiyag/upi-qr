@@ -889,7 +889,7 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
           <Field label={tr("GSTIN (optional)")} htmlFor="ws-s-gstin"><input id="ws-s-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} /></Field>
           <Field label={tr("Invoice number prefix")} htmlFor="ws-s-prefix"><input id="ws-s-prefix" className={inputClass} value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={12} /></Field>
           <Field label={tr("Udyam number (micro/small enterprise, optional)")} htmlFor="ws-s-udyam"><input id="ws-s-udyam" className={inputClass} value={udyam} onChange={(e) => setUdyam(e.target.value)} maxLength={30} placeholder="UDYAM-MH-12-1234567" autoCapitalize="characters" /></Field>
-          <p className="text-[11px] leading-4 text-forest/60 sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the 45-day MSMED deadline on overdue invoices.")}</p>
+          <p className="text-[11px] leading-4 text-forest/60 sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the MSMED deadline on overdue invoices. We treat your invoice due date as the agreed date, capped at 45 days; without a written agreement the law allows only 15.")}</p>
           <div className="flex items-end"><button type="submit" className={`${primaryButton} w-full`}>{tr("Save settings")}</button></div>
         </form>
         {error && <p role="alert" className="mt-2 text-xs font-bold text-[#a8321d]">{error}</p>}
