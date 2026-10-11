@@ -8,16 +8,20 @@ import { useWs } from "./i18n";
 interface BillingState {
   plan: { id: "free" | "pro"; activePaylinks: number };
   subscription: { status: string; interval: "monthly" | "yearly"; currentEnd: number | null; cancelAtCycleEnd: boolean } | null;
-  /** A checkout the customer started that Razorpay hasn't confirmed yet. */
+  /** A checkout the customer started that the payment provider hasn't confirmed yet. */
   checkout?: { interval: "monthly" | "yearly"; url: string } | null;
   billingAvailable: boolean;
+  /** Where new checkouts go: Dodo Payments (merchant of record) or Razorpay. */
+  provider?: "dodo" | "razorpay" | null;
+  /** Dodo's customer portal (payment method, invoices) is available for this subscription. */
+  manageAvailable?: boolean;
 }
 
-// After returning from Razorpay, re-check every 5 s for two minutes (the server
-// re-reads the subscription from Razorpay, so this works even if a webhook is lost).
+// After returning from checkout, re-check every 5 s for two minutes (the server
+// re-reads the subscription from the provider, so this works even if a webhook is lost).
 const CHECKOUT_POLL_MS = 5000;
 const CHECKOUT_POLL_LIMIT = 24;
-const RAZORPAY_PAGE = /^https:\/\/([a-z0-9-]+\.)*(rzp\.io|razorpay\.com)\//i;
+const PAYMENT_PAGE = /^https:\/\/([a-z0-9-]+\.)*(rzp\.io|razorpay\.com|dodopayments\.com)\//i;
 
 const PRO_FEATURES = [
   "Unlimited active pay links (Free: 10)",
@@ -99,7 +103,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
     return () => window.clearInterval(timer);
   }, [waiting, pollRound, load]);
 
-  // Coming back from Razorpay: the tab becomes visible again, or the back button
+  // Coming back from checkout: the tab becomes visible again, or the back button
   // restores this page from the back/forward cache with its old state.
   useEffect(() => {
     if (!signedIn) return;
@@ -118,7 +122,9 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
     setBusy(true);
     setError("");
     try {
-      const response = await authedFetch("/api/v1/billing/", "POST", { action: "checkout", interval });
+      // The server reads the email from the account; this is only a fallback for the receipt.
+      const email = (window as unknown as { Clerk?: { user?: { primaryEmailAddress?: { emailAddress?: string } } } }).Clerk?.user?.primaryEmailAddress?.emailAddress;
+      const response = await authedFetch("/api/v1/billing/", "POST", { action: "checkout", interval, ...(email ? { email } : {}) });
       const body = await response.json().catch(() => ({}));
       if (!response.ok || typeof body.url !== "string") {
         setError(tr(body.error ?? "Couldn't start checkout. Try again."));
@@ -133,6 +139,21 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
       window.location.href = body.url;
     } catch {
       setError(tr("You're offline. Connect to upgrade."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function manage() {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await authedFetch("/api/v1/billing/", "POST", { action: "manage" });
+      const body = await response.json().catch(() => ({}));
+      if (!response.ok || typeof body.url !== "string" || !PAYMENT_PAGE.test(body.url)) return setError(tr(body.error ?? "Couldn't open billing. Try again."));
+      window.location.href = body.url;
+    } catch {
+      setError(tr("You're offline. Connect to manage billing."));
     } finally {
       setBusy(false);
     }
@@ -202,7 +223,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
           {sub.cancelAtCycleEnd || sub.status === "cancelled"
             ? <p>{tr("Cancelled — Pro stays on until {date}, then you move to Free. Your data stays.", { date: longDate(sub.currentEnd, dateLocale) })}</p>
             : sub.status === "pending"
-              ? <p>{tr("Your last renewal payment failed. Razorpay will retry; update your payment method from the Razorpay email to keep Pro.")}</p>
+              ? <p>{tr("Your last renewal payment failed. Update your payment method to keep Pro.")}</p>
               : <p>{tr(sub.interval === "yearly" ? "Pro yearly" : "Pro monthly")}{sub.currentEnd ? tr(" · renews on {date}", { date: longDate(sub.currentEnd, dateLocale) }) : null}.</p>}
           {!sub.cancelAtCycleEnd && (sub.status === "active" || sub.status === "authenticated") && (
             confirmCancel ? (
@@ -214,6 +235,9 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             ) : (
               <button type="button" onClick={() => setConfirmCancel(true)} className="mt-3 text-xs font-bold text-forest/50 hover:text-[#a8321d]">{tr("Cancel subscription…")}</button>
             )
+          )}
+          {billing?.manageAvailable && (
+            <button type="button" disabled={busy} onClick={manage} className={`${secondaryButton} mt-3 block`}>{tr("Manage billing")}</button>
           )}
         </div>
       ) : (
@@ -228,11 +252,11 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             </p>
           ) : billing?.billingAvailable && billing.checkout && !startOver ? (
             <div role="status" className="mt-4 rounded-xl border border-sun/60 bg-sun/15 p-3">
-              <p className="text-sm font-black text-forest">{tr("Waiting for Razorpay to confirm your payment…")}</p>
-              <p className="mt-1 text-xs text-forest/70">{tr("Paid already? Pro switches on here by itself, usually within a minute. Not paid yet? Continue on Razorpay's page.")}</p>
+              <p className="text-sm font-black text-forest">{tr("Waiting for your payment to be confirmed…")}</p>
+              <p className="mt-1 text-xs text-forest/70">{tr("Paid already? Pro switches on here by itself, usually within a minute. Not paid yet? Continue to the payment page.")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={checking} onClick={checkAgain} className={primaryButton}>{checking ? tr("Checking…") : tr("Check again")}</button>
-                {RAZORPAY_PAGE.test(billing.checkout.url) && <a href={billing.checkout.url} className={secondaryButton}>{tr("Continue to payment")}</a>}
+                {PAYMENT_PAGE.test(billing.checkout.url) && <a href={billing.checkout.url} className={secondaryButton}>{tr("Continue to payment")}</a>}
               </div>
               <button type="button" onClick={() => setStartOver(true)} className="mt-2 text-xs font-bold text-forest/50 hover:text-forest">{tr("Choose a different plan")}</button>
             </div>
@@ -244,7 +268,9 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
               <button type="button" disabled={busy} onClick={() => checkout("yearly")} className={intent === "yearly" ? primaryButton : secondaryButton}>
                 {tr("{price} / year · save ₹{saving}", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })}
               </button>
-              <p className="text-[11px] text-forest/55 sm:col-span-2">{tr("Pay with UPI AutoPay or card on Razorpay's secure page. Cancel anytime; Pro runs to the end of the paid period.")}</p>
+              <p className="text-[11px] text-forest/55 sm:col-span-2">{billing.provider === "dodo"
+                  ? tr("Secure checkout by Dodo Payments, our merchant of record: UPI or card, GST included. Cancel anytime; Pro runs to the end of the paid period.")
+                  : tr("Pay with UPI AutoPay or card on Razorpay's secure page. Cancel anytime; Pro runs to the end of the paid period.")}</p>
             </div>
           ) : billing ? (
             joined ? (

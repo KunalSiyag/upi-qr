@@ -5,16 +5,22 @@ import { cancelAtCycleEnd, createSubscription, fetchSubscription, parseSubscript
 import { CHECKOUT_RECHECK_WINDOW_MS, dueForDailyCheck, PERIOD_END_GRACE_MS, RECHECK_SECONDS, recheckInterval, reconcileDueSubscriptions, reconcileSubscription } from "../src/lib/billing/reconcile.ts";
 import { handleSubscriptionWebhook } from "../src/lib/billing/webhook.ts";
 import { memoryBillingStore } from "../src/lib/billing/store.ts";
+import { CheckoutNeedsEmail, dodoProvider, razorpayProvider } from "../src/lib/billing/provider.ts";
+import { cancelDodoAtPeriodEnd, dodoConfig, dodoPortalLink, fetchDodoSubscription, parseDodoSubscription, parseDodoWebhook, verifyStandardWebhook } from "../src/lib/billing/dodo.ts";
+import { handleDodoWebhook } from "../src/lib/billing/webhook.ts";
 import { planFromSubscription, PLANS } from "../src/lib/workspace/entitlements.ts";
 import { PRO_PRICES, YEARLY_SAVING_RUPEES } from "../src/data/pricing.ts";
 import { readFileSync } from "node:fs";
 import { findOrCreatePlans, readPrices } from "./razorpay-plans.mjs";
+import { findOrCreateProducts, matchesPrice } from "./dodo-products.mjs";
 
 const DAY = 86_400_000;
 const now = 1_790_000_000_000;
 const owner = "a".repeat(32);
 const env = { RAZORPAY_KEY_ID: "rzp_test_key", RAZORPAY_KEY_SECRET: "secret", RAZORPAY_WEBHOOK_SECRET: "whsec", RAZORPAY_PLAN_MONTHLY: "plan_month", RAZORPAY_PLAN_YEARLY: "plan_year" };
 const config = razorpayConfig(env);
+/** Providers with only Razorpay configured, calling a fake API. */
+const rz = (fetchImpl) => ({ razorpay: razorpayProvider(config, fetchImpl), dodo: null });
 
 // Config is all-or-nothing.
 assert.ok(config);
@@ -149,9 +155,9 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   // Paid, webhook lost: the read activates Pro once, then active subscriptions aren't re-read.
   calls = 0;
   let store = await seeded(checkout);
-  let result = await reconcileSubscription(store, config, owner, T0 + 60_000, razorpay);
+  let result = await reconcileSubscription(store, rz(razorpay), owner, T0 + 60_000);
   assert.deepEqual([result.activated, result.record.status, (await store.get(owner)).status, calls], [true, "active", "active", 1]);
-  result = await reconcileSubscription(store, config, owner, T0 + 120_000, razorpay);
+  result = await reconcileSubscription(store, rz(razorpay), owner, T0 + 120_000);
   assert.deepEqual([result.activated, calls], [false, 1]);
   const afterRead = await store.get(owner);
   assert.equal(applySubscriptionEvent(afterRead, ev("subscription.cancelled", "cancelled", T0 + 60_000, T0 + 30 * DAY, "sub_PAID1234"), T0 + 61_000)?.status, "cancelled", "webhook from the read's second applies");
@@ -161,28 +167,28 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   reply = entity("created", { current_end: null });
   store = await seeded(checkout);
   calls = 0;
-  await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
-  await reconcileSubscription(store, config, owner, T0 + 2000, razorpay);
+  await reconcileSubscription(store, rz(razorpay), owner, T0 + 1000);
+  await reconcileSubscription(store, rz(razorpay), owner, T0 + 2000);
   assert.equal(calls, 1, "one Razorpay read per throttle window");
-  await reconcileSubscription(store, config, owner, T0 + 1000 + RECHECK_SECONDS.checkout * 1000, razorpay);
+  await reconcileSubscription(store, rz(razorpay), owner, T0 + 1000 + RECHECK_SECONDS.checkout * 1000);
   assert.equal(calls, 2);
   assert.deepEqual(await store.get(owner), checkout);
 
   // Razorpay unreachable: stored state, no throw.
   store = await seeded(checkout);
-  result = await reconcileSubscription(store, config, owner, T0 + 1000, async () => { throw new Error("network"); });
+  result = await reconcileSubscription(store, rz(async () => { throw new Error("network"); }), owner, T0 + 1000);
   assert.deepEqual([result.record.status, result.activated], ["created", false]);
 
   // A subscription whose notes name another account is never applied.
   reply = entity("active", { notes: { owner: "b".repeat(32) } });
   store = await seeded(checkout);
-  await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
+  await reconcileSubscription(store, rz(razorpay), owner, T0 + 1000);
   assert.equal((await store.get(owner)).status, "created");
 
   // A failed renewal the customer fixed comes back without waiting for a webhook.
   reply = entity("active");
   store = await seeded({ ...checkout, status: "halted", currentEnd: T0 - DAY, shortUrl: null });
-  result = await reconcileSubscription(store, config, owner, T0 + 1000, razorpay);
+  result = await reconcileSubscription(store, rz(razorpay), owner, T0 + 1000);
   assert.deepEqual([result.record.status, result.activated], ["active", true]);
 }
 
@@ -224,7 +230,7 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
     if (!truth[id]) return new Response('{"error":{"description":"down"}}', { status: 503 });
     return new Response(JSON.stringify({ id, entity: "subscription", plan_id: "plan_month", ...truth[id] }), { status: 200 });
   };
-  const out = await reconcileDueSubscriptions(store, config, N, { fetchImpl: razorpay, deadline: Infinity });
+  const out = await reconcileDueSubscriptions(store, rz(razorpay), N, { deadline: Infinity });
   assert.deepEqual(asked.sort(), ["sub_AAAA1111", "sub_CCCC1111", "sub_DDDD1111", "sub_FFFF1111"], "only due subscriptions are read");
   assert.deepEqual(out, { owners: 6, checked: 4, updated: 3, activated: 2, failed: 1, remaining: 0 });
   assert.equal(hasProAccess(await store.get(owners.a), N), false, "a missed cancellation turns Pro off after the paid period");
@@ -233,7 +239,7 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   assert.equal((await store.get(owners.f)).status, "pending", "Razorpay unreachable: record untouched");
 
   // Out of time before starting: nothing is read, everything is left for the next run.
-  const late = await reconcileDueSubscriptions(store, config, N, { fetchImpl: razorpay, deadline: 0, clock: () => 1 });
+  const late = await reconcileDueSubscriptions(store, rz(razorpay), N, { deadline: 0, clock: () => 1 });
   assert.deepEqual([late.checked, late.remaining], [0, 6]);
 }
 
@@ -262,4 +268,157 @@ assert.equal(parseSubscriptionWebhook('{"event":"payment.captured","payload":{}}
   await assert.rejects(findOrCreatePlans({ keyId: "x", keySecret: "y", prices, fetchImpl: async () => new Response("{}", { status: 401 }) }), /HTTP 401/);
 }
 
-console.log("[billing] access rules, event ordering, signatures, webhook handling, Razorpay requests, lost-webhook and daily reconcile, plan setup passed");
+// Dodo product setup script: products must charge exactly what /pricing/ shows, GST included.
+{
+  const prices = readPrices(readFileSync(new URL("../src/data/pricing.ts", import.meta.url), "utf8"));
+  const price = (amount, interval, extra = {}) => ({ type: "recurring_price", price: amount, currency: "INR", tax_inclusive: true, payment_frequency_count: 1, payment_frequency_interval: interval, subscription_period_count: 10, subscription_period_interval: "Year", ...extra });
+  const product = (id, detail, metadata = {}) => ({ product_id: id, is_recurring: true, price: detail.price, currency: detail.currency, tax_inclusive: detail.tax_inclusive, price_detail: detail, metadata });
+  assert.ok(matchesPrice(product("pdt_a", price(14900, "Month")), "monthly", 14900));
+  for (const wrong of [price(14900, "Year"), price(14900, "Month", { tax_inclusive: false }), price(14900, "Month", { currency: "USD" }), price(14900, "Month", { payment_frequency_count: 3 }), price(14900, "Month", { discount_bps: 1000 }), price(14900, "Month", { trial_period_days: 7 }), price(14900, "Month", { purchasing_power_parity: true }), { ...price(14900, "Month"), type: "one_time_price" }]) {
+    assert.equal(matchesPrice(product("pdt_x", wrong), "monthly", 14900), false, JSON.stringify(wrong));
+  }
+  const filler = Array.from({ length: 100 }, (_, i) => product(`pdt_fill${i}`, price(100, "Week")));
+  const pages = [filler, [product("pdt_other", price(14900, "Month")), product("pdt_ours", price(14900, "Month"), { product: "proupiqr-pro", interval: "monthly" }), product("pdt_disc", price(149900, "Year", { discount_bps: 500 }))]];
+  const calls = [];
+  const fake = async (url, init = {}) => {
+    const u = new URL(url);
+    calls.push({ url: u, method: init.method ?? "GET", body: init.body ? JSON.parse(init.body) : null, auth: init.headers?.Authorization });
+    if ((init.method ?? "GET") === "GET") return new Response(JSON.stringify({ items: pages[Number(u.searchParams.get("page_number"))] ?? [] }));
+    return new Response(JSON.stringify({ product_id: "pdt_newyear", ...JSON.parse(init.body) }));
+  };
+  const look = await findOrCreateProducts({ apiKey: "dodo_test_key", environment: "test_mode", prices, fetchImpl: fake });
+  assert.deepEqual(look, { monthly: { id: "pdt_ours", created: false }, yearly: null }, "pages through, prefers our tagged product, ignores discounted prices");
+  assert.deepEqual([calls[0].url.host, calls[0].url.pathname, calls[0].url.searchParams.get("recurring"), calls[0].auth], ["test.dodopayments.com", "/products", "true", "Bearer dodo_test_key"]);
+  assert.ok(calls.every((c) => c.method === "GET"), "looking never creates");
+  calls.length = 0;
+  const made = await findOrCreateProducts({ apiKey: "dodo_live_key", environment: "live_mode", prices, create: true, fetchImpl: fake });
+  assert.deepEqual(made, { monthly: { id: "pdt_ours", created: false }, yearly: { id: "pdt_newyear", created: true } });
+  const post = calls.find((c) => c.method === "POST");
+  assert.equal(post.url.href, "https://live.dodopayments.com/products");
+  assert.deepEqual([post.body.tax_category, post.body.price.type, post.body.price.price, post.body.price.currency, post.body.price.tax_inclusive, post.body.price.payment_frequency_interval, post.body.price.payment_frequency_count, post.body.metadata], ["saas", "recurring_price", 149900, "INR", true, "Year", 1, { product: "proupiqr-pro", interval: "yearly" }]);
+  assert.ok(matchesPrice({ price_detail: post.body.price }, "yearly", 149900), "what we create is what we look for");
+  await assert.rejects(findOrCreateProducts({ apiKey: "x", environment: "test_mode", prices, fetchImpl: async () => new Response("{}", { status: 401 }) }), /HTTP 401/);
+}
+
+// ---------- Dodo Payments ----------
+{
+  // Standard Webhooks: the published spec vector, replay window, multiple signatures.
+  const vector = { id: "msg_p5jXN8AQM9LWM0D4loKWxJek", timestamp: "1614265330", signature: "v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=" };
+  const vkey = "whsec_MfKQ9r8GKYqrTwjUPD8ILPZIo2LaLaSw";
+  assert.equal(verifyStandardWebhook('{"test": 2432232314}', vector, vkey, 1614265330), true, "spec test vector");
+  assert.equal(verifyStandardWebhook('{"test": 2432232315}', vector, vkey, 1614265330), false, "any byte change breaks it");
+  assert.equal(verifyStandardWebhook('{"test": 2432232314}', vector, "whsec_" + Buffer.from("other key").toString("base64"), 1614265330), false);
+  assert.equal(verifyStandardWebhook('{"test": 2432232314}', vector, vkey, 1614265330 + 301), false, "older than 5 minutes is a replay");
+  assert.equal(verifyStandardWebhook('{"test": 2432232314}', { ...vector, signature: "v1,AAAA v1,g0hM9SsE+OTPJTGt/tmIKtSyZlE3uFJELVlNIOLJ1OE=" }, vkey, 1614265330), true, "any listed signature may match");
+  assert.equal(verifyStandardWebhook('{"test": 2432232314}', { ...vector, signature: null }, vkey, 1614265330), false);
+
+  // Config is all-or-nothing and test mode unless explicitly live.
+  const denv = { DODO_PAYMENTS_API_KEY: "dodo_test_key", DODO_PAYMENTS_WEBHOOK_KEY: "whsec_" + Buffer.from("dodo-webhook-secret").toString("base64"), DODO_PRODUCT_MONTHLY: "pdt_MonthlyAAAAAAAAAAAAA", DODO_PRODUCT_YEARLY: "pdt_YearlyBBBBBBBBBBBBBB" };
+  const dcfg = dodoConfig(denv);
+  assert.equal(dcfg.environment, "test_mode");
+  assert.equal(dodoConfig({ ...denv, DODO_PAYMENTS_ENVIRONMENT: "live_mode" }).environment, "live_mode");
+  assert.equal(dodoConfig({ ...denv, DODO_PRODUCT_YEARLY: "" }), null);
+
+  // Status mapping, period end, interval, owner from the customer's metadata.
+  const sub = (status, extra = {}) => ({ subscription_id: "sub_Iuaq622bbmmfOGrVTqdXv", status, product_id: "pdt_MonthlyAAAAAAAAAAAAA", next_billing_date: "2026-11-11T00:00:00Z", payment_frequency_interval: "Month", cancel_at_next_billing_date: false, customer: { customer_id: "cus_TV52uJWWXt2yIoBBxpjaa", email: "a@b.in", name: "A", metadata: { owner } }, metadata: {}, ...extra });
+  const mapped = (status) => parseDodoSubscription(sub(status), "subscription.updated", now, dcfg).event.status;
+  assert.deepEqual(["pending", "active", "on_hold", "past_due", "paused", "cancelled", "failed", "expired"].map(mapped), ["created", "active", "pending", "pending", "paused", "cancelled", "expired", "expired"]);
+  const ps = parseDodoSubscription(sub("active", { product_id: "pdt_YearlyBBBBBBBBBBBBBB", cancel_at_next_billing_date: true }), "subscription.active", now, dcfg);
+  assert.deepEqual([ps.owner, ps.customerId, ps.event.interval, ps.event.currentEnd, ps.event.provider, ps.event.cancelAtPeriodEnd], [owner, "cus_TV52uJWWXt2yIoBBxpjaa", "yearly", Date.parse("2026-11-11T00:00:00Z"), "dodo", true]);
+  assert.equal(parseDodoSubscription(sub("weird"), "x", now, dcfg), null);
+  assert.equal(parseDodoSubscription({ ...sub("active"), subscription_id: "../x" }, "x", now, dcfg), null);
+  assert.equal(parseDodoWebhook(JSON.stringify({ type: "payment.succeeded", data: {} }), dcfg), null, "only subscription events change Pro");
+
+  // Webhook flow: an unconfirmed checkout record (cks_…) becomes the live subscription.
+  const secretKey = denv.DODO_PAYMENTS_WEBHOOK_KEY;
+  const signed = (body, id = `msg_${Math.random().toString(36).slice(2, 12)}`, ts = Math.floor(now / 1000)) => ({
+    id, timestamp: String(ts),
+    signature: "v1," + createHmac("sha256", Buffer.from(secretKey.slice(6), "base64")).update(`${id}.${ts}.${body}`).digest("base64"),
+  });
+  const delivery = (type, data, at = now) => JSON.stringify({ business_id: "bus_x", type, timestamp: new Date(at).toISOString(), data });
+  const store = memoryBillingStore();
+  await store.put(owner, { provider: "dodo", subscriptionId: "cks_n010SZaY4NXc7F1ck3Tq1", interval: "monthly", status: "created", currentEnd: null, cancelAtCycleEnd: false, shortUrl: "https://test.checkout.dodopayments.com/x", eventAt: 0, updatedAt: now });
+  const active = delivery("subscription.active", sub("active"));
+  assert.equal((await handleDodoWebhook(store, dcfg, active, { ...signed(active), signature: "v1,AAAA" }, now)).status, 401, "bad signature");
+  const h = signed(active, "msg_ActivateAAAA");
+  const ok = await handleDodoWebhook(store, dcfg, active, h, now);
+  assert.deepEqual([ok.status, ok.body.transition], [200, "pro_activated"]);
+  let rec = await store.get(owner);
+  assert.deepEqual([rec.provider, rec.subscriptionId, rec.status, hasProAccess(rec, now)], ["dodo", "sub_Iuaq622bbmmfOGrVTqdXv", "active", true]);
+  assert.equal(await store.ownerFor("sub_Iuaq622bbmmfOGrVTqdXv"), owner);
+  assert.equal((await handleDodoWebhook(store, dcfg, active, h, now)).body.duplicate, true, "webhook-id de-duplicates retries");
+  const forged = delivery("subscription.renewed", sub("active", { customer: { customer_id: "cus_OtherCCCCCCCCCCCCCCCC", email: "x@y.in", name: "X", metadata: { owner: "b".repeat(32) } } }), now + 1000);
+  assert.equal((await handleDodoWebhook(store, dcfg, forged, signed(forged), now)).body.ignored, "owner mismatch");
+  const onHold = delivery("subscription.on_hold", sub("on_hold"), now + 2000);
+  await handleDodoWebhook(store, dcfg, onHold, signed(onHold), now);
+  rec = await store.get(owner);
+  assert.equal(rec.status, "pending");
+  assert.equal(hasProAccess(rec, Date.parse("2026-11-11T00:00:00Z") + 6 * DAY), true, "failed renewal keeps the grace window");
+  const cancelled = delivery("subscription.cancelled", sub("cancelled"), now + 3000);
+  assert.equal((await handleDodoWebhook(store, dcfg, cancelled, signed(cancelled), now)).body.transition, "pro_cancelled");
+  rec = await store.get(owner);
+  assert.equal(hasProAccess(rec, Date.parse("2026-11-10T00:00:00Z")), true, "Pro until the paid period ends");
+  // No owner tag on the customer: fall back to the customer we created for the account.
+  const store2 = memoryBillingStore();
+  await store2.linkCustomer("c".repeat(32), "cus_TV52uJWWXt2yIoBBxpjaa");
+  const untagged = delivery("subscription.active", sub("active", { customer: { customer_id: "cus_TV52uJWWXt2yIoBBxpjaa", email: "a@b.in", name: "A", metadata: {} } }));
+  await handleDodoWebhook(store2, dcfg, untagged, signed(untagged), now);
+  assert.equal((await store2.get("c".repeat(32)))?.status, "active");
+
+  // API calls: customer once per account, checkout body, chain lookup, cancel, portal.
+  const calls = [];
+  const api = async (url, init = {}) => {
+    const u = new URL(url);
+    calls.push({ method: init.method ?? "GET", path: u.pathname + u.search, body: init.body ? JSON.parse(init.body) : null, auth: init.headers?.Authorization, host: u.host });
+    const r = (j) => new Response(JSON.stringify(j));
+    if (u.pathname === "/customers") return r({ customer_id: "cus_NewCustomerAAAAAAAAA" });
+    if (u.pathname === "/checkouts") return r({ session_id: "cks_SessionAAAAAAAAAAAAA", checkout_url: "https://test.checkout.dodopayments.com/buy/cks_SessionAAAAAAAAAAAAA" });
+    if (u.pathname === "/checkouts/cks_SessionAAAAAAAAAAAAA") return r({ id: "cks_SessionAAAAAAAAAAAAA", payment_id: "pay_gr4RizvMOXFJ6xca3y2tU", payment_status: "succeeded" });
+    if (u.pathname === "/payments/pay_gr4RizvMOXFJ6xca3y2tU") return r({ payment_id: "pay_gr4RizvMOXFJ6xca3y2tU", subscription_id: "sub_Iuaq622bbmmfOGrVTqdXv", customer: {} });
+    if (u.pathname === "/subscriptions/sub_Iuaq622bbmmfOGrVTqdXv" && (init.method ?? "GET") === "GET") return r(sub("active"));
+    if (u.pathname === "/subscriptions/sub_Iuaq622bbmmfOGrVTqdXv") return r(sub("active", { cancel_at_next_billing_date: true }));
+    if (u.pathname.endsWith("/customer-portal/session")) return r({ link: "https://customer.dodopayments.com/portal/xyz" });
+    return new Response("{}", { status: 404 });
+  };
+  const dodo = dodoProvider(dcfg, api);
+  const s3 = memoryBillingStore();
+  await assert.rejects(dodo.startCheckout({ interval: "monthly", owner, email: null, name: null, origin: "https://www.proupiqr.in" }, s3), CheckoutNeedsEmail);
+  const started = await dodo.startCheckout({ interval: "yearly", owner, email: "riya@example.com", name: "Riya", origin: "https://preview.example.app" }, s3);
+  assert.deepEqual(started, { subscriptionId: "cks_SessionAAAAAAAAAAAAA", url: "https://test.checkout.dodopayments.com/buy/cks_SessionAAAAAAAAAAAAA" });
+  const [cust, checkout] = calls;
+  assert.deepEqual([cust.method, cust.path, cust.host, cust.auth, cust.body.metadata.owner], ["POST", "/customers", "test.dodopayments.com", "Bearer dodo_test_key", owner]);
+  assert.deepEqual(checkout.body.product_cart, [{ product_id: "pdt_YearlyBBBBBBBBBBBBBB", quantity: 1 }]);
+  assert.deepEqual([checkout.body.customer, checkout.body.billing_currency, checkout.body.billing_address, checkout.body.metadata.owner], [{ customer_id: "cus_NewCustomerAAAAAAAAA" }, "INR", { country: "IN" }, owner]);
+  assert.deepEqual(checkout.body.feature_flags, { allow_currency_selection: false, allow_discount_code: false, allow_tax_id: true, redirect_immediately: true }, "INR only, no coupon box, GSTIN allowed");
+  assert.equal(checkout.body.return_url, "https://preview.example.app/app/?tab=settings&checkout=done", "a preview returns to itself");
+  calls.length = 0;
+  await dodo.startCheckout({ interval: "monthly", owner, email: "riya@example.com", name: "Riya", origin: "https://www.proupiqr.in" }, s3);
+  assert.deepEqual(calls.map((c) => c.path), ["/checkouts"], "the customer is created once per account");
+  calls.length = 0;
+  const viaChain = await fetchDodoSubscription(dcfg, "cks_SessionAAAAAAAAAAAAA", now, api);
+  assert.deepEqual(calls.map((c) => c.path), ["/checkouts/cks_SessionAAAAAAAAAAAAA", "/payments/pay_gr4RizvMOXFJ6xca3y2tU", "/subscriptions/sub_Iuaq622bbmmfOGrVTqdXv"]);
+  assert.deepEqual([viaChain.event.subscriptionId, viaChain.event.status, viaChain.owner], ["sub_Iuaq622bbmmfOGrVTqdXv", "active", owner]);
+  calls.length = 0;
+  await cancelDodoAtPeriodEnd(dcfg, "sub_Iuaq622bbmmfOGrVTqdXv", api);
+  assert.deepEqual([calls[0].method, calls[0].body], ["PATCH", { cancel_at_next_billing_date: true }]);
+  await assert.rejects(cancelDodoAtPeriodEnd(dcfg, "../../payments", api));
+  calls.length = 0;
+  assert.equal(await dodoPortalLink(dcfg, "cus_NewCustomerAAAAAAAAA", "https://www.proupiqr.in/app/?tab=settings", api), "https://customer.dodopayments.com/portal/xyz");
+  assert.equal(calls[0].path, "/customers/cus_NewCustomerAAAAAAAAA/customer-portal/session?return_url=" + encodeURIComponent("https://www.proupiqr.in/app/?tab=settings"));
+  assert.equal((await fetchDodoSubscription(dodoConfig({ ...denv, DODO_PAYMENTS_ENVIRONMENT: "live_mode" }), "sub_Iuaq622bbmmfOGrVTqdXv", now, async (url) => { assert.equal(new URL(url).host, "live.dodopayments.com"); return new Response(JSON.stringify(sub("active"))); })).event.status, "active");
+
+  // Lost webhook: the on-demand re-check resolves the checkout chain and activates Pro.
+  const s4 = memoryBillingStore();
+  await s4.put(owner, { provider: "dodo", subscriptionId: "cks_SessionAAAAAAAAAAAAA", interval: "monthly", status: "created", currentEnd: null, cancelAtCycleEnd: false, shortUrl: "https://test.checkout.dodopayments.com/x", eventAt: 0, updatedAt: now });
+  const rec4 = await reconcileSubscription(s4, { dodo: dodoProvider(dcfg, api), razorpay: null }, owner, now + 60_000);
+  assert.deepEqual([rec4.activated, rec4.record.subscriptionId, rec4.record.provider], [true, "sub_Iuaq622bbmmfOGrVTqdXv", "dodo"]);
+  assert.equal(await s4.ownerFor("sub_Iuaq622bbmmfOGrVTqdXv"), owner, "later webhooks find the account");
+  // A Razorpay subscription is still re-read through Razorpay even when Dodo takes new checkouts.
+  const s5 = memoryBillingStore();
+  await s5.put(owner, { provider: "razorpay", subscriptionId: "sub_PAID1234", interval: "monthly", status: "created", currentEnd: null, cancelAtCycleEnd: false, shortUrl: null, eventAt: 0, updatedAt: now });
+  let rzCalls = 0;
+  await reconcileSubscription(s5, { dodo: dodoProvider(dcfg, async () => { throw new Error("Dodo must not be asked"); }), razorpay: razorpayProvider(config, async () => { rzCalls++; return new Response(JSON.stringify({ id: "sub_PAID1234", status: "created", plan_id: "plan_month", notes: { owner } })); }) }, owner, now + 60_000);
+  assert.equal(rzCalls, 1);
+}
+
+console.log("[billing] access rules, ordering, signatures (Razorpay + Standard Webhooks), webhooks, Razorpay + Dodo requests, lost-webhook and daily reconcile, plan + product setup passed");

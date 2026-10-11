@@ -3,12 +3,14 @@
 //   npm run launch:check                       # reads process env + .env.local
 //   npm run launch:check -- --env .env.production.local --online
 //
-// --online also pings Vercel KV and reads your Razorpay plans to confirm they
-// charge exactly what /pricing/ shows. Get production env locally with:
+// --online also pings Vercel KV, reads your Dodo Payments products (or Razorpay
+// plans) to confirm they charge exactly what /pricing/ shows, and probes the live
+// webhook URLs. Get production env locally with:
 //   vercel env pull .env.production.local --environment=production
 import { createECDH } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
+import { matchesPrice } from "./dodo-products.mjs";
 
 const ROOT = new URL("../", import.meta.url).pathname;
 const args = process.argv.slice(2);
@@ -70,21 +72,78 @@ else {
   }
 }
 
-section("Pro billing (Razorpay)");
+const pricingSource = readFileSync(join(ROOT, "src/data/pricing.ts"), "utf8");
+const expected = {
+  monthly: Number(/monthly: \{ paise: ([\d_]+)/.exec(pricingSource)?.[1].replace(/_/g, "")),
+  yearly: Number(/yearly: \{ paise: ([\d_]+)/.exec(pricingSource)?.[1].replace(/_/g, "")),
+};
+
+/** One unsigned POST to the exact URL the provider will call (shows once as webhook_rejected in /admin/metrics/). */
+async function probeWebhook(url) {
+  try {
+    const res = await fetch(url, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json" }, body: "{}" });
+    if (res.status === 401) ok(`Live webhook URL is deployed and rejects unsigned calls (401)`);
+    else if (res.status === 503) fail("Live webhook URL is deployed, but this provider isn't configured in the Production environment (503)");
+    else if (res.status >= 300 && res.status < 400) fail(`Live webhook URL redirects (HTTP ${res.status}); a redirect counts as a failed delivery`);
+    else fail(`Live webhook URL returned HTTP ${res.status}; deploy the billing code to production first`);
+  } catch { fail(`Couldn't reach ${url}`); }
+}
+
+const dodoKeys = ["DODO_PAYMENTS_API_KEY", "DODO_PAYMENTS_WEBHOOK_KEY", "DODO_PRODUCT_MONTHLY", "DODO_PRODUCT_YEARLY"];
+const dodoPresent = dodoKeys.filter((k) => val(k));
+const dodoOn = dodoPresent.length === dodoKeys.length;
 const rzp = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"];
 const present = rzp.filter((k) => val(k));
-if (present.length === 0) warn("Billing is off — /pricing/ and Settings show a Pro early-access form instead of checkout. Plans: npm run razorpay:plans -- --env FILE --create");
-else if (present.length < rzp.length) fail(`Billing half-configured: missing ${rzp.filter((k) => !val(k)).join(", ")}`);
+const billingOn = dodoOn || present.length === rzp.length;
+
+section("Pro billing (Dodo Payments — merchant of record, takes new checkouts)");
+if (dodoPresent.length === 0) {
+  present.length === rzp.length
+    ? ok("Dodo Payments not configured — new checkouts go through Razorpay")
+    : warn("Billing is off — /pricing/ and Settings show a Pro early-access form instead of checkout. Set up Dodo: npm run dodo:products -- --env FILE --create");
+} else if (!dodoOn) fail(`Dodo half-configured: missing ${dodoKeys.filter((k) => !val(k)).join(", ")}`);
 else {
-  ok("All Razorpay settings present");
+  const mode = val("DODO_PAYMENTS_ENVIRONMENT") === "live_mode" ? "live_mode" : "test_mode";
+  ok(`All Dodo Payments settings present (${mode})`);
+  if (val("DODO_PAYMENTS_ENVIRONMENT") && !["live_mode", "test_mode"].includes(val("DODO_PAYMENTS_ENVIRONMENT"))) fail("DODO_PAYMENTS_ENVIRONMENT must be live_mode or test_mode");
+  if (mode !== "live_mode") warn("Dodo is in test mode — live payments need DODO_PAYMENTS_ENVIRONMENT=live_mode with a live API key, live products and the live webhook's secret");
+  const whsec = val("DODO_PAYMENTS_WEBHOOK_KEY");
+  /^whsec_[A-Za-z0-9+/]+={0,2}$/.test(whsec) && Buffer.from(whsec.slice(6), "base64").length >= 24
+    ? ok("DODO_PAYMENTS_WEBHOOK_KEY looks like a signing secret (whsec_…)")
+    : fail("DODO_PAYMENTS_WEBHOOK_KEY should be the endpoint's signing secret, starting whsec_ (Developer → Webhooks → your endpoint)");
+  for (const key of ["DODO_PRODUCT_MONTHLY", "DODO_PRODUCT_YEARLY"]) {
+    if (!/^pdt_[A-Za-z0-9]{6,64}$/.test(val(key))) fail(`${key} should be a Dodo product id (pdt_…) — get them with npm run dodo:products`);
+  }
+  if (online) {
+    const host = mode === "live_mode" ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
+    for (const [interval, key] of [["monthly", "DODO_PRODUCT_MONTHLY"], ["yearly", "DODO_PRODUCT_YEARLY"]]) {
+      try {
+        const res = await fetch(`${host}/products/${encodeURIComponent(val(key))}`, { headers: { Authorization: `Bearer ${val("DODO_PAYMENTS_API_KEY")}` } });
+        const product = await res.json().catch(() => ({}));
+        if (res.status === 401) { fail(`${key}: Dodo rejected the API key (401) — is DODO_PAYMENTS_ENVIRONMENT=${mode} the key's mode?`); continue; }
+        if (!res.ok) { fail(`${key}: Dodo returned HTTP ${res.status}`); continue; }
+        const p = product?.price ?? {};
+        matchesPrice({ price_detail: p }, interval, expected[interval])
+          ? ok(`${key} charges ₹${p.price / 100} ${interval}, GST included — matches /pricing/`)
+          : fail(`${key} is ${p.currency} ${p.price / 100} every ${p.payment_frequency_count} ${p.payment_frequency_interval} (tax_inclusive: ${p.tax_inclusive}${Number(p.discount_bps) > 0 ? `, ${p.discount_bps / 100}% off` : ""}); /pricing/ shows ₹${expected[interval] / 100} ${interval} GST included — get matching ids with npm run dodo:products`);
+      } catch { fail(`${key}: couldn't reach Dodo Payments`); }
+    }
+    await probeWebhook("https://www.proupiqr.in/api/billing/dodo-webhook/");
+  }
+  console.log("    Webhook URL: https://www.proupiqr.in/api/billing/dodo-webhook/");
+  console.log("      exactly this: www and the trailing slash (proupiqr.in and the no-slash path redirect, and a redirect is a failed delivery)");
+  console.log("    Events: subscription.active, renewed, on_hold, failed, cancelled, expired, plan_changed, updated");
+  console.log("    Test and live mode each have their own API key, products and webhook secret; all four must come from the same mode.");
+}
+
+section("Pro billing (Razorpay — optional fallback)");
+if (present.length === 0) ok(dodoOn ? "Razorpay not configured (not needed while Dodo takes checkouts)" : "Razorpay not configured");
+else if (present.length < rzp.length) fail(`Razorpay half-configured: missing ${rzp.filter((k) => !val(k)).join(", ")}`);
+else {
+  ok(dodoOn ? "All Razorpay settings present — renews existing Razorpay subscriptions; new checkouts use Dodo" : "All Razorpay settings present");
   if (!val("RAZORPAY_KEY_ID").startsWith("rzp_live_")) warn("RAZORPAY_KEY_ID is a test key — live payments need rzp_live_ keys");
   if (val("RAZORPAY_WEBHOOK_SECRET").length < 16) warn("RAZORPAY_WEBHOOK_SECRET is short; use a long random secret");
   if (online) {
-    const pricing = readFileSync(join(ROOT, "src/data/pricing.ts"), "utf8");
-    const expected = {
-      monthly: Number(/monthly: \{ paise: ([\d_]+)/.exec(pricing)?.[1].replace(/_/g, "")),
-      yearly: Number(/yearly: \{ paise: ([\d_]+)/.exec(pricing)?.[1].replace(/_/g, "")),
-    };
     const auth = `Basic ${Buffer.from(`${val("RAZORPAY_KEY_ID")}:${val("RAZORPAY_KEY_SECRET")}`).toString("base64")}`;
     for (const [interval, key] of [["monthly", "RAZORPAY_PLAN_MONTHLY"], ["yearly", "RAZORPAY_PLAN_YEARLY"]]) {
       try {
@@ -98,19 +157,9 @@ else {
           : fail(`${key} is ₹${amount / 100} every ${plan?.interval} ${plan?.period} (${plan?.item?.currency}); /pricing/ shows ₹${expected[interval] / 100} ${interval} — get matching ids with npm run razorpay:plans`);
       } catch { fail(`${key}: couldn't reach Razorpay`); }
     }
+    await probeWebhook("https://www.proupiqr.in/api/billing/razorpay-webhook/");
   }
-  if (online) {
-    // One unsigned POST to the exact URL Razorpay will call (shows once as webhook_rejected in /admin/metrics/).
-    try {
-      const res = await fetch("https://www.proupiqr.in/api/billing/razorpay-webhook/", { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json" }, body: "{}" });
-      if (res.status === 401) ok("Live webhook URL is deployed and rejects unsigned calls (401)");
-      else if (res.status === 503) fail("Live webhook URL is deployed, but billing isn't configured in the Production environment (503)");
-      else if (res.status >= 300 && res.status < 400) fail(`Live webhook URL redirects (HTTP ${res.status}); Razorpay counts a redirect as a failed delivery`);
-      else fail(`Live webhook URL returned HTTP ${res.status}; deploy the billing code to production first`);
-    } catch { fail("Couldn't reach https://www.proupiqr.in/api/billing/razorpay-webhook/"); }
-  }
-  console.log("    Webhook URL: https://www.proupiqr.in/api/billing/razorpay-webhook/");
-  console.log("      exactly this: www and the trailing slash (proupiqr.in and the no-slash path redirect, and a redirect is a failed delivery)");
+  console.log("    Webhook URL: https://www.proupiqr.in/api/billing/razorpay-webhook/ (www and the trailing slash)");
   console.log("    Events: subscription.* (activated, charged, pending, halted, cancelled, completed, paused, resumed)");
   console.log("    Test and live mode each have their own webhook and secret; RAZORPAY_WEBHOOK_SECRET must match the mode of RAZORPAY_KEY_ID.");
 }
@@ -130,14 +179,14 @@ else {
   /^(mailto:|https:)/.test(subject) ? ok(`VAPID subject ${subject}`) : fail("VAPID_SUBJECT must start with mailto: or https:");
 }
 const cron = val("CRON_SECRET");
-if (!cron) (vpub || present.length ? fail : warn)("CRON_SECRET missing — the 09:00 cron (billing reconcile + morning digest) refuses to run without it");
+if (!cron) (vpub || billingOn ? fail : warn)("CRON_SECRET missing — the 09:00 cron (billing reconcile + morning digest) refuses to run without it");
 else cron.length >= 24 ? ok("CRON_SECRET set") : fail("CRON_SECRET is too short (use 32+ random characters)");
 
 section("Founder metrics");
 const admins = (val("ADMIN_USER_IDS")).split(",").map((s) => s.trim()).filter((s) => /^user_[A-Za-z0-9]{6,64}$/.test(s));
 admins.length ? ok(`${admins.length} admin user id(s) for /admin/metrics/`) : warn("ADMIN_USER_IDS empty — /admin/metrics/ will 404 for everyone (find your id in Clerk → Users)");
 
-section("Razorpay website review (needed for live mode)");
+section("Payment provider website review (needed for live mode)");
 {
   const statics = join(ROOT, ".vercel/output/static");
   const pages = ["about", "contact", "pricing", "terms", "privacy", "refund-policy", "shipping-policy"];
@@ -151,9 +200,9 @@ section("Razorpay website review (needed for live mode)");
   }
   const business = readFileSync(join(ROOT, "src/data/business.ts"), "utf8");
   const blank = ["phone", "address"].filter((field) => new RegExp(`^\\s*${field}: null`, "m").test(business));
-  if (blank.length) warn(`No ${blank.join(" or ")} in src/data/business.ts — Razorpay reviewers usually ask for a phone number and an operational address on the contact page`);
+  if (blank.length) warn(`No ${blank.join(" or ")} in src/data/business.ts — payment providers' reviewers usually ask for a phone number and an operational address on the contact page`);
   else ok("Contact page shows a phone number and address");
-  console.log("    Razorpay also asks for a sample invoice (PNG/JPG/PDF) and test login details, because upgrading needs sign-in.");
+  console.log("    Reviewers may also ask for test login details, because upgrading needs sign-in.");
 }
 
 section("Build output");
@@ -173,5 +222,5 @@ else {
 }
 
 console.log(`\n${failures ? `✗ ${failures} blocker(s)` : "✓ No blockers"}${warnings ? `, ⚠ ${warnings} warning(s)` : ""}.`);
-console.log("Still do by hand: one real sign-in on production; one full Pro upgrade in Razorpay test mode on a preview deployment (test keys + test plans); and confirm Vercel → Settings → Cron Jobs lists /api/cron/digest/ after deploying.");
+console.log("Still do by hand: one real sign-in on production; one full Pro upgrade in Dodo test mode on a preview deployment (test API key, test products, a test-mode webhook pointing at that preview); and confirm Vercel → Settings → Cron Jobs lists /api/cron/digest/ after deploying.");
 process.exit(failures ? 1 : 0);

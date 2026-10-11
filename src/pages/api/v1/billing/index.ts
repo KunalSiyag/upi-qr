@@ -1,9 +1,9 @@
 import type { APIRoute } from "astro";
 import { authenticatedUserId, isTrustedMutation, jsonResponse, readJsonObject, RequestBodyError } from "../../../../lib/apiSecurity";
 import { consumeRateLimit, rateLimitHeaders } from "../../../../lib/rateLimit";
-import { billingConfig, safeCheckoutUrl } from "../../../../lib/billing/config";
+import { billingProviders, safeCheckoutUrl } from "../../../../lib/billing/config";
 import { billingStore } from "../../../../lib/billing/kvBillingStore";
-import { cancelAtCycleEnd, createSubscription } from "../../../../lib/billing/razorpay";
+import { CheckoutNeedsEmail, checkoutProvider, providerFor } from "../../../../lib/billing/provider";
 import { recheckInterval, reconcileSubscription } from "../../../../lib/billing/reconcile";
 import { hasProAccess, type BillingInterval } from "../../../../lib/billing/subscription";
 import { recordMetric } from "../../../../lib/metrics";
@@ -14,6 +14,19 @@ import { PRO_PRICES } from "../../../../data/pricing";
 export const prerender = false;
 
 const PENDING_CHECKOUT_REUSE_MS = 24 * 60 * 60 * 1000;
+const EMAIL = /^[^\s@]{1,64}@[^\s@]{1,190}\.[^\s@]{2,24}$/;
+
+/** The signed-in account's email and name from Clerk (for the provider's customer record and receipt). */
+async function accountContact(locals: unknown, fallbackEmail: unknown): Promise<{ email: string | null; name: string | null }> {
+  try {
+    const user = await (locals as { currentUser?: () => Promise<{ primaryEmailAddress?: { emailAddress?: string } | null; fullName?: string | null; firstName?: string | null } | null> }).currentUser?.();
+    const email = user?.primaryEmailAddress?.emailAddress ?? null;
+    if (email) return { email, name: user?.fullName || user?.firstName || null };
+  } catch {
+    // Clerk unreachable: fall back to the address the signed-in page sent.
+  }
+  return { email: typeof fallbackEmail === "string" && EMAIL.test(fallbackEmail.trim()) ? fallbackEmail.trim() : null, name: null };
+}
 
 export const GET: APIRoute = async ({ locals }) => {
   const userId = authenticatedUserId(locals);
@@ -21,12 +34,12 @@ export const GET: APIRoute = async ({ locals }) => {
   try {
     const owner = workspaceOwner(userId);
     const store = billingStore();
-    const config = billingConfig();
+    const providers = billingProviders();
     const now = Date.now();
     let record = await store.get(owner);
-    // Waiting on Razorpay (unconfirmed checkout, failing renewal)? Re-read it in case a webhook was lost.
-    if (config && recheckInterval(record, now) !== null) {
-      const result = await reconcileSubscription(store, config, owner, now);
+    // Waiting on the provider (unconfirmed checkout, failing renewal)? Re-read it in case a webhook was lost.
+    if (recheckInterval(record, now) !== null) {
+      const result = await reconcileSubscription(store, providers, owner, now);
       record = result.record;
       if (result.activated) await recordMetric("pro_activated");
       if (result.changed) await recordMetric("billing_reconciled");
@@ -35,14 +48,18 @@ export const GET: APIRoute = async ({ locals }) => {
     const checkoutUrl = record?.status === "created" && record.shortUrl && now - record.updatedAt < PENDING_CHECKOUT_REUSE_MS
       ? safeCheckoutUrl(record.shortUrl)
       : null;
+    const provider = checkoutProvider(providers);
     return jsonResponse({
       plan: { id: plan.id, activePaylinks: plan.activePaylinks },
       subscription: record && record.status !== "created"
         ? { status: record.status, interval: record.interval, currentEnd: record.currentEnd, cancelAtCycleEnd: record.cancelAtCycleEnd }
         : null,
-      // A checkout the customer started but Razorpay hasn't confirmed yet.
+      // A checkout the customer started but the provider hasn't confirmed yet.
       checkout: checkoutUrl && plan.id === "free" && record ? { interval: record.interval, url: checkoutUrl } : null,
-      billingAvailable: config !== null,
+      billingAvailable: provider !== null,
+      provider: provider?.id ?? null,
+      // Dodo's customer portal (payment method, invoices) for subscriptions it manages.
+      manageAvailable: Boolean(record && record.status !== "created" && record.provider === "dodo" && providers.dodo),
       prices: PRO_PRICES,
     });
   } catch {
@@ -61,8 +78,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (error instanceof RequestBodyError) return jsonResponse({ error: error.message }, error.status);
     return jsonResponse({ error: "JSON body required." }, 400);
   }
-  const config = billingConfig();
-  if (!config) return jsonResponse({ error: "Pro is not available for purchase yet.", code: "billing_unavailable" }, 503);
+  const providers = billingProviders();
+  if (!checkoutProvider(providers)) return jsonResponse({ error: "Pro is not available for purchase yet.", code: "billing_unavailable" }, 503);
 
   try {
     if (rateLimitsAvailable()) {
@@ -73,24 +90,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const store = billingStore();
     const existing = await store.get(owner);
     const now = Date.now();
+    const origin = new URL(request.url).origin;
 
     if (body.action === "checkout") {
+      const provider = checkoutProvider(providers)!;
       const interval: BillingInterval = body.interval === "yearly" ? "yearly" : "monthly";
       if (hasProAccess(existing, now) && !(existing?.status === "cancelled" || existing?.status === "completed")) {
         return jsonResponse({ error: "You're already on Pro.", code: "already_pro" }, 409);
       }
       // Reuse a fresh, unpaid checkout so double clicks don't create duplicate subscriptions.
-      if (existing?.status === "created" && existing.shortUrl && existing.interval === interval && now - existing.updatedAt < PENDING_CHECKOUT_REUSE_MS) {
+      if (existing?.status === "created" && existing.provider === provider.id && existing.shortUrl && existing.interval === interval && now - existing.updatedAt < PENDING_CHECKOUT_REUSE_MS) {
         const url = safeCheckoutUrl(existing.shortUrl);
         if (url) return jsonResponse({ url });
       }
-      const created = await createSubscription(config, interval, owner);
-      const url = safeCheckoutUrl(created.shortUrl);
+      const { email, name } = await accountContact(locals, body.email);
+      const started = await provider.startCheckout({ interval, owner, email, name, origin }, store);
+      const url = safeCheckoutUrl(started.url);
       if (!url) return jsonResponse({ error: "Unexpected checkout address from the payment provider." }, 502);
-      await store.link(created.id, owner);
+      await store.link(started.subscriptionId, owner);
       if (!hasProAccess(existing, now)) {
         await store.put(owner, {
-          provider: "razorpay", subscriptionId: created.id, interval, status: "created", currentEnd: null,
+          provider: provider.id, subscriptionId: started.subscriptionId, interval, status: "created", currentEnd: null,
           cancelAtCycleEnd: false, shortUrl: url, eventAt: 0, updatedAt: now,
         });
       }
@@ -98,16 +118,26 @@ export const POST: APIRoute = async ({ request, locals }) => {
     }
 
     if (body.action === "cancel") {
-      if (!existing || !(existing.status === "active" || existing.status === "authenticated")) {
+      const provider = providerFor(existing, providers);
+      if (!existing || !provider || !(existing.status === "active" || existing.status === "authenticated")) {
         return jsonResponse({ error: "There's no active subscription to cancel." }, 409);
       }
-      await cancelAtCycleEnd(config, existing.subscriptionId);
+      await provider.cancelAtPeriodEnd(existing.subscriptionId);
       await store.put(owner, { ...existing, cancelAtCycleEnd: true, updatedAt: now });
       return jsonResponse({ ok: true, currentEnd: existing.currentEnd });
     }
 
+    if (body.action === "manage") {
+      const provider = providerFor(existing, providers);
+      const link = provider && existing && existing.status !== "created" ? await provider.manageUrl(owner, origin, store) : null;
+      const url = link ? safeCheckoutUrl(link) : null;
+      if (!url) return jsonResponse({ error: "Billing management isn't available for this subscription." }, 404);
+      return jsonResponse({ url });
+    }
+
     return jsonResponse({ error: "Unknown action." }, 400);
-  } catch {
+  } catch (error) {
+    if (error instanceof CheckoutNeedsEmail) return jsonResponse({ error: error.message, code: "email_required" }, 400);
     return jsonResponse({ error: "Couldn't reach the payment provider. Try again in a minute." }, 502);
   }
 };

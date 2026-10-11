@@ -196,13 +196,24 @@ assert.equal(safeCheckoutUrl("https://checkout.razorpay.com/x"), "https://checko
 assert.equal(safeCheckoutUrl("https://razorpay.com.evil.example/x"), null);
 assert.equal(safeCheckoutUrl("http://rzp.io/i/abc"), null);
 assert.equal(safeCheckoutUrl("javascript:alert(1)"), null);
+assert.equal(safeCheckoutUrl("https://test.checkout.dodopayments.com/buy/cks_x"), "https://test.checkout.dodopayments.com/buy/cks_x");
+assert.equal(safeCheckoutUrl("https://dodopayments.com.evil.example/x"), null);
+assert.equal(safeCheckoutUrl("https://evil-dodopayments.com/x"), null);
+// Dodo webhooks: Standard Webhooks signature checked before anything else; checkout pinned to our customer.
+const dodoFirst = webhookCore.split("headers: { id: string | null; timestamp: string | null; signature: string | null },\n  now: number,\n): Promise<WebhookResult> {")[1]?.trim().split("\n")[0] ?? "";
+assert.match(dodoFirst, /verifyStandardWebhook/, "Dodo webhook must verify the signature before anything else");
+const dodoLib = readFileSync(join(projectRoot, "src/lib/billing/dodo.ts"), "utf8");
+assert.match(dodoLib, /Math\.abs\(nowSeconds - Number\(timestamp\)\) > 300/, "Dodo webhooks older than 5 minutes are replays");
+assert.match(dodoLib, /timingSafeEqual\(given, expected\)/, "Dodo signatures compared in constant time");
+const dodoRoute = readFileSync(join(projectRoot, "src/pages/api/billing/dodo-webhook.ts"), "utf8");
+assert.match(dodoRoute, /request\.headers\.get\("webhook-signature"\)/);
 // Re-reading subscriptions from Razorpay: only the signed-in owner's own record, throttled, and the
 // pending-checkout URL handed to the browser goes through the same allow-list.
 const reconcile = readFileSync(join(projectRoot, "src/lib/billing/reconcile.ts"), "utf8");
 assert.match(reconcile, /store\.claimRefresh\(owner, seconds, now\)/, "Razorpay re-reads must be throttled per account");
 assert.match(reconcile, /fetched\.owner !== owner/, "a re-read subscription naming another account must not be applied");
 const getHandler = billingApi.split("export const GET: APIRoute")[1]?.split("export const")[0] ?? "";
-assert.match(getHandler, /reconcileSubscription\(store, config, owner, now\)/);
+assert.match(getHandler, /reconcileSubscription\(store, providers, owner, now\)/);
 assert.match(getHandler, /safeCheckoutUrl\(record\.shortUrl\)/, "pending checkout URLs must be allow-listed");
 const razorpayClient = readFileSync(join(projectRoot, "src/lib/billing/razorpay.ts"), "utf8");
 assert.match(razorpayClient, /const API = "https:\/\/api\.razorpay\.com\/v1";/, "Razorpay API host must stay fixed");

@@ -1,23 +1,23 @@
-import { fetchSubscription, type RazorpayConfig } from "./razorpay.ts";
 import { applySubscriptionEvent, hasProAccess, type SubscriptionRecord } from "./subscription.ts";
+import { providerFor, type BillingProvider, type BillingProviders } from "./provider.ts";
 import type { BillingStore } from "./store.ts";
 
 /**
  * Webhooks drive billing state, but a delivery can be lost for good: a webhook
  * URL without the trailing slash (redirects count as failures), a test/live
  * secret mix-up, a protected preview deployment, or an outage that outlasts
- * Razorpay's retries. While an account is waiting on Razorpay, re-read its
- * subscription so a customer who paid is never left on Free, and a fixed
+ * the provider's retries. While an account is waiting on the provider, re-read
+ * its subscription so a customer who paid is never left on Free, and a fixed
  * renewal comes back without waiting for the next webhook.
  */
 
 const DAY = 86_400_000;
 /** Unconfirmed checkouts are re-checked for a week, then treated as abandoned. */
 export const CHECKOUT_RECHECK_WINDOW_MS = 7 * DAY;
-/** Minimum seconds between Razorpay reads per account. */
+/** Minimum seconds between provider reads per account. */
 export const RECHECK_SECONDS = { checkout: 5, renewal: 600 } as const;
 
-/** Seconds between re-reads for this record, or null when Razorpay has nothing we're waiting for. */
+/** Seconds between re-reads for this record, or null when the provider has nothing we're waiting for. */
 export function recheckInterval(record: SubscriptionRecord | null, now: number): number | null {
   if (!record) return null;
   if (record.status === "created") return now - record.updatedAt < CHECKOUT_RECHECK_WINDOW_MS ? RECHECK_SECONDS.checkout : null;
@@ -31,43 +31,39 @@ export interface ReconcileResult {
   activated: boolean;
   /** The stored record changed. */
   changed?: boolean;
-  /** Razorpay couldn't be read (or answered for another account); nothing was written. */
+  /** The provider couldn't be read (or answered for another account); nothing was written. */
   failed?: boolean;
 }
 
-/** Re-reads one subscription from Razorpay and stores it if it moved. */
-async function applyLatest(
-  store: BillingStore,
-  config: RazorpayConfig,
-  owner: string,
-  existing: SubscriptionRecord,
-  now: number,
-  fetchImpl: typeof fetch,
-): Promise<ReconcileResult> {
-  let fetched: Awaited<ReturnType<typeof fetchSubscription>>;
+/** Re-reads one subscription from its provider and stores it if it moved. */
+async function applyLatest(store: BillingStore, provider: BillingProvider, owner: string, existing: SubscriptionRecord, now: number): Promise<ReconcileResult> {
+  let fetched: Awaited<ReturnType<BillingProvider["fetch"]>>;
   try {
-    fetched = await fetchSubscription(config, existing.subscriptionId, now, fetchImpl);
+    fetched = await provider.fetch(existing.subscriptionId, now);
   } catch {
     return { record: existing, activated: false, failed: true };
   }
-  if (fetched.owner !== null && fetched.owner !== owner) return { record: existing, activated: false, failed: true };
+  // The subscription must belong to this account: our owner tag, or else the customer we created for it.
+  const foreign = fetched.owner !== null
+    ? fetched.owner !== owner
+    : Boolean(fetched.customerId) && (await store.customerFor(owner)) !== fetched.customerId;
+  if (foreign) return { record: existing, activated: false, failed: true };
   const next = applySubscriptionEvent(existing, fetched.event, now);
-  if (!next || (next.status === existing.status && next.currentEnd === existing.currentEnd)) return { record: existing, activated: false };
+  if (!next || (next.subscriptionId === existing.subscriptionId && next.status === existing.status && next.currentEnd === existing.currentEnd && next.cancelAtCycleEnd === existing.cancelAtCycleEnd)) {
+    return { record: existing, activated: false };
+  }
   await store.put(owner, next);
+  // A checkout id (Dodo cks_…) resolved to the real subscription: let its webhooks find this account.
+  if (next.subscriptionId !== existing.subscriptionId) await store.link(next.subscriptionId, owner);
   return { record: next, activated: !hasProAccess(existing, now) && hasProAccess(next, now), changed: true };
 }
 
-export async function reconcileSubscription(
-  store: BillingStore,
-  config: RazorpayConfig,
-  owner: string,
-  now: number,
-  fetchImpl: typeof fetch = fetch,
-): Promise<ReconcileResult> {
+export async function reconcileSubscription(store: BillingStore, providers: BillingProviders, owner: string, now: number): Promise<ReconcileResult> {
   const existing = await store.get(owner);
   const seconds = recheckInterval(existing, now);
-  if (!existing || seconds === null || !(await store.claimRefresh(owner, seconds, now))) return { record: existing, activated: false };
-  return applyLatest(store, config, owner, existing, now, fetchImpl);
+  const provider = providerFor(existing, providers);
+  if (!existing || !provider || seconds === null || !(await store.claimRefresh(owner, seconds, now))) return { record: existing, activated: false };
+  return applyLatest(store, provider, owner, existing, now);
 }
 
 /* ---------- Daily reconcile (cron) ---------- */
@@ -111,9 +107,9 @@ export interface DailyReconcileResult {
 
 export async function reconcileDueSubscriptions(
   store: BillingStore,
-  config: RazorpayConfig,
+  providers: BillingProviders,
   now: number,
-  { deadline = now + 10_000, concurrency = 5, fetchImpl = fetch, clock = Date.now }: { deadline?: number; concurrency?: number; fetchImpl?: typeof fetch; clock?: () => number } = {},
+  { deadline = now + 10_000, concurrency = 5, clock = Date.now }: { deadline?: number; concurrency?: number; clock?: () => number } = {},
 ): Promise<DailyReconcileResult> {
   const owners = await store.owners();
   const result: DailyReconcileResult = { owners: owners.length, checked: 0, updated: 0, activated: 0, failed: 0, remaining: 0 };
@@ -122,9 +118,10 @@ export async function reconcileDueSubscriptions(
     while (next < owners.length && clock() < deadline) {
       const owner = owners[next++];
       const record = await store.get(owner);
-      if (!record || !dueForDailyCheck(record, now)) continue;
+      const provider = providerFor(record, providers);
+      if (!record || !provider || !dueForDailyCheck(record, now)) continue;
       result.checked++;
-      const outcome = await applyLatest(store, config, owner, record, now, fetchImpl);
+      const outcome = await applyLatest(store, provider, owner, record, now);
       if (outcome.failed) result.failed++;
       if (outcome.changed) result.updated++;
       if (outcome.activated) result.activated++;

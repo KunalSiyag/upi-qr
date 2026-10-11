@@ -1,7 +1,8 @@
 /**
  * Subscription state for the Pro plan — pure functions, no I/O.
  *
- * Razorpay webhooks drive the state. Events can arrive late, twice, or out of
+ * Provider webhooks (Dodo Payments or Razorpay) drive the state; each provider
+ * maps its own statuses onto the vocabulary below. Events can arrive late, twice, or out of
  * order, so applying an event is idempotent and older events never overwrite
  * newer ones. Access rules are deliberately customer-friendly: a paid period
  * is always honoured, and failed renewals keep Pro for a grace window while
@@ -15,15 +16,17 @@ export type SubscriptionStatus =
 const STATUSES: readonly SubscriptionStatus[] = ["created", "authenticated", "active", "pending", "halted", "cancelled", "completed", "expired", "paused"];
 export const PENDING_GRACE_MS = 7 * 24 * 60 * 60 * 1000;
 
+export type BillingProviderId = "razorpay" | "dodo";
+
 export interface SubscriptionRecord {
-  provider: "razorpay";
+  provider: BillingProviderId;
   subscriptionId: string;
   interval: BillingInterval;
   status: SubscriptionStatus;
   /** End of the paid (or current) billing cycle, epoch ms. */
   currentEnd: number | null;
   cancelAtCycleEnd: boolean;
-  /** Hosted authorisation page while status is "created". */
+  /** Hosted checkout page while status is "created". */
   shortUrl: string | null;
   /** created_at of the last applied webhook event, epoch ms. */
   eventAt: number;
@@ -59,9 +62,21 @@ export interface SubscriptionEvent {
   createdAt: number;
   subscriptionId: string;
   status: SubscriptionStatus;
-  /** Epoch ms, or null when Razorpay has not started a cycle yet. */
+  /** Epoch ms, or null when the provider has not started a cycle yet. */
   currentEnd: number | null;
   interval: BillingInterval;
+  /** Defaults to "razorpay". */
+  provider?: BillingProviderId;
+  /** Set when the provider reports it (Dodo's cancel_at_next_billing_date); otherwise kept from the stored record. */
+  cancelAtPeriodEnd?: boolean;
+}
+
+/** A provider's view of one subscription, plus the account it belongs to when the provider knows it. */
+export interface ParsedSubscription {
+  event: SubscriptionEvent;
+  owner: string | null;
+  /** Provider customer id (Dodo), used to find the owner when metadata is missing. */
+  customerId?: string | null;
 }
 
 /**
@@ -79,13 +94,14 @@ export function applySubscriptionEvent(existing: SubscriptionRecord | null, even
     return null;
   }
   const same = existing?.subscriptionId === event.subscriptionId ? existing : null;
+  const running = event.status === "active" || event.status === "authenticated";
   return {
-    provider: "razorpay",
+    provider: event.provider ?? "razorpay",
     subscriptionId: event.subscriptionId,
     interval: event.interval,
     status: event.status,
     currentEnd: event.currentEnd ?? same?.currentEnd ?? null,
-    cancelAtCycleEnd: event.status === "active" || event.status === "authenticated" ? (same?.cancelAtCycleEnd ?? false) : false,
+    cancelAtCycleEnd: running ? (event.cancelAtPeriodEnd ?? same?.cancelAtCycleEnd ?? false) : false,
     shortUrl: event.status === "created" ? (same?.shortUrl ?? null) : null,
     eventAt: event.createdAt,
     updatedAt: now,
@@ -98,7 +114,7 @@ export function parseSubscriptionRecord(raw: unknown): SubscriptionRecord | null
   const r = value as Record<string, unknown>;
   if (typeof r.subscriptionId !== "string" || !isSubscriptionStatus(r.status)) return null;
   return {
-    provider: "razorpay",
+    provider: r.provider === "dodo" ? "dodo" : "razorpay",
     subscriptionId: r.subscriptionId,
     interval: r.interval === "yearly" ? "yearly" : "monthly",
     status: r.status,

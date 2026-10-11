@@ -6,7 +6,7 @@ import { runMorningDigest } from "../../../lib/push/digestRunner";
 import { pushStore } from "../../../lib/push/kvPushStore";
 import { cloudStore, projectionStore } from "../../../lib/workspace/kvCloudStore";
 import { recordMetric } from "../../../lib/metrics";
-import { billingConfig } from "../../../lib/billing/config";
+import { billingProviders } from "../../../lib/billing/config";
 import { billingStore } from "../../../lib/billing/kvBillingStore";
 import { reconcileDueSubscriptions } from "../../../lib/billing/reconcile";
 
@@ -28,11 +28,11 @@ export const GET: APIRoute = async ({ request }) => {
   if (!secret) return jsonResponse({ error: "CRON_SECRET is not configured." }, 503);
   if (!authorized(request.headers.get("authorization"), secret)) return jsonResponse({ error: "Unauthorized." }, 401);
   const now = Date.now();
-  const config = billingConfig();
+  const providers = billingProviders();
   let billing: Record<string, unknown> | undefined;
-  if (config) {
+  if (providers.dodo || providers.razorpay) {
     try {
-      const result = await reconcileDueSubscriptions(billingStore(), config, now, { deadline: now + 10_000 });
+      const result = await reconcileDueSubscriptions(billingStore(), providers, now, { deadline: now + 10_000 });
       if (result.activated) await recordMetric("pro_activated", result.activated, now);
       if (result.updated) await recordMetric("billing_reconciled", result.updated, now);
       billing = { ...result };

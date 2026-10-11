@@ -1,5 +1,5 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
-import { isSubscriptionStatus, type BillingInterval, type SubscriptionEvent } from "./subscription.ts";
+import { isSubscriptionStatus, type BillingInterval, type ParsedSubscription, type SubscriptionEvent } from "./subscription.ts";
 
 /**
  * Minimal Razorpay Subscriptions client (docs checked 2026-10):
@@ -37,8 +37,6 @@ export function verifyWebhookSignature(rawBody: string, signature: string | null
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   return timingSafeEqual(Buffer.from(expected, "hex"), Buffer.from(signature.toLowerCase(), "hex"));
 }
-
-type ParsedSubscription = { event: SubscriptionEvent; owner: string | null };
 
 /** A subscription entity (webhook payload or API response) as an event; null if it isn't one. */
 function subscriptionFromEntity(entity: Record<string, unknown> | undefined, event: string, createdAt: number, config: RazorpayConfig): ParsedSubscription | null {
