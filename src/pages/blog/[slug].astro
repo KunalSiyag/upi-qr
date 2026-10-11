@@ -426,6 +426,21 @@ const alternates = [
     padding: 0.75rem 1rem;
     border: 1px solid rgba(17, 59, 44, 0.1);
     text-align: left;
+    /* .blog-content's break-word lets table columns shrink to one letter on phones ("writin|g"); in cells, wrap at spaces and only split words that can't fit at all. */
+    word-break: normal;
+    overflow-wrap: break-word;
+  }
+  @media (max-width: 640px) {
+    /* Wide tables scroll inside themselves instead of being clipped by the page. */
+    .blog-content table {
+      display: block;
+      max-width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .blog-content th, .blog-content td {
+      padding: 0.6rem 0.65rem;
+    }
   }
 
   .blog-content th {
