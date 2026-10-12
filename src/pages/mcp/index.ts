@@ -69,7 +69,8 @@ const BROWSER_PAGE = `<!doctype html>
 
 export const ALL: APIRoute = async ({ request }) => {
   if (request.method === "GET" && (request.headers.get("accept") || "").includes("text/html")) {
-    return new Response(BROWSER_PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "public, max-age=3600" } });
+    // Never cacheable: Vercel's edge would replay this page to an MCP client's GET (which must get 405).
+    return new Response(BROWSER_PAGE, { headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store", Vary: "Accept" } });
   }
   return handleMcpHttp(request, server, { allowedOrigins: ALLOWED_ORIGINS, beforeToolCall: () => beforeToolCall(request) });
 };

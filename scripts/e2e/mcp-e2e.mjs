@@ -53,6 +53,7 @@ try {
   // People and browsers.
   const page = await fetch(`${DEV}/mcp/`, { headers: { Accept: "text/html" } });
   check("a browser gets a short explainer", page.status === 200 && (await page.text()).includes("This is the Pro UPI QR MCP server"));
+  check("the explainer is never cached (an edge cache would replay it to MCP clients)", page.headers.get("cache-control") === "no-store" && /accept/i.test(page.headers.get("vary") || ""), `${page.headers.get("cache-control")} / ${page.headers.get("vary")}`);
   check("GET for an event stream → 405", (await fetch(`${DEV}/mcp/`, { headers: { Accept: "text/event-stream" } })).status === 405);
   check("unknown browser origin → 403", (await rpc({ jsonrpc: "2.0", id: 4, method: "tools/list" }, { Origin: "https://evil.example", ...LEGACY })).status === 403);
 

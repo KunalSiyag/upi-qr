@@ -269,6 +269,7 @@ for (const [name, src] of [["route", mcpRoute], ["protocol", mcpProtocol], ["too
 assert.match(mcpRoute, /consumeRateLimit\("mcp-call", requestFingerprint\(request\)/, "tool calls are rate-limited per network");
 assert.match(mcpRoute, /recordMetric\("mcp_tool_call"\)/, "only an aggregate counter");
 assert.doesNotMatch(mcpRoute, /locals|auth\(|clerk/i, "the connector never reads a signed-in session");
+assert.doesNotMatch(mcpRoute, /public, max-age|s-maxage/, "no /mcp/ response may be cached at the edge (it would be replayed to MCP clients)");
 assert.match(mcpProtocol, /options\.allowedOrigins\.includes\(origin\)/, "browser origins are allow-listed (DNS rebinding guard)");
 assert.match(mcpProtocol, /readLimitedText\(request, options\.maxBodyBytes \?\? 64 \* 1024\)/, "request bodies are capped");
 assert.doesNotMatch(mcpProtocol, /["']Mcp-Session-Id["']\s*:/i, "no session id is ever sent");
