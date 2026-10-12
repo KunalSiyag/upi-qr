@@ -20,7 +20,10 @@ const pushServer = createServer(async (req, res) => {
   for await (const c of req) chunks.push(c);
   received.push({ url: req.url, headers: req.headers, body: Buffer.concat(chunks) });
   res.writeHead(respondWith); res.end();
-}).listen(8798, "127.0.0.1");
+});
+// An ephemeral port, so a dev server elsewhere on this machine can't collide with it.
+await new Promise((resolve) => pushServer.listen(0, "127.0.0.1", resolve));
+const PUSH_ORIGIN = `http://127.0.0.1:${pushServer.address().port}`;
 
 const ua = createECDH("prime256v1"); ua.generateKeys();
 const auth = Buffer.alloc(16, 9);
@@ -51,7 +54,7 @@ try {
   await admin("reset", {});
   await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(ws) });
   await admin("set", { key: `ws:rev:${OWNER}`, value: "1" });
-  const sub = { endpoint: "http://127.0.0.1:8798/push/phone", keys: { p256dh: b64u(ua.getPublicKey()), auth: b64u(auth) }, createdAt: T };
+  const sub = { endpoint: `${PUSH_ORIGIN}/push/phone`, keys: { p256dh: b64u(ua.getPublicKey()), auth: b64u(auth) }, createdAt: T };
   await admin("set", { hash: `push:subs:${OWNER}`, field: "phone", value: JSON.stringify(sub) });
   await fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(["sadd", "push:owners", OWNER]) });
 
@@ -80,7 +83,7 @@ try {
   const pub = Buffer.from(VAPID_PUBLIC, "base64url");
   const key = createPublicKey({ key: { kty: "EC", crv: "P-256", x: b64u(pub.subarray(1, 33)), y: b64u(pub.subarray(33)) }, format: "jwk" });
   check("VAPID JWT verifies with the server's public key", k === VAPID_PUBLIC && verify("sha256", Buffer.from(`${h}.${c}`), { key, dsaEncoding: "ieee-p1363" }, Buffer.from(s, "base64url")));
-  check("JWT audience is the push service origin", JSON.parse(Buffer.from(c, "base64url")).aud === "http://127.0.0.1:8798");
+  check("JWT audience is the push service origin", JSON.parse(Buffer.from(c, "base64url")).aud === PUSH_ORIGIN);
   const payload = decrypt(delivery.body);
   check("decrypted payload is the digest", payload.title === "1 invoice to chase today" && /Start with Acme Traders — ₹25,000, 12 days late\./.test(payload.body) && payload.url === "/app/", JSON.stringify(payload));
 

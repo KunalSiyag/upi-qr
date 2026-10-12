@@ -9,7 +9,9 @@ const admin = (path, body) => fetch(`${KV}/__admin/${path}`, { method: "POST", b
 const kvCmd = (cmd) => fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(cmd) }).then((r) => r.json());
 const day = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
 const metric = async (name) => Number((await admin("get", { key: `metrics:${name}:${day}` })).value || 0);
-const pushServer = createServer((req, res) => { req.resume(); req.on("end", () => { res.writeHead(201); res.end(); }); }).listen(8797, "127.0.0.1");
+const pushServer = createServer((req, res) => { req.resume(); req.on("end", () => { res.writeHead(201); res.end(); }); });
+await new Promise((resolve) => pushServer.listen(0, "127.0.0.1", resolve));
+const PUSH_ORIGIN = `http://127.0.0.1:${pushServer.address().port}`;
 
 const OWNER = "e".repeat(32);
 const TOKEN = "Mt7pQ2xYz9AbCdEfGhIjKl";
@@ -60,7 +62,7 @@ try {
   check("pro_cancelled counted", (await metric("pro_cancelled")) === 1);
 
   const ua = createECDH("prime256v1"); ua.generateKeys();
-  await admin("set", { hash: `push:subs:${OWNER}`, field: "phone", value: JSON.stringify({ endpoint: "http://127.0.0.1:8797/push/phone", keys: { p256dh: ua.getPublicKey().toString("base64url"), auth: Buffer.alloc(16, 1).toString("base64url") }, createdAt: T }) });
+  await admin("set", { hash: `push:subs:${OWNER}`, field: "phone", value: JSON.stringify({ endpoint: `${PUSH_ORIGIN}/push/phone`, keys: { p256dh: ua.getPublicKey().toString("base64url"), auth: Buffer.alloc(16, 1).toString("base64url") }, createdAt: T }) });
   await kvCmd(["sadd", "push:owners", OWNER]);
   const cron = await fetch(`${DEV}/api/cron/digest/`, { headers: { Authorization: `Bearer ${process.env.E2E_CRON_SECRET}` } });
   if (process.env.E2E_MODE === "prod") {
