@@ -26,6 +26,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { text: "Free accounts: sync between phone and laptop, plus pay links your clients can pay from", href: "/pricing/" },
       { text: "Pro: unlimited pay links, client statement links, and MSME mode with 45-day deadlines and Section 16 interest", href: "/pricing/" },
       { text: "New guide: Section 43B(h) and the 45-day MSME payment rule", href: "/blog/section-43b-h-msme-45-day-payment-rule/" },
+      { text: "Use Pro UPI QR inside Claude: an MCP server for UPI QR codes, payment links, error codes, GST and MSMED interest", href: "/mcp-server/" },
     ],
   },
   {

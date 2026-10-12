@@ -7,11 +7,11 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
 
 <BaseLayout title={title} description={description}>
   <main class="mx-auto max-w-4xl px-4 py-12 md:px-6 lg:px-8">
-    <div class="rounded-[2rem] border border-white/70 bg-white/85 p-6 shadow-md md:p-10">
+    <div class="rounded-[28px] border border-forest/10 bg-white p-6 shadow-md md:p-10">
       <a href="/hi/" class="text-sm font-bold text-leaf hover:underline">&larr; जनरेटर पर वापस जाएं</a>
       
       <h1 class="mt-6 text-4xl font-extrabold tracking-tight text-forest md:text-5xl">गोपनीयता नीति (Privacy Policy)</h1>
-      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 11 अक्टूबर, 2026</p>
+      <p class="mt-2 text-xs text-forest/50">अंतिम अपडेट: 12 अक्टूबर, 2026</p>
 
       <div class="mt-8 space-y-6 text-sm leading-relaxed text-forest/80">
         <section class="space-y-3">
@@ -68,29 +68,36 @@ const description = "जानें कौन से Pro UPI QR टूल ब�
           </p>
         </section>
 
+        <section id="mcp" class="scroll-mt-28 space-y-3">
+          <h2 class="text-xl font-bold text-forest">7. AI Assistant Connector (MCP)</h2>
+          <p>
+            अगर आप हमारा MCP server (https://www.proupiqr.in/mcp/) Claude या किसी दूसरे AI app में जोड़ते हैं, तो वह app हर टूल के लिए ज़रूरी जानकारी हमारे server को भेजता है, जैसे UPI ID, payee का नाम, राशि, नोट, upi:// लिंक, error code या तारीखें। हम इनका इस्तेमाल सिर्फ़ जवाब बनाने के लिए करते हैं और फिर हटा देते हैं: ये किसी database या हमारे logs में नहीं लिखी जातीं। हम tool calls की सिर्फ़ एक दैनिक कुल संख्या रखते हैं, बिना किसी पहचान के, और abuse रोकने के लिए network address का एक hashed counter, जो एक मिनट में expire हो जाता है। आपकी बातचीत AI app का provider (जैसे Claude के लिए Anthropic) अपनी privacy शर्तों के तहत संभालता है। Connector जो लिंक लौटाता है, उनमें payment की जानकारी address में # के बाद रहती है, जिसे आपका browser हमारे server को नहीं भेजता। <a href="/mcp-server/" class="text-leaf underline font-semibold">Connector कैसे काम करता है</a>।
+          </p>
+        </section>
+
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">7. Hosting, Security और Technical Logs</h2>
+          <h2 class="text-xl font-bold text-forest">8. Hosting, Security और Technical Logs</h2>
           <p>
             Vercel site और server functions host करता है और अपनी privacy terms के अनुसार IP address, user agent, timestamp और error log जैसी सामान्य request information process कर सकता है। Abuse रोकने के लिए हम थोड़े समय वाले hashed request fingerprints उपयोग करते हैं; rate-limit key अपनी निर्धारित window के बाद expire हो जाती हैं।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">8. Data Retention और Deletion</h2>
+          <h2 class="text-xl font-bold text-forest">9. Data Retention और Deletion</h2>
           <p>
             Dynamic campaign owner द्वारा delete किए जाने तक या abuse के कारण हटाए जाने तक रहती है। Checkout 24 घंटे और signed payment response 90 दिन में expire होते हैं। Early-access entries sign-up के 12 महीने बाद expire होती हैं। Sync किया गया workspace तब तक रहता है जब तक आप cloud copy या account न हटाएं; pay link तब तक जब तक आप उसे बंद न करें, और payer के दावे तब तक जब तक आप पुष्टि या खारिज न करें। Merchant settings account active रहने तक रहती हैं। Account, merchant profile या early-access entry हटाने के लिए उसी email address से हमें लिखें।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">9. Analytics, Advertising और बाहरी लिंक</h2>
+          <h2 class="text-xl font-bold text-forest">10. Analytics, Advertising और बाहरी लिंक</h2>
           <p>
             Google Analytics या Google AdSense नहीं चलता। Vercel Speed Insights cookie-free Core Web Vitals (LCP, INP, CLS) मापता है, फ़ॉर्म सामग्री नहीं। Vercel Web Analytics page views और नामित product events (QR generate, PNG/PDF export, share, copy, tool error, early-access card देखा, जुड़े या बंद किया, और payment tracker में invoice जोड़ा, payment दर्ज किया या reminder खोला) रिकॉर्ड करता है। इनमें केवल action नाम और छोटा tool slug होता है — VPA, payee नाम, राशि, invoice text या uploaded file नहीं। हमारा server रोज़ की कुल गिनती (जैसे कितनी visits में किसी मुफ़्त tool से download हुआ या payment tracker खुला — हर visit एक बार गिनी जाती है — कितने pay link बने या कितने Pro checkout शुरू हुए) भी रखता है, जिसमें कोई account, device या निजी पहचान नहीं जुड़ी होती। UPI apps या affiliate links Pro UPI QR से बाहर जाते हैं।
           </p>
         </section>
 
         <section class="space-y-3">
-          <h2 class="text-xl font-bold text-forest">10. संपर्क और Data Requests</h2>
+          <h2 class="text-xl font-bold text-forest">11. संपर्क और Data Requests</h2>
           <p>
             Privacy, access, correction या deletion request के लिए <a href="mailto:privacy@proupiqr.in" class="text-leaf underline font-semibold">privacy@proupiqr.in</a> पर संपर्क करें। UPI PIN, OTP या banking password कभी email न करें।
           </p>

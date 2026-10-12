@@ -3,7 +3,7 @@ import { clerkMiddleware } from "@clerk/astro/server";
 import { routeExistsInLang } from "./data/validRoutes";
 import { NON_EN_LANG_PATTERN } from "./lib/locale";
 
-const PRIVATE_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/dashboard", "/app", "/admin", "/c", "/i", "/api", "/embed", "/r"];
+const PRIVATE_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/dashboard", "/app", "/admin", "/c", "/i", "/api", "/embed", "/r", "/mcp"];
 const CLERK_ROUTE_PREFIXES = ["/sign-in", "/sign-up", "/dashboard", "/admin", "/api/dynamic", "/api/internal", "/api/v1"];
 
 const searchIndexPolicy = defineMiddleware(async (context, next) => {

@@ -255,4 +255,26 @@ assert.match(adminPage, /status: 404/, "non-admins get a 404, not a hint that th
 const metricsLib = readFileSync(join(projectRoot, "src/lib/metricsCore.ts"), "utf8");
 assert.doesNotMatch(metricsLib, /email|owner|userId|vpa/i, "metrics are aggregate counters only");
 
-console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, and admin guards passed");
+// MCP server (/mcp/, the Claude connector): stateless and read-only. Tool input is never logged or
+// stored; KV sees only the rate-limit window and the aggregate daily counter. No Clerk, no outside calls,
+// browser origins allow-listed, bodies capped, no sessions, and poster links keep the payment after #.
+const mcpRoute = readFileSync(join(projectRoot, "src/pages/mcp/index.ts"), "utf8");
+const mcpProtocol = readFileSync(join(projectRoot, "src/lib/mcp/protocol.ts"), "utf8");
+const mcpTools = readFileSync(join(projectRoot, "src/lib/mcp/tools.ts"), "utf8");
+for (const [name, src] of [["route", mcpRoute], ["protocol", mcpProtocol], ["tools", mcpTools]]) {
+  assert.doesNotMatch(src, /console\.(log|info|warn|error|debug)/, `MCP ${name} must not log tool input`);
+  assert.doesNotMatch(src, /from "@vercel\/kv"|\bkv\./, `MCP ${name} must not touch KV directly`);
+  assert.doesNotMatch(src, /\bfetch\(/, `MCP ${name} makes no outside calls (openWorldHint: false)`);
+}
+assert.match(mcpRoute, /consumeRateLimit\("mcp-call", requestFingerprint\(request\)/, "tool calls are rate-limited per network");
+assert.match(mcpRoute, /recordMetric\("mcp_tool_call"\)/, "only an aggregate counter");
+assert.doesNotMatch(mcpRoute, /locals|auth\(|clerk/i, "the connector never reads a signed-in session");
+assert.match(mcpProtocol, /options\.allowedOrigins\.includes\(origin\)/, "browser origins are allow-listed (DNS rebinding guard)");
+assert.match(mcpProtocol, /readLimitedText\(request, options\.maxBodyBytes \?\? 64 \* 1024\)/, "request bodies are capped");
+assert.doesNotMatch(mcpProtocol, /["']Mcp-Session-Id["']\s*:/i, "no session id is ever sent");
+assert.match(mcpProtocol, /readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false/);
+assert.match(mcpTools, /`\$\{SITE\}\/#pay\?/, "poster links carry the payment after #, never in the query string");
+assert.match(middleware, /PRIVATE_ROUTE_PREFIXES = \[[^\]]*"\/mcp"\]/, "the endpoint is noindex");
+assert.doesNotMatch(middleware.match(/CLERK_ROUTE_PREFIXES = \[[^\]]*\]/)[0], /\/mcp/, "Clerk stays off /mcp/");
+
+console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, and MCP guards passed");

@@ -1,0 +1,226 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { proUpiQrServer, SITE } from "../lib/mcp/tools.ts";
+import { LEGACY_VERSIONS, MODERN_VERSIONS } from "../lib/mcp/protocol.ts";
+
+const title = "UPI MCP Server: UPI QR & Payment Links in Claude | Pro UPI QR";
+const description =
+  "Connect Pro UPI QR to Claude with one URL: a free, read-only MCP server for UPI payment links, QR codes, UPI error codes, GST, MSMED interest and MDR.";
+const url = `${SITE}/mcp-server/`;
+const endpoint = `${SITE}/mcp/`;
+// The page lists exactly what the endpoint serves.
+const { tools } = proUpiQrServer({ catalog: [] });
+
+const link = "font-semibold text-forest underline underline-offset-4 hover:text-leaf";
+
+const steps = [
+  {
+    name: "Copy the server URL",
+    text: `Copy ${endpoint}. It needs no API key and no sign-in.`,
+  },
+  {
+    name: "Add a custom connector in Claude",
+    text: "In Claude on the web or desktop, open Settings → Connectors, choose Add custom connector, name it Pro UPI QR and paste the URL. On Team and Enterprise plans an owner may need to add it for the organization first.",
+  },
+  {
+    name: "Turn it on in a chat and ask",
+    text: "Enable Pro UPI QR from the tools menu in a chat, then ask in plain words, for example: make a UPI QR for ₹499 to ramesh@okaxis.",
+  },
+];
+
+const prompts = [
+  "Make a UPI QR for ₹499 to ramesh@okaxis, name Ramesh Stores, note “Order 112”.",
+  "Create a UPI payment link to split ₹2,340 four ways; pay to asha@oksbi.",
+  "My customer's payment failed with U30. Was money debited, and what should they do?",
+  "Is this QR safe to pay? upi://pay?pa=shop@ybl&pn=Shop&am=1500",
+  "GST on ₹12,000 at 18% for a sale to another state.",
+  "A buyer paid my ₹2,40,000 invoice dated 1 March on 10 October. How much MSMED interest can I claim?",
+  "What will 0.4% UPI MDR cost me on a ₹5,000 sale, and do I pay it as a small shop?",
+  "Write ₹1,25,050.50 in words for a cheque.",
+];
+
+const faqs = [
+  {
+    question: "Is the Pro UPI QR MCP server free?",
+    answer: "Yes. Every tool is free, needs no account and no API key, and stays that way. It's the same free toolkit as the website, reachable from Claude.",
+  },
+  {
+    question: "Can Claude move money with it?",
+    answer: "No. The tools only compute answers: they build upi://pay links and QR images, read links, and do GST, MSMED and MDR arithmetic. Money moves only when a payer opens their own UPI app and enters their UPI PIN.",
+  },
+  {
+    question: "What happens to the UPI ID, names and amounts I send?",
+    answer: "They are used to compute the reply and then discarded. Nothing is written to a database or log. We count how many tool calls happen each day, as one total, and keep a hashed network address for a minute to stop runaway loops.",
+  },
+  {
+    question: "Does it work with other AI apps?",
+    answer: "Any app that can add a remote MCP server over Streamable HTTP can use the same URL, with no authentication. In Claude Code: claude mcp add --transport http proupiqr https://www.proupiqr.in/mcp/",
+  },
+  {
+    question: "Why not just ask Claude to write the UPI link?",
+    answer: "The tools return a correctly encoded upi://pay link and a real, scannable QR image, do money arithmetic in whole paise, and use maintained data: the NPCI error-code list and the current RBI Bank Rate for MSMED interest.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": `${url}#app`,
+      name: "Pro UPI QR MCP server",
+      applicationCategory: "DeveloperApplication",
+      operatingSystem: "Any",
+      url,
+      description,
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+      publisher: { "@id": `${SITE}/#organization` },
+    },
+    {
+      "@type": "HowTo",
+      name: "Add Pro UPI QR to Claude",
+      step: steps.map((step, index) => ({ "@type": "HowToStep", position: index + 1, name: step.name, text: step.text })),
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({ "@type": "Question", name: faq.question, acceptedAnswer: { "@type": "Answer", text: faq.answer } })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: `${SITE}/` },
+        { "@type": "ListItem", position: 2, name: "Developers", item: `${SITE}/developer/` },
+        { "@type": "ListItem", position: 3, name: "Claude connector", item: url },
+      ],
+    },
+  ],
+};
+
+const curl = `curl -s ${endpoint} \\
+  -H 'Content-Type: application/json' \\
+  -H 'Accept: application/json, text/event-stream' \\
+  -H 'MCP-Protocol-Version: 2025-11-25' \\
+  -d '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"create_upi_payment_link","arguments":{"upi_id":"ramesh@okaxis","payee_name":"Ramesh Stores","amount":499}}}'`;
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-12 pt-8 md:px-6 md:pt-14 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span>/</span>
+          <a href="/developer/" class="transition-colors hover:text-leaf">Developers</a>
+          <span>/</span>
+          <span class="font-bold text-forest" aria-current="page">Claude connector</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">MCP server · free · no sign-in</p>
+        <h1 class="mt-2 text-4xl font-black leading-[1.05] tracking-[-0.02em] text-obsidian md:text-6xl">Use Pro UPI QR inside Claude</h1>
+        <p class="mt-4 max-w-3xl text-lg leading-8">
+          Add one URL to Claude and ask in plain words: make a UPI QR for ₹499, explain error U30, work out GST on ₹12,000.
+          Claude calls our tools and answers with exact amounts, a scannable QR, and a link to print the poster. The tools are read-only and nothing you send is stored.
+        </p>
+
+        <div class="mt-8 rounded-[28px] bg-fog p-5 md:p-7">
+          <p class="text-sm font-bold text-muted">Server URL</p>
+          <p class="mt-2 break-all font-mono text-lg font-semibold text-obsidian md:text-2xl"><code class="select-all">{endpoint}</code></p>
+          <p class="mt-3 text-[15px] leading-6">Streamable HTTP. No API key, no OAuth. Use the <code class="font-mono text-sm">www</code> address with the trailing slash.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="setup" class="scroll-mt-20 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl border-t border-forest/10 pt-12">
+        <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">Add it in two minutes</h2>
+        <ol class="mt-8 grid gap-x-10 gap-y-6 md:grid-cols-3">
+          {steps.map((step, index) => (
+            <li>
+              <p class="flex h-8 w-8 items-center justify-center rounded-full bg-mint text-sm font-bold text-forest" aria-hidden="true">{index + 1}</p>
+              <h3 class="mt-3 text-lg font-bold text-obsidian">{step.name}</h3>
+              <p class="mt-1.5 text-[15px] leading-6">{step.text}</p>
+            </li>
+          ))}
+        </ol>
+        <div class="mt-10 min-w-0">
+          <h3 class="text-lg font-bold text-obsidian">Claude Code</h3>
+          <pre class="mt-2 overflow-x-auto rounded-[10px] bg-obsidian p-4 text-sm leading-6 text-mint"><code>claude mcp add --transport http proupiqr {endpoint}</code></pre>
+          <h3 class="mt-6 text-lg font-bold text-obsidian">Other AI apps</h3>
+          <p class="mt-2 text-[15px] leading-6">Any app that adds remote MCP servers over Streamable HTTP can use the same URL with no authentication.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="tools" class="scroll-mt-20 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">{tools.length} tools, all read-only</h2>
+        <p class="mt-3 max-w-3xl text-lg leading-8">Each tool computes an answer from what you ask. None can sign in, store anything or move money.</p>
+        <ul class="mt-8 grid gap-x-10 md:grid-cols-2">
+          {tools.map((tool) => (
+            <li class="border-t border-forest/10 py-5">
+              <h3 class="text-lg font-bold text-obsidian">{tool.title}</h3>
+              <p class="mt-0.5 font-mono text-sm text-muted">{tool.name}</p>
+              <p class="mt-2 text-[15px] leading-6">{tool.description}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section id="examples" class="scroll-mt-20 bg-mint px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">Things to ask</h2>
+        <ul class="mt-6 grid gap-x-10 md:grid-cols-2">
+          {prompts.map((prompt) => (
+            <li class="border-t border-forest/15 py-4 text-[15px] leading-6 text-obsidian">“{prompt}”</li>
+          ))}
+        </ul>
+        <p class="mt-6 text-[15px] leading-6">
+          Links in Claude's answers open the matching free tool: the QR link fills in the{" "}<a href="/" class={link}>UPI QR generator</a>{" "}so you can download a printable poster or{" "}<a href="/qr-sticker-generator/" class={link}>sticker sheet</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="privacy" class="scroll-mt-20 px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-5xl gap-10 md:grid-cols-2">
+        <div class="min-w-0">
+          <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">What happens to your data</h2>
+          <ul class="mt-6 space-y-3 text-[15px] leading-6">
+            <li><span class="font-bold text-obsidian">Used, then discarded.</span> UPI IDs, names, amounts and links you send are used to compute the reply. Nothing is written to a database or log.</li>
+            <li><span class="font-bold text-obsidian">Counted, not tracked.</span> We keep one daily total of tool calls, with no identifiers.</li>
+            <li><span class="font-bold text-obsidian">Limits.</span> 300 tool calls a minute per network address, kept as a one-minute hashed counter, so a stuck loop can't run up the bill.</li>
+            <li><span class="font-bold text-obsidian">Poster links stay on your device.</span> The payment rides after the # in the link, which browsers never send to a server.</li>
+          </ul>
+          <p class="mt-4 text-[15px] leading-6">Details in the{" "}<a href="/privacy/#mcp" class={link}>privacy policy</a>.</p>
+        </div>
+        <div class="min-w-0">
+          <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">For developers</h2>
+          <ul class="mt-6 space-y-3 text-[15px] leading-6">
+            <li>Streamable HTTP at <code class="font-mono text-sm">{endpoint}</code>. Each POST gets one JSON reply; no SSE stream, no sessions.</li>
+            <li>Protocol {MODERN_VERSIONS.join(", ")} (per-request metadata, <code class="font-mono text-sm">server/discover</code>) and {LEGACY_VERSIONS.join(", ")} (<code class="font-mono text-sm">initialize</code> handshake).</li>
+            <li>Errors follow the spec: header mismatches return 400 with code -32020, unsupported versions 400 with -32022 and the supported list.</li>
+          </ul>
+          <pre class="mt-5 overflow-x-auto rounded-[10px] bg-obsidian p-4 text-xs leading-5 text-mint"><code>{curl}</code></pre>
+          <p class="mt-3 text-[15px] leading-6">Building your own checkout instead? See the{" "}<a href="/developer/" class={link}>embed widget and checkout API</a>.</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="faq" class="scroll-mt-20 px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">Questions</h2>
+        <div class="mt-8 grid gap-3">
+          {faqs.map((faq) => (
+            <details class="group rounded-[10px] bg-fog px-5 py-4">
+              <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-lg font-bold text-obsidian">
+                <span>{faq.question}</span>
+                <span class="mt-0.5 text-2xl leading-none text-forest transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+              </summary>
+              <p class="mt-3 max-w-3xl text-base leading-7">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+        <p class="mt-8 text-sm leading-6 text-muted">Claude is a trademark of Anthropic. Pro UPI QR is an independent product and is not affiliated with or endorsed by Anthropic or NPCI.</p>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

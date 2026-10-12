@@ -67,6 +67,9 @@ jobs:
       - name: Workspace model and sync tests
         run: npm run test:workspace
 
+      - name: MCP server (Claude connector) tests
+        run: npm run test:mcp
+
       - name: RSS validity
         run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"
 

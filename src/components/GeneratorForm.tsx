@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { parseUpiUri } from "../lib/upi-uri";
 import { GENERATOR_COPY, TEMPLATE_COPY, type GeneratorLang } from "../data/generatorI18n";
 import { isWaitlistLang } from "../data/waitlist";
 import { WaitlistCard } from "./WaitlistCard";
@@ -241,6 +242,25 @@ function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
 
+/**
+ * A payment shared as /#pay?pa=…&pn=…[&am=…][&tn=…] (the links our Claude connector
+ * returns). It rides in the URL fragment, which never reaches a server, and leaves
+ * the address bar once read.
+ */
+function sharedPayment(): { pa: string; pn: string; am: string; tn: string } | null {
+  const hash = window.location.hash;
+  if (!hash.startsWith("#pay?")) return null;
+  window.history.replaceState(null, "", window.location.pathname + window.location.search);
+  const parsed = parseUpiUri(`upi://pay?${hash.slice(5)}`);
+  if (!isValidUpiId(parsed.pa) || !parsed.pn) return null;
+  return {
+    pa: parsed.pa,
+    pn: parsed.pn.slice(0, 99),
+    am: parsed.amountPaise && parsed.am ? parsed.am : "",
+    tn: (parsed.tn ?? "").slice(0, 80),
+  };
+}
+
 export interface GeneratorFormProps {
   presetType?:
     | "phonepe"
@@ -301,6 +321,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
   const upiUrl = useMemo(() => buildUpiUrl(form), [form]);
 
   const isInitialized = useRef(false);
+  const generateOnLoad = useRef(false);
 
   useEffect(() => {
     let initialForm: FormState = {
@@ -349,7 +370,17 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       }
     }
 
-    // 2. If presetType is defined, override specific preset settings
+    // 2. A shared payment link wins over the draft and opens on the poster, where the
+    // amount and note are visible and editable; its QR renders straight away
+    const shared = sharedPayment();
+    if (shared) {
+      initialForm = { ...initialForm, upiId: shared.pa, payee: shared.pn, amount: shared.am, note: shared.tn };
+      initialMode = "advanced";
+      initialShowOptional = Boolean(shared.am || shared.tn);
+      generateOnLoad.current = true;
+    }
+
+    // 3. If presetType is defined, override specific preset settings
     if (presetType) {
       initialMode = "advanced";
       if (presetType === "donation") {
@@ -379,6 +410,13 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     // Exclude large dataURLs from localStorage to prevent quota limit errors
     const { logoUrl, coverUrl, ...savableForm } = form;
     window.localStorage.setItem(draftKey, JSON.stringify(savableForm));
+  }, [form]);
+
+  useEffect(() => {
+    // The first pass still holds the empty initial form; wait for the shared one.
+    if (!generateOnLoad.current || !form.upiId) return;
+    generateOnLoad.current = false;
+    void handleGenerate();
   }, [form]);
 
   const activeTemplate =

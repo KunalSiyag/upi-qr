@@ -73,6 +73,12 @@ Developers can embed the free UPI QR generator inside any web application:
 
 ---
 
+## MCP Server (Claude connector)
+- **Endpoint**: `https://www.proupiqr.in/mcp/` (Streamable HTTP, no authentication, read-only). Setup guide: https://www.proupiqr.in/mcp-server/
+- **Tools**: create_upi_payment_link, generate_upi_qr_code (PNG), read_upi_link, explain_upi_error, calculate_gst, calculate_msmed_interest, calculate_upi_mdr, amount_in_words, find_merchant_tools.
+- **Protocol**: 2026-07-28 (per-request metadata, server/discover) and 2025-03-26 to 2025-11-25 (initialize). Stateless JSON replies; nothing sent to the tools is stored.
+- **Claude Code**: `claude mcp add --transport http proupiqr https://www.proupiqr.in/mcp/`
+
 ## Official Links & Repositories
 - **Website**: https://www.proupiqr.in/
 - **GitHub Repository**: https://github.com/KunalSiyag/upi-qr
