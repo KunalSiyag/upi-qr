@@ -401,7 +401,7 @@ ${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
       <div className="no-print space-y-6 rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/10 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{t.eyebrow}</p>
+            <p className="text-sm font-semibold text-leaf">{t.eyebrow}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">

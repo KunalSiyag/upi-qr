@@ -211,13 +211,13 @@ export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Proforma builder")}</p>
+            <p className="text-sm font-semibold text-leaf">{tr("Proforma builder")}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Formal Advance Requests")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `${"💬"} ${tr("WhatsApp Share")}`}</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${"📄"} ${tr("Download PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("Download PNG")}`}</button>
+            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `${tr("WhatsApp Share")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
           </div>
         </div>
 

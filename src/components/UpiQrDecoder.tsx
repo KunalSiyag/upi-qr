@@ -491,13 +491,13 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
                     href={`/?upiId=${encodeURIComponent(parsedData.vpa)}&name=${encodeURIComponent(parsedData.name)}#generator`}
                     className="inline-flex items-center justify-center flex-1 py-3 px-5 rounded-2xl bg-leaf text-white font-black text-sm hover:bg-forest transition-all shadow-md gap-2"
                   >
-                    🎨 Print Counter Standee →
+                    Print Counter Standee →
                   </a>
                   <a
                     href="/dynamic-qr-generator/"
                     className="inline-flex items-center justify-center flex-1 py-3 px-5 rounded-2xl border-2 border-forest/20 bg-forest/5 text-forest font-black text-sm hover:bg-forest hover:text-white transition-all shadow-sm gap-2"
                   >
-                    📊 Make Trackable Dynamic QR →
+                    Make Trackable Dynamic QR →
                   </a>
                 </div>
               )}

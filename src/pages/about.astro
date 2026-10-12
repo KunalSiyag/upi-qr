@@ -123,7 +123,7 @@ const schema = {
           <span>/</span>
           <span class="font-bold text-forest" aria-current="page">About</span>
         </nav>
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">About us</p>
+        <p class="text-sm font-semibold text-leaf">About us</p>
         <h1 class="mt-3 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">We help India's small businesses get paid.</h1>
         <p class="mt-6 max-w-3xl text-lg leading-8 text-forest/75">
           UPI made taking money free. Getting paid on time still isn't. Pro UPI QR builds everything around the payment: the QR on your counter, the invoice and the receipt, the reminder, and a tracker that shows who still owes you.
@@ -148,7 +148,7 @@ const schema = {
 
     <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we build</p>
+        <p class="text-sm font-semibold text-leaf">What we build</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Start free. Grow into the tracker.</h2>
         <div class="mt-8 grid gap-5 md:grid-cols-3">
           {products.map((product) => (
@@ -174,7 +174,7 @@ const schema = {
 
     <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we believe</p>
+        <p class="text-sm font-semibold text-leaf">What we believe</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Four rules we build by</h2>
         <div class="mt-8 grid gap-4 sm:grid-cols-2">
           {principles.map((principle) => (
@@ -193,14 +193,14 @@ const schema = {
     <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto grid max-w-5xl gap-5 md:grid-cols-2">
         <div class="rounded-[2rem] border border-white/75 bg-white/90 p-6">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Who's building it</p>
+          <p class="text-sm font-semibold text-leaf">Who's building it</p>
           <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">Independent and founder-led</h2>
           <p class="mt-3 text-sm leading-6 text-forest/72">
             <a href={DEFAULT_AUTHOR.path} class={link}>{DEFAULT_AUTHOR.name}</a> founded Pro UPI QR in 2026, builds the product and writes the guides. There's no hidden editorial board. Follow along on <a href="https://x.com/proupiqr" rel="noopener noreferrer" class={link}>X</a> and <a href="https://github.com/KunalSiyag/upi-qr" rel="noopener noreferrer" class={link}>GitHub</a>, or read the reviews on <a href="https://www.producthunt.com/products/pro-upi-qr" rel="noopener noreferrer" class={link}>Product Hunt</a> and our <a href="/reviews/" class={link}>reviews page</a>.
           </p>
         </div>
         <div class="rounded-[2rem] border border-white/75 bg-white/90 p-6">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What's next</p>
+          <p class="text-sm font-semibold text-leaf">What's next</p>
           <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">Reminders that send themselves</h2>
           <p class="mt-3 text-sm leading-6 text-forest/72">
             We're building automatic WhatsApp reminders, so overdue invoices follow up without you. Pro members get early access. See <a href="/changelog/" class={link}>everything we've shipped so far</a>, and tell us what to build next: <a href={`mailto:${BUSINESS.emails.feedback}`} class={link}>{BUSINESS.emails.feedback}</a>.
@@ -211,7 +211,7 @@ const schema = {
 
     <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">What we're not</p>
+        <p class="text-sm font-semibold text-leaf">What we're not</p>
         <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">So nobody is confused</h2>
         <ul class="mt-5 grid gap-2 text-sm leading-6 text-forest/75 sm:grid-cols-2">
           <li class="rounded-xl bg-white/80 px-4 py-3">Not NPCI, BHIM, or a government service.</li>
@@ -227,7 +227,7 @@ const schema = {
 
     <section class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Talk to us</p>
+        <p class="text-sm font-semibold text-leaf">Talk to us</p>
         <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">A real person reads every email</h2>
         <ul class="mt-5 grid gap-2 text-sm text-forest/75 sm:grid-cols-2">
           <li>Support and billing: <a href={`mailto:${BUSINESS.emails.support}`} class={link}>{BUSINESS.emails.support}</a></li>
@@ -243,11 +243,11 @@ const schema = {
 
     <section id="faq" class="px-4 py-12 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight text-forest">Frequently asked questions</h2>
         <div class="mt-6 grid gap-4">
           {faqs.map((faq) => (
-            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+            <details class="rounded-[10px] bg-fog px-5 py-4">
               <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
               <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
             </details>

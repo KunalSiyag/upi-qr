@@ -40,7 +40,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       {/* Input Form */}
       <div className="rounded-3xl border border-leaf/20 bg-white p-6 md:p-8 shadow-sm space-y-5">
         <h3 className="text-xl font-black text-forest border-b border-forest/10 pb-3 flex items-center gap-2">
-          <span className="text-leaf">⚡</span> Enter UPI Payment Link Details
+          Enter UPI Payment Link Details
         </h3>
 
         <div className="grid sm:grid-cols-2 gap-4">
@@ -130,7 +130,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               rel="noopener noreferrer"
               className="py-2.5 px-4 rounded-xl bg-[#25D366] text-white hover:opacity-90 text-xs font-bold transition-all flex items-center gap-1.5"
             >
-              💬 Share via WhatsApp
+              Share via WhatsApp
             </a>
           </div>
         </div>
@@ -139,7 +139,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="rounded-3xl border border-leaf/20 bg-white p-6 shadow-sm space-y-5 flex flex-col justify-between">
           <div>
             <h4 className="text-base font-black text-forest flex items-center gap-2">
-              💻 HTML Payment Button Code
+              HTML Payment Button Code
             </h4>
             <p className="text-xs text-forest/60 mt-1">
               Paste this HTML snippet into your website, invoice email, or HTML landing page.

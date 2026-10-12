@@ -204,13 +204,13 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Payslip builder")}</p>
+            <p className="text-sm font-semibold text-leaf">{tr("Payslip builder")}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Issue Salary Slips Free")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">💬 Share</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `📄 ${tr("Download PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `🖼️ ${tr("Download PNG")}`}</button>
+            <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">Share</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
           </div>
         </div>
 

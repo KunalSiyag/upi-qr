@@ -95,13 +95,13 @@ function toolHref(href: string): string {
   <section class="mt-12 border-t border-forest/10 pt-10 space-y-10">
     {relatedTools.length > 0 && (
       <div>
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">{labels.toolsTitle}</p>
+        <p class="text-sm font-semibold text-leaf">{labels.toolsTitle}</p>
         <p class="mt-2 text-sm text-forest/70">{labels.toolsSubtitle}</p>
         <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {relatedTools.map((tool) => (
             <a
               href={toolHref(tool.href)}
-              class="group flex flex-col justify-between rounded-2xl border border-forest/8 bg-[#fffdf6] p-5 transition-all duration-300 hover:border-leaf/25 hover:shadow-md"
+              class="group flex flex-col justify-between rounded-[10px] bg-fog p-5 transition-colors hover:bg-mint"
             >
               <div>
                 <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">
@@ -120,13 +120,13 @@ function toolHref(href: string): string {
 
     {relatedGuides.length > 0 && (
       <div>
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">{labels.guidesTitle}</p>
+        <p class="text-sm font-semibold text-leaf">{labels.guidesTitle}</p>
         <p class="mt-2 text-sm text-forest/70">{labels.guidesSubtitle}</p>
         <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {relatedGuides.map((guide) => (
             <a
               href={guidePath(guide.id.replace(/\.mdx?$/, ""))}
-              class="group flex flex-col justify-between rounded-2xl border border-forest/8 bg-white p-5 transition-all duration-300 hover:border-leaf/25 hover:shadow-md"
+              class="group flex flex-col justify-between rounded-[10px] border border-forest/10 bg-white p-5 transition-colors hover:border-leaf/40"
             >
               <div>
                 <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">

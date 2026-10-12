@@ -78,7 +78,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 : "bg-cream text-forest/70 hover:bg-mint"
             }`}
           >
-            🛠️ Review Card Builder
+            Review Card Builder
           </button>
           <button
             onClick={() => setActiveTab("preview")}
@@ -88,7 +88,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 : "bg-cream text-forest/70 hover:bg-mint"
             }`}
           >
-            📱 Card Preview
+            Card Preview
           </button>
         </div>
 
@@ -103,7 +103,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="md:col-span-7 space-y-6">
             <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-sm space-y-4">
               <h3 className="text-lg font-black text-forest border-b border-forest/10 pb-3 flex items-center gap-2">
-                <span className="text-leaf">📋</span> Business & Review Setup
+                Business & Review Setup
               </h3>
 
               <div className="space-y-3">
@@ -145,7 +145,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                     className="w-full px-4 py-2.5 rounded-xl border border-forest/20 text-xs font-mono text-forest outline-none focus:border-leaf"
                   />
                   <p className="text-[11px] text-forest/60 mt-1">
-                    💡 The QR opens this HTTPS review link directly. No tracking redirect is inserted.
+                    The QR opens this HTTPS review link directly. No tracking redirect is inserted.
                   </p>
                 </div>
               </div>
@@ -227,7 +227,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                     download="feedback-survey-qr.png"
                     className="block w-full py-2.5 rounded-xl bg-mint border border-leaf/20 text-forest text-xs font-bold hover:bg-leaf hover:text-white transition-all"
                   >
-                    🖼️ Download PNG QR
+                    Download PNG QR
                   </a>
                 )}
               </div>

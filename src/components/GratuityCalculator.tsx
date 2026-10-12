@@ -60,7 +60,7 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Gratuity planner")}</p>
+          <p className="text-sm font-semibold text-leaf">{tr("Gratuity planner")}</p>
           <h2 className="mt-1 text-2xl font-black text-forest">{tr("Estimate Leaving Benefits")}</h2>
         </div>
 
@@ -89,7 +89,7 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Estimated payout")}</p>
+          <p className="text-sm font-semibold text-leaf">{tr("Estimated payout")}</p>
           <h2 className="mt-1 text-xl font-black text-forest">{result.eligible ? "Gratuity payable on exit" : "Not yet eligible"}</h2>
         </div>
 

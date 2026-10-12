@@ -245,7 +245,7 @@ END:VCARD`;
               disabled={isExporting}
               className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md disabled:opacity-50"
             >
-              🖼️ Download Card PNG
+              Download Card PNG
             </button>
             <button
               type="button"
@@ -253,14 +253,14 @@ END:VCARD`;
               disabled={isExporting}
               className="flex-1 rounded-xl bg-mint border border-leaf/20 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors disabled:opacity-50"
             >
-              📄 Download Card PDF
+              Download Card PDF
             </button>
             <button
               type="button"
               onClick={downloadVcf}
               className="rounded-xl border border-forest/20 bg-cream py-3 px-4 text-xs font-bold text-forest hover:bg-white transition-colors"
             >
-              📇 Export .VCF
+              Export .VCF
             </button>
           </div>
         </div>

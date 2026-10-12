@@ -253,7 +253,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             onClick={downloadSampleCsv}
             className="rounded-full border border-forest/15 bg-mint/40 px-3 py-1 text-[10px] font-bold text-forest hover:bg-mint transition"
           >
-            📥 Sample CSV
+            Sample CSV
           </button>
         </div>
         <p className="mt-1 text-xs text-forest/60">Upload a CSV file or paste tabular data with columns: <code>Payee, UPI_ID, Amount, Note</code>.</p>
@@ -287,7 +287,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             disabled={isGenerating || parsedItems.length === 0}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf active:scale-95 disabled:opacity-50"
           >
-            {isGenerating ? downloadProgress : `📦 Download ZIP (${parsedItems.filter(i => i.status === "valid").length} PNGs)`}
+            {isGenerating ? downloadProgress : `Download ZIP (${parsedItems.filter(i => i.status === "valid").length} PNGs)`}
           </button>
           <button
             type="button"
@@ -295,7 +295,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             disabled={isGenerating || parsedItems.length === 0}
             className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl border border-forest/15 bg-mint/50 px-6 py-3.5 text-xs font-black text-forest transition hover:bg-mint active:scale-95 disabled:opacity-50"
           >
-            📄 Download Batch PDF
+            Download Batch PDF
           </button>
         </div>
       </div>

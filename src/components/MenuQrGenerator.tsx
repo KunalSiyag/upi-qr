@@ -211,7 +211,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
         <div className="rounded-3xl border border-leaf/30 bg-mint/30 p-6 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <h3 className="text-base font-black text-forest flex items-center gap-2">
-              ✨ Groq AI Auto-Menu Generator
+              Groq AI Auto-Menu Generator
             </h3>
             <span className="text-[10px] font-bold uppercase tracking-wider bg-leaf/10 text-leaf px-2.5 py-0.5 rounded-full">
               Llama 3.3 70B
@@ -383,7 +383,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
                       </div>
                     ) : (
                       <label className="cursor-pointer text-[10px] font-bold text-leaf hover:underline flex items-center gap-1">
-                        📷 Upload Product Photo
+                        Upload Product Photo
                         <input
                           type="file"
                           accept="image/*"
@@ -413,7 +413,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               disabled={isExporting}
               className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md disabled:opacity-50"
             >
-              🖼️ Download Menu PNG
+              Download Menu PNG
             </button>
             <button
               type="button"
@@ -421,7 +421,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               disabled={isExporting}
               className="flex-1 rounded-xl bg-mint border border-leaf/20 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors disabled:opacity-50"
             >
-              📄 Download Menu PDF
+              Download Menu PDF
             </button>
           </div>
         </div>

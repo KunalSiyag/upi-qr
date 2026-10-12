@@ -82,7 +82,7 @@ const schema = {
           <span>/</span>
           <span class="text-forest font-bold" aria-current="page">{hub.shortName}</span>
         </nav>
-        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
+        <p class="inline-flex text-sm font-semibold text-leaf">
           {hub.eyebrow}
         </p>
         <h1 class="mt-5 max-w-4xl text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">
@@ -96,18 +96,19 @@ const schema = {
       <section class="px-4 py-8 md:px-6 lg:px-8">
         <div class="mx-auto max-w-7xl">
           <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">{group.heading}</h2>
-          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+          <ul class="mt-5 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
             {group.tools.map((tool) => (
-              <a
-                href={tool.href}
-                class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(17,59,44,0.12)]"
-              >
-                <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{tool.name}</h3>
-                <p class="mt-2 flex-1 text-xs leading-6 text-forest/70">{tool.description}</p>
-                <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf opacity-80 group-hover:opacity-100">Open →</span>
-              </a>
+              <li class="border-t border-forest/10">
+                <a href={tool.href} class="group flex items-start justify-between gap-4 py-3.5">
+                  <div class="min-w-0">
+                    <h3 class="text-base font-bold text-obsidian group-hover:text-leaf">{tool.name}</h3>
+                    <p class="mt-0.5 text-sm leading-6">{tool.description}</p>
+                  </div>
+                  <span class="mt-0.5 shrink-0 text-forest/40 group-hover:text-leaf" aria-hidden="true">→</span>
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     ))}
@@ -117,18 +118,17 @@ const schema = {
         <div class="mx-auto max-w-7xl">
           <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Guides in this topic</h2>
           <p class="mt-1 text-sm font-semibold text-forest/65">From the article collection, not a hand-picked subset.</p>
-          <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          <ul class="mt-5 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
             {articles.map((post) => (
-              <a
-                href={`/blog/${post.id.replace(/\.mdx?$/, "")}/`}
-                class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5"
-              >
-                <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">{post.data.title}</h3>
-                <p class="mt-2 flex-1 text-xs leading-6 text-forest/70 line-clamp-3">{post.data.description}</p>
-                <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf">Read guide →</span>
-              </a>
+              <li class="border-t border-forest/10">
+                <a href={`/blog/${post.id.replace(/\.mdx?$/, "")}/`} class="group block py-4">
+                  <h3 class="line-clamp-2 text-base font-bold text-obsidian group-hover:text-leaf">{post.data.title}</h3>
+                  <p class="mt-1 line-clamp-3 text-sm leading-6">{post.data.description}</p>
+                  <span class="mt-1.5 inline-block text-sm font-semibold text-forest underline underline-offset-4">Read guide →</span>
+                </a>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
       </section>
     )}
@@ -136,11 +136,11 @@ const schema = {
     <section class="px-4 py-8 md:px-6 lg:px-8" id="faq">
       <div class="mx-auto max-w-7xl">
         <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Frequently asked questions</h2>
-        <div class="mt-5 grid gap-4 md:grid-cols-2">
+        <div class="mt-5 grid gap-x-10 md:grid-cols-2">
           {hub.faqs.map((faq) => (
-            <div class="rounded-2xl border border-forest/10 bg-white p-5 shadow-sm space-y-2">
-              <h3 class="text-sm font-black text-forest">{faq.question}</h3>
-              <p class="text-xs text-forest/75 leading-relaxed">{faq.answer}</p>
+            <div class="border-t border-forest/10 py-4">
+              <h3 class="text-base font-bold text-obsidian">{faq.question}</h3>
+              <p class="mt-1.5 text-sm leading-6">{faq.answer}</p>
             </div>
           ))}
         </div>
@@ -150,17 +150,16 @@ const schema = {
     <section class="px-4 py-8 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
         <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Related topics</h2>
-        <div class="mt-5 grid gap-4 sm:grid-cols-3">
+        <ul class="mt-5 grid gap-x-10 sm:grid-cols-3">
           {relatedHubs.map((related) => (
-            <a
-              href={related.path}
-              class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 transition hover:border-leaf/40"
-            >
-              <h3 class="text-base font-black text-forest">{related.shortName}</h3>
-              <p class="mt-2 text-xs leading-6 text-forest/70">{related.blurb}</p>
-            </a>
+            <li class="border-t border-forest/10">
+              <a href={related.path} class="group block py-4">
+                <h3 class="text-base font-bold text-obsidian group-hover:text-leaf">{related.shortName}</h3>
+                <p class="mt-1 text-sm leading-6">{related.blurb}</p>
+              </a>
+            </li>
           ))}
-        </div>
+        </ul>
       </div>
     </section>
   </main>

@@ -146,12 +146,12 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Unit economics</p>
+            <p className="text-sm font-semibold text-leaf">Unit economics</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Find Your Survival Point</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "📄 Analysis PDF"}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("PNG")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Analysis PDF"}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
 

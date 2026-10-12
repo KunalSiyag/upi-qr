@@ -176,7 +176,7 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               disabled={isExporting}
               className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-white hover:bg-forest/90 transition-all shadow-md disabled:opacity-50"
             >
-              🖼️ Download Poster PNG
+              Download Poster PNG
             </button>
             <button
               type="button"
@@ -184,7 +184,7 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               disabled={isExporting}
               className="flex-1 rounded-xl bg-mint border border-leaf/20 py-3 text-xs font-bold text-forest hover:bg-mint/80 transition-colors disabled:opacity-50"
             >
-              📄 Download Poster PDF
+              Download Poster PDF
             </button>
           </div>
         </div>

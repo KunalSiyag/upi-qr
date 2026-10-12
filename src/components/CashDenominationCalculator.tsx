@@ -187,7 +187,7 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">Night close</p>
+            <p className="text-sm font-semibold text-leaf">Night close</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Count cash, then close the till</h2>
           </div>
           <button onClick={clearAll} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600 transition">Clear all</button>
@@ -256,8 +256,8 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
         {varianceLabel && <p className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${varianceLabel.cls}`}>{varianceLabel.text}</p>}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "📄 Download summary PDF"}</button>
-          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("Download PNG")}`}</button>
+          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Download summary PDF"}</button>
+          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
         </div>
       </div>
 

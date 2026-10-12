@@ -78,7 +78,7 @@ const schema = {
           <span class="text-forest font-bold" aria-current="page">TReDS Calculator</span>
         </nav>
         <div class="max-w-4xl">
-          <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">B2B money tools</p>
+          <p class="inline-flex text-sm font-semibold text-leaf">B2B money tools</p>
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">TReDS discounting calculator for MSME invoices</h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Before accepting a financier's bid on RXIL, Invoicemart, or M1xchange — know exactly how much cash lands today, what the discount truly costs, and whether it beats your overdraft.</p>
           <div class="mt-7 flex flex-wrap gap-3">
@@ -97,11 +97,11 @@ const schema = {
 
     <section class="px-4 py-14 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">TReDS questions</h2>
         <div class="mt-8 grid gap-4">
           {faqs.map((faq) => (
-            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
+            <details class="rounded-[10px] bg-fog px-5 py-4">
               <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
               <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
             </details>

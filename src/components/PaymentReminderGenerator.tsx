@@ -6,7 +6,7 @@ import { trackProductEvent } from "../lib/productEvents";
 const draftKey = "proupiqr-payment-reminder-draft";
 
 const tones = [
-  { id: "friendly", label: "🙂 Friendly nudge", name: "Friendly nudge" },
+  { id: "friendly", label: "Friendly nudge", name: "Friendly nudge" },
   { id: "professional", label: "💼 Professional reminder", name: "Professional reminder" },
   { id: "firm", label: "⚠️ Firm final notice", name: "Firm final notice" }
 ] as const;
@@ -97,7 +97,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Reminder builder")}</p>
+          <p className="text-sm font-semibold text-leaf">{tr("Reminder builder")}</p>
           <h2 className="mt-1 text-2xl font-black text-forest">{tr("Chase Payments Politely")}</h2>
         </div>
 
@@ -131,7 +131,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex items-center justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Message preview")}</p>
+            <p className="text-sm font-semibold text-leaf">{tr("Message preview")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{tr(tones.find((item) => item.id === tone)?.name ?? "")}</h2>
           </div>
           <span className="rounded-full bg-mint px-3 py-1.5 text-[11px] font-black text-forest/70">{message.length} chars</span>
@@ -143,7 +143,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
 
         <div className="mt-5 flex flex-wrap gap-2">
           <button onClick={copyMessage} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf transition">{copied ? `${"✓"} ${tr("Copied!")}` : `${"📋"} ${tr("Copy message")}`}</button>
-          <button onClick={() => openWith("https://api.whatsapp.com/send?text=")} className="rounded-full bg-[#25D366] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1da851] transition">💬 WhatsApp</button>
+          <button onClick={() => openWith("https://api.whatsapp.com/send?text=")} className="rounded-full bg-[#25D366] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1da851] transition">WhatsApp</button>
           <button onClick={() => openWith("sms:?&body=")} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition">📱 SMS</button>
           <button onClick={() => openWith(`mailto:?subject=${encodeURIComponent(`Payment reminder - Invoice ${invoiceNo}`)}&body=`)} className="rounded-full border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:bg-mint transition">✉️ Email</button>
         </div>

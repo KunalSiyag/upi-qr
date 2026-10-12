@@ -204,13 +204,13 @@ export function CreditNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div className="border-b border-forest/5 pb-4 sm:w-auto sm:flex-1">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("GST credit note")}</p>
+            <p className="text-sm font-semibold text-leaf">{tr("GST credit note")}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Adjust A Taxed Sale")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-4">
-            <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">💬 {tr("Share")}</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${"📄"} ${tr("PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${"🖼️"} ${tr("PNG")}`}</button>
+            <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">{tr("Share")}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
 

@@ -373,7 +373,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
 
         <div className="flex flex-wrap gap-3 sm:justify-between items-start">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">MSMED receivables suite</p>
+            <p className="text-sm font-semibold text-leaf">MSMED receivables suite</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Invoice aging & demand letters</h2>
           </div>
           <div className="flex items-center gap-1 rounded-xl bg-cream p-1">

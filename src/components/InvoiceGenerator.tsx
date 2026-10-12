@@ -393,7 +393,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{t.eyebrow}</p>
+            <p className="text-sm font-semibold text-leaf">{t.eyebrow}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
@@ -403,14 +403,14 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               title={t.whatsapp}
               className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
             >
-              {shareState === "busy" ? t.preparing : `💬 ${t.whatsapp}`}
+              {shareState === "busy" ? t.preparing : `${t.whatsapp}`}
             </button>
             <button
               onClick={downloadInvoicePdf}
               disabled={downloadPdfState === "busy"}
               className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
             >
-              {downloadPdfState === "busy" ? t.generating : `📄 ${t.downloadPdf}`}
+              {downloadPdfState === "busy" ? t.generating : `${t.downloadPdf}`}
             </button>
             {template.currency === "INR" && (
               <button
@@ -418,7 +418,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
                 className="rounded-full border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-sun/30 transition"
               >
-                {`📒 ${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
+                {`${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
               </button>
             )}
             <button
@@ -426,7 +426,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               disabled={downloadPngState === "busy"}
               className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
             >
-              {downloadPngState === "busy" ? t.generating : `🖼️ ${t.downloadPng}`}
+              {downloadPngState === "busy" ? t.generating : `${t.downloadPng}`}
             </button>
           </div>
         </div>

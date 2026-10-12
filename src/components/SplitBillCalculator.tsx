@@ -200,7 +200,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Split calculator")}</p>
+          <p className="text-sm font-semibold text-leaf">{tr("Split calculator")}</p>
           <h2 className="mt-1 text-2xl font-black text-forest">{tr("Who ordered what")}</h2>
         </div>
 
@@ -330,7 +330,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
       <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-leaf">{tr("Who owes what")}</p>
+            <p className="text-sm font-semibold text-leaf">{tr("Who owes what")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{money(calc.grandPaise)} across {calc.n}</h2>
           </div>
           <button onClick={() => shareOnWhatsapp(null)} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm">
