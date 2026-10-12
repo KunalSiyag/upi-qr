@@ -39,362 +39,146 @@ const chrome = chromeFor(siteLang);
 const p = (slug: string) => localeHref(siteLang, slug);
 const activeLang = languages.find((language) => language.code === currentLang) ?? languages[0];
 const localeHome = currentLang === "en" ? "/" : `/${currentLang}/`;
+const hi = (en: string, hindi: string) => (isHindi ? hindi : en);
+const loginHref = "/sign-in/?redirect_url=" + encodeURIComponent("/app/");
+
+/**
+ * The Tools menu: the pages people search for (Search Console), grouped by the job.
+ * Every other tool is one click away on its hub ("All …") or on /tools/.
+ */
+const toolGroups = [
+  {
+    title: chrome.qrGenerators,
+    links: [
+      { href: localeHome, label: chrome.upiQrGenerator },
+      { href: p("universal-qr-generator"), label: "Universal QR" },
+      { href: p("phonepe-qr-generator"), label: "PhonePe QR" },
+      { href: p("google-pay-qr-generator"), label: "Google Pay QR" },
+      { href: p("paytm-qr-generator"), label: "Paytm QR" },
+      { href: p("bhim-qr-generator"), label: "NPCI / BHIM QR" },
+      { href: p("sbi-qr-generator"), label: "SBI QR" },
+      { href: p("qr-sticker-generator"), label: hi("QR stickers", "QR स्टीकर") },
+      { href: p("upi-qr-decoder"), label: hi("UPI QR decoder", "UPI QR डिकोडर") },
+    ],
+    more: { href: p("upi-qr-generators"), label: hi("All QR generators", "सभी QR जनरेटर") },
+  },
+  {
+    title: chrome.billing,
+    links: [
+      { href: p("invoice-generator"), label: hi("Invoice PDF", "इनवॉइस PDF") },
+      { href: p("receipt-generator"), label: hi("Payment receipt", "भुगतान रसीद") },
+      { href: p("paid-stamp-generator"), label: hi("Paid stamp", "PAID स्टैम्प") },
+      { href: p("quotation-generator"), label: hi("Quotation", "कोटेशन") },
+      { href: p("upi-link-generator"), label: hi("Payment link", "पेमेंट लिंक") },
+      { href: p("payment-tracker"), label: hi("Payment tracker", "पेमेंट ट्रैकर") },
+    ],
+    more: { href: p("merchant-documents"), label: hi("All documents", "सभी दस्तावेज़") },
+  },
+  {
+    title: chrome.calculators,
+    links: [
+      { href: p("upi-calculator"), label: hi("UPI fee calculator", "UPI शुल्क कैलकुलेटर") },
+      { href: p("gst-calculator"), label: hi("GST calculator", "GST कैलकुलेटर") },
+      { href: p("upi-mdr-calculator"), label: "UPI MDR (Oct 2026)" },
+      { href: p("upi-limits"), label: hi("Bank UPI limits", "बैंक UPI लिमिट") },
+      { href: p("upi-error-codes"), label: hi("UPI error codes", "UPI एरर कोड") },
+      { href: p("emi-calculator"), label: hi("EMI calculator", "EMI कैलकुलेटर") },
+    ],
+    more: { href: p("business-calculators"), label: hi("All calculators", "सभी कैलकुलेटर") },
+  },
+];
 ---
 
-<div class="relative">
-<header class="flex items-center justify-between gap-4 rounded-full border border-white/80 bg-white/85 px-4 py-3 backdrop-blur-md shadow-[0_8px_30px_rgb(0,0,0,0.06)] pointer-events-auto transition-all">
-  <a href={localeHome} class="flex items-center gap-2.5 text-sm sm:text-lg font-black tracking-tight text-forest shrink-0 hover:opacity-90">
-    <img src="/favicon.svg" alt="Pro UPI QR Logo" width="32" height="32" class="h-8 w-8 rounded-xl shadow-sm" />
+<header class="flex h-16 items-center justify-between gap-4">
+  <a href={localeHome} class="flex shrink-0 items-center gap-2.5 text-lg font-black tracking-tight text-obsidian">
+    <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8 rounded-[9px]" />
     <span>Pro UPI QR</span>
   </a>
 
-  <!-- Desktop Navigation -->
-  <nav class="hidden xl:flex items-center gap-1 text-xs md:text-sm font-semibold text-forest/80">
-    <!-- QR Generators Dropdown -->
-    <div class="relative group px-2 py-1">
-      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus-visible:ring-2 focus-visible:ring-leaf rounded-md focus:outline-none">
-        <span>{chrome.qrGenerators}</span>
-        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+  <nav aria-label="Main" class="hidden items-center gap-7 text-[15px] font-semibold text-forest lg:flex">
+    <div class="group relative">
+      <button type="button" aria-haspopup="true" class="flex min-h-11 items-center gap-1 rounded-full hover:text-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf">
+        <span>{chrome.toolsCol}</span>
+        <svg class="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
       </button>
-      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-64">
-        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-1">
-          <a href={localeHome} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">{chrome.upiQrGenerator}</div>
-              <div class="text-[10px] text-forest/60">{chrome.upiQrGeneratorHint}</div>
-            </div>
-          </a>
-          <a href={p("universal-qr-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">Universal QR Generator</div>
-              <div class="text-[10px] text-forest/60">URL, Text, WiFi, vCard & Contact</div>
-            </div>
-          </a>
-          <a href={p("qr-sticker-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">PhonePe / GPay stickers</div>
-              <div class="text-[10px] text-forest/60">Print 4, 6, or 12 shop QR stickers</div>
-            </div>
-          </a>
-          <a href={p("upi-qr-decoder")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">UPI QR decoder</div>
-              <div class="text-[10px] text-forest/60">Extract and verify a UPI ID from a QR</div>
-            </div>
-          </a>
-          <a href={p("upi-link-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">UPI payment link</div>
-              <div class="text-[10px] text-forest/60">upi://pay links for WhatsApp and invoices</div>
-            </div>
-          </a>
-          <a href={p("bulk-qr")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 10h16M4 14h16M4 18h16"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">Bulk CSV QR Generator</div>
-              <div class="text-[10px] text-forest/60">Batch generate QRs from Excel</div>
-            </div>
-          </a>
-          <a href={p("dynamic-qr-generator")} class="flex items-start gap-2.5 rounded-xl p-2 hover:bg-mint/60 transition-colors">
-            <div class="p-1.5 rounded-lg bg-mint text-leaf">
-              <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            </div>
-            <div>
-              <div class="text-xs font-bold text-forest">Dynamic QR & Link Shortener</div>
-              <div class="text-[10px] text-forest/60">Editable redirect QR links</div>
-            </div>
-          </a>
-          <a href={p("upi-qr-generators")} class="block rounded-xl p-2 text-center text-[11px] font-black uppercase tracking-wider text-leaf hover:bg-mint/60">
-            {isHindi ? "सभी UPI QR जनरेटर →" : "All UPI QR generators →"}
-          </a>
+      <div class="absolute left-0 top-full z-50 hidden w-[min(46rem,calc(100vw-4rem))] pt-2 group-focus-within:block group-hover:block">
+        <div class="rounded-[28px] border border-forest/10 bg-white p-6 shadow-[0_6px_20px_rgba(0,0,0,0.08)]">
+          <div class="grid grid-cols-3 gap-6">
+            {toolGroups.map((group) => (
+              <div>
+                <p class="px-2 text-xs font-bold text-muted">{group.title}</p>
+                <ul class="mt-2 space-y-0.5">
+                  {group.links.map((link) => (
+                    <li><a href={link.href} class="block rounded-[10px] px-2 py-1.5 text-sm font-semibold text-forest hover:bg-mint">{link.label}</a></li>
+                  ))}
+                </ul>
+                <a href={group.more.href} class="mt-2 inline-block px-2 text-sm font-semibold text-forest underline underline-offset-4 hover:text-leaf">{group.more.label}</a>
+              </div>
+            ))}
+          </div>
+          <div class="mt-5 flex items-center justify-between border-t border-forest/10 pt-4 text-sm font-semibold">
+            <span class="text-muted">{hi("Free, no signup. Made in your browser.", "मुफ्त, बिना साइनअप। आपके ब्राउज़र में बनता है।")}</span>
+            <a href={p("tools")} class="text-forest underline underline-offset-4 hover:text-leaf">{chrome.allTools} &rarr;</a>
+          </div>
         </div>
       </div>
     </div>
-
-    <!-- Billing documents -->
-    <div class="relative group px-2 py-1">
-      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus-visible:ring-2 focus-visible:ring-leaf rounded-md focus:outline-none">
-        <span>{chrome.billing}</span>
-        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-72">
-        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-0.5">
-          <a href={p("invoice-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Invoice PDF</div>
-            <div class="text-[10px] text-forest/60">GST invoices with a payment QR</div>
-          </a>
-          <a href={p("payment-tracker")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Payment tracker <span class="ml-1 rounded-full bg-sun/40 px-1.5 py-0.5 text-[9px] font-black">New</span></div>
-            <div class="text-[10px] text-forest/60">Who owes you + WhatsApp reminders</div>
-          </a>
-          <a href={p("receipt-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Payment receipt</div>
-            <div class="text-[10px] text-forest/60">PAID stamp, UTR, and UPI QR</div>
-          </a>
-          <a href={p("rent-receipt-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Rent receipt</div>
-            <div class="text-[10px] text-forest/60">HRA format with revenue stamp box</div>
-          </a>
-          <a href={p("quotation-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Quotation</div>
-            <div class="text-[10px] text-forest/60">Estimates with optional advance QR</div>
-          </a>
-          <a href={p("paid-stamp-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Paid stamp</div>
-            <div class="text-[10px] text-forest/60">Stamp PAID on a bill photo</div>
-          </a>
-          <a href={p("salary-slip-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Salary slip</div>
-            <div class="text-[10px] text-forest/60">Monthly payslip with deductions</div>
-          </a>
-          <a href={p("purchase-order-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Purchase order</div>
-            <div class="text-[10px] text-forest/60">Formal PO with GSTINs</div>
-          </a>
-          <a href={p("freelance-contract-generator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Freelance agreement</div>
-            <div class="text-[10px] text-forest/60">Milestones, IP, and advance QR</div>
-          </a>
-          <a href={p("merchant-documents")} class="block rounded-xl p-2 text-center text-[11px] font-black uppercase tracking-wider text-leaf hover:bg-mint/60">
-            {isHindi ? "सभी दस्तावेज़ →" : "All billing documents →"}
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <!-- Calculators -->
-    <div class="relative group px-2 py-1">
-      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus-visible:ring-2 focus-visible:ring-leaf rounded-md focus:outline-none">
-        <span>{chrome.calculators}</span>
-        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      <div class="absolute left-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-72">
-        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-0.5">
-          <a href={p("gst-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">GST calculator</div>
-            <div class="text-[10px] text-forest/60">Find the rate, then split tax</div>
-          </a>
-          <a href={p("upi-mdr-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">UPI MDR (Oct 2026)</div>
-            <div class="text-[10px] text-forest/60">0.4% above ₹2,000 — not a tax</div>
-          </a>
-          <a href={p("emi-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">EMI calculator</div>
-            <div class="text-[10px] text-forest/60">Loan EMI and amortization PDF</div>
-          </a>
-          <a href={p("sip-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">SIP calculator</div>
-            <div class="text-[10px] text-forest/60">Growth table and inflation view</div>
-          </a>
-          <a href={p("split-bill-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Split bill</div>
-            <div class="text-[10px] text-forest/60">Fair shares with UPI pay links</div>
-          </a>
-          <a href={p("cash-denomination-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Night-close till</div>
-            <div class="text-[10px] text-forest/60">Cash + UPI + card + bank bag</div>
-          </a>
-          <a href={p("upi-calculator")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">UPI fee calculator</div>
-            <div class="text-[10px] text-forest/60">Gateway 2.36% vs UPI after Oct MDR</div>
-          </a>
-          <a href={p("upi-limits")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">Bank UPI limits</div>
-            <div class="text-[10px] text-forest/60">Daily caps for 30+ banks</div>
-          </a>
-          <a href={p("upi-error-codes")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">NPCI error resolver</div>
-            <div class="text-[10px] text-forest/60">Paste Z9 / M16 / returned error</div>
-          </a>
-          <a href={p("business-calculators")} class="block rounded-xl p-2 text-center text-[11px] font-black uppercase tracking-wider text-leaf hover:bg-mint/60">
-            {isHindi ? "सभी कैलकुलेटर →" : "All calculators →"}
-          </a>
-        </div>
-      </div>
-    </div>
-
-    <a href={p("tools")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.allTools}</a>
-    <a href={p("blog")} class="px-2 py-1 hover:text-leaf transition-colors">{chrome.guides}</a>
-
-    <div class="relative group px-2 py-1">
-      <button type="button" class="flex items-center gap-1 hover:text-leaf transition-colors focus-visible:ring-2 focus-visible:ring-leaf rounded-md focus:outline-none">
-        <span>{chrome.more}</span>
-        <svg class="h-3.5 w-3.5 opacity-70 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
-      <div class="absolute right-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-72">
-        <div class="rounded-2xl border border-forest/10 bg-white/95 p-2 shadow-2xl backdrop-blur-xl space-y-0.5">
-          <a href={p("upi-qr-generators")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{isHindi ? "UPI QR जनरेटर" : "UPI QR generators"}</div>
-            <div class="text-[10px] text-forest/60">{isHindi ? "ऐप, बैंक, दुकान प्रीसेट" : "App, bank, and shop presets"}</div>
-          </a>
-          <a href={p("print-upi-qr")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{isHindi ? "प्रिंट और स्टैंडी" : "Print, stickers, standees"}</div>
-            <div class="text-[10px] text-forest/60">{isHindi ? "आकार, स्टीकर, पोस्टर" : "Sizes, sticker sheets, posters"}</div>
-          </a>
-          <a href="/products/" class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{isHindi ? "स्टैंडी और प्रिंटर" : "Standees & printers"}</div>
-            <div class="text-[10px] text-forest/60">{isHindi ? "एक्रिलिक, स्टीकर, थर्मल प्रिंटर" : "Acrylic, stickers, thermal printers"}</div>
-          </a>
-          <a href={p("developer")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{chrome.developers}</div>
-            <div class="text-[10px] text-forest/60">{isHindi ? "एम्बेड और API" : "Embed widget and payment API"}</div>
-          </a>
-          <a href="/pricing/" class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{isHindi ? "प्राइसिंग" : "Pricing"}</div>
-            <div class="text-[10px] text-forest/60">{isHindi ? "मुफ्त टूल, Pro प्लान" : "Free tools, free account, Pro"}</div>
-          </a>
-          <a href={p("about")} class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{chrome.about}</div>
-          </a>
-          <a href="/reviews/" class="block rounded-xl px-3 py-2 hover:bg-mint/60">
-            <div class="text-xs font-bold text-forest">{chrome.reviews}</div>
-          </a>
-        </div>
-      </div>
-    </div>
+    <a href={p("payment-tracker")} class="hover:text-leaf">{hi("Payment tracker", "पेमेंट ट्रैकर")}</a>
+    <a href="/pricing/" class="hover:text-leaf">{hi("Pricing", "प्राइसिंग")}</a>
+    <a href={p("blog")} class="hover:text-leaf">{chrome.guides}</a>
   </nav>
 
-  <div class="flex items-center gap-2 sm:gap-3">
-    <a href={"/sign-in/?redirect_url=" + encodeURIComponent("/app/")} class="hidden min-h-11 shrink-0 items-center px-1 text-xs font-bold text-forest transition-colors hover:text-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf md:inline-flex">{isHindi ? "लॉग इन" : "Log in"}</a>
-    <a href="/app/" class="hidden min-h-11 shrink-0 items-center rounded-full bg-forest px-4 text-xs font-black text-white transition-colors hover:bg-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf sm:inline-flex">{isHindi ? "पेमेंट ट्रैक करें" : "Track payments"}</a>
-    <!-- Language Dropdown Selector -->
-    <div class="relative group">
-      <button type="button" class="flex min-h-11 items-center gap-1.5 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-xs font-bold text-forest hover:bg-forest hover:text-white transition-all duration-200 shrink-0 focus:outline-none">
-        <svg class="h-3.5 w-3.5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
-        </svg>
-        <span>{activeLang.label}</span>
-        <svg class="h-3 w-3 opacity-60 group-hover:rotate-180 transition-transform duration-200" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-          <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
-        </svg>
+  <div class="flex items-center gap-1 sm:gap-2">
+    <div class="group relative">
+      <button type="button" aria-haspopup="true" aria-label={`Language: ${activeLang.label}`} class="flex min-h-11 items-center gap-1 rounded-full px-2.5 text-sm font-semibold text-muted hover:text-forest focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf">
+        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
+        <span class="uppercase">{activeLang.code}</span>
       </button>
-      <div class="absolute right-0 top-full hidden group-hover:block group-focus-within:block pt-2 z-50 w-36">
-        <div class="rounded-2xl border border-forest/10 bg-white/95 p-1.5 shadow-2xl backdrop-blur-xl space-y-0.5 text-xs font-bold">
+      <div class="absolute right-0 top-full z-50 hidden w-44 pt-2 group-focus-within:block group-hover:block">
+        <div class="space-y-0.5 rounded-[18px] border border-forest/10 bg-white p-1.5 text-sm font-semibold shadow-[0_6px_20px_rgba(0,0,0,0.08)]">
           {languages.map((lang) => (
-            <a
-              href={lang.path}
-              class={`flex items-center justify-between rounded-xl px-3 py-2 transition-colors ${
-                activeLang.code === lang.code ? "bg-forest text-white" : "hover:bg-mint text-forest"
-              }`}
-            >
+            <a href={lang.path} class={`flex items-center justify-between rounded-[10px] px-3 py-2 ${activeLang.code === lang.code ? "bg-forest text-white" : "text-forest hover:bg-mint"}`}>
               <span>{lang.label}</span>
-              <span class="text-[10px] uppercase opacity-60">{lang.code}</span>
+              <span class="text-[11px] uppercase opacity-60">{lang.code}</span>
             </a>
           ))}
         </div>
       </div>
     </div>
-
-    <!-- Mobile Menu Button -->
-    <button type="button" id="mobile-menu-btn" aria-label={chrome.openMenu} aria-controls="mobile-menu" aria-expanded="false" class="xl:hidden flex h-11 w-11 items-center justify-center rounded-full bg-forest/5 text-forest hover:bg-forest/10 focus:outline-none">
-      <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-        <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
-      </svg>
+    <a href={loginHref} class="hidden min-h-11 shrink-0 items-center px-2 text-[15px] font-semibold text-forest hover:text-leaf md:inline-flex">{hi("Log in", "लॉग इन")}</a>
+    <a href="/app/" class="hidden h-11 shrink-0 items-center rounded-full border border-forest px-5 text-[15px] font-semibold text-forest transition-colors hover:bg-forest hover:text-white sm:inline-flex">{hi("Track payments", "पेमेंट ट्रैक करें")}</a>
+    <button type="button" id="mobile-menu-btn" aria-label={chrome.openMenu} aria-controls="mobile-menu" aria-expanded="false" class="flex h-11 w-11 items-center justify-center rounded-full bg-fog text-forest hover:bg-mint lg:hidden">
+      <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
     </button>
   </div>
-
 </header>
 
-<!-- Mobile Dropdown Menu (opens below the navbar) -->
-  <nav id="mobile-menu" aria-label="Mobile navigation" hidden class="xl:hidden pointer-events-auto absolute inset-x-0 top-[calc(100%+0.5rem)] z-40 max-h-[calc(100dvh-7rem)] overflow-y-auto overscroll-contain rounded-3xl border border-forest/10 bg-white shadow-2xl">
-    <div class="space-y-3 p-4" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
-    <a href="/app/" class="flex items-center justify-between rounded-2xl bg-forest px-4 py-3 text-sm font-black text-white hover:bg-leaf">
-      <span>{isHindi ? "पेमेंट ट्रैक करें — मुफ्त" : "Track payments — free"}</span>
+<nav id="mobile-menu" aria-label={chrome.openMenu} hidden class="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-forest/10 bg-white shadow-[0_6px_20px_rgba(0,0,0,0.08)] lg:hidden">
+  <div class="mx-auto max-w-7xl space-y-5 px-4 py-4 md:px-6" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
+    <a href="/app/" class="flex h-12 items-center justify-between rounded-full bg-sun px-5 text-base font-bold text-forest">
+      <span>{hi("Track payments — free", "पेमेंट ट्रैक करें — मुफ्त")}</span>
       <span aria-hidden="true">&rarr;</span>
     </a>
-    <div>
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.qrGenerators}</div>
-      <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href={localeHome} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI QR</a>
-        <a href={p("universal-qr-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Universal QR</a>
-        <a href={p("qr-sticker-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">QR Stickers</a>
-        <a href={p("upi-qr-decoder")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">QR Decoder</a>
-        <a href={p("upi-link-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Payment link</a>
-        <a href={p("bulk-qr")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Bulk CSV QR</a>
-        <a href={p("dynamic-qr-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Dynamic QR</a>
+    {toolGroups.map((group) => (
+      <div>
+        <p class="text-xs font-bold text-muted">{group.title}</p>
+        <ul class="mt-1 grid grid-cols-2 gap-x-3">
+          {group.links.map((link) => (
+            <li><a href={link.href} class="block py-2.5 text-[15px] font-semibold text-forest">{link.label}</a></li>
+          ))}
+        </ul>
+        <a href={group.more.href} class="inline-block py-1 text-sm font-semibold text-forest underline underline-offset-4">{group.more.label}</a>
       </div>
+    ))}
+    <div class="flex flex-wrap gap-x-5 gap-y-1 border-t border-forest/10 pt-3 text-[15px] font-semibold text-forest">
+      <a href={p("tools")} class="py-2">{chrome.allTools}</a>
+      <a href="/pricing/" class="py-2">{hi("Pricing", "प्राइसिंग")}</a>
+      <a href={p("blog")} class="py-2">{chrome.guides}</a>
+      <a href={p("about")} class="py-2">{chrome.about}</a>
+      <a href={loginHref} class="py-2">{hi("Log in", "लॉग इन")}</a>
     </div>
-
-    <div class="border-t border-forest/10 pt-2">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.billing}</div>
-      <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href={p("invoice-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Invoice PDF</a>
-        <a href={p("payment-tracker")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Payment Tracker</a>
-        <a href={p("receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Receipt PDF</a>
-        <a href={p("rent-receipt-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Rent Receipt</a>
-        <a href={p("quotation-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Quotation</a>
-        <a href={p("paid-stamp-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Paid Stamp</a>
-        <a href={p("salary-slip-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Salary Slip</a>
-        <a href={p("purchase-order-generator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Purchase Order</a>
-        <a href={p("merchant-documents")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">All documents</a>
-      </div>
-    </div>
-
-    <div class="border-t border-forest/10 pt-2">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.calculators}</div>
-      <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href={p("gst-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">GST</a>
-        <a href={p("upi-mdr-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI MDR</a>
-        <a href={p("emi-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">EMI</a>
-        <a href={p("sip-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">SIP</a>
-        <a href={p("split-bill-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Split Bill</a>
-        <a href={p("cash-denomination-calculator")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">Night close</a>
-        <a href={p("upi-error-codes")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Errors</a>
-        <a href={p("upi-limits")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">UPI Limits</a>
-        <a href={p("business-calculators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">All calculators</a>
-      </div>
-    </div>
-
-    <div class="border-t border-forest/10 pt-2">
-      <div class="text-[10px] font-bold uppercase tracking-wider text-forest/50 px-2 mb-1">{chrome.topics}</div>
-      <div class="grid grid-cols-2 gap-1 text-xs">
-        <a href={p("upi-qr-generators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "QR जनरेटर" : "QR generators"}</a>
-        <a href={p("merchant-setup")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "मर्चेंट सेटअप" : "Merchant setup"}</a>
-        <a href={p("print-upi-qr")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट / स्टैंडी" : "Print / standees"}</a>
-        <a href={p("print-templates")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "प्रिंट टेम्पलेट" : "Print templates"}</a>
-        <a href="/products/" class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "हार्डवेयर" : "Hardware"}</a>
-        <a href={p("upi-errors-and-limits")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "एरर / लिमिट" : "Errors / limits"}</a>
-        <a href={p("merchant-documents")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "दस्तावेज़" : "Documents"}</a>
-        <a href={p("business-calculators")} class="p-2.5 rounded-lg hover:bg-mint text-forest font-semibold">{isHindi ? "कैलकुलेटर" : "Calculators"}</a>
-      </div>
-    </div>
-    <div class="border-t border-forest/10 pt-2 flex justify-around text-xs font-bold text-forest">
-      <a href={p("tools")} class="p-2 hover:text-leaf">{chrome.allTools}</a>
-      <a href={p("blog")} class="p-2 hover:text-leaf">{chrome.guides}</a>
-      <a href={p("developer")} class="p-2 hover:text-leaf">{chrome.developers}</a>
-      <a href="/pricing/" class="p-2 hover:text-leaf">{isHindi ? "प्राइसिंग" : "Pricing"}</a>
-      <a href={"/sign-in/?redirect_url=" + encodeURIComponent("/app/")} class="p-2 hover:text-leaf">{isHindi ? "लॉग इन" : "Log in"}</a>
-      <a href={p("about")} class="p-2 hover:text-leaf">{chrome.about}</a>
-      <a href="/reviews/" class="p-2 hover:text-leaf">{chrome.reviews}</a>
-    </div>
-    </div>
-  </nav>
-</div>
+  </div>
+</nav>
 
 <script>
   const btn = document.getElementById('mobile-menu-btn');

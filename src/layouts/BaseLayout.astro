@@ -2,7 +2,6 @@
 import "../styles/global.css";
 import Footer from "../components/Footer.astro";
 import HeaderNav from "../components/HeaderNav.astro";
-import TopicHubNav from "../components/TopicHubNav.astro";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import { routeExistsInLang } from "../data/validRoutes";
@@ -234,16 +233,15 @@ if (cleanPath !== "/") {
       }
     </script>
   </head>
-  <body class="font-sans text-ink antialiased bg-[#fffdf6] min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
-    <div class="fixed top-0 left-0 right-0 z-50 w-full px-4 pt-4 pb-2 md:px-6 lg:px-8 pointer-events-none">
-      <div class="mx-auto max-w-7xl">
+  <body class="font-sans text-charcoal antialiased bg-white min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
+    <div class="fixed inset-x-0 top-0 z-50 w-full border-b border-forest/10 bg-white/95 backdrop-blur-md">
+      <div class="relative mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <HeaderNav isHindi={isHindi} currentPath={rawPath} />
       </div>
     </div>
-    <div class="flex-1 overflow-x-hidden pt-24 md:pt-28">
+    <div class="flex-1 overflow-x-hidden pt-16">
       <slot />
     </div>
-    <TopicHubNav />
     <Footer />
     <Analytics />
     <SpeedInsights />

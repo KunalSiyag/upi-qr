@@ -19,6 +19,19 @@ const flagshipTools = [
   { href: localeHref(lang, "tools"), label: chrome.allTools },
 ];
 
+// Tools that left the header menu keep a sitewide link here (one quiet line).
+const moreTools = [
+  { slug: "rent-receipt-generator", label: "Rent receipt" },
+  { slug: "salary-slip-generator", label: "Salary slip" },
+  { slug: "purchase-order-generator", label: "Purchase order" },
+  { slug: "freelance-contract-generator", label: "Freelance agreement" },
+  { slug: "split-bill-calculator", label: "Split bill" },
+  { slug: "cash-denomination-calculator", label: "Night-close till" },
+  { slug: "sip-calculator", label: "SIP calculator" },
+  { slug: "dynamic-qr-generator", label: "Dynamic QR" },
+  { slug: "bulk-qr", label: "Bulk QR from CSV" },
+];
+
 const flagshipGenerators = [
   { slug: "phonepe-qr-generator" as const, label: "PhonePe" },
   { slug: "google-pay-qr-generator" as const, label: "Google Pay" },
@@ -28,45 +41,48 @@ const flagshipGenerators = [
 ];
 ---
 
-<footer class="border-t border-forest/10 bg-cream/40 px-4 py-10 md:px-6 lg:px-8">
+<footer class="no-print bg-forest px-4 py-14 text-[#c8dccf] md:px-6 lg:px-8">
   <div class="mx-auto max-w-7xl">
-    <div class="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
-      <div class="space-y-3">
-        <a href={home} class="text-xl font-black tracking-tight text-forest">Pro UPI QR</a>
-        <p class="text-xs leading-relaxed text-forest/70">{chrome.brandBlurb}</p>
-        <a href="/app/" class="inline-flex rounded-full bg-forest px-4 py-2 text-xs font-black text-white transition hover:bg-leaf">{lang === "hi" ? "पेमेंट ट्रैकर खोलें" : "Open the payment tracker"}</a>
-        <p class="flex flex-wrap gap-3 text-xs font-bold text-forest/70">
-          <a href="https://x.com/proupiqr" rel="noopener noreferrer" class="hover:text-leaf hover:underline">X</a>
-          <a href="https://github.com/KunalSiyag/upi-qr" rel="noopener noreferrer" class="hover:text-leaf hover:underline">GitHub</a>
-          <a href="https://www.producthunt.com/products/pro-upi-qr" rel="noopener noreferrer" class="hover:text-leaf hover:underline">Product Hunt</a>
+    <div class="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+      <div class="space-y-4">
+        <a href={home} class="inline-flex items-center gap-2.5 text-xl font-black tracking-tight text-white">
+          <img src="/favicon.svg" alt="" width="32" height="32" class="h-8 w-8 rounded-[9px]" />
+          <span>Pro UPI QR</span>
+        </a>
+        <p class="max-w-xs text-sm leading-relaxed">{chrome.brandBlurb}</p>
+        <a href="/app/" class="inline-flex h-11 items-center rounded-full bg-sun px-5 text-sm font-bold text-forest transition hover:bg-white">{lang === "hi" ? "पेमेंट ट्रैकर खोलें" : "Open the payment tracker"}</a>
+        <p class="flex flex-wrap gap-4 text-sm font-semibold">
+          <a href="https://x.com/proupiqr" rel="noopener noreferrer" class="hover:text-white hover:underline">X</a>
+          <a href="https://github.com/KunalSiyag/upi-qr" rel="noopener noreferrer" class="hover:text-white hover:underline">GitHub</a>
+          <a href="https://www.producthunt.com/products/pro-upi-qr" rel="noopener noreferrer" class="hover:text-white hover:underline">Product Hunt</a>
         </p>
       </div>
 
       <div class="space-y-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.topics}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
+        <h4 class="text-sm font-bold text-mint">{chrome.topics}</h4>
+        <ul class="space-y-2.5 text-sm">
           {NAV_HUBS.map((hub) => (
             <li>
-              <a href={localeHref(lang, hub.path.replace(/^\/|\/$/g, ""))} class="hover:text-leaf hover:underline">
+              <a href={localeHref(lang, hub.path.replace(/^\/|\/$/g, ""))} class="hover:text-white hover:underline">
                 {lang === "hi" ? hub.hiName : hub.shortName}
               </a>
             </li>
           ))}
-          <li><a href={localeHref(lang, "print-templates")} class="hover:text-leaf hover:underline">{chrome.printTemplates}</a></li>
-          <li><a href="/products/" class="hover:text-leaf hover:underline">Standees & printers</a></li>
-          <li><a href={localeHref(lang, "blog")} class="hover:text-leaf hover:underline">{chrome.blog}</a></li>
+          <li><a href={localeHref(lang, "print-templates")} class="hover:text-white hover:underline">{chrome.printTemplates}</a></li>
+          <li><a href="/products/" class="hover:text-white hover:underline">Standees & printers</a></li>
+          <li><a href={localeHref(lang, "blog")} class="hover:text-white hover:underline">{chrome.blog}</a></li>
         </ul>
       </div>
 
       <div class="space-y-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.toolsCol}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
+        <h4 class="text-sm font-bold text-mint">{chrome.toolsCol}</h4>
+        <ul class="space-y-2.5 text-sm">
           {flagshipTools.map((tool) => (
-            <li><a href={tool.href} class="hover:text-leaf hover:underline">{tool.label}</a></li>
+            <li><a href={tool.href} class="hover:text-white hover:underline">{tool.label}</a></li>
           ))}
           {flagshipGenerators.map((gen) => (
             <li>
-              <a href={generatorPath(gen.slug, lang)} class="hover:text-leaf hover:underline">
+              <a href={generatorPath(gen.slug, lang)} class="hover:text-white hover:underline">
                 {gen.label} QR
               </a>
             </li>
@@ -75,45 +91,54 @@ const flagshipGenerators = [
       </div>
 
       <div class="space-y-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.companyCol}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href="/about/" class="hover:text-leaf hover:underline">{chrome.about}</a></li>
-          <li><a href="/pricing/" class="hover:text-leaf hover:underline">Pricing</a></li>
-          <li><a href="/changelog/" class="hover:text-leaf hover:underline">{lang === "hi" ? "नया क्या है" : "What's new"}</a></li>
-          <li><a href="/reviews/" class="hover:text-leaf hover:underline">{chrome.reviews}</a></li>
-          <li><a href="/authors/kunal-siyag/" class="hover:text-leaf hover:underline">{chrome.author}</a></li>
-          <li><a href="/contact/" class="hover:text-leaf hover:underline">Contact</a></li>
-          <li><a href="mailto:support@proupiqr.in" class="hover:text-leaf hover:underline">support@proupiqr.in</a></li>
+        <h4 class="text-sm font-bold text-mint">{chrome.companyCol}</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="/about/" class="hover:text-white hover:underline">{chrome.about}</a></li>
+          <li><a href="/pricing/" class="hover:text-white hover:underline">Pricing</a></li>
+          <li><a href="/changelog/" class="hover:text-white hover:underline">{lang === "hi" ? "नया क्या है" : "What's new"}</a></li>
+          <li><a href="/reviews/" class="hover:text-white hover:underline">{chrome.reviews}</a></li>
+          <li><a href="/authors/kunal-siyag/" class="hover:text-white hover:underline">{chrome.author}</a></li>
+          <li><a href="/contact/" class="hover:text-white hover:underline">Contact</a></li>
+          <li><a href="mailto:support@proupiqr.in" class="hover:text-white hover:underline">support@proupiqr.in</a></li>
         </ul>
       </div>
 
       <div class="space-y-3">
-        <h4 class="text-xs font-bold uppercase tracking-wider text-forest/90">{chrome.legalCol}</h4>
-        <ul class="space-y-2 text-xs font-medium text-forest/75">
-          <li><a href="/editorial-policy/" class="hover:text-leaf hover:underline">{chrome.editorial}</a></li>
-          <li><a href="/accuracy-policy/" class="hover:text-leaf hover:underline">{chrome.accuracy}</a></li>
-          <li><a href="/corrections/" class="hover:text-leaf hover:underline">{chrome.corrections}</a></li>
-          <li><a href={localeHref(lang, "privacy")} class="hover:text-leaf hover:underline">{chrome.privacy}</a></li>
-          <li><a href={localeHref(lang, "terms")} class="hover:text-leaf hover:underline">{chrome.terms}</a></li>
-          <li><a href={localeHref(lang, "disclaimer")} class="hover:text-leaf hover:underline">{chrome.disclaimer}</a></li>
-          <li><a href="/refund-policy/" class="hover:text-leaf hover:underline">Cancellation &amp; refunds</a></li>
-          <li><a href="/shipping-policy/" class="hover:text-leaf hover:underline">Shipping &amp; delivery</a></li>
+        <h4 class="text-sm font-bold text-mint">{chrome.legalCol}</h4>
+        <ul class="space-y-2.5 text-sm">
+          <li><a href="/editorial-policy/" class="hover:text-white hover:underline">{chrome.editorial}</a></li>
+          <li><a href="/accuracy-policy/" class="hover:text-white hover:underline">{chrome.accuracy}</a></li>
+          <li><a href="/corrections/" class="hover:text-white hover:underline">{chrome.corrections}</a></li>
+          <li><a href={localeHref(lang, "privacy")} class="hover:text-white hover:underline">{chrome.privacy}</a></li>
+          <li><a href={localeHref(lang, "terms")} class="hover:text-white hover:underline">{chrome.terms}</a></li>
+          <li><a href={localeHref(lang, "disclaimer")} class="hover:text-white hover:underline">{chrome.disclaimer}</a></li>
+          <li><a href="/refund-policy/" class="hover:text-white hover:underline">Cancellation &amp; refunds</a></li>
+          <li><a href="/shipping-policy/" class="hover:text-white hover:underline">Shipping &amp; delivery</a></li>
         </ul>
       </div>
     </div>
 
-    <div class="mt-8 border-t border-forest/5 pt-5 text-[10px] leading-relaxed text-forest/60 space-y-2">
+    <div class="mt-12 border-t border-white/10 pt-6">
+      <h4 class="text-sm font-bold text-mint">{lang === "hi" ? "और मुफ्त टूल" : "More free tools"}</h4>
+      <ul class="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-sm">
+        {moreTools.map((tool) => (
+          <li><a href={localeHref(lang, tool.slug)} class="hover:text-white hover:underline">{tool.label}</a></li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="mt-8 space-y-2 border-t border-white/10 pt-6 text-xs leading-relaxed text-[#a9c3b4]">
       <p>
-        <strong>NPCI:</strong> {chrome.npciDisclaimer}
+        <strong class="text-[#c8dccf]">NPCI:</strong> {chrome.npciDisclaimer}
       </p>
       <p>
-        <strong>Brands:</strong> {chrome.brands}
+        <strong class="text-[#c8dccf]">Brands:</strong> {chrome.brands}
       </p>
     </div>
 
-    <div class="mt-5 flex flex-col items-center justify-between gap-3 border-t border-forest/5 pt-5 text-center text-xs text-forest/65 md:flex-row">
+    <div class="mt-6 flex flex-col items-center justify-between gap-3 border-t border-white/10 pt-6 text-center text-sm md:flex-row md:text-left">
       <p>&copy; {currentYear} Pro UPI QR. {chrome.madeFor}</p>
-      <p class="text-[10px] text-forest/50">{chrome.paymentsFollow}</p>
+      <p class="text-xs text-[#a9c3b4]">{chrome.paymentsFollow}</p>
     </div>
   </div>
 </footer>
