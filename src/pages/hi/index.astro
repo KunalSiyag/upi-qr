@@ -1,7 +1,6 @@
 ---
 import BaseLayout from "../../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../../components/GeneratorForm";
-import AffiliateProducts from "../../components/AffiliateProducts.astro";
 import TemplateThumb from "../../components/TemplateThumb.astro";
 
 const title = "मुफ्त UPI QR कोड जनरेटर — यूनिवर्सल QR";
@@ -172,6 +171,22 @@ const landingLinks = [
   { href: "/hi/donation-qr-generator/", label: "Donation QR जनरेटर" },
   { href: "/universal-qr-generator/", label: "Universal QR जनरेटर" }
 ];
+/** Quick presets under the generator: app and bank pages people search for, plus stickers. */
+const presets = [
+  { href: "/hi/phonepe-qr-generator/", label: "PhonePe QR", icon: "/phonepe.png" },
+  { href: "/hi/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe स्टीकर", icon: "/phonepe.png" },
+  { href: "/hi/google-pay-qr-generator/", label: "Google Pay QR", icon: "/googlepay.png" },
+  { href: "/hi/qr-sticker-generator/?app=gpay#tool", label: "GPay स्टीकर", icon: "/googlepay.png" },
+  { href: "/hi/paytm-qr-generator/", label: "Paytm QR", icon: "/paytm.ico" },
+  { href: "/hi/bhim-qr-generator/", label: "BHIM QR", icon: "/bhim.ico" },
+  { href: "/hi/whatsapp-pay-qr-generator/", label: "WhatsApp QR", icon: "/whatsapp.png" },
+  { href: "/hi/amazon-pay-qr-generator/", label: "Amazon Pay QR", icon: "/amazonpay.png" },
+  { href: "/hi/sbi-qr-generator/", label: "SBI QR", icon: "/sbi.ico" },
+  { href: "/hi/hdfc-qr-generator/", label: "HDFC QR", icon: "/hdfc.ico" },
+  { href: "/hi/icici-qr-generator/", label: "ICICI QR", icon: "/icici.ico" },
+  { href: "/hi/donation-qr-generator/", label: "दान QR", icon: null },
+  { href: "/universal-qr-generator/", label: "Universal QR", icon: null },
+];
 ---
 
 <BaseLayout
@@ -179,333 +194,147 @@ const landingLinks = [
   description={description}
   schema={schema}
   image="/images/og-image.jpg"
-  preloadImage={{ href: "/images/template/abc-shop-standee-480.avif", type: "image/avif" }}
 >
   <main>
-    <section class="relative overflow-hidden px-4 pb-24 md:pb-32 pt-12 md:px-6 lg:px-8">
-      <div class="grid-glow absolute inset-x-0 top-0 h-[28rem] pointer-events-none"></div>
+    <section class="px-4 pb-14 pt-8 md:px-6 md:pt-14 lg:px-8">
       <div class="mx-auto max-w-7xl">
-
-        <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-          <div class="pt-4 min-w-0">
-            <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
-              दुकान और बैंक खाते के लिए मुफ्त UPI QR
-            </p>
-            <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
-              मुफ्त UPI QR कोड जनरेटर
-            </h1>
-            <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
-              अपनी UPI आईडी डालें और PhonePe, Google Pay, Paytm व BHIM पर चलने वाला भुगतान QR डाउनलोड करें। साइनअप नहीं। राशि वैकल्पिक। काउंटर स्टैंडी या स्टीकर जब चाहिए तब प्रिंट करें।
-            </p>
-
-            <div class="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#generator"
-                class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
-              >
-                अपना QR अभी बनाएं
-              </a>
-              <a
-                href="#templates"
-                class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white"
-              >
-                पोस्टर डिज़ाइन देखें
-              </a>
-            </div>
-            <p class="mt-5 text-xs leading-5 text-forest/60">
-              Product Hunt पर सार्वजनिक रेटिंग दें, या
-              <a href="/reviews/" class="font-semibold text-leaf underline hover:text-forest">समीक्षा पृष्ठ</a>
-              पर दुकान का अनुभव भेजें। हम नकली स्टार स्कोर नहीं दिखाते।
-            </p>
-
-            <div class="mt-8 pt-6 border-t border-forest/10">
-              <p class="text-xs font-bold text-forest/70 uppercase tracking-wider mb-3">
-                क्विक प्रीसेट जनरेटर्स:
-              </p>
-              <div class="flex flex-wrap gap-2.5">
-                <a
-                  href="/hi/phonepe-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-[#5f259f]/5 px-4 py-2 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
-                >
-                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  PhonePe QR
-                </a>
-                <a
-                  href="/hi/qr-sticker-generator/?app=phonepe#tool"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-white px-4 py-2 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
-                >
-                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  PhonePe स्टीकर
-                </a>
-                <a
-                  href="/hi/google-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-[#4285f4]/5 px-4 py-2 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
-                >
-                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  Google Pay QR
-                </a>
-                <a
-                  href="/hi/qr-sticker-generator/?app=gpay#tool"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-white px-4 py-2 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
-                >
-                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  GPay स्टीकर
-                </a>
-                <a
-                  href="/hi/paytm-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#00baf2]/25 bg-[#00baf2]/5 px-4 py-2 text-xs font-bold text-[#00baf2] transition hover:bg-[#00baf2] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#00baf2]"></span>
-                  Paytm QR
-                </a>
-                <a
-                  href="/hi/bhim-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#e55523]/25 bg-[#e55523]/5 px-4 py-2 text-xs font-bold text-[#e55523] transition hover:bg-[#e55523] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#e55523]"></span>
-                  BHIM QR
-                </a>
-                <a
-                  href="/hi/whatsapp-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#25d366]/25 bg-[#25d366]/5 px-4 py-2 text-xs font-bold text-[#25d366] transition hover:bg-[#25d366] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#25d366]"></span>
-                  WhatsApp QR
-                </a>
-                <a
-                  href="/hi/amazon-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#ff9900]/25 bg-[#ff9900]/5 px-4 py-2 text-xs font-bold text-[#ff9900] transition hover:bg-[#ff9900] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#ff9900]"></span>
-                  Amazon Pay QR
-                </a>
-                <a
-                  href="/hi/sbi-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#00a2e8]/25 bg-[#00a2e8]/5 px-4 py-2 text-xs font-bold text-[#00a2e8] transition hover:bg-[#00a2e8] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#00a2e8]"></span>
-                  SBI QR
-                </a>
-                <a
-                  href="/hi/hdfc-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#1c3f94]/25 bg-[#1c3f94]/5 px-4 py-2 text-xs font-bold text-[#1c3f94] transition hover:bg-[#1c3f94] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#1c3f94]"></span>
-                  HDFC QR
-                </a>
-                <a
-                  href="/hi/icici-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#f27220]/25 bg-[#f27220]/5 px-4 py-2 text-xs font-bold text-[#f27220] transition hover:bg-[#f27220] hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-[#f27220]"></span>
-                  ICICI QR
-                </a>
-                <a
-                  href="/hi/donation-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-forest/25 bg-mint px-4 py-2 text-xs font-bold text-forest transition hover:bg-forest hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                  दान QR
-                </a>
-                <a
-                  href="/universal-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-forest/25 bg-white px-4 py-2 text-xs font-bold text-forest transition hover:bg-forest hover:text-white"
-                >
-                  <span class="w-1.5 h-1.5 rounded-full bg-forest"></span>
-                  Universal QR
-                </a>
-              </div>
-            </div>
-
-            <div class="mt-8 overflow-hidden relative w-full py-3 border-y border-forest/10">
-              <div class="flex animate-marquee gap-4 whitespace-nowrap">
-                {useCases.map((item) => (
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-2 text-xs font-bold text-forest backdrop-blur">
-                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                    {item}
-                  </span>
-                ))}
-                {useCases.map((item) => (
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-2 text-xs font-bold text-forest backdrop-blur">
-                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-card-shadow rounded-[2rem] border border-white/75 bg-white/88 p-4 backdrop-blur md:p-5">
-            <div class="rounded-[1.7rem] border border-forest/10 bg-[#f7f3e7] p-4 overflow-hidden">
-              <div class="relative flex flex-col md:flex-row items-center justify-center p-6 gap-6 md:gap-0 min-h-[380px] md:min-h-auto">
-                {/* Standee Card */}
-                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-white p-4 border border-forest/10 shadow-xl transition-all duration-300 hover:scale-105 hover:-rotate-2 hover:z-25 md:rotate-[-4deg] md:translate-x-4">
-                  <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">स्टैंडी (Standee)</p>
-                  <div class="mt-3 rounded-[1.1rem] bg-mint p-4">
-                    <p class="text-base font-black text-forest text-center">स्कैन और पे</p>
-                    <div class="mt-3 overflow-hidden rounded-xl border border-forest/10 bg-white shadow-sm">
-                      <TemplateThumb
-                        src="/images/template/abc-shop-standee.png"
-                        alt="Shop payment standee template"
-                        width={220}
-                        height={240}
-                        loading="eager"
-                        fetchpriority="high"
-                        class="h-[240px] w-full object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Donation Card */}
-                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-forest p-4 text-white shadow-xl transition-all duration-300 hover:scale-105 hover:rotate-2 hover:z-25 md:rotate-[4deg] md:-translate-x-4 mt-[-24px] md:mt-0">
-                  <p class="text-xs font-black uppercase tracking-[0.2em] text-sun">दान (Donation)</p>
-                  <div class="mt-3 rounded-[1.1rem] bg-white/10 p-4">
-                    <p class="text-base font-black text-center">समर्थन करें</p>
-                    <div class="mt-3 overflow-hidden rounded-xl border border-white/15 bg-white shadow-sm">
-                      <TemplateThumb
-                        src="/images/template/abc-temple-donation.png"
-                        alt="Temple donation template"
-                        width={220}
-                        height={240}
-                        loading="lazy"
-                        class="h-[240px] w-full object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p class="mt-4 text-sm leading-7 text-forest/72">
-                चेकआउट काउंटर पर प्रिंट, फ्रेम और उच्च-रिज़ॉल्यूशन वाले भुगतान स्टैंडी रखें। आपके ग्राहकों के साथ तत्काल विश्वास बनाने के लिए साफ और पेशेवर दिखने के लिए डिज़ाइन किया गया।
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </section>
-
-    <section id="generator" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl">
-        <div class="mb-8 max-w-3xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">जनरेटर</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
-            30 सेकंड से कम समय में राशि के साथ UPI QR कोड जनरेट करें।
-          </h2>
-          <p class="mt-4 text-lg leading-8 text-forest/72">
-            PhonePe, Google Pay, Paytm, BHIM और अन्य UPI ऐप्स के लिए काम करता है जो मानक `upi://pay` लिंक्स का समर्थन करते हैं।
+        <div class="max-w-4xl">
+          <h1 class="text-[2.75rem] font-black leading-[1.05] tracking-[-0.02em] text-obsidian sm:text-6xl lg:text-7xl">
+            मुफ्त UPI QR कोड जनरेटर
+          </h1>
+          <p class="mt-4 max-w-2xl text-lg leading-8 md:text-xl">
+            अपनी UPI आईडी डालें और PhonePe, Google Pay, Paytm व BHIM पर चलने वाला भुगतान QR डाउनलोड करें। साइनअप नहीं। राशि वैकल्पिक। काउंटर स्टैंडी या स्टीकर जब चाहिए तब प्रिंट करें।
           </p>
-          <div class="mt-4 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
-            <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">
-              <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-              </svg>
-              100% गोपनीयता: आपके ब्राउज़र में स्थानीय रूप से जनरेट। हम कभी भी आपके भुगतान विवरण एकत्र या संग्रहीत नहीं करते हैं।
-            </span>
+          <ul class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px] font-medium">
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>मुफ्त · बिना साइनअप</li>
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>QR आपके ब्राउज़र में बनता है</li>
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>हर UPI ऐप पर स्कैन</li>
+            <li><a href="/reviews/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">समीक्षाएं पढ़ें</a></li>
+          </ul>
+        </div>
+
+        <div id="generator" class="mt-8 scroll-mt-20">
+          <GeneratorForm client:load lang="hi" />
+        </div>
+
+        <div class="mt-12 grid gap-10 border-t border-forest/10 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+          <div>
+            <h2 class="text-2xl font-black tracking-tight text-obsidian sm:text-3xl">
+              30 सेकंड से कम समय में राशि के साथ UPI QR कोड जनरेट करें।
+            </h2>
+            <p class="mt-3 text-base leading-7">
+              PhonePe, Google Pay, Paytm, BHIM और अन्य UPI ऐप्स के लिए काम करता है जो मानक{" "}
+              <code class="font-mono text-sm">upi://pay</code> लिंक्स का समर्थन करते हैं।
+            </p>
+            <p class="mt-4 flex items-start gap-2 text-[15px] leading-6">
+              <svg class="mt-0.5 h-5 w-5 shrink-0 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              <span>100% गोपनीयता: आपके ब्राउज़र में स्थानीय रूप से जनरेट। हम कभी भी आपके भुगतान विवरण एकत्र या संग्रहीत नहीं करते हैं।</span>
+            </p>
+            <p class="mt-3 text-[15px] leading-6">
+              Product Hunt पर सार्वजनिक रेटिंग दें, या{" "}<a href="/reviews/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">समीक्षा पृष्ठ</a>{" "}पर दुकान का अनुभव भेजें। हम नकली स्टार स्कोर नहीं दिखाते।
+            </p>
+            <p class="mt-6 text-sm leading-6 text-muted">इनके लिए बना: {useCases.join(" · ")}।</p>
+          </div>
+          <div>
+            <p class="text-sm font-bold text-muted">क्विक प्रीसेट जनरेटर्स</p>
+            <ul class="mt-2 grid grid-cols-2 gap-x-6">
+              {presets.map((preset) => (
+                <li>
+                  <a href={preset.href} class="flex min-h-12 items-center gap-3 border-b border-forest/10 py-2.5 text-[15px] font-semibold text-forest hover:text-leaf">
+                    {preset.icon ? (
+                      <img src={preset.icon} alt="" width="24" height="24" loading="lazy" class="h-6 w-6 rounded-full bg-white object-contain ring-1 ring-forest/10" />
+                    ) : (
+                      <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mint" aria-hidden="true"><span class="h-2 w-2 rounded-full bg-leaf"></span></span>
+                    )}
+                    {preset.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
-        <GeneratorForm client:visible lang="hi" />
       </div>
     </section>
 
-    <section class="px-4 py-12 md:px-6 lg:px-8">
-      <div class="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
+    <section class="px-4 py-16 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-7xl gap-10 border-t border-forest/10 pt-12 md:grid-cols-3">
         {features.map((feature) => (
-          <article class="section-card rounded-[1.75rem] border border-white/75 bg-white/86 p-6">
-            <h3 class="text-xl font-black text-forest">{feature.title}</h3>
-            <p class="mt-3 text-base leading-7 text-forest/72">{feature.copy}</p>
-          </article>
+          <div>
+            <h3 class="text-xl font-bold text-obsidian">{feature.title}</h3>
+            <p class="mt-2 text-base leading-7">{feature.copy}</p>
+          </div>
         ))}
       </div>
     </section>
 
-    <section id="templates" class="scroll-mt-28 relative z-20 px-4 py-12 md:px-6 lg:px-8">
+    <section id="templates" class="scroll-mt-20 px-4 pb-16 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <div class="mb-8 max-w-3xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">टेम्पलेट्स</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-5xl">
             आठ तैयार पेमेंट पोस्टर टेम्पलेट्स के साथ शुरुआत करें।
           </h2>
-          <p class="mt-4 text-lg leading-8 text-forest/72">
+          <p class="mt-4 text-lg leading-8">
             एक बार जनरेट करें, तुरंत शैलियों को बदलें, और अपने काउंटर, टेबल, दान डेस्क या क्लाइंट शेयर फ्लो के लिए एक प्रिंट करने योग्य भुगतान छवि डाउनलोड करें।
           </p>
+          <p class="mt-3 text-base leading-7">
+            चेकआउट काउंटर पर प्रिंट, फ्रेम और उच्च-रिज़ॉल्यूशन वाले भुगतान स्टैंडी रखें। आपके ग्राहकों के साथ तत्काल विश्वास बनाने के लिए साफ और पेशेवर दिखने के लिए डिज़ाइन किया गया।
+          </p>
         </div>
-
-        <div class="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        <ul class="mt-10 grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-4">
           {templates.map((template) => (
-            <article class="flex flex-col justify-between rounded-[2rem] border border-white/75 bg-white/86 p-6 shadow-sm">
-              <div>
-                <div class="overflow-hidden rounded-2xl border border-forest/10 bg-[#f7f3e7] p-2">
-                  <TemplateThumb
-                    src={template.image}
-                    alt={template.name}
-                    width={340}
-                    height={280}
-                    loading="lazy"
-                    class="h-[280px] w-full rounded-xl object-cover object-top shadow-inner"
-                  />
-                </div>
-                <h3 class="mt-5 text-xl font-black text-forest">{template.name}</h3>
-                <p class="mt-2 text-xs font-semibold text-leaf">{template.bestFor}</p>
-                <p class="mt-3 text-sm leading-relaxed text-forest/70">{template.value}</p>
+            <li>
+              <div class="overflow-hidden rounded-[10px] bg-fog">
+                <TemplateThumb
+                  src={template.image}
+                  alt={template.name}
+                  width={340}
+                  height={255}
+                  loading="lazy"
+                  class="aspect-[4/3] w-full object-cover object-top"
+                />
               </div>
-              <div class="mt-6 pt-4 border-t border-forest/5 flex items-center justify-between">
-                <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3 py-1 text-[10px] font-bold text-forest">
-                  <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                  {template.status}
-                </span>
-                <a
-                  href="#generator"
-                  class="text-xs font-black text-forest hover:text-leaf hover:underline"
-                >
-                  उपयोग करें &rarr;
-                </a>
-              </div>
-            </article>
+              <h3 class="mt-3 text-base font-bold text-obsidian">{template.name}</h3>
+              <p class="mt-1 text-sm leading-6">{template.value}</p>
+              <p class="mt-1 text-xs leading-5 text-muted">{template.bestFor}</p>
+            </li>
           ))}
-        </div>
+        </ul>
+        <a href="#generator" class="mt-8 inline-block text-[15px] font-semibold text-forest underline underline-offset-4 hover:text-leaf">जनरेटर में अपना पोस्टर बनाएं &uarr;</a>
       </div>
     </section>
 
-    <section class="relative overflow-hidden bg-forest px-4 py-20 text-white md:px-6 lg:px-8">
-      <div class="grid-glow absolute inset-0 opacity-10 pointer-events-none"></div>
-      <div class="relative mx-auto max-w-4xl text-center">
-        <h2 class="text-3xl font-black tracking-tight md:text-5xl">
-          विशिष्ट पेमेंट ऐप्स के लिए अनुकूलित जनरेटर
-        </h2>
-        <p class="mx-auto mt-4 max-w-2xl text-lg text-white/75">
-          यदि आप विशेष रूप से PhonePe, Google Pay, या Paytm के लिए QR कोड पोस्टर डिज़ाइन करना चाहते हैं, तो हमारे विशेष रूप से तैयार जनरेटर का उपयोग करें।
-        </p>
-        <div class="mt-8 flex flex-wrap justify-center gap-3">
-          {landingLinks.map((link) => (
-            <a
-              href={link.href}
-              class="rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-white transition hover:bg-white hover:text-forest"
-            >
-              {link.label}
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-5xl">
-        <div class="mb-8 max-w-2xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">अक्सर पूछे जाने वाले प्रश्न (FAQ)</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
-            भुगतान QR पर भरोसा करने से पहले लोग अक्सर जो प्रश्न पूछते हैं।
+    <section class="bg-forest px-4 py-16 text-[#c8dccf] md:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-7xl flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl font-black tracking-tight text-mint md:text-5xl">
+            विशिष्ट पेमेंट ऐप्स के लिए अनुकूलित जनरेटर
           </h2>
+          <p class="mt-4 text-lg leading-8">
+            यदि आप विशेष रूप से PhonePe, Google Pay, या Paytm के लिए QR कोड पोस्टर डिज़ाइन करना चाहते हैं, तो हमारे विशेष रूप से तैयार जनरेटर का उपयोग करें।
+          </p>
         </div>
-        <div class="grid gap-4">
+        <ul class="grid grid-cols-1 gap-x-8 gap-y-3 text-[15px] font-semibold text-white sm:grid-cols-2 lg:min-w-[30rem]">
+          {landingLinks.map((link) => (
+            <li><a href={link.href} class="hover:underline">{link.label} &rarr;</a></li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section id="faq" class="scroll-mt-20 px-4 py-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">अक्सर पूछे जाने वाले प्रश्न (FAQ)</p>
+        <h2 class="mt-2 text-3xl font-black tracking-tight text-obsidian md:text-5xl">
+          भुगतान QR पर भरोसा करने से पहले लोग अक्सर जो प्रश्न पूछते हैं।
+        </h2>
+        <div class="mt-8 grid gap-3">
           {faqs.map((faq) => (
-            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
-              <summary class="cursor-pointer list-none text-lg font-black text-forest flex justify-between items-center outline-none">
+            <details class="group rounded-[10px] bg-fog px-5 py-4">
+              <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-lg font-bold text-obsidian">
                 <span>{faq.question}</span>
-                <span class="text-leaf text-sm ml-2">▼</span>
+                <span class="mt-0.5 text-2xl leading-none text-forest transition-transform group-open:rotate-45" aria-hidden="true">+</span>
               </summary>
-              <p class="mt-4 text-base leading-7 text-forest/72 border-t border-forest/5 pt-4">
-                {faq.answer}
-              </p>
+              <p class="mt-3 max-w-3xl text-base leading-7">{faq.answer}</p>
             </details>
           ))}
         </div>

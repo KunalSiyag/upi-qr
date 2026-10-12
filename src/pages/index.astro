@@ -3,7 +3,6 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../components/GeneratorForm";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import TemplateThumb from "../components/TemplateThumb.astro";
-import SocialProofBar from "../components/SocialProofBar.astro";
 import Testimonials from "../components/Testimonials.astro";
 import ReviewInvite from "../components/ReviewInvite.astro";
 import { getCollection } from "astro:content";
@@ -244,6 +243,25 @@ const merchantTools = [
 
 const posts = await getCollection("blog");
 const featuredGuides = pickFeaturedPosts(posts, 6);
+
+/** Quick presets under the generator: app and bank pages people search for, plus stickers. */
+const presets = [
+  { href: "/phonepe-qr-generator/", label: "PhonePe QR", icon: "/phonepe.png" },
+  { href: "/qr-sticker-generator/?app=phonepe#tool", label: "PhonePe sticker", icon: "/phonepe.png" },
+  { href: "/google-pay-qr-generator/", label: "Google Pay QR", icon: "/googlepay.png" },
+  { href: "/qr-sticker-generator/?app=gpay#tool", label: "GPay sticker", icon: "/googlepay.png" },
+  { href: "/paytm-qr-generator/", label: "Paytm QR", icon: "/paytm.ico" },
+  { href: "/bhim-qr-generator/", label: "BHIM QR", icon: "/bhim.ico" },
+  { href: "/whatsapp-pay-qr-generator/", label: "WhatsApp QR", icon: "/whatsapp.png" },
+  { href: "/amazon-pay-qr-generator/", label: "Amazon Pay QR", icon: "/amazonpay.png" },
+  { href: "/sbi-qr-generator/", label: "SBI QR", icon: "/sbi.ico" },
+  { href: "/hdfc-qr-generator/", label: "HDFC QR", icon: "/hdfc.ico" },
+  { href: "/icici-qr-generator/", label: "ICICI QR", icon: "/icici.ico" },
+  { href: "/donation-qr-generator/", label: "Donation QR", icon: null },
+  { href: "/universal-qr-generator/", label: "Universal QR", icon: null },
+  { href: "/invoice-generator/", label: "Invoice QR PDF", icon: null },
+];
+
 ---
 
 <BaseLayout
@@ -251,477 +269,253 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
   description={description}
   schema={schema}
   image={ogImageForPath("/").src}
-  preloadImage={{ href: "/images/template/abc-shop-standee-480.avif", type: "image/avif" }}
 >
   <main>
-    <section class="relative overflow-hidden px-4 pb-24 md:pb-32 pt-12 md:px-6 lg:px-8">
-      <div class="grid-glow absolute inset-x-0 top-0 h-[28rem]"></div>
+    <section class="px-4 pb-14 pt-8 md:px-6 md:pt-14 lg:px-8">
       <div class="mx-auto max-w-7xl">
-
-        <div class="grid items-start gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-14">
-          <div class="pt-4 min-w-0">
-            <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-4 py-2 text-xs font-black uppercase tracking-[0.26em] text-leaf">
-              Free universal UPI QR for shops and bank accounts
-            </p>
-            <h1 class="mt-5 max-w-3xl text-5xl font-black leading-[0.95] tracking-tight text-forest md:text-7xl">
-              Free UPI QR Code Generator
-            </h1>
-            <p class="mt-6 max-w-2xl text-lg leading-8 text-forest/75 md:text-xl">
-              Enter your UPI ID and download a universal payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
-            </p>
-            <SocialProofBar compact />
-
-            <div class="mt-8 flex flex-wrap gap-3">
-              <a
-                href="#generator"
-                id="btn-create-qr"
-                class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf"
-              >
-                Create your QR now
-              </a>
-              <a
-                href="#templates"
-                id="btn-see-poster"
-                class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white"
-              >
-                See poster ideas
-              </a>
-            </div>
-
-            <div class="mt-8 pt-6 border-t border-forest/10">
-              <p class="text-xs font-bold text-forest/70 uppercase tracking-wider mb-3">
-                Quick Preset Generators:
-              </p>
-              <div class="flex flex-wrap gap-2.5">
-                <a
-                  href="/phonepe-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-[#5f259f]/5 px-3.5 py-1.5 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
-                >
-                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  PhonePe QR
-                </a>
-                <a
-                  href="/qr-sticker-generator/?app=phonepe#tool"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#5f259f]/25 bg-white px-3.5 py-1.5 text-xs font-bold text-[#5f259f] transition hover:bg-[#5f259f] hover:text-white"
-                >
-                  <img src="/phonepe.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  PhonePe sticker
-                </a>
-                <a
-                  href="/google-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-[#4285f4]/5 px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
-                >
-                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  Google Pay QR
-                </a>
-                <a
-                  href="/qr-sticker-generator/?app=gpay#tool"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#4285f4]/25 bg-white px-3.5 py-1.5 text-xs font-bold text-[#4285f4] transition hover:bg-[#4285f4] hover:text-white"
-                >
-                  <img src="/googlepay.png" alt="" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  GPay sticker
-                </a>
-                <a
-                  href="/paytm-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#00baf2]/25 bg-[#00baf2]/5 px-3.5 py-1.5 text-xs font-bold text-[#00baf2] transition hover:bg-[#00baf2] hover:text-white"
-                >
-                  <img src="/paytm.ico" alt="Paytm" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  Paytm QR
-                </a>
-                <a
-                  href="/bhim-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#e55523]/25 bg-[#e55523]/5 px-3.5 py-1.5 text-xs font-bold text-[#e55523] transition hover:bg-[#e55523] hover:text-white"
-                >
-                  <img src="/bhim.ico" alt="BHIM" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  BHIM QR
-                </a>
-                <a
-                  href="/whatsapp-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#25d366]/25 bg-[#25d366]/5 px-3.5 py-1.5 text-xs font-bold text-[#25d366] transition hover:bg-[#25d366] hover:text-white"
-                >
-                  <img src="/whatsapp.png" alt="WhatsApp" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  WhatsApp QR
-                </a>
-                <a
-                  href="/amazon-pay-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#ff9900]/25 bg-[#ff9900]/5 px-3.5 py-1.5 text-xs font-bold text-[#ff9900] transition hover:bg-[#ff9900] hover:text-white"
-                >
-                  <img src="/amazonpay.png" alt="Amazon Pay" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  Amazon Pay QR
-                </a>
-                <a
-                  href="/sbi-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#00a2e8]/25 bg-[#00a2e8]/5 px-3.5 py-1.5 text-xs font-bold text-[#00a2e8] transition hover:bg-[#00a2e8] hover:text-white"
-                >
-                  <img src="/sbi.ico" alt="SBI" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  SBI QR
-                </a>
-                <a
-                  href="/hdfc-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#1c3f94]/25 bg-[#1c3f94]/5 px-3.5 py-1.5 text-xs font-bold text-[#1c3f94] transition hover:bg-[#1c3f94] hover:text-white"
-                >
-                  <img src="/hdfc.ico" alt="HDFC" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  HDFC QR
-                </a>
-                <a
-                  href="/icici-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-[#f27220]/25 bg-[#f27220]/5 px-3.5 py-1.5 text-xs font-bold text-[#f27220] transition hover:bg-[#f27220] hover:text-white"
-                >
-                  <img src="/icici.ico" alt="ICICI" width="16" height="16" class="w-4 h-4 rounded-full object-contain" />
-                  ICICI QR
-                </a>
-                <a
-                  href="/donation-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-forest/25 bg-mint px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-forest hover:text-white"
-                >
-                  <span class="w-2 h-2 rounded-full bg-leaf"></span>
-                  Donation QR
-                </a>
-                <a
-                  href="/universal-qr-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-forest/25 bg-white px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-forest hover:text-white"
-                >
-                  <span class="w-2 h-2 rounded-full bg-forest"></span>
-                  Universal QR
-                </a>
-                <a
-                  href="/invoice-generator/"
-                  class="inline-flex items-center gap-2 rounded-full border border-leaf/25 bg-mint px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-leaf hover:text-white"
-                >
-                  <span class="w-2 h-2 rounded-full bg-leaf"></span>
-                  Invoice QR PDF
-                </a>
-              </div>
-            </div>
-
-            <div class="mt-6 overflow-hidden relative w-full py-2.5 border-y border-forest/10">
-              <div class="flex animate-marquee gap-4 whitespace-nowrap">
-                {useCases.map((item) => (
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-1.5 text-xs font-bold text-forest backdrop-blur">
-                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                    {item}
-                  </span>
-                ))}
-                {useCases.map((item) => (
-                  <span class="inline-flex items-center gap-2 rounded-full border border-white/80 bg-white/70 px-4 py-1.5 text-xs font-bold text-forest backdrop-blur">
-                    <span class="w-1.5 h-1.5 rounded-full bg-leaf"></span>
-                    {item}
-                  </span>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div class="hero-card-shadow rounded-[2rem] border border-white/75 bg-white/88 p-4 backdrop-blur md:p-5">
-            <div class="rounded-[1.7rem] border border-forest/10 bg-[#f7f3e7] p-4 overflow-hidden">
-              <div class="relative flex flex-col md:flex-row items-center justify-center p-6 gap-6 md:gap-0 min-h-[380px] md:min-h-auto">
-                {/* Standee Card */}
-                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-white p-4 border border-forest/10 shadow-xl transition-all duration-300 hover:scale-105 hover:-rotate-2 hover:z-25 md:rotate-[-4deg] md:translate-x-4">
-                  <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Standee</p>
-                  <div class="mt-3 rounded-[1.1rem] bg-mint p-4">
-                    <p class="text-base font-black text-forest text-center">Scan & Pay</p>
-                    <div class="mt-3 overflow-hidden rounded-xl border border-forest/10 bg-white shadow-sm">
-                      <TemplateThumb
-                        src="/images/template/abc-shop-standee.png"
-                        alt="Shop payment standee template"
-                        width={220}
-                        height={240}
-                        loading="eager"
-                        fetchpriority="high"
-                        class="h-[240px] w-full object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Donation Card */}
-                <div class="w-full md:w-[220px] rounded-[1.35rem] bg-forest p-4 text-white shadow-xl transition-all duration-300 hover:scale-105 hover:rotate-2 hover:z-25 md:rotate-[4deg] md:-translate-x-4 mt-[-24px] md:mt-0">
-                  <p class="text-xs font-black uppercase tracking-[0.2em] text-sun">Donation</p>
-                  <div class="mt-3 rounded-[1.1rem] bg-white/10 p-4">
-                    <p class="text-base font-black text-center">Support Us</p>
-                    <div class="mt-3 overflow-hidden rounded-xl border border-white/15 bg-white shadow-sm">
-                      <TemplateThumb
-                        src="/images/template/abc-temple-donation.png"
-                        alt="Temple donation template"
-                        width={220}
-                        height={240}
-                        loading="lazy"
-                        class="h-[240px] w-full object-cover object-top"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </div>
-              <p class="mt-4 text-sm leading-7 text-forest/72">
-                Print, frame, and place high-resolution payment standees at checkout. Designed to look clean and professional, creating instant trust with your customers.
-              </p>
-            </div>
-          </div>
+        <div class="max-w-4xl">
+          <h1 class="text-[2.75rem] font-black leading-[0.95] tracking-[-0.03em] text-obsidian sm:text-6xl lg:text-7xl">
+            Free UPI QR Code Generator
+          </h1>
+          <p class="mt-4 max-w-2xl text-lg leading-8 md:text-xl">
+            Enter your UPI ID and download a universal payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
+          </p>
+          <ul class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px] font-medium">
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Free · no signup</li>
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Local in-browser QR</li>
+            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>20+ merchant tools</li>
+            <li><a href="/reviews/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">Read reviews</a></li>
+          </ul>
         </div>
 
-        {/* Interactive Top Generator Console */}
-        <div id="generator" class="scroll-mt-28 mt-12 pt-8 border-t border-forest/10">
-          <div class="mb-6 max-w-3xl">
-            <p class="text-xs font-black uppercase tracking-[0.2em] text-leaf">Generator Console</p>
-            <h2 class="mt-2 text-2xl font-black tracking-tight text-forest sm:text-3xl md:text-4xl">
+        <div id="generator" class="mt-8 scroll-mt-20">
+          <GeneratorForm client:load />
+        </div>
+
+        <div class="mt-12 grid gap-10 border-t border-forest/10 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
+          <div>
+            <h2 class="text-2xl font-black tracking-tight text-obsidian sm:text-3xl">
               Generate UPI QR code with amount in under 30 seconds.
             </h2>
-            <p class="mt-2 text-sm leading-relaxed text-forest/72">
-              Works on PhonePe, Google Pay, Paytm, BHIM, and other UPI apps that support standard
-              <code class="font-mono text-xs">upi://pay</code> links. Need a peel-off counter sticker?
-              Use the <a href="/qr-sticker-generator/?app=phonepe#tool" class="font-bold text-leaf hover:underline">PhonePe / GPay sticker sheet</a>.
-              Need URL, WiFi, or vCard? Open the <a href="/universal-qr-generator/" class="font-bold text-leaf hover:underline">universal QR generator</a>.
+            <p class="mt-3 text-base leading-7">
+              Works on PhonePe, Google Pay, Paytm, BHIM, and other UPI apps that support standard{" "}
+              <code class="font-mono text-sm">upi://pay</code> links. Need a peel-off counter sticker?
+              Use the{" "}<a href="/qr-sticker-generator/?app=phonepe#tool" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">PhonePe / GPay sticker sheet</a>.
+              Need URL, WiFi, or vCard? Open the{" "}<a href="/universal-qr-generator/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">universal QR generator</a>.
             </p>
-            <div class="mt-3 flex flex-wrap items-center gap-4 text-xs font-semibold text-leaf">
-              <span class="inline-flex items-center gap-1.5 rounded-full bg-mint px-3.5 py-1.5 border border-leaf/10">
-                <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                </svg>
-                100% Privacy: Generated locally in your browser. We never collect, transmit, or store your payment details.
-              </span>
-            </div>
-            <div class="mt-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 rounded-2xl border border-leaf/20 bg-mint/60 p-3.5 sm:px-4">
-              <div class="flex items-center gap-2.5">
-                <span class="inline-flex h-6 items-center rounded-md bg-forest px-2 text-[10px] font-black uppercase tracking-wider text-white">Dynamic</span>
-                <span class="text-xs font-bold text-forest">Need to update payment links later or track daily customer scans?</span>
-              </div>
-              <a href="/dynamic-qr-generator/" class="inline-flex items-center gap-1.5 text-xs font-black text-leaf hover:text-forest transition-colors">
-                Create Dynamic QR &rarr;
-              </a>
-            </div>
+            <p class="mt-4 flex items-start gap-2 text-[15px] leading-6">
+              <svg class="mt-0.5 h-5 w-5 shrink-0 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+              <span>100% Privacy: Generated locally in your browser. We never collect, transmit, or store your payment details.</span>
+            </p>
+            <p class="mt-3 text-[15px] leading-6">
+              <span class="font-bold text-forest">Dynamic QR:</span> Need to update payment links later or track daily customer scans?{" "}
+              <a href="/dynamic-qr-generator/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">Create Dynamic QR &rarr;</a>
+            </p>
+            <p class="mt-6 text-sm leading-6 text-muted">Made for {useCases.join(" · ")}.</p>
           </div>
-          <GeneratorForm client:visible />
+          <div>
+            <p class="text-sm font-bold text-muted">Quick preset generators</p>
+            <ul class="mt-2 grid grid-cols-2 gap-x-6">
+              {presets.map((preset) => (
+                <li>
+                  <a href={preset.href} class="flex min-h-12 items-center gap-3 border-b border-forest/10 py-2.5 text-[15px] font-semibold text-forest hover:text-leaf">
+                    {preset.icon ? (
+                      <img src={preset.icon} alt="" width="24" height="24" loading="lazy" class="h-6 w-6 rounded-full bg-white object-contain ring-1 ring-forest/10" />
+                    ) : (
+                      <span class="flex h-6 w-6 items-center justify-center rounded-full bg-mint" aria-hidden="true"><span class="h-2 w-2 rounded-full bg-leaf"></span></span>
+                    )}
+                    {preset.label}
+                  </a>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
     </section>
 
-    <section class="px-4 py-12 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-white/88 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-8">
-        <div class="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div class="max-w-3xl">
-            <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Merchant toolkit</p>
-            <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Turn Pro UPI QR into a complete payment workflow.</h2>
-            <p class="mt-4 text-lg leading-8 text-forest/72">Beyond standalone QR codes, use Pro UPI QR for invoices, hosted payment links, developer integrations, and bulk merchant assets.</p>
-          </div>
-          <a href="/invoice-generator/" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Open invoice generator →</a>
-        </div>
-        <div class="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          {merchantTools.map((tool) => (
-            <a href={tool.href} class="rounded-[1.5rem] border border-forest/10 bg-cream p-5 transition hover:border-leaf/30 hover:bg-white">
-              <span class="rounded-full bg-mint px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-leaf">{tool.status}</span>
-              <h3 class="mt-4 text-xl font-black text-forest">{tool.title}</h3>
-              <p class="mt-3 text-sm leading-7 text-forest/72">{tool.copy}</p>
-            </a>
-          ))}
-        </div>
-      </div>
-    </section>
-
-    <section class="px-4 py-12 md:px-6 lg:px-8">
+    <section class="bg-mint px-4 py-16 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Topics</p>
-        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Find the right tool without scanning a hundred footer links.</h2>
-        <div class="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {TOPIC_HUBS.map((hub) => (
-            <a href={hub.path} class="rounded-[1.5rem] border border-white/75 bg-white/88 p-5 transition hover:border-leaf/40">
-              <h3 class="text-lg font-black text-forest">{hub.shortName}</h3>
-              <p class="mt-2 text-sm leading-7 text-forest/72">{hub.blurb}</p>
-              <span class="mt-3 inline-block text-xs font-bold text-leaf">Open hub →</span>
-            </a>
-          ))}
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-3xl">
+            <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-5xl">Turn Pro UPI QR into a complete payment workflow.</h2>
+            <p class="mt-4 text-lg leading-8">Beyond standalone QR codes, use Pro UPI QR for invoices, hosted payment links, developer integrations, and bulk merchant assets.</p>
+          </div>
+          <a href="/invoice-generator/" class="inline-flex h-12 shrink-0 items-center self-start rounded-full bg-sun px-6 text-[15px] font-bold text-forest transition hover:brightness-95 md:self-auto">Open invoice generator &rarr;</a>
         </div>
+        <ul class="mt-10 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
+          {merchantTools.map((tool) => (
+            <li class="border-t border-forest/15 py-5">
+              <a href={tool.href} class="group block">
+                <h3 class="flex flex-wrap items-center gap-2 text-lg font-bold text-obsidian group-hover:text-leaf">
+                  {tool.title}
+                  {tool.status === "New" && <span class="rounded-full bg-white px-2 py-0.5 text-xs font-semibold text-leaf">New</span>}
+                </h3>
+                <p class="mt-1.5 text-[15px] leading-6">{tool.copy}</p>
+              </a>
+            </li>
+          ))}
+        </ul>
       </div>
     </section>
 
-    <section class="px-4 py-12 md:px-6 lg:px-8">
-      <div class="mx-auto grid max-w-7xl gap-5 md:grid-cols-3">
+    <section class="px-4 pt-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <h2 class="max-w-3xl text-3xl font-black tracking-tight text-obsidian md:text-5xl">Find the right tool without scanning a hundred footer links.</h2>
+        <ul class="mt-8 grid gap-x-10 sm:grid-cols-2 lg:grid-cols-3">
+          {TOPIC_HUBS.map((hub) => (
+            <li class="border-t border-forest/10 py-5">
+              <a href={hub.path} class="group block">
+                <h3 class="text-lg font-bold text-obsidian group-hover:text-leaf">{hub.shortName}</h3>
+                <p class="mt-1.5 text-[15px] leading-6">{hub.blurb}</p>
+                <span class="mt-2 inline-block text-sm font-semibold text-forest underline underline-offset-4">Open hub &rarr;</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-16 md:px-6 lg:px-8">
+      <div class="mx-auto grid max-w-7xl gap-10 border-t border-forest/10 pt-12 md:grid-cols-3">
         {features.map((feature) => (
-          <article class="section-card rounded-[1.75rem] border border-white/75 bg-white/86 p-6">
-            <h3 class="text-xl font-black text-forest">{feature.title}</h3>
-            <p class="mt-3 text-base leading-7 text-forest/72">{feature.copy}</p>
-          </article>
+          <div>
+            <h3 class="text-xl font-bold text-obsidian">{feature.title}</h3>
+            <p class="mt-2 text-base leading-7">{feature.copy}</p>
+          </div>
         ))}
       </div>
     </section>
 
-    <section id="templates" class="scroll-mt-28 relative z-20 px-4 py-12 md:px-6 lg:px-8">
+    <section id="templates" class="scroll-mt-20 px-4 pb-16 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <div class="mb-8 max-w-3xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Templates</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-5xl">
             Start with eight ready-to-use payment poster templates.
           </h2>
-          <p class="mt-4 text-lg leading-8 text-forest/72">
+          <p class="mt-4 text-lg leading-8">
             Generate once, switch styles instantly, and download a printable payment image for your
             counter, table, donation desk, or client share flow.
-            See paper sizes in the
-            <a href="/print-templates/" class="font-bold text-leaf hover:underline">A4, A5, 5×7, and sticker gallery</a>.
+            See paper sizes in the{" "}
+            <a href="/print-templates/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">A4, A5, 5×7, and sticker gallery</a>.
+          </p>
+          <p class="mt-3 text-base leading-7">
+            Print, frame, and place high-resolution payment standees at checkout. Designed to look clean and professional, creating instant trust with your customers.
           </p>
         </div>
-
-        <div class="relative isolate mx-auto mt-12 mb-16 flex min-h-[760px] max-w-4xl items-center justify-center overflow-visible px-4 sm:min-h-[520px]" id="template-deck">
-          {templates.map((template, idx) => (
-            <div 
-              data-idx={idx}
-              class="template-card absolute w-[290px] sm:w-[320px] md:w-[340px] rounded-[2rem] border border-forest/15 bg-white p-5 shadow-2xl transition-all duration-500 cursor-pointer origin-bottom select-none will-change-transform"
-            >
-              <div class="flex items-center justify-between border-b border-forest/10 pb-2.5">
-                <span class="text-[10px] font-black uppercase tracking-[0.18em] text-leaf">{template.status}</span>
-                <span class="rounded-full bg-mint px-2.5 py-0.5 text-[10px] font-bold text-forest">{idx + 1}/8</span>
-              </div>
-              
-              <h3 class="mt-3.5 text-lg font-black text-forest">{template.name}</h3>
-              <p class="mt-2 text-xs text-forest/72 leading-relaxed h-[52px] overflow-hidden">{template.value}</p>
-
-              {/* Template preview image */}
-              <div class="mt-4 rounded-2xl bg-cream p-4 border border-forest/5 flex flex-col items-center justify-center min-h-[170px] relative overflow-hidden shadow-inner">
+        <ul class="mt-10 grid grid-cols-2 gap-x-5 gap-y-8 md:grid-cols-4">
+          {templates.map((template) => (
+            <li>
+              <div class="overflow-hidden rounded-[10px] bg-fog">
                 <TemplateThumb
                   src={template.image}
                   alt={`${template.name} printable UPI QR template`}
                   width={340}
-                  height={170}
+                  height={255}
                   loading="lazy"
-                  class="h-full w-full rounded-xl object-cover object-top"
+                  class="aspect-[4/3] w-full object-cover object-top"
                 />
               </div>
-
-              <div class="mt-4 pt-3 border-t border-forest/10 flex items-center justify-between text-[11px] font-bold text-forest/70">
-                <span class="truncate max-w-[190px]">{template.bestFor}</span>
-                <span class="text-leaf shrink-0 font-black text-xs hover:translate-x-1 transition-transform">Use &rarr;</span>
-              </div>
-            </div>
+              <h3 class="mt-3 text-base font-bold text-obsidian">{template.name}</h3>
+              <p class="mt-1 text-sm leading-6">{template.value}</p>
+              <p class="mt-1 text-xs leading-5 text-muted">{template.bestFor}</p>
+            </li>
           ))}
-        </div>
-
-      <div class="mt-8"></div>
-      <AffiliateProducts />
+        </ul>
+        <a href="#generator" class="mt-8 inline-block text-[15px] font-semibold text-forest underline underline-offset-4 hover:text-leaf">Make your poster with the generator &uarr;</a>
+        <div class="mt-12"><AffiliateProducts /></div>
       </div>
     </section>
 
-    <section class="px-4 py-12 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest px-6 py-8 text-white md:px-8 md:py-10">
-        <div class="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
-          <div class="max-w-3xl">
-            <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Universal Scanning</p>
-            <h2 class="mt-3 text-3xl font-black tracking-tight md:text-5xl">
-              Scan instantly using any UPI payment application.
-            </h2>
-            <p class="mt-4 text-lg leading-8 text-white/76">
-              Our generated QR codes strictly adhere to standard UPI guidelines. Customers can scan and make secure payments instantly using PhonePe, Google Pay, Paytm, BHIM, or any banking app.
-            </p>
-          </div>
-          <div class="flex flex-wrap gap-3">
-            {landingLinks.map((link) => (
-              <a
-                href={link.href}
-                class="rounded-full border border-white/15 px-4 py-2 text-sm font-bold text-white transition hover:bg-white hover:text-forest"
-              >
-                {link.label}
-              </a>
-            ))}
-          </div>
+    <section class="bg-forest px-4 py-16 text-[#c8dccf] md:px-6 lg:px-8">
+      <div class="mx-auto flex max-w-7xl flex-col gap-10 lg:flex-row lg:items-start lg:justify-between">
+        <div class="max-w-2xl">
+          <h2 class="text-3xl font-black tracking-tight text-mint md:text-5xl">
+            Scan instantly using any UPI payment application.
+          </h2>
+          <p class="mt-4 text-lg leading-8">
+            Our generated QR codes strictly adhere to standard UPI guidelines. Customers can scan and make secure payments instantly using PhonePe, Google Pay, Paytm, BHIM, or any banking app.
+          </p>
         </div>
+        <ul class="grid grid-cols-1 gap-x-8 gap-y-3 text-[15px] font-semibold text-white sm:grid-cols-2 lg:min-w-[30rem]">
+          {landingLinks.map((link) => (
+            <li><a href={link.href} class="hover:underline">{link.label} &rarr;</a></li>
+          ))}
+        </ul>
       </div>
     </section>
 
-    <section class="px-4 py-12 md:px-6 lg:px-8">
+    <section class="px-4 py-16 md:px-6 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <div class="mb-8 max-w-3xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">Guides</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
+        <div class="max-w-3xl">
+          <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-5xl">
             Learn how to print, set up, and secure your payment QR.
           </h2>
-          <p class="mt-4 text-lg leading-8 text-forest/72">
+          <p class="mt-4 text-lg leading-8">
             Practical tutorials for shop owners, NGOs, and freelancers — from standee printing to Google Pay activation.
           </p>
         </div>
-
-        <div class="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+        <ul class="mt-8 grid gap-x-10 md:grid-cols-2 lg:grid-cols-3">
           {featuredGuides.map((guide) => (
-            <a
-              href={guidePath(guide.id.replace(/\.mdx?$/, ""))}
-              class="group flex flex-col justify-between rounded-[1.75rem] border border-white/75 bg-white/86 p-6 transition-all duration-300 hover:border-leaf/20 hover:shadow-[0_18px_48px_rgba(17,59,44,0.08)]"
-            >
-              <div>
-                <h3 class="text-lg font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">
-                  {guide.data.title}
-                </h3>
-                <p class="mt-3 text-sm leading-7 text-forest/72 line-clamp-3">{guide.data.description}</p>
-              </div>
-              <span class="mt-5 text-xs font-bold text-leaf group-hover:translate-x-1 transition-transform inline-block">
-                Read guide &rarr;
-              </span>
-            </a>
+            <li class="border-t border-forest/10 py-5">
+              <a href={guidePath(guide.id.replace(/\.mdx?$/, ""))} class="group block">
+                <h3 class="line-clamp-2 text-lg font-bold text-obsidian group-hover:text-leaf">{guide.data.title}</h3>
+                <p class="mt-1.5 line-clamp-3 text-[15px] leading-6">{guide.data.description}</p>
+                <span class="mt-2 inline-block text-sm font-semibold text-forest underline underline-offset-4">Read guide &rarr;</span>
+              </a>
+            </li>
           ))}
-        </div>
-
-        <a href="/blog/" class="mt-8 inline-block text-sm font-bold text-leaf hover:underline">
+        </ul>
+        <a href="/blog/" class="mt-6 inline-block text-[15px] font-semibold text-forest underline underline-offset-4 hover:text-leaf">
           Browse all blog guides &rarr;
         </a>
       </div>
     </section>
 
-    <!-- Universal QR promotion + relaxed content -->
-    <section class="px-4 py-12 md:px-6 lg:px-8 border-t border-forest/10">
-      <div class="max-w-6xl mx-auto">
-        <div class="flex flex-col md:flex-row items-start md:items-end justify-between gap-4 mb-8">
-          <div>
-            <p class="text-xs uppercase tracking-[2px] text-leaf font-black">ALSO AVAILABLE</p>
-            <h2 class="text-4xl font-black tracking-tight">Universal QR Code Generator</h2>
-            <p class="text-forest/70 mt-1 max-w-md">Free QR codes for websites, WiFi, vCard, WhatsApp, PDF, and UPI. 13 templates. No signup, no watermark.</p>
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl border-t border-forest/10 pt-12">
+        <div class="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div class="max-w-2xl">
+            <p class="text-sm font-semibold text-leaf">Also available</p>
+            <h2 class="mt-2 text-3xl font-black tracking-tight text-obsidian md:text-4xl">Universal QR Code Generator</h2>
+            <p class="mt-3 text-lg leading-8">Free QR codes for websites, WiFi, vCard, WhatsApp, PDF, and UPI. 13 templates. No signup, no watermark.</p>
           </div>
-          <a href="/universal-qr-generator/" class="rounded-full bg-forest text-white px-6 py-3 text-sm font-bold whitespace-nowrap">Open universal QR editor →</a>
+          <a href="/universal-qr-generator/" class="inline-flex h-12 shrink-0 items-center self-start rounded-full border border-forest px-6 text-[15px] font-semibold text-forest transition hover:bg-forest hover:text-white md:self-auto">Open universal QR editor &rarr;</a>
         </div>
-
-        <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 text-sm">
+        <p class="mt-6 flex flex-wrap gap-x-5 gap-y-2 text-[15px] font-semibold">
           {["UPI Pay", "Website / URL", "WhatsApp", "WiFi", "Contact (vCard)", "PDF Files", "SMS", "Email", "Phone", "Plain Text"].map((item) => (
-            <a href="/universal-qr-generator/" class="block p-3 rounded-2xl border border-white/70 bg-white/80 hover:border-leaf/40">{item}</a>
+            <a href="/universal-qr-generator/" class="text-forest hover:text-leaf hover:underline">{item}</a>
           ))}
-        </div>
-
-        <div class="mt-6 flex flex-wrap items-center gap-3 pt-4 border-t border-forest/10">
-          <a href="/upi-qr-decoder/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
-            <span>Decode & Scan UPI QR Code Image</span>
-          </a>
-          <a href="/upi-link-generator/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>
-            <span>UPI Payment Link Builder</span>
-          </a>
-          <a href="/survey-qr-generator/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5 text-leaf" fill="currentColor" viewBox="0 0 24 24"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>
-            <span>Survey & Google Review QR</span>
-          </a>
-          <a href="/sbi-business-qr-code-generator/" class="px-4 py-2 rounded-full bg-leaf/10 border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all flex items-center gap-1.5">
-            <svg class="h-3.5 w-3.5 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>
-            <span>SBI Business QR Generator</span>
-          </a>
-        </div>
+        </p>
+        <ul class="mt-8 grid gap-x-10 border-t border-forest/10 sm:grid-cols-2 lg:grid-cols-4">
+          <li><a href="/upi-qr-decoder/" class="flex items-center gap-2 py-4 text-[15px] font-semibold text-forest hover:text-leaf"><svg class="h-4 w-4 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>Decode &amp; Scan UPI QR Code Image</a></li>
+          <li><a href="/upi-link-generator/" class="flex items-center gap-2 py-4 text-[15px] font-semibold text-forest hover:text-leaf"><svg class="h-4 w-4 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"/></svg>UPI Payment Link Builder</a></li>
+          <li><a href="/survey-qr-generator/" class="flex items-center gap-2 py-4 text-[15px] font-semibold text-forest hover:text-leaf"><svg class="h-4 w-4 text-leaf" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.64-7.03L22 9.24l-7.19-.61L12 2 9.19 8.63 2 9.24l5.46 4.73L5.82 21z"/></svg>Survey &amp; Google Review QR</a></li>
+          <li><a href="/sbi-business-qr-code-generator/" class="flex items-center gap-2 py-4 text-[15px] font-semibold text-forest hover:text-leaf"><svg class="h-4 w-4 text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/></svg>SBI Business QR Generator</a></li>
+        </ul>
       </div>
     </section>
 
     <Testimonials heading="Merchant reviews of Pro UPI QR" />
     <ReviewInvite />
 
-    <section id="faq" class="scroll-mt-28 px-4 py-14 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-5xl">
-        <div class="mb-8 max-w-2xl">
-          <p class="text-sm font-black uppercase tracking-[0.2em] text-leaf">FAQ</p>
-          <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">
-            Questions about UPI &amp; Universal QR Codes
-          </h2>
-        </div>
-        <div class="grid gap-4">
+    <section id="faq" class="scroll-mt-20 px-4 py-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-5xl">
+          Questions about UPI &amp; Universal QR Codes
+        </h2>
+        <div class="mt-8 grid gap-3">
           {faqs.map((faq) => (
-            <details class="section-card rounded-[1.5rem] border border-white/75 bg-white/86 p-5">
-              <summary class="cursor-pointer list-none text-lg font-black text-forest">
-                {faq.question}
+            <details class="group rounded-[10px] bg-fog px-5 py-4">
+              <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-lg font-bold text-obsidian">
+                <span>{faq.question}</span>
+                <span class="mt-0.5 text-2xl leading-none text-forest transition-transform group-open:rotate-45" aria-hidden="true">+</span>
               </summary>
-              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">
+              <p class="mt-3 max-w-3xl text-base leading-7">
                 {faq.answerLink ? (
                   <>
                     {faq.answer.split(faq.answerLink.label)[0]}
-                    <a href={faq.answerLink.href} class="text-leaf font-semibold underline hover:text-forest">
+                    <a href={faq.answerLink.href} class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">
                       {faq.answerLink.label}
                     </a>
                     {faq.answer.split(faq.answerLink.label)[1]}
@@ -737,196 +531,3 @@ const featuredGuides = pickFeaturedPosts(posts, 6);
     </section>
   </main>
 </BaseLayout>
-
-<style is:global>
-  @keyframes marquee {
-    0% { transform: translateX(0); }
-    100% { transform: translateX(-50%); }
-  }
-  .animate-marquee {
-    display: flex;
-    width: max-content;
-    animation: marquee 20s linear infinite;
-  }
-  .animate-marquee:hover {
-    animation-play-state: paused;
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-  .animate-slideDown {
-    animation: slideDown 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-  }
-</style>
-
-<script>
-  function setupDeck() {
-    const deck = document.getElementById('template-deck');
-    if (!deck) return;
-    const cards = Array.from(deck.querySelectorAll('.template-card')) as HTMLElement[];
-    let activeIndex = 0;
-
-    function updateCardPositions() {
-      const isMobile = window.innerWidth < 640;
-      const translateX = isMobile ? 24 : 64;
-      const translateY = isMobile ? 8 : 16;
-      const rotateDeg = isMobile ? 2.5 : 4.5;
-
-      cards.forEach((card, idx) => {
-        let indexOffset = idx - activeIndex;
-        
-        if (indexOffset < -cards.length / 2) {
-          indexOffset += cards.length;
-        } else if (indexOffset > cards.length / 2) {
-          indexOffset -= cards.length;
-        }
-
-        const absOffset = Math.abs(indexOffset);
-        
-        if (indexOffset === 0) {
-          card.style.transform = 'translate(0px, 0px) scale(1) rotate(0deg)';
-          card.style.zIndex = '30';
-          card.style.opacity = '1';
-          card.style.pointerEvents = 'auto';
-        } else if (indexOffset > 0 && indexOffset <= 2) {
-          const x = indexOffset * translateX;
-          const y = indexOffset * translateY;
-          const r = indexOffset * rotateDeg;
-          card.style.transform = `translate(${x}px, ${y}px) scale(${1 - absOffset * 0.04}) rotate(${r}deg)`;
-          card.style.zIndex = String(30 - absOffset);
-          card.style.opacity = String(1 - absOffset * 0.15);
-          card.style.pointerEvents = 'auto';
-        } else if (indexOffset < 0 && indexOffset >= -2) {
-          const x = indexOffset * translateX;
-          const y = -indexOffset * translateY;
-          const r = indexOffset * rotateDeg;
-          card.style.transform = `translate(${x}px, ${y}px) scale(${1 - absOffset * 0.04}) rotate(${r}deg)`;
-          card.style.zIndex = String(30 - absOffset);
-          card.style.opacity = String(1 - absOffset * 0.15);
-          card.style.pointerEvents = 'auto';
-        } else {
-          card.style.transform = 'translate(0px, 40px) scale(0.8) rotate(0deg)';
-          card.style.zIndex = '5';
-          card.style.opacity = '0';
-          card.style.pointerEvents = 'none';
-        }
-      });
-    }
-
-    cards.forEach((card) => {
-      card.addEventListener('click', () => {
-        const idx = parseInt(card.getAttribute('data-idx') || '0', 10);
-        activeIndex = idx;
-        updateCardPositions();
-      });
-    });
-
-    // Add Swipe support for Touch Devices
-    let touchStartX = 0;
-    let touchEndX = 0;
-    let touchStartY = 0;
-    let touchEndY = 0;
-
-    deck.addEventListener('touchstart', (e: TouchEvent) => {
-      touchStartX = e.changedTouches[0].screenX;
-      touchStartY = e.changedTouches[0].screenY;
-    }, { passive: true });
-
-    deck.addEventListener('touchend', (e: TouchEvent) => {
-      touchEndX = e.changedTouches[0].screenX;
-      touchEndY = e.changedTouches[0].screenY;
-      
-      const diffX = touchEndX - touchStartX;
-      const diffY = touchEndY - touchStartY;
-      const minSwipeDistance = 45;
-
-      // Check if horizontal swipe is larger than vertical scroll
-      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > minSwipeDistance) {
-        if (diffX < 0) {
-          // Swipe left -> Next card
-          activeIndex = (activeIndex + 1) % cards.length;
-        } else {
-          // Swipe right -> Previous card
-          activeIndex = (activeIndex - 1 + cards.length) % cards.length;
-        }
-        updateCardPositions();
-      }
-    }, { passive: true });
-
-    // Add Mouse Drag support for Desktop testing/browsers
-    let isDragging = false;
-    let dragStartX = 0;
-
-    deck.addEventListener('mousedown', (e: MouseEvent) => {
-      isDragging = true;
-      dragStartX = e.clientX;
-      deck.style.cursor = 'grabbing';
-    });
-
-    window.addEventListener('mouseup', (e: MouseEvent) => {
-      if (!isDragging) return;
-      isDragging = false;
-      deck.style.cursor = 'default';
-      
-      const dragEndX = e.clientX;
-      const diffX = dragEndX - dragStartX;
-      const minSwipeDistance = 45;
-
-      if (Math.abs(diffX) > minSwipeDistance) {
-        if (diffX < 0) {
-          activeIndex = (activeIndex + 1) % cards.length;
-        } else {
-          activeIndex = (activeIndex - 1 + cards.length) % cards.length;
-        }
-        updateCardPositions();
-      }
-    });
-
-    updateCardPositions();
-    window.addEventListener('resize', updateCardPositions);
-  }
-
-  function setupSmoothScroll() {
-    const btnCreate = document.getElementById('btn-create-qr');
-    const btnSeePoster = document.getElementById('btn-see-poster');
-    
-    if (btnCreate) {
-      btnCreate.addEventListener('click', (e) => {
-        const target = document.getElementById('generator');
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-          const firstInput = target.querySelector('input') as HTMLInputElement | null;
-          if (firstInput) {
-            setTimeout(() => firstInput.focus(), 300);
-          }
-        }
-      });
-    }
-
-    if (btnSeePoster) {
-      btnSeePoster.addEventListener('click', (e) => {
-        const target = document.getElementById('templates');
-        if (target) {
-          e.preventDefault();
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    }
-  }
-
-  setupDeck();
-  setupSmoothScroll();
-  document.addEventListener('astro:page-load', () => {
-    setupDeck();
-    setupSmoothScroll();
-  });
-</script>
