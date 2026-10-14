@@ -3,12 +3,13 @@
 //   npx astro build && npm run test:e2e
 //
 // Starts: fake Upstash REST (127.0.0.1:8799), static server for the production
-// build (:4400), and `astro dev` (:4321) pointed at the fake KV with fake
+// build (:4400), and `astro dev` (first free port from :4321) pointed at the fake KV with fake
 // Dodo Payments + Razorpay settings. Nothing here talks to production KV, Clerk,
 // Dodo Payments or Razorpay.
 // Needs google-chrome and python3 on PATH.
 import { spawn, spawnSync } from "node:child_process";
 import { createECDH } from "node:crypto";
+import { connect } from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +26,16 @@ const only = process.argv.slice(2).filter((a) => a !== "--prod");
 // --prod runs the server-backed suites against the real production bundle (scripts/e2e/prod-server.mjs).
 const SERVER_SUITES = ["waitlist-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e", "load-paypage", "load-digest"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+// Another project's dev server may hold :4321 (it happened); take the first port nothing answers on.
+const portBusy = (port) => new Promise((resolve) => {
+  const socket = connect({ port, host: "localhost" });
+  socket.once("connect", () => { socket.destroy(); resolve(true); });
+  socket.once("error", () => resolve(false));
+});
+async function freePort(start) {
+  for (let port = start; port < start + 50; port++) if (!(await portBusy(port))) return port;
+  throw new Error(`no free port from ${start}`);
+}
 
 if (!existsSync(join(STATIC_DIR, "app", "index.html"))) {
   console.error("Run `npx astro build` first (missing .vercel/output/static/app/index.html).");
@@ -86,11 +97,14 @@ try {
     process.env.DEV_BASE = "http://localhost:4500";
     process.env.E2E_MODE = "prod";
   } else {
-    start("npx", ["astro", "dev", "--port", "4321"], serverEnv);
+    const port = await freePort(4321);
+    process.env.DEV_BASE = `http://localhost:${port}`;
+    // Run astro directly (not via npx) so stopAll's kill reaches the dev server itself.
+    start(join(ROOT, "node_modules", ".bin", "astro"), ["dev", "--port", String(port), "--ignore-lock"], serverEnv);
   }
   await waitFor("http://127.0.0.1:8799/__admin/health");
   await waitFor("http://localhost:4400/app/");
-  await waitFor(PROD ? "http://localhost:4500/pricing/" : "http://localhost:4321/pricing/");
+  await waitFor(`${process.env.DEV_BASE}/pricing/`);
   if (PROD) {
     // Vercel applies vercel.json "crons" at deploy time; a copy in the build output is a duplicate and fails the deploy.
     const vercelJson = JSON.parse(readFileSync(join(ROOT, "vercel.json"), "utf8"));

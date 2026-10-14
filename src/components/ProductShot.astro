@@ -1,0 +1,33 @@
+---
+/**
+ * The payment tracker as people see it: a browser-framed desktop screenshot with a
+ * phone in front. Screenshots are real (sample data) and live in public/images/app/.
+ */
+interface Props {
+  /** Above the fold: load eagerly with high priority. */
+  eager?: boolean;
+}
+const { eager = false } = Astro.props;
+const loading = eager ? "eager" : "lazy";
+---
+
+<div class="relative pb-10 pr-6 sm:pr-16">
+  <div class="overflow-hidden rounded-[14px] bg-white shadow-[0_30px_80px_-30px_rgba(13,31,23,0.45)] ring-1 ring-forest/10">
+    <div class="flex items-center gap-1.5 border-b border-forest/10 bg-white px-4 py-2.5" aria-hidden="true">
+      <span class="h-2.5 w-2.5 rounded-full bg-coral/70"></span><span class="h-2.5 w-2.5 rounded-full bg-sun/80"></span><span class="h-2.5 w-2.5 rounded-full bg-leaf/60"></span>
+      <span class="ml-3 rounded-full bg-fog px-3 py-0.5 text-[11px] text-muted">proupiqr.in/app</span>
+    </div>
+    <picture>
+      <source type="image/avif" srcset="/images/app/tracker-desktop-800.avif 800w, /images/app/tracker-desktop-1600.avif 1600w" sizes="(min-width: 1024px) 680px, 92vw" />
+      <source type="image/webp" srcset="/images/app/tracker-desktop-800.webp 800w, /images/app/tracker-desktop-1600.webp 1600w" sizes="(min-width: 1024px) 680px, 92vw" />
+      <img src="/images/app/tracker-desktop-800.png" fetchpriority={eager ? "high" : "auto"} width="800" height="581" loading={loading} decoding="async" alt="Payment tracker overview: ₹35,000 to collect, ₹18,500 overdue, and two clients to remind on WhatsApp" class="block h-auto w-full" />
+    </picture>
+  </div>
+  <div class="absolute bottom-0 right-0 w-[30%] max-w-[190px] overflow-hidden rounded-[22px] border-[5px] border-obsidian bg-white shadow-[0_24px_60px_-20px_rgba(13,31,23,0.6)]">
+    <picture>
+      <source type="image/avif" srcset="/images/app/tracker-mobile-390.avif 390w, /images/app/tracker-mobile-780.avif 780w" sizes="190px" />
+      <source type="image/webp" srcset="/images/app/tracker-mobile-390.webp 390w, /images/app/tracker-mobile-780.webp 780w" sizes="190px" />
+      <img src="/images/app/tracker-mobile-390.png" width="390" height="780" loading={loading} decoding="async" alt="The same tracker on a phone" class="block h-auto w-full" />
+    </picture>
+  </div>
+</div>

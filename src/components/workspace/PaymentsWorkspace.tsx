@@ -303,7 +303,7 @@ function Workspace() {
       )}
       {saveFailed && <p role="alert" className="mt-2 rounded-2xl bg-coral/15 px-4 py-2.5 text-xs font-bold text-[#a8321d]">{tr("This browser blocked saving. Your changes will be lost when you close the tab — download a backup from Settings.")}</p>}
 
-      <nav aria-label={tr("Workspace sections")} className="sticky z-30 mt-5 -mx-1 flex gap-1 overflow-x-auto rounded-2xl bg-white/95 p-1 shadow-sm backdrop-blur" style={{ top: "calc(6.5rem + env(safe-area-inset-top, 0px))" }}>
+      <nav aria-label={tr("Workspace sections")} className="sticky z-30 mt-5 -mx-1 flex gap-1 overflow-x-auto [scrollbar-width:none] rounded-2xl bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-1" style={{ top: "calc(4.75rem + env(safe-area-inset-top, 0px))" }}>
         {TABS.map((t) => (
           <button
             key={t.id}
@@ -394,14 +394,23 @@ function Workspace() {
               </p>
             )}
             {views.length === 0 && !signedIn && (
-              <div className="rounded-[1.5rem] border border-dashed border-forest/20 bg-white/80 p-5 text-center">
-                <p className="text-sm text-forest/70">{tr("New here? See how it works with a few sample invoices, or add your own.")}</p>
-                <div className="mt-3 flex flex-wrap justify-center gap-2">
+              <div className="flex flex-col items-center gap-5 rounded-[1.5rem] bg-white p-6 text-center ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] sm:flex-row sm:text-left">
+                <EmptyIllustration />
+                <div className="min-w-0">
+                <p className="text-base font-bold text-forest">{tr("New here? See how it works with a few sample invoices, or add your own.")}</p>
+                <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
                   <button type="button" className={secondaryButton} onClick={() => { setWs(addSampleData(ws, today, Date.now())); setFlash(tr("Sample invoices added — try Remind or Got paid.")); }}>{tr("Try with sample data")}</button>
                   <button type="button" className={primaryButton} onClick={() => setSheet({ kind: "invoice" })}>{tr("Add your first invoice")}</button>
                 </div>
+                </div>
               </div>
             )}
+            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+              <Stat accent="collect" label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} />
+              <Stat accent="overdue" label={tr("Overdue")} value={formatPaise(summary.overduePaise)} note={tr(summary.overdueCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.overdueCount })} tone={summary.overduePaise ? "bad" : undefined} />
+              <Stat accent="soon" label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} />
+              <Stat accent="collected" label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} tone="good" />
+            </div>
             <GettingStarted ws={ws} signedIn={signedIn} onAction={(step) => {
               if (step === "invoice") setSheet({ kind: "invoice" });
               else if (step === "remind" || step === "payment") setTab("invoices");
@@ -409,14 +418,8 @@ function Workspace() {
             }} />
             {needsSetup && <SetupCard ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
 
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} />
-              <Stat label={tr("Overdue")} value={formatPaise(summary.overduePaise)} note={tr(summary.overdueCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.overdueCount })} tone={summary.overduePaise ? "bad" : undefined} />
-              <Stat label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} />
-              <Stat label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} tone="good" />
-            </div>
 
-            <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+            <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
               <div className="flex flex-wrap items-baseline justify-between gap-2">
                 <h2 className="text-lg font-black text-forest">{tr("Chase today")}</h2>
                 {summary.openCount > 0 && <button type="button" onClick={() => setSheet({ kind: "statement" })} className="text-xs font-bold text-leaf hover:underline">{tr("Got paid? Import bank statement")}</button>}
@@ -441,14 +444,14 @@ function Workspace() {
               )}
             </section>
 
-            <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+            <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
               <h2 className="text-lg font-black text-forest">{tr("Unpaid by age")}</h2>
               <p className="mt-1 text-xs text-forest/60">{tr("If you are a Udyam-registered micro or small enterprise, business buyers owe you interest on dues unpaid after 45 days (MSMED Act, 2006 §15–16).")}</p>
               <div className="mt-4 space-y-2.5">
                 {buckets.map((b) => (
                   <div key={b.key} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm">
                     <span className="text-xs font-bold text-forest/70">{tr(b.label)}</span>
-                    <div className="h-3 overflow-hidden rounded-full bg-forest/5">
+                    <div className="h-3 overflow-hidden rounded-full bg-fog">
                       <div className={`h-full rounded-full ${b.key === "current" ? "bg-leaf" : b.key === "d45_plus" ? "bg-coral" : "bg-sun"}`} style={{ width: `${(b.balancePaise / maxBucket) * 100}%` }} />
                     </div>
                     <span className="text-right text-xs font-bold tabular-nums text-forest">{formatPaise(b.balancePaise)}</span>
@@ -517,7 +520,7 @@ function Workspace() {
         {tab === "clients" && (
           <div className="space-y-3">
             {liveRecurring(ws).length > 0 && (
-              <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm" aria-labelledby="monthly-title">
+              <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5" aria-labelledby="monthly-title">
                 <h2 id="monthly-title" className="text-lg font-black text-forest">{tr("Monthly billing")}</h2>
                 <ul className="mt-2 divide-y divide-forest/5">
                   {liveRecurring(ws).map((plan) => {
@@ -553,7 +556,7 @@ function Workspace() {
             {clients.length === 0 ? (
               <p className="rounded-[1.5rem] border border-dashed border-forest/20 bg-white/70 p-8 text-center text-sm text-forest/70">{tr("Clients are added automatically when you create an invoice.")}</p>
             ) : (
-              <ul className="divide-y divide-forest/5 rounded-[1.5rem] border border-white/75 bg-white/90 px-5 shadow-sm">
+              <ul className="divide-y divide-forest/5 rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] px-5">
                 {clients.map((c) => {
                   const bal = balances.get(c.id);
                   return (
@@ -669,11 +672,48 @@ function Workspace() {
   );
 }
 
-function Stat({ label, value, note, tone }: { label: string; value: string; note?: string; tone?: "good" | "bad" }) {
+/** An invoice, a WhatsApp reminder and a paid tick: what the tracker does, at a glance. */
+function EmptyIllustration() {
   return (
-    <div className="rounded-[1.25rem] border border-white/75 bg-white/90 p-4 shadow-sm">
-      <p className="text-xs font-bold text-forest/60">{label}</p>
-      <p className={`mt-1 text-xl font-black tabular-nums md:text-2xl ${tone === "bad" ? "text-[#a8321d]" : tone === "good" ? "text-leaf" : "text-forest"}`}>{value}</p>
+    <svg className="h-28 w-40 shrink-0" viewBox="0 0 160 112" fill="none" aria-hidden="true">
+      <rect x="18" y="10" width="78" height="92" rx="10" fill="#eef1ec" />
+      <rect x="26" y="20" width="62" height="74" rx="7" fill="#fff" stroke="#113b2c" strokeOpacity=".12" />
+      <rect x="34" y="30" width="30" height="5" rx="2.5" fill="#113b2c" />
+      <rect x="34" y="41" width="44" height="4" rx="2" fill="#113b2c" fillOpacity=".18" />
+      <rect x="34" y="50" width="38" height="4" rx="2" fill="#113b2c" fillOpacity=".18" />
+      <rect x="34" y="66" width="20" height="5" rx="2.5" fill="#113b2c" fillOpacity=".3" />
+      <text x="80" y="72" textAnchor="end" fontSize="11" fontWeight="800" fill="#113b2c" fontFamily="system-ui, sans-serif">₹4,500</text>
+      <rect x="34" y="80" width="46" height="7" rx="3.5" fill="#f6b73c" />
+      <path d="M92 34h46a8 8 0 018 8v14a8 8 0 01-8 8h-30l-9 7v-7h-7a8 8 0 01-8-8V42a8 8 0 018-8z" fill="#25D366" />
+      <rect x="100" y="43" width="34" height="4" rx="2" fill="#fff" />
+      <rect x="100" y="51" width="22" height="4" rx="2" fill="#fff" fillOpacity=".75" />
+      <circle cx="128" cy="86" r="15" fill="#287a57" />
+      <path d="M121 86l5 5 9-10" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+const STAT_ACCENT = {
+  collect: { chip: "bg-sun/25 text-[#8a5a00]", bar: "bg-sun", icon: "M12 6v12m-4-9h6.5a2.5 2.5 0 010 5H8m0-5h8M8 9h5" },
+  overdue: { chip: "bg-coral/15 text-[#a8321d]", bar: "bg-coral", icon: "M12 8v5m0 3h.01M10.3 3.9L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" },
+  soon: { chip: "bg-[#e3eefb] text-[#1d5fa8]", bar: "bg-[#4a8fd8]", icon: "M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" },
+  collected: { chip: "bg-mint text-leaf", bar: "bg-leaf", icon: "M5 13l4 4L19 7" },
+} as const;
+
+function Stat({ label, value, note, tone, accent }: { label: string; value: string; note?: string; tone?: "good" | "bad"; accent: keyof typeof STAT_ACCENT }) {
+  const a = STAT_ACCENT[accent];
+  return (
+    <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-4 ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)]">
+      <span className={`absolute inset-x-0 top-0 h-1 ${a.bar}`} aria-hidden="true" />
+      <div className="flex items-center gap-2">
+        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${a.chip}`} aria-hidden="true">
+          {accent === "collect"
+            ? <span className="text-sm font-black leading-none">₹</span>
+            : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={a.icon} /></svg>}
+        </span>
+        <p className="text-xs font-bold text-forest/60">{label}</p>
+      </div>
+      <p className={`mt-2 text-xl font-black tabular-nums md:text-2xl ${tone === "bad" ? "text-[#a8321d]" : tone === "good" ? "text-leaf" : "text-forest"}`}>{value}</p>
       {note && <p className="mt-0.5 text-[11px] text-forest/55">{note}</p>}
     </div>
   );
@@ -701,7 +741,7 @@ function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onR
   const { tr, dateLocale } = useWs();
   const { invoice } = view;
   return (
-    <li className="rounded-[1.25rem] border border-white/75 bg-white/90 shadow-sm">
+    <li className="rounded-[1.25rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)]">
       <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left">
         <div className="min-w-0">
           <p className="truncate font-bold text-forest">{view.client?.name ?? tr("Unknown client")}</p>
@@ -871,7 +911,7 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+      <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
         <h2 className="text-lg font-black text-forest">{tr("Business details")}</h2>
         <form noValidate className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
           e.preventDefault();
@@ -895,7 +935,7 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
         {error && <p role="alert" className="mt-2 text-xs font-bold text-[#a8321d]">{error}</p>}
       </section>
 
-      <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+      <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
         <h2 className="text-lg font-black text-forest">{tr("Your data")}</h2>
         <p className="mt-1 text-sm text-forest/70">{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
@@ -970,7 +1010,7 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
   const { tr, dateLocale } = useWs();
 
   return (
-    <section className="rounded-[1.5rem] border border-leaf/20 bg-white/90 p-5 shadow-sm">
+    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
       <h2 className="text-lg font-black text-forest">{tr("Sync across devices")}</h2>
       {state.status === "checking" && <p className="mt-2 text-sm text-forest/60">{tr("Checking your account…")}</p>}
       {state.status === "signed_out" && (
@@ -1052,7 +1092,7 @@ function GettingStarted({ ws, signedIn, onAction }: { ws: Workspace; signedIn: b
   const doneCount = steps.filter((s) => s.done).length;
   if (dismissed || doneCount === steps.length) return null;
   return (
-    <section className="rounded-[1.5rem] border border-leaf/20 bg-white/90 p-5 shadow-sm" aria-labelledby="getting-started-title">
+    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5" aria-labelledby="getting-started-title">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 id="getting-started-title" className="text-lg font-black text-forest">{tr("Get paid faster in 5 steps")}</h2>
         <span className="text-xs font-bold text-forest/60">{tr("{done} of {total} done", { done: doneCount, total: steps.length })}</span>

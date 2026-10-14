@@ -215,7 +215,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
   const trialDays = billing?.trialDays ?? 0;
 
   return (
-    <section ref={panel} id="plan" className={`rounded-[1.5rem] border bg-white/90 p-5 shadow-sm ${intent && !isPro ? "border-sun ring-2 ring-sun/50" : "border-white/75"}`}>
+    <section ref={panel} id="plan" className={`rounded-[1.5rem] border bg-white shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5 ${intent && !isPro ? "border-sun ring-2 ring-sun/50" : "border-forest/[0.07]"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <h2 className="text-lg font-black text-forest">{tr("Plan")}</h2>
         <span className={`rounded-full px-3 py-1 text-xs font-black ${isPro ? "bg-forest text-white" : "bg-mint text-leaf"}`}>{isPro ? "Pro" : tr("Free")}</span>

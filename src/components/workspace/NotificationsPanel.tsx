@@ -101,7 +101,7 @@ export function NotificationsPanel({ signedIn, standalone, ios, onFlash }: {
   }
 
   return (
-    <section className="rounded-[1.5rem] border border-white/75 bg-white/90 p-5 shadow-sm">
+    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
       <h2 className="text-lg font-black text-forest">{tr("Morning reminders")}</h2>
       <p className="mt-1 text-sm text-forest/70">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2" role="status">

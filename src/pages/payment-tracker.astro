@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import ProductShot from "../components/ProductShot.astro";
 import { MSMED_INTEREST_PCT } from "../data/rbiRates";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
@@ -93,44 +94,27 @@ const schema = {
 
 <BaseLayout title={title} description={description} schema={schema}>
   <main>
-    <section class="relative overflow-hidden px-4 pb-10 pt-12 md:px-6 lg:px-8">
-      <div class="grid-glow absolute inset-x-0 top-0 h-[24rem]"></div>
-      <div class="relative mx-auto max-w-6xl">
-        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
+    <section class="bg-gradient-to-b from-mint/70 via-mint/25 to-white px-4 pb-14 pt-8 md:px-6 md:pt-12 lg:px-8">
+      <div class="mx-auto max-w-6xl">
+        <nav aria-label="Breadcrumb" class="mb-5 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/60">
           <a href="/" class="transition-colors hover:text-leaf">Home</a>
           <span>/</span>
           <a href="/tools/" class="transition-colors hover:text-leaf">Tools</a>
           <span>/</span>
           <span class="font-bold text-forest" aria-current="page">Payment tracker</span>
         </nav>
-        <div class="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
+        <div class="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:items-center">
           <div>
-            <p class="inline-flex text-sm font-semibold text-leaf">Free · no signup</p>
-            <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Know who owes you — and get paid faster</h1>
-            <p class="mt-5 max-w-2xl text-lg leading-8 text-forest/75">A free invoice payment tracker for freelancers, tutors, and small businesses. See every unpaid invoice, send a WhatsApp reminder in one tap, and mark UPI payments received — all on your phone, with no account.</p>
+            <p class="text-sm font-semibold text-leaf">Free · no signup</p>
+            <h1 class="mt-3 text-4xl font-black leading-[1.05] tracking-[-0.02em] text-obsidian md:text-6xl">Know who owes you — and get paid faster</h1>
+            <p class="mt-5 max-w-2xl text-lg leading-8">A free invoice payment tracker for freelancers, tutors, and small businesses. See every unpaid invoice, send a WhatsApp reminder in one tap, and mark UPI payments received — all on your phone, with no account.</p>
             <div class="mt-7 flex flex-wrap gap-3">
-              <a href="/app/" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Open payment tracker</a>
-              <a href="/app/?new=1" class="rounded-full border border-forest/10 bg-white/70 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Add first invoice</a>
+              <a href="/app/" class="inline-flex h-12 items-center rounded-full bg-sun px-6 text-sm font-black text-forest transition hover:brightness-95">Open payment tracker</a>
+              <a href="/app/?new=1" class="inline-flex h-12 items-center rounded-full bg-white px-6 text-sm font-bold text-forest ring-1 ring-forest/20 transition hover:bg-mint">Add first invoice</a>
             </div>
-            <p class="mt-4 text-xs text-forest/60">Saved only in this browser. Back up anytime from Settings. <a href="/pricing/" class="font-bold text-leaf underline">Free account & Pro plans</a></p>
+            <p class="mt-4 text-sm text-muted">Saved only in this browser. Back up anytime from Settings. <a href="/pricing/" class="font-bold text-leaf underline">Free account & Pro plans</a></p>
           </div>
-          <div aria-hidden="true" class="rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.12)]">
-            <p class="text-xs font-bold text-forest/60">Chase today</p>
-            <ul class="mt-3 space-y-3 text-sm">
-              <li class="flex items-center justify-between gap-3 rounded-2xl bg-cream p-3">
-                <span><b class="text-forest">Acme Traders</b><br /><span class="text-xs text-forest/60">₹25,000 · 18 days late</span></span>
-                <span class="rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white">Remind</span>
-              </li>
-              <li class="flex items-center justify-between gap-3 rounded-2xl bg-cream p-3">
-                <span><b class="text-forest">Rohan (tuition)</b><br /><span class="text-xs text-forest/60">₹3,000 · due today</span></span>
-                <span class="rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white">Remind</span>
-              </li>
-            </ul>
-            <div class="mt-4 grid grid-cols-2 gap-3 text-xs">
-              <div class="rounded-2xl bg-mint/60 p-3"><span class="text-forest/60">To collect</span><br /><b class="text-lg text-forest">₹28,000</b></div>
-              <div class="rounded-2xl bg-coral/10 p-3"><span class="text-forest/60">Overdue</span><br /><b class="text-lg text-[#a8321d]">₹25,000</b></div>
-            </div>
-          </div>
+          <ProductShot eager />
         </div>
       </div>
     </section>

@@ -10,7 +10,7 @@ const description = "Track invoices, record UPI payments, and send WhatsApp paym
 ---
 
 <BaseLayout title={title} description={description} noindex={true} manifest="/app.webmanifest">
-  <main class="px-4 pb-16 pt-6 md:px-6 lg:px-8">
+  <main class="min-h-[70vh] bg-fog px-4 pb-16 pt-6 md:px-6 lg:px-8">
     <PaymentsWorkspace client:load />
     <ClerkClient />
   </main>
