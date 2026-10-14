@@ -4,6 +4,14 @@
  * fails if a tr() string has no Hindi here, or placeholders don't match.
  */
 export const WS_HI: Record<string, string> = {
+  "Keep these {n} invoices safe": "इन {n} इनवॉइस को सुरक्षित रखें",
+  "Keep this invoice safe": "इस इनवॉइस को सुरक्षित रखें",
+  "They're saved only in this browser. Clearing it or switching phones loses them. A free account backs them up and syncs your phone and laptop.": "ये सिर्फ़ इसी ब्राउज़र में सेव हैं। ब्राउज़र साफ़ करने या फ़ोन बदलने पर ये मिट जाएँगे। मुफ़्त अकाउंट इनका बैकअप रखता है और आपके फ़ोन और लैपटॉप को सिंक करता है।",
+  "You're in an app's built-in browser, which forgets data easily. Open this page in Chrome or Safari.": "आप किसी ऐप के अंदर वाले ब्राउज़र में हैं, जो डेटा आसानी से भूल जाता है। यह पेज Chrome या Safari में खोलें।",
+  "Save with a free account": "मुफ़्त अकाउंट से सेव करें",
+  "You collected {amount} by UPI this month, straight to your bank. A card or payment gateway at 2.36% would have kept about {fee}.": "इस महीने आपने UPI से {amount} सीधे अपने बैंक में पाए। 2.36% वाले कार्ड या पेमेंट गेटवे से लगभग {fee} फ़ीस में कट जाते।",
+  "Pro costs {price}/month, less than the gateway fee on {amount} of sales.": "Pro {price}/महीना है — {amount} की बिक्री पर लगने वाली गेटवे फ़ीस से भी कम।",
+  "Compare UPI and gateway fees": "UPI और गेटवे फ़ीस की तुलना करें",
   " ({extra} more than was due wasn't recorded)": " (बकाया से {extra} ज़्यादा था, उसे दर्ज नहीं किया गया)",
   " · Monthly": " · मासिक",
   " · ended": " · समाप्त",

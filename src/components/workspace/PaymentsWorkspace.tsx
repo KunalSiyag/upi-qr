@@ -20,6 +20,7 @@ import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
 import { PRO_PRICES } from "../../data/pricing";
+import { gatewayFeePaise, UPI_MDR } from "../../lib/upiMdr";
 import { downloadText, Field, inputClass, primaryButton, secondaryButton, Sheet, StatusBadge } from "./ui";
 import { initialWsLang, LangToggle, makeTr, useWs, WS_LANG_KEY, WsLangProvider, type Tr, type WsLang } from "./i18n";
 
@@ -387,6 +388,7 @@ function Workspace() {
               </section>
             )}
 
+            {ready && !signedIn && <SyncNudge ws={ws} today={today} />}
             {hasSampleData(ws) && (
               <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sun/25 px-4 py-2.5 text-xs font-bold text-forest">
                 {tr("You're looking at sample data.")}
@@ -411,6 +413,7 @@ function Workspace() {
               <Stat accent="soon" label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} />
               <Stat accent="collected" label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} tone="good" />
             </div>
+            <GatewaySavings ws={ws} today={today} isPro={isPro} />
             <GettingStarted ws={ws} signedIn={signedIn} onAction={(step) => {
               if (step === "invoice") setSheet({ kind: "invoice" });
               else if (step === "remind" || step === "payment") setTab("invoices");
@@ -669,6 +672,94 @@ function Workspace() {
         <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { setWs(next); setSheet(null); setFlash(message); }} />
       )}
     </div>
+  );
+}
+
+const NUDGE_KEY = "proupiqr-sync-nudge-dismissed";
+const NUDGE_SNOOZE_MS = 14 * 86_400_000;
+/** Apps whose built-in browser keeps its own storage, which people lose easily. */
+const IN_APP_BROWSER = /Instagram|FBAN|FBAV|FB_IAB|Line\/|Snapchat/i;
+
+/**
+ * Local-only workspaces vanish with browser data. Once someone has real invoices to
+ * lose (two, or one with a payment), ask them to keep a free cloud copy; sign-up
+ * uploads what's here. "Not now" hides it for 14 days.
+ */
+function SyncNudge({ ws, today }: { ws: Workspace; today: string }) {
+  const { tr } = useWs();
+  const [hidden, setHidden] = useState(true);
+  const [inApp, setInApp] = useState(false);
+  useEffect(() => {
+    let dismissedAt = 0;
+    try { dismissedAt = Number(localStorage.getItem(NUDGE_KEY)) || 0; } catch { /* storage blocked */ }
+    setHidden(Date.now() - dismissedAt < NUDGE_SNOOZE_MS);
+    setInApp(IN_APP_BROWSER.test(navigator.userAgent));
+  }, []);
+  const real = Object.values(ws.invoices).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const atRisk = real.length >= 2 || real.some((i) => i.payments.length > 0) || (inApp && real.length > 0);
+  if (hidden || !atRisk) return null;
+  const dismiss = () => {
+    try { localStorage.setItem(NUDGE_KEY, String(Date.now())); } catch { /* storage blocked */ }
+    setHidden(true);
+  };
+  return (
+    <section className="flex flex-col gap-4 rounded-[1.5rem] bg-forest p-5 text-white shadow-[0_16px_40px_-20px_rgba(17,59,44,0.6)] sm:flex-row sm:items-center sm:justify-between" aria-labelledby="sync-nudge-title">
+      <div className="flex gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sun" aria-hidden="true">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 18a4 4 0 01-.9-7.9 5.5 5.5 0 0110.7-1.4A4.5 4.5 0 0117 18H7zm5-7v5m0-5l-2 2m2-2l2 2" /></svg>
+        </span>
+        <div className="min-w-0">
+          <h2 id="sync-nudge-title" className="text-base font-black">{real.length === 1 ? tr("Keep this invoice safe") : tr("Keep these {n} invoices safe", { n: real.length })}</h2>
+          <p className="mt-1 text-sm leading-6 text-white/80">{tr("They're saved only in this browser. Clearing it or switching phones loses them. A free account backs them up and syncs your phone and laptop.")}</p>
+          {inApp && <p className="mt-2 text-sm font-bold text-sun">{tr("You're in an app's built-in browser, which forgets data easily. Open this page in Chrome or Safari.")}</p>}
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        <a href={SIGN_UP_HREF} className="inline-flex h-11 items-center rounded-full bg-sun px-5 text-sm font-black text-forest transition hover:brightness-95">{tr("Save with a free account")}</a>
+        <button type="button" onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")} className="inline-flex h-11 items-center rounded-full px-4 text-sm font-bold text-white ring-1 ring-white/30 transition hover:bg-white/10">{tr("Download backup")}</button>
+        <button type="button" onClick={dismiss} className="inline-flex h-11 items-center rounded-full px-3 text-sm font-bold text-white/70 hover:text-white">{tr("Not now")}</button>
+      </div>
+    </section>
+  );
+}
+
+/** UPI payments recorded this month on real (non-sample) invoices, in paise. */
+export function upiCollectedInMonth(ws: Workspace, today: string): number {
+  const month = today.slice(0, 7);
+  let total = 0;
+  for (const invoice of Object.values(ws.invoices)) {
+    if (invoice.deletedAt || isSampleId(invoice.id)) continue;
+    for (const payment of invoice.payments) if (payment.mode === "upi" && payment.date.startsWith(month)) total += payment.amountPaise;
+  }
+  return total;
+}
+
+/** ₹10,000: below this the gateway comparison is too small to matter. */
+const SAVINGS_FROM_PAISE = 10_000_00;
+
+/** What a 2.36% card/gateway checkout would have taken from this month's direct UPI collections. */
+function GatewaySavings({ ws, today, isPro }: { ws: Workspace; today: string; isPro: boolean }) {
+  const { tr } = useWs();
+  const collected = upiCollectedInMonth(ws, today);
+  if (collected < SAVINGS_FROM_PAISE) return null;
+  // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee.
+  const breakEven = Math.ceil((PRO_PRICES.monthly.paise * 10_000) / UPI_MDR.gatewayRateBps / 100) * 100;
+  return (
+    <section className="flex flex-col gap-3 rounded-[1.5rem] bg-mint p-5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-leaf" aria-hidden="true">
+          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7l7-4zm-3 9l2 2 4-4" /></svg>
+        </span>
+        <div className="min-w-0 text-sm leading-6 text-forest">
+          <p className="font-bold">{tr("You collected {amount} by UPI this month, straight to your bank. A card or payment gateway at 2.36% would have kept about {fee}.", { amount: formatPaise(collected), fee: formatPaise(gatewayFeePaise(collected)) })}</p>
+          {!isPro && <p className="mt-0.5 text-forest/70">{tr("Pro costs {price}/month, less than the gateway fee on {amount} of sales.", { price: PRO_PRICES.monthly.label, amount: formatPaise(breakEven) })}</p>}
+        </div>
+      </div>
+      <div className="flex shrink-0 flex-wrap gap-2">
+        {!isPro && <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>}
+        <a href="/upi-mdr-calculator/" className="inline-flex items-center px-2 text-xs font-bold text-leaf hover:underline">{tr("Compare UPI and gateway fees")}</a>
+      </div>
+    </section>
   );
 }
 

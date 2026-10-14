@@ -206,9 +206,10 @@ const dueText = view.dueDate
         </div>
       </div>
       {branded && (
-        <p class="mt-6 text-center text-xs text-forest/60">
-          Send your own pay links free — <a href="/payment-tracker/" class="font-bold text-leaf underline">Pro UPI QR payment tracker</a>
-        </p>
+        <a href="/payment-tracker/" class="mx-auto mt-6 flex max-w-md items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 text-left text-xs text-forest/70 ring-1 ring-forest/10 transition hover:bg-white">
+          <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint text-sm font-black text-leaf" aria-hidden="true">₹</span>
+          <span><b class="text-forest">0% gateway fee: paid straight by UPI.</b> Send your own pay links free with the <span class="font-bold text-leaf underline">Pro UPI QR payment tracker</span></span>
+        </a>
       )}
     </main>
   </body>

@@ -89,6 +89,13 @@ try {
   page = await text();
   check("partial payment updates totals", page.includes("₹16,500.50") && page.includes("₹15,000") && page.includes("Payment recorded"));
   check("collected this month", /Collected this month\s*₹10,000/.test(page));
+  // Two real invoices, signed out: keep a free cloud copy before browser data is lost.
+  check("sync nudge once there are two invoices", /Keep these 2 invoices safe/.test(page) && /Save with a free account/.test(page));
+  // ₹10,000 by UPI this month: what a 2.36% gateway would have taken, and Pro's break-even.
+  check("gateway savings shown from ₹10,000 by UPI", /You collected ₹10,000 by UPI this month[\s\S]*would have kept about ₹236/.test(page), page.slice(0, 900));
+  check("Pro break-even is exact", /less than the gateway fee on ₹6,314 of sales/.test(page));
+  await t(`__t.click(/^Not now$/)`);
+  check("sync nudge snoozes", !/Keep these 2 invoices safe/.test(await text()) && Number(await b.eval("localStorage.getItem('proupiqr-sync-nudge-dismissed')")) > 0);
 
   // Invoices tab: filters, full payment, undo, persistence.
   await t(`__t.click(/^Invoices/)`);
