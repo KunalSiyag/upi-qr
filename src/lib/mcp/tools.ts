@@ -18,7 +18,15 @@ import { CATEGORY_LABEL, DEBIT_LABEL, ORIGIN_LABEL, UPI_ERROR_CODES, type UpiErr
 import type { JsonObject, McpServer, McpTool, ToolResult } from "./protocol.ts";
 
 export const SITE = "https://www.proupiqr.in";
-export const MCP_SERVER_VERSION = "1.0.0";
+export const MCP_SERVER_VERSION = "1.1.0";
+
+/**
+ * Pages find_merchant_tools may return: free tools and hubs only. The /products/ hardware
+ * guides carry Amazon Associate links, and directory policies exclude sponsored placements.
+ */
+export function isCatalogEligible(href: string): boolean {
+  return href.startsWith("/") && !href.startsWith("//") && !/^\/products(\/|$)/.test(href);
+}
 
 /** A free tool or hub on the site, for find_merchant_tools. */
 export interface CatalogEntry {
@@ -77,11 +85,24 @@ function isoDate(value: string): boolean {
 export const indiaToday = (now = Date.now()) => new Date(now + 330 * 60_000).toISOString().slice(0, 10);
 const percentLabel = (bps: number) => `${(bps / 100).toFixed(3).replace(/\.?0+$/, "")}%`;
 
+/** Links back to the site carry these so visits from AI assistants show up in analytics. */
+export const MCP_UTM = "utm_source=mcp&utm_medium=tool";
+
+/** `${SITE}${path}` with the MCP campaign tags before any #fragment. */
+export function siteLink(path: string): string {
+  const hash = path.indexOf("#");
+  const [base, fragment] = hash === -1 ? [path, ""] : [path.slice(0, hash), path.slice(hash)];
+  return `${SITE}${base}${base.includes("?") ? "&" : "?"}${MCP_UTM}${fragment}`;
+}
+
 /**
  * The generator with this payment filled in: the upi:// query rides in the #fragment
- * (`/#pay?pa=…&pn=…`), which browsers never send to a server. GeneratorForm reads it.
+ * (`/?utm…#pay?pa=…&pn=…`), which browsers never send to a server. GeneratorForm reads it.
  */
-export const posterUrl = (uri: string) => `${SITE}/#pay?${uri.slice(uri.indexOf("?") + 1)}`;
+export const posterUrl = (uri: string) => siteLink(`/#pay?${uri.slice(uri.indexOf("?") + 1)}`);
+
+/** Said to the model and in the payment tools: the directories' policies exclude tools that move money. */
+const NO_MONEY_MOVES = "These tools never send, receive or hold money: they only build upi:// links, QR codes and calculations, and the payer approves any payment in their own UPI app.";
 
 /* ---------- UPI link and QR ---------- */
 
@@ -144,7 +165,7 @@ const createPaymentLink: McpTool = {
   name: "create_upi_payment_link",
   title: "Create UPI payment link",
   description:
-    "Create a UPI payment link (upi://pay) for an Indian UPI ID. On a phone it opens PhonePe, Google Pay, Paytm, BHIM or any UPI app with the payee, amount and note filled in. Use it to collect a payment, split a bill or put on an invoice. Returns the link and a proupiqr.in page with its QR code and printable poster. Amounts are exact to the paisa; nothing is stored.",
+    "Create a UPI payment link (upi://pay) for an Indian UPI ID. On a phone it opens PhonePe, Google Pay, Paytm, BHIM or any UPI app with the payee, amount and note filled in. Use it to collect a payment, split a bill or put on an invoice. Returns the link and a proupiqr.in page with its QR code and printable poster. Amounts are exact to the paisa; nothing is stored. It never moves money: the payer approves the payment in their own UPI app.",
   inputSchema: { type: "object", properties: UPI_ARGS, required: ["upi_id", "payee_name"] },
   run(args) {
     const p = upiPayment(args);
@@ -167,7 +188,7 @@ const generateQr: McpTool = {
   name: "generate_upi_qr_code",
   title: "Generate UPI QR code",
   description:
-    "Generate a UPI payment QR code (PNG image) for an Indian UPI ID that PhonePe, Google Pay, Paytm, BHIM and every UPI app can scan, optionally with a fixed amount and note. Also returns the upi:// link and a proupiqr.in page to download a printable counter poster or stickers. Nothing is stored.",
+    "Generate a UPI payment QR code (PNG image) for an Indian UPI ID that PhonePe, Google Pay, Paytm, BHIM and every UPI app can scan, optionally with a fixed amount and note. Also returns the upi:// link and a proupiqr.in page to download a printable counter poster or stickers. Nothing is stored. It never moves money: the payer approves the payment in their own UPI app.",
   inputSchema: {
     type: "object",
     properties: { ...UPI_ARGS, size: { type: "integer", minimum: 200, maximum: 1000, description: "Image width in pixels (default 512)." } },
@@ -329,7 +350,7 @@ const explainError: McpTool = {
     if (!query) return problem("code is required, e.g. U30.");
     const item = findErrorCode(query.slice(0, 200));
     if (!item) {
-      return problem(`No UPI error code matches "${clip(query)}". Common ones: U30, U16, U28, ZM, Z9, XH, U09, U90. Ask for the exact code the app shows, or browse all of them at ${SITE}/upi-error-codes/.`);
+      return problem(`No UPI error code matches "${clip(query)}". Common ones: U30, U16, U28, ZM, Z9, XH, U09, U90. Ask for the exact code the app shows, or browse all of them at ${siteLink(`/upi-error-codes/`)}.`);
     }
     return done(
       [
@@ -339,9 +360,9 @@ const explainError: McpTool = {
         `Money: ${DEBIT_LABEL[item.debitStatus]}. ${item.refundTime}`,
         `What to do: ${item.actionStep}`,
         `For merchants: ${item.merchantNote}`,
-        `Details: ${SITE}/upi-error-codes/#${item.code.toLowerCase()}`,
+        `Details: ${siteLink(`/upi-error-codes/#${item.code.toLowerCase()}`)}`,
       ].join("\n"),
-      { code: item.code, title: item.title, origin: item.origin, category: item.category, debit_status: item.debitStatus, refund_time: item.refundTime, url: `${SITE}/upi-error-codes/#${item.code.toLowerCase()}` },
+      { code: item.code, title: item.title, origin: item.origin, category: item.category, debit_status: item.debitStatus, refund_time: item.refundTime, url: `${siteLink(`/upi-error-codes/#${item.code.toLowerCase()}`)}` },
     );
   },
 };
@@ -384,7 +405,7 @@ const calculateGst: McpTool = {
           : [`- IGST ${rate}: ${formatInr(line.igstPaise)}`]),
         `- Total GST: ${formatInr(line.gstPaise)}`,
         `- Total: ${formatInr(line.totalPaise)}`,
-        `GST invoice with a UPI QR: ${SITE}/invoice-generator/ · Calculator: ${SITE}/gst-calculator/`,
+        `GST invoice with a UPI QR: ${siteLink(`/invoice-generator/`)} · Calculator: ${siteLink(`/gst-calculator/`)}`,
       ].join("\n"),
       { taxable_paise: line.basePaise, cgst_paise: line.cgstPaise, sgst_paise: line.sgstPaise, igst_paise: line.igstPaise, gst_paise: line.gstPaise, total_paise: line.totalPaise, rate_percent: Number(rateText) },
     );
@@ -434,7 +455,7 @@ function msmedTool(today: () => string): McpTool {
           ? [`Interest: ${formatInr(interest)} at ${rateLine}.`, `Total due: ${formatInr(amount + interest)} (${formatInr(amount)} + interest).`]
           : []),
         `Applies when the supplier is a micro or small enterprise registered on Udyam. Without a written agreement, the deadline is 15 days after acceptance. ${args.credit_days === undefined ? "No credit period was given, so 45 days was assumed." : ""}`.trim(),
-        `Calculator and claim letter: ${SITE}/msmed-interest-calculator/ · Track MSME dues: ${SITE}/msme-receivables/`,
+        `Calculator and claim letter: ${siteLink(`/msmed-interest-calculator/`)} · Track MSME dues: ${siteLink(`/msme-receivables/`)}`,
       ];
       return done(lines.join("\n"), { deadline, days_late: lateDays, rate_percent: MSMED_INTEREST_PCT, interest_paise: interest, total_paise: amount + interest, rbi_bank_rate_as_of: RBI_BANK_RATE.asOf });
     },
@@ -484,7 +505,7 @@ function mdrTool(today: () => string): McpTool {
             ]
           : []),
         "MDR is not a tax, and merchants may not add it to the customer's bill.",
-        `Calculator: ${SITE}/upi-mdr-calculator/ · Am I a P2PM small merchant? ${SITE}/blog/p2pm-small-merchant-upi-mdr/`,
+        `Calculator: ${siteLink(`/upi-mdr-calculator/`)} · Am I a P2PM small merchant? ${siteLink(`/blog/p2pm-small-merchant-upi-mdr/`)}`,
       ];
       return done(lines.join("\n"), { mdr_paise: mdr, gst_on_mdr_paise: mdr > 0 ? gstPaise : 0, merchant_keeps_paise: mdr > 0 ? netPaise : amount, effective_on: UPI_MDR.effectiveOn });
     },
@@ -561,17 +582,17 @@ function findToolsTool(catalog: CatalogEntry[]): McpTool {
       if (!query) return problem("query is required, e.g. \"rent receipt\".");
       const limit = args.limit === undefined ? 5 : Math.min(10, Math.max(1, Math.floor(Number(args.limit)) || 5));
       const found = searchCatalog(catalog, query, limit);
-      if (!found.length) return done(`No tool matched "${clip(query)}". All free tools: ${SITE}/tools/`, { tools: [] });
+      if (!found.length) return done(`No tool matched "${clip(query)}". All free tools: ${siteLink(`/tools/`)}`, { tools: [] });
       return done(
-        [`Free tools for "${clip(query)}":`, ...found.map((t) => `- ${t.name}: ${t.description} ${SITE}${t.href}`), `Everything else: ${SITE}/tools/`].join("\n"),
-        { tools: found.map((t) => ({ name: t.name, url: `${SITE}${t.href}`, description: t.description })) },
+        [`Free tools for "${clip(query)}":`, ...found.map((t) => `- ${t.name}: ${t.description} ${siteLink(t.href)}`), `Everything else: ${siteLink(`/tools/`)}`].join("\n"),
+        { tools: found.map((t) => ({ name: t.name, url: `${siteLink(t.href)}`, description: t.description })) },
       );
     },
   };
 }
 
 export const SERVER_INSTRUCTIONS =
-  "Pro UPI QR (proupiqr.in) tools for payments in India. Build UPI payment links and QR codes, read and check upi:// links, explain UPI error codes, calculate GST, MSMED Act late-payment interest and UPI MDR, write rupee amounts in words, and find the free browser tool for a task (invoices, receipts, posters). Amounts are Indian rupees and exact to the paisa. All tools are read-only and free; nothing sent to them is stored. Links to proupiqr.in open the matching free tool, where people can download printable posters, invoices and receipts.";
+  "Pro UPI QR (proupiqr.in) tools for payments in India. Build UPI payment links and QR codes, read and check upi:// links, explain UPI error codes, calculate GST, MSMED Act late-payment interest and UPI MDR, write rupee amounts in words, and find the free browser tool for a task (invoices, receipts, posters). Amounts are Indian rupees and exact to the paisa. All tools are read-only and free; nothing sent to them is stored. Links to proupiqr.in open the matching free tool, where people can download printable posters, invoices and receipts. " + NO_MONEY_MOVES;
 
 export function proUpiQrServer(options: { catalog: CatalogEntry[]; today?: () => string }): McpServer {
   const today = options.today ?? (() => indiaToday());

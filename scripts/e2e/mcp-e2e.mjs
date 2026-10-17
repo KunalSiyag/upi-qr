@@ -36,7 +36,7 @@ try {
   const list = await (await rpc({ jsonrpc: "2.0", id: 2, method: "tools/list" }, LEGACY)).json();
   check("nine read-only tools listed", list.result?.tools?.length === 9 && list.result.tools.every((t) => t.annotations?.readOnlyHint === true), JSON.stringify(list).slice(0, 200));
   const found = await (await rpc({ jsonrpc: "2.0", id: 3, method: "tools/call", params: { name: "find_merchant_tools", arguments: { query: "rent receipt for HRA" } } }, LEGACY)).json();
-  check("find_merchant_tools searches the site's topic hubs", found.result?.structuredContent?.tools?.[0]?.url === "https://www.proupiqr.in/rent-receipt-generator/", JSON.stringify(found).slice(0, 300));
+  check("find_merchant_tools searches the site's topic hubs", found.result?.structuredContent?.tools?.[0]?.url === "https://www.proupiqr.in/rent-receipt-generator/?utm_source=mcp&utm_medium=tool", JSON.stringify(found).slice(0, 300));
 
   // A modern (2026-07-28) client: per-request metadata, mirrored headers.
   const discover = await rpc({ jsonrpc: "2.0", id: "d", method: "server/discover", params: { _meta: meta } }, modern("server/discover"));

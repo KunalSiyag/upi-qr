@@ -41,6 +41,9 @@ for f in html_files:
         if link.startswith(("#", "mailto:", "tel:", "javascript:", "data:")):
             continue
         parsed = urlparse(link)
+        # App deeplinks (cursor://, vscode:, …) leave the site: not internal paths.
+        if parsed.scheme and not parsed.scheme.startswith("http"):
+            continue
         if parsed.scheme.startswith("http") and parsed.netloc not in ALLOWED_HOSTS:
             continue
         path = parsed.path

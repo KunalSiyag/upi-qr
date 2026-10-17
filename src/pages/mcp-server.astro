@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import { proUpiQrServer, SITE } from "../lib/mcp/tools.ts";
 import { LEGACY_VERSIONS, MODERN_VERSIONS } from "../lib/mcp/protocol.ts";
+import { BUSINESS } from "../data/business";
 
 const title = "UPI MCP Server: UPI QR & Payment Links in Claude | Pro UPI QR";
 const description =
@@ -12,6 +13,18 @@ const endpoint = `${SITE}/mcp/`;
 const { tools } = proUpiQrServer({ catalog: [] });
 
 const link = "font-semibold text-forest underline underline-offset-4 hover:text-leaf";
+// One-click installs: Claude opens its "Add custom connector" dialog prefilled; Cursor installs from a deeplink.
+const claudeInstall = `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=${encodeURIComponent("Pro UPI QR")}&connectorUrl=${encodeURIComponent(endpoint)}`;
+const cursorInstall = `cursor://anysphere.cursor-deeplink/mcp/install?name=proupiqr&config=eyJ1cmwiOiJodHRwczovL3d3dy5wcm91cGlxci5pbi9tY3AvIn0%3D`;
+
+/** Setup for apps other than Claude on the web: each takes the same URL with no authentication. */
+const clients = [
+  { name: "Claude Code", code: `claude mcp add --transport http proupiqr ${endpoint}` },
+  { name: "Codex (CLI, IDE and desktop)", code: `codex mcp add proupiqr --url ${endpoint}\n\n# or in ~/.codex/config.toml\n[mcp_servers.proupiqr]\nurl = "${endpoint}"` },
+  { name: "ChatGPT", text: "Open chatgpt.com/plugins, choose + and Add custom MCP server, paste the URL and pick No authentication. Availability depends on your ChatGPT plan." },
+  { name: "Gemini CLI", code: `// ~/.gemini/settings.json\n{ "mcpServers": { "proupiqr": { "httpUrl": "${endpoint}" } } }` },
+  { name: "Vercel AI SDK", code: `import { createMCPClient } from "@ai-sdk/mcp";\n\nconst client = await createMCPClient({\n  transport: { type: "http", url: "${endpoint}" },\n});\nconst tools = await client.tools();` },
+];
 
 const steps = [
   {
@@ -20,7 +33,7 @@ const steps = [
   },
   {
     name: "Add a custom connector in Claude",
-    text: "In Claude on the web or desktop, open Settings → Connectors, choose Add custom connector, name it Pro UPI QR and paste the URL. On Team and Enterprise plans an owner may need to add it for the organization first.",
+    text: "In Claude on the web or desktop, open Customize → Connectors, choose Add custom connector, name it Pro UPI QR, paste the URL and pick No sign-in. Free plans allow one custom connector. On Team and Enterprise, an owner adds it under Organization settings → Connectors → Add → Custom → Web.",
   },
   {
     name: "Turn it on in a chat and ask",
@@ -125,6 +138,10 @@ const curl = `curl -s ${endpoint} \\
           <p class="text-sm font-bold text-muted">Server URL</p>
           <p class="mt-2 break-all font-mono text-lg font-semibold text-obsidian md:text-2xl"><code class="select-all">{endpoint}</code></p>
           <p class="mt-3 text-[15px] leading-6">Streamable HTTP. No API key, no OAuth. Use the <code class="font-mono text-sm">www</code> address with the trailing slash.</p>
+          <div class="mt-5 flex flex-wrap gap-3">
+            <a href={claudeInstall} class="inline-flex h-11 items-center rounded-[10px] bg-forest px-5 text-sm font-semibold text-white hover:bg-graphite">Add to Claude</a>
+            <a href={cursorInstall} class="inline-flex h-11 items-center rounded-[10px] bg-white px-5 text-sm font-semibold text-forest ring-1 ring-inset ring-forest/15 hover:bg-fog">Add to Cursor</a>
+          </div>
         </div>
       </div>
     </section>
@@ -141,11 +158,29 @@ const curl = `curl -s ${endpoint} \\
             </li>
           ))}
         </ol>
-        <div class="mt-10 min-w-0">
-          <h3 class="text-lg font-bold text-obsidian">Claude Code</h3>
-          <pre class="mt-2 overflow-x-auto rounded-[10px] bg-obsidian p-4 text-sm leading-6 text-mint"><code>claude mcp add --transport http proupiqr {endpoint}</code></pre>
-          <h3 class="mt-6 text-lg font-bold text-obsidian">Other AI apps</h3>
-          <p class="mt-2 text-[15px] leading-6">Any app that adds remote MCP servers over Streamable HTTP can use the same URL with no authentication.</p>
+        <div class="mt-10 grid min-w-0 gap-x-10 gap-y-8 md:grid-cols-2">
+          {clients.map((client) => (
+            <div class="min-w-0">
+              <h3 class="text-lg font-bold text-obsidian">{client.name}</h3>
+              {client.code
+                ? <pre class="mt-2 overflow-x-auto rounded-[10px] bg-obsidian p-4 text-sm leading-6 text-white/90"><code>{client.code}</code></pre>
+                : <p class="mt-2 text-[15px] leading-6">{client.text}</p>}
+            </div>
+          ))}
+          <div class="min-w-0">
+            <h3 class="text-lg font-bold text-obsidian">Other AI apps</h3>
+            <p class="mt-2 text-[15px] leading-6">Any app that adds remote MCP servers over Streamable HTTP can use the same URL with no authentication.</p>
+          </div>
+        </div>
+        <div id="support" class="mt-12 scroll-mt-20 rounded-[14px] bg-fog p-5 md:p-7">
+          <h3 class="text-lg font-bold text-obsidian">Support and troubleshooting</h3>
+          <ul class="mt-3 space-y-2 text-[15px] leading-6">
+            <li><span class="font-semibold text-obsidian">"Couldn't connect" or a redirect error:</span> use exactly <code class="font-mono text-sm">{endpoint}</code>, with <code class="font-mono text-sm">www</code> and the trailing slash.</li>
+            <li><span class="font-semibold text-obsidian">405 when you open the URL:</span> normal. The server answers MCP requests (POST); a browser just shows a short note.</li>
+            <li><span class="font-semibold text-obsidian">"Too many requests":</span> a short safety limit against runaway loops. Wait a minute and ask again.</li>
+            <li><span class="font-semibold text-obsidian">A tool says a value is wrong:</span> the reply explains what to fix, such as a UPI ID that needs the name@bank form.</li>
+          </ul>
+          <p class="mt-4 text-[15px] leading-6">Still stuck? Email <a href="mailto:support@proupiqr.in" class={link}>support@proupiqr.in</a> or use the <a href="/contact/" class={link}>contact page</a>. We reply within {BUSINESS.replyWithin}.</p>
         </div>
       </div>
     </section>
@@ -187,7 +222,7 @@ const curl = `curl -s ${endpoint} \\
           <ul class="mt-6 space-y-3 text-[15px] leading-6">
             <li><span class="font-bold text-obsidian">Used, then discarded.</span> UPI IDs, names, amounts and links you send are used to compute the reply. Nothing is written to a database or log.</li>
             <li><span class="font-bold text-obsidian">Counted, not tracked.</span> We keep one daily total of tool calls, with no identifiers.</li>
-            <li><span class="font-bold text-obsidian">Limits.</span> 300 tool calls a minute per network address, kept as a one-minute hashed counter, so a stuck loop can't run up the bill.</li>
+            <li><span class="font-bold text-obsidian">Limits.</span> 300 tool calls a minute per network address, kept as a one-minute hashed counter, so a stuck loop can't run up the bill. Claude's shared Anthropic addresses get one larger shared allowance.</li>
             <li><span class="font-bold text-obsidian">Poster links stay on your device.</span> The payment rides after the # in the link, which browsers never send to a server.</li>
           </ul>
           <p class="mt-4 text-[15px] leading-6">Details in the{" "}<a href="/privacy/#mcp" class={link}>privacy policy</a>.</p>
