@@ -207,7 +207,7 @@ export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
@@ -215,9 +215,9 @@ export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Formal Advance Requests")}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `${tr("WhatsApp Share")}`}</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
+            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition">{shareState === "busy" ? tr("Preparing…") : `${tr("WhatsApp Share")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
           </div>
         </div>
 
@@ -248,13 +248,13 @@ export function ProformaInvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {
         <label className="mt-5 block text-sm font-bold text-forest">Terms &amp; conditions<textarea value={terms} onChange={(e) => setTerms(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={paperRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Proforma invoice")}</p>
             <h2 className="mt-2 text-3xl font-black text-forest">{merchant || "Your Business"}</h2>
           </div>
-          <div className="rounded-2xl bg-sun/40 p-4 text-right">
+          <div className="rounded-2xl bg-fog p-4 text-right">
             <p className="text-sm font-black text-forest">{quoteNo}</p>
             <p className="mt-1 text-xs font-semibold text-forest/65">{tr("Date")}: {quoteDate}</p>
             <p className="text-xs font-black text-forest">{tr("Valid until")}: {validUntil}</p>

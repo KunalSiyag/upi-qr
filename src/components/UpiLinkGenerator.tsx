@@ -119,7 +119,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="flex gap-2">
             <button
               onClick={() => copyToClipboard(upiUri, "uri")}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-leaf text-xs font-bold transition-all"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold transition-all"
             >
               {copiedField === "uri" ? "✓ Copied Link!" : "Copy Intent URI"}
             </button>
@@ -151,7 +151,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
           <button
             onClick={() => copyToClipboard(htmlSnippet, "html")}
-            className="w-full py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-leaf text-xs font-bold transition-all"
+            className="w-full py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold transition-all"
           >
             {copiedField === "html" ? "✓ Copied HTML Snippet!" : "Copy HTML Code"}
           </button>
@@ -166,7 +166,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </p>
         <a
           href={`/?upiId=${encodeURIComponent(rawVpa)}&name=${encodeURIComponent(rawName)}&amount=${encodeURIComponent(rawAmount)}#generator`}
-          className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-leaf text-white font-black text-xs hover:bg-forest transition-all shadow-md"
+          className="mt-4 inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-leaf text-white font-black text-xs hover:bg-graphite transition-all shadow-md"
         >
           🎨 Generate Free QR Standee Poster for {rawVpa || "this UPI ID"} →
         </a>

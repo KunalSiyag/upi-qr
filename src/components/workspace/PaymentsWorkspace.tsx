@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
   liveRecurring, upsertPlan, allocatePayment,
@@ -21,7 +21,7 @@ import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
 import { PRO_PRICES } from "../../data/pricing";
 import { gatewayFeePaise, UPI_MDR } from "../../lib/upiMdr";
-import { downloadText, Field, inputClass, primaryButton, secondaryButton, Sheet, StatusBadge } from "./ui";
+import { card, cardNote, cardTitle, dangerText, downloadText, Field, ghostButton, Icon, inputClass, primaryButton, rowButton, rowPrimary, secondaryButton, Sheet, StatusBadge } from "./ui";
 import { initialWsLang, LangToggle, makeTr, useWs, WS_LANG_KEY, WsLangProvider, type Tr, type WsLang } from "./i18n";
 
 type Tab = "overview" | "invoices" | "clients" | "settings";
@@ -277,355 +277,406 @@ function Workspace() {
   }
 
   const maxBucket = Math.max(1, ...buckets.map((b) => b.balancePaise));
+  const SECTION_NOTE: Record<Tab, string> = {
+    overview: tr("Who owes you, and who to chase today."),
+    invoices: tr("Every invoice you're waiting on, and what's been paid."),
+    clients: tr("Balances by client."),
+    settings: tr("Business details, sync, reminders and your plan."),
+  };
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-xs font-black text-leaf">{tr("Payments workspace · free")}</p>
-          <h1 className="mt-1 text-3xl font-black tracking-tight text-forest md:text-4xl">{ws.business.name || tr("Who owes you money?")}</h1>
+    <div className="mx-auto flex max-w-[1240px] flex-col lg:flex-row lg:items-start lg:gap-8">
+      {/* Sidebar on desktop, a sticky tab strip on phones and tablets. */}
+      <nav
+        aria-label={tr("Workspace sections")}
+        className="sticky z-30 -mx-4 border-b border-hairline bg-fog/95 px-4 backdrop-blur-sm md:-mx-6 md:px-6 lg:mx-0 lg:w-56 lg:shrink-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none"
+        style={{ top: "calc(4rem + env(safe-area-inset-top, 0px))" }}
+      >
+        <div className="hidden items-center gap-2.5 px-2 pb-5 pt-1 lg:flex">
+          <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-graphite text-sm font-semibold text-white">{(ws.business.name || "P").trim().charAt(0).toUpperCase()}</span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-semibold text-ink">{ws.business.name || tr("Your business")}</p>
+            <p className="text-xs text-muted">{isPro ? "Pro" : tr("Free plan")}</p>
+          </div>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:py-0">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => { setTab(t.id); if (t.id !== "invoices") setClientFilter(null); }}
+              aria-current={tab === t.id ? "page" : undefined}
+              className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-medium transition-colors duration-150 lg:px-2.5 ${tab === t.id ? "bg-white text-ink shadow-[0_1px_2px_rgba(28,40,64,0.06)] ring-1 ring-hairline" : "text-charcoal hover:bg-white/70 hover:text-ink"}`}
+            >
+              <span className={tab === t.id ? "text-ink" : "text-muted"}><Icon name={t.id} /></span>
+              {tr(t.label)}
+              {t.id === "invoices" && summary.overdueCount > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{summary.overdueCount}</span>}
+            </button>
+          ))}
+        </div>
+        <div className="mt-6 hidden space-y-3 border-t border-hairline px-2 pt-4 lg:block">
           <LangToggle />
-          {installer.canInstall && <button type="button" onClick={() => void installer.install()} className={secondaryButton}>{tr("Install app")}</button>}
-          <SyncPill state={sync} onClick={() => setTab("settings")} />
-          <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={primaryButton}>{tr("+ New invoice")}</button>
         </div>
-      </div>
-
-      {sync.status === "synced" || sync.status === "syncing" ? (
-        <p className="mt-3 rounded-2xl border border-leaf/15 bg-mint/50 px-4 py-2.5 text-xs leading-5 text-forest/80">
-          {tr("☁️ Synced to your account — open proupiqr.in/app on any device and sign in to see the same invoices.")}
-        </p>
-      ) : (
-        <p className="mt-3 rounded-2xl border border-leaf/15 bg-mint/50 px-4 py-2.5 text-xs leading-5 text-forest/80">
-          {tr("🔒 Saved only in this browser — no account needed.")} <button type="button" className="font-bold underline" onClick={() => setTab("settings")}>{tr("Back up or sync across devices")}</button>
-        </p>
-      )}
-      {saveFailed && <p role="alert" className="mt-2 rounded-2xl bg-coral/15 px-4 py-2.5 text-xs font-bold text-[#a8321d]">{tr("This browser blocked saving. Your changes will be lost when you close the tab — download a backup from Settings.")}</p>}
-
-      <nav aria-label={tr("Workspace sections")} className="sticky z-30 mt-5 -mx-1 flex gap-1 overflow-x-auto [scrollbar-width:none] rounded-2xl bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-1" style={{ top: "calc(4.75rem + env(safe-area-inset-top, 0px))" }}>
-        {TABS.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => { setTab(t.id); if (t.id !== "invoices") setClientFilter(null); }}
-            aria-current={tab === t.id ? "page" : undefined}
-            className={`flex-1 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-bold transition ${tab === t.id ? "bg-forest text-white" : "text-forest/70 hover:bg-mint"}`}
-          >
-            {tr(t.label)}
-            {t.id === "invoices" && summary.overdueCount > 0 && <span className="ml-1.5 rounded-full bg-coral px-1.5 text-[10px] text-white">{summary.overdueCount}</span>}
-          </button>
-        ))}
       </nav>
 
-      {flash && <p role="status" className="mt-3 rounded-2xl bg-forest px-4 py-2.5 text-sm font-bold text-white">{flash}</p>}
-      {upsell && (
-        <section role="status" className="mt-3 flex flex-wrap items-center justify-between gap-3 rounded-2xl border-2 border-sun bg-cream px-4 py-3">
-          <div className="min-w-0 text-sm text-forest">
-            <p className="font-black">{tr("You've used all {n} free pay links.", { n: paylinks?.plan?.activePaylinks ?? 10 })}</p>
-            <p className="text-xs text-forest/70">{tr("Pro gives unlimited pay links and client statement links for {price}/month. Or turn off links for paid invoices in Settings.", { price: PRO_PRICES.monthly.label })}</p>
+      <div className="min-w-0 flex-1 pt-5 lg:pt-0">
+        <header className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h1 className="truncate text-[22px] font-semibold leading-tight text-ink md:text-2xl">{ws.business.name || tr("Who owes you money?")}</h1>
+            <p className="mt-1 text-[13px] text-muted">{SECTION_NOTE[tab]}</p>
           </div>
-          <div className="flex gap-2">
-            <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>
-            <button type="button" onClick={() => setUpsell(false)} className="rounded-xl px-3 py-2 text-xs font-bold text-forest/60 hover:text-forest">{tr("Not now")}</button>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="lg:hidden"><LangToggle /></span>
+            {installer.canInstall && <button type="button" onClick={() => void installer.install()} className={secondaryButton}>{tr("Install app")}</button>}
+            <SyncPill state={sync} onClick={() => setTab("settings")} />
+            <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={primaryButton}>{tr("+ New invoice")}</button>
           </div>
-        </section>
-      )}
+        </header>
 
-      <div className="mt-5">
-        {tab === "overview" && (
-          <div className="space-y-5">
-            {statementClaims.length > 0 && (
-              <section className="rounded-[1.5rem] border-2 border-sun/70 bg-cream p-5" aria-labelledby="stmt-claims-title">
-                <h2 id="stmt-claims-title" className="text-lg font-black text-forest">{tr("Statement payments to confirm")}</h2>
-                <p className="mt-1 text-xs text-forest/60">{tr("Check your bank or UPI app first. Confirmed amounts are applied to the oldest unpaid invoices.")}</p>
-                <ul className="mt-3 divide-y divide-forest/10">
+        <p className="mt-3 flex flex-wrap items-center gap-x-1.5 gap-y-1 text-[13px] text-muted">
+          {sync.status === "synced" || sync.status === "syncing" ? (
+            <><Icon name="cloud" className="h-3.5 w-3.5 text-leaf" />{tr("Synced to your account — open proupiqr.in/app on any device and sign in to see the same invoices.")}</>
+          ) : (
+            <><Icon name="lock" className="h-3.5 w-3.5" />{tr("Saved only in this browser — no account needed.")} <button type="button" className="font-medium text-leaf hover:underline" onClick={() => setTab("settings")}>{tr("Back up or sync across devices")}</button></>
+          )}
+        </p>
+        {saveFailed && <p role="alert" className={`mt-3 rounded-[10px] bg-[#fdeeec] px-4 py-2.5 text-[13px] font-medium ${dangerText}`}>{tr("This browser blocked saving. Your changes will be lost when you close the tab — download a backup from Settings.")}</p>}
+
+        {flash && (
+          <div className="pointer-events-none fixed inset-x-0 bottom-4 z-[70] flex justify-center px-4" style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}>
+            <p role="status" className="ws-toast pointer-events-auto flex items-center gap-2 rounded-[10px] bg-graphite px-4 py-2.5 text-sm font-medium text-white shadow-[0_8px_24px_rgba(16,17,19,0.24)]">
+              <Icon name="check" className="h-4 w-4 text-[#7fd1a8]" />{flash}
+            </p>
+          </div>
+        )}
+        {upsell && (
+          <section role="status" className={`${card} mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
+            <div className="min-w-0 text-sm">
+              <p className="font-semibold text-ink">{tr("You've used all {n} free pay links.", { n: paylinks?.plan?.activePaylinks ?? 10 })}</p>
+              <p className={cardNote}>{tr("Pro gives unlimited pay links and client statement links for {price}/month. Or turn off links for paid invoices in Settings.", { price: PRO_PRICES.monthly.label })}</p>
+            </div>
+            <div className="flex gap-2">
+              <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>
+              <button type="button" onClick={() => setUpsell(false)} className={ghostButton}>{tr("Not now")}</button>
+            </div>
+          </section>
+        )}
+
+        <div className="mt-5">
+          {tab === "overview" && (
+            <div className="space-y-4">
+              {statementClaims.length > 0 && (
+                <ClaimsCard id="stmt-claims-title" title={tr("Statement payments to confirm")} note={tr("Check your bank or UPI app first. Confirmed amounts are applied to the oldest unpaid invoices.")}>
                   {statementClaims.map(({ clientId, token, claim }) => (
-                    <li key={`${token}-${claim.utr}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li key={`${token}-${claim.utr}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0 text-sm">
-                        <p className="font-bold text-forest">{tr("{name} says they paid {amount} on their statement", { name: ws.clients[clientId]?.name ?? tr("Client"), amount: claim.amountPaise ? formatPaise(claim.amountPaise) : tr("an amount") })}</p>
-                        <p className="text-xs text-forest/60">UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                        <p className="font-medium text-ink">{tr("{name} says they paid {amount} on their statement", { name: ws.clients[clientId]?.name ?? tr("Client"), amount: claim.amountPaise ? formatPaise(claim.amountPaise) : tr("an amount") })}</p>
+                        <p className="text-[13px] text-muted">UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
                         {claim.amountPaise && (balances.get(clientId)?.balancePaise ?? 0) > 0 && (
-                          <button type="button" className="rounded-xl bg-forest px-3 py-2 text-xs font-black text-white hover:bg-leaf" onClick={() => applyStatementClaim(clientId, token, claim)}>{tr("Confirm & apply")}</button>
+                          <button type="button" className={rowPrimary} onClick={() => applyStatementClaim(clientId, token, claim)}>{tr("Confirm & apply")}</button>
                         )}
-                        <button type="button" className="rounded-xl border border-forest/15 px-3 py-2 text-xs font-bold text-forest hover:bg-mint" onClick={async () => { await deletePaylink(token, "claims"); await refreshLinks(); }}>{tr("Not received")}</button>
+                        <button type="button" className={rowButton} onClick={async () => { await deletePaylink(token, "claims"); await refreshLinks(); }}>{tr("Not received")}</button>
                       </div>
                     </li>
                   ))}
-                </ul>
-              </section>
-            )}
+                </ClaimsCard>
+              )}
 
-            {pendingClaims.length > 0 && (
-              <section className="rounded-[1.5rem] border-2 border-sun/70 bg-cream p-5" aria-labelledby="claims-title">
-                <h2 id="claims-title" className="text-lg font-black text-forest">{tr("Payments to confirm")}</h2>
-                <p className="mt-1 text-xs text-forest/60">{tr("Clients sent these from your pay links. Check your bank or UPI app before confirming.")}</p>
-                <ul className="mt-3 divide-y divide-forest/10">
+              {pendingClaims.length > 0 && (
+                <ClaimsCard id="claims-title" title={tr("Payments to confirm")} note={tr("Clients sent these from your pay links. Check your bank or UPI app before confirming.")}>
                   {pendingClaims.map(({ invoiceId, token, claim, view }) => (
-                    <li key={`${token}-${claim.utr}`} className="flex flex-wrap items-center justify-between gap-3 py-3">
+                    <li key={`${token}-${claim.utr}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0 text-sm">
-                        <p className="font-bold text-forest">{tr("{name} says they paid {amount}", { name: view.client?.name ?? tr("Client"), amount: formatPaise(claim.amountPaise ?? view.balancePaise) })}</p>
-                        <p className="text-xs text-forest/60">{view.invoice.number} · UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                        <p className="font-medium text-ink">{tr("{name} says they paid {amount}", { name: view.client?.name ?? tr("Client"), amount: formatPaise(claim.amountPaise ?? view.balancePaise) })}</p>
+                        <p className="text-[13px] text-muted">{view.invoice.number} · UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
                         {view.balancePaise > 0 && (
-                          <button type="button" className="rounded-xl bg-forest px-3 py-2 text-xs font-black text-white hover:bg-leaf"
+                          <button type="button" className={rowPrimary}
                             onClick={() => setSheet({ kind: "payment", id: invoiceId, amountPaise: claim.amountPaise ?? view.balancePaise, reference: claim.utr, claimToken: token })}>
                             {tr("Confirm & record")}
                           </button>
                         )}
-                        <button type="button" className="rounded-xl border border-forest/15 px-3 py-2 text-xs font-bold text-forest hover:bg-mint"
+                        <button type="button" className={rowButton}
                           onClick={async () => { await deletePaylink(token, "claims"); await refreshLinks(); }}>
                           {view.balancePaise > 0 ? tr("Not received") : tr("Dismiss")}
                         </button>
                       </div>
                     </li>
                   ))}
-                </ul>
-              </section>
-            )}
-
-            {ready && !signedIn && <SyncNudge ws={ws} today={today} />}
-            {hasSampleData(ws) && (
-              <p className="flex flex-wrap items-center justify-between gap-2 rounded-2xl bg-sun/25 px-4 py-2.5 text-xs font-bold text-forest">
-                {tr("You're looking at sample data.")}
-                <button type="button" className="underline" onClick={() => { setWs(removeSampleData(ws, Date.now())); setFlash(tr("Sample data cleared.")); }}>{tr("Clear sample data")}</button>
-              </p>
-            )}
-            {views.length === 0 && !signedIn && (
-              <div className="flex flex-col items-center gap-5 rounded-[1.5rem] bg-white p-6 text-center ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] sm:flex-row sm:text-left">
-                <EmptyIllustration />
-                <div className="min-w-0">
-                <p className="text-base font-bold text-forest">{tr("New here? See how it works with a few sample invoices, or add your own.")}</p>
-                <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
-                  <button type="button" className={secondaryButton} onClick={() => { setWs(addSampleData(ws, today, Date.now())); setFlash(tr("Sample invoices added — try Remind or Got paid.")); }}>{tr("Try with sample data")}</button>
-                  <button type="button" className={primaryButton} onClick={() => setSheet({ kind: "invoice" })}>{tr("Add your first invoice")}</button>
-                </div>
-                </div>
-              </div>
-            )}
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-              <Stat accent="collect" label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} />
-              <Stat accent="overdue" label={tr("Overdue")} value={formatPaise(summary.overduePaise)} note={tr(summary.overdueCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.overdueCount })} tone={summary.overduePaise ? "bad" : undefined} />
-              <Stat accent="soon" label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} />
-              <Stat accent="collected" label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} tone="good" />
-            </div>
-            <GatewaySavings ws={ws} today={today} isPro={isPro} />
-            <GettingStarted ws={ws} signedIn={signedIn} onAction={(step) => {
-              if (step === "invoice") setSheet({ kind: "invoice" });
-              else if (step === "remind" || step === "payment") setTab("invoices");
-              else if (step === "account") location.href = SIGN_UP_HREF;
-            }} />
-            {needsSetup && <SetupCard ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
-
-
-            <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-              <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <h2 className="text-lg font-black text-forest">{tr("Chase today")}</h2>
-                {summary.openCount > 0 && <button type="button" onClick={() => setSheet({ kind: "statement" })} className="text-xs font-bold text-leaf hover:underline">{tr("Got paid? Import bank statement")}</button>}
-              </div>
-              {chase.length === 0 ? (
-                <p className="mt-2 text-sm text-forest/65">{views.length ? tr("Nothing overdue. 🎉") : tr("Add your first invoice to see who to follow up with.")}</p>
-              ) : (
-                <ul className="mt-3 divide-y divide-forest/5">
-                  {chase.map((v) => (
-                    <li key={v.invoice.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <div className="min-w-0">
-                        <p className="truncate font-bold text-forest">{v.client?.name ?? tr("Unknown client")} <span className="font-normal text-forest/50">· {v.invoice.number}</span></p>
-                        <p className="text-xs text-forest/60">{formatPaise(v.balancePaise)} · {dueText(v, tr, dateLocale)}{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <button type="button" onClick={() => setSheet({ kind: "remind", id: v.invoice.id })} className="rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white hover:bg-[#1da851]">{tr("Remind")}</button>
-                        <button type="button" onClick={() => setSheet({ kind: "payment", id: v.invoice.id })} className="rounded-xl border border-forest/15 px-3 py-2 text-xs font-bold text-forest hover:bg-mint">{tr("Got paid")}</button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
+                </ClaimsCard>
               )}
-            </section>
 
-            <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-              <h2 className="text-lg font-black text-forest">{tr("Unpaid by age")}</h2>
-              <p className="mt-1 text-xs text-forest/60">{tr("If you are a Udyam-registered micro or small enterprise, business buyers owe you interest on dues unpaid after 45 days (MSMED Act, 2006 §15–16).")}</p>
-              <div className="mt-4 space-y-2.5">
-                {buckets.map((b) => (
-                  <div key={b.key} className="grid grid-cols-[7.5rem_1fr_auto] items-center gap-3 text-sm">
-                    <span className="text-xs font-bold text-forest/70">{tr(b.label)}</span>
-                    <div className="h-3 overflow-hidden rounded-full bg-fog">
-                      <div className={`h-full rounded-full ${b.key === "current" ? "bg-leaf" : b.key === "d45_plus" ? "bg-coral" : "bg-sun"}`} style={{ width: `${(b.balancePaise / maxBucket) * 100}%` }} />
+              {ready && !signedIn && <SyncNudge ws={ws} today={today} />}
+              {hasSampleData(ws) && (
+                <p className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] text-charcoal ring-1 ring-hairline">
+                  {tr("You're looking at sample data.")}
+                  <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { setWs(removeSampleData(ws, Date.now())); setFlash(tr("Sample data cleared.")); }}>{tr("Clear sample data")}</button>
+                </p>
+              )}
+              {views.length === 0 && !signedIn && (
+                <div className={`${card} flex flex-col items-center gap-5 p-6 text-center sm:flex-row sm:text-left`}>
+                  <EmptyIllustration />
+                  <div className="min-w-0">
+                    <p className="text-[15px] font-semibold text-ink">{tr("New here? See how it works with a few sample invoices, or add your own.")}</p>
+                    <div className="mt-3 flex flex-wrap justify-center gap-2 sm:justify-start">
+                      <button type="button" className={secondaryButton} onClick={() => { setWs(addSampleData(ws, today, Date.now())); setFlash(tr("Sample invoices added — try Remind or Got paid.")); }}>{tr("Try with sample data")}</button>
+                      <button type="button" className={primaryButton} onClick={() => setSheet({ kind: "invoice" })}>{tr("Add your first invoice")}</button>
                     </div>
-                    <span className="text-right text-xs font-bold tabular-nums text-forest">{formatPaise(b.balancePaise)}</span>
                   </div>
-                ))}
-              </div>
-              {buckets[4].balancePaise > 0 && (
-                <a href="/msmed-interest-calculator/" className="mt-4 inline-block text-xs font-black text-leaf hover:underline">{tr("Calculate MSMED interest on 45+ day dues →")}</a>
+                </div>
               )}
-            </section>
-          </div>
-        )}
+              {needsSetup && <SetupCard ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
 
-        {tab === "invoices" && (
-          <div className="space-y-4">
-            <div className="flex flex-wrap items-center gap-2">
-              {(["unpaid", "overdue", "paid", "all"] as Filter[]).map((f) => (
-                <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
-                  className={`rounded-full px-3 py-1.5 text-xs font-bold capitalize transition ${filter === f ? "bg-forest text-white" : "bg-white text-forest hover:bg-mint"}`}>
-                  {tr(f)}
-                </button>
-              ))}
-              {clientFilter && (
-                <button type="button" onClick={() => setClientFilter(null)} className="rounded-full bg-sun/30 px-3 py-1.5 text-xs font-bold text-forest">
-                  {ws.clients[clientFilter]?.name ?? tr("Client")} ×
-                </button>
-              )}
-              <button type="button" onClick={() => setSheet({ kind: "statement" })} className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-leaf ring-1 ring-leaf/20 hover:bg-mint">{tr("Import bank statement")}</button>
-              <label htmlFor="ws-search" className="sr-only">{tr("Search invoices")}</label>
-              <input id="ws-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("Search client or number")} className={`${inputClass} ml-auto max-w-xs py-2`} />
-            </div>
-
-            {filtered.length === 0 ? (
-              <div className="rounded-[1.5rem] border border-dashed border-forest/20 bg-white/70 p-8 text-center">
-                <p className="text-sm text-forest/70">{views.length ? tr("No invoices match.") : tr("No invoices yet.")}</p>
-                {!views.length && <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={`${primaryButton} mt-3`}>{tr("Add your first invoice")}</button>}
-              </div>
-            ) : (
-              <ul className="space-y-2.5">
-                {filtered.map((v) => (
-                  <InvoiceRow
-                    key={v.invoice.id}
-                    view={v}
-                    msme={msmeFor(v)}
-                    signedIn={signedIn}
-                    payLink={paylinks?.byInvoice[v.invoice.id] ? paylinkUrl(paylinks.byInvoice[v.invoice.id].token) : undefined}
-                    linkBusy={linkBusy === v.invoice.id}
-                    onCreateLink={() => void makeLink(v.invoice.id)}
-                    onRevokeLink={() => { const link = paylinks?.byInvoice[v.invoice.id]; if (link) void revokeLink(link.token); }}
-                    onPay={() => setSheet({ kind: "payment", id: v.invoice.id })}
-                    onRemind={() => setSheet({ kind: "remind", id: v.invoice.id })}
-                    onEdit={() => setSheet({ kind: "invoice", id: v.invoice.id })}
-                    onVoid={() => { setWs(upsertInvoice(ws, { ...v.invoice, voided: !v.invoice.voided }, Date.now())); }}
-                    onDelete={() => { setWs(deleteInvoice(ws, v.invoice.id, Date.now())); setFlash(tr("{number} deleted.", { number: v.invoice.number })); }}
-                    onUndoPayment={(paymentId) => setWs(removePayment(ws, v.invoice.id, paymentId, Date.now()))}
-                  />
-                ))}
-              </ul>
-            )}
-            <p className="text-right text-xs text-forest/55">
-              {tr("{n} shown", { n: filtered.length })} · <button type="button" className="font-bold underline" onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(filtered), "text/csv;charset=utf-8")}>{tr("Export CSV")}</button>
-            </p>
-          </div>
-        )}
-
-        {tab === "clients" && (
-          <div className="space-y-3">
-            {liveRecurring(ws).length > 0 && (
-              <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5" aria-labelledby="monthly-title">
-                <h2 id="monthly-title" className="text-lg font-black text-forest">{tr("Monthly billing")}</h2>
-                <ul className="mt-2 divide-y divide-forest/5">
-                  {liveRecurring(ws).map((plan) => {
-                    const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
-                    return (
-                      <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 py-3 text-sm">
-                        <div className="min-w-0">
-                          <p className="font-bold text-forest">{ws.clients[plan.clientId]?.name ?? tr("Client")} · {formatPaise(plan.amountPaise)}</p>
-                          <p className="text-xs text-forest/60">
-                            {tr("Day {d} of each month", { d: plan.dayOfMonth })}{plan.description ? ` · ${plan.description}` : ""}
-                            {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
-                          </p>
-                        </div>
-                        {!ended && (
-                          <div className="flex gap-2">
-                            <button type="button" className="rounded-lg border border-forest/15 px-2.5 py-1.5 text-xs font-bold text-forest hover:bg-mint"
-                              onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
-                              {plan.paused ? tr("Resume") : tr("Pause")}
-                            </button>
-                            <button type="button" className="rounded-lg px-2.5 py-1.5 text-xs font-bold text-forest/50 hover:text-[#a8321d]"
-                              onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
-                              {tr("Stop after this month")}
-                            </button>
-                          </div>
-                        )}
-                      </li>
-                    );
-                  })}
-                </ul>
+              <section aria-label={tr("Summary")} className={`${card} grid grid-cols-2 md:grid-cols-4`}>
+                <Stat label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} className="border-b border-r border-hairline md:border-b-0" />
+                <Stat label={tr("Overdue")} value={formatPaise(summary.overduePaise)} note={tr(summary.overdueCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.overdueCount })} dot={summary.overduePaise ? "bg-[#d84a3a]" : undefined} tone={summary.overduePaise ? "bad" : undefined} className="border-b border-hairline md:border-b-0 md:border-r" />
+                <Stat label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} dot={summary.dueSoonPaise ? "bg-[#e8a33d]" : undefined} className="border-r border-hairline" />
+                <Stat label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} dot={summary.collectedThisMonthPaise ? "bg-[#1f7a52]" : undefined} />
               </section>
-            )}
-            <div className="flex justify-end"><button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button></div>
-            {clients.length === 0 ? (
-              <p className="rounded-[1.5rem] border border-dashed border-forest/20 bg-white/70 p-8 text-center text-sm text-forest/70">{tr("Clients are added automatically when you create an invoice.")}</p>
-            ) : (
-              <ul className="divide-y divide-forest/5 rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] px-5">
-                {clients.map((c) => {
-                  const bal = balances.get(c.id);
-                  return (
-                    <li key={c.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
-                      <button type="button" onClick={() => openClientInvoices(c.id)} className="min-w-0 text-left">
-                        <p className="truncate font-bold text-forest hover:underline">{c.name}</p>
-                        <p className="text-xs text-forest/60">{c.phone || tr("No number")}{bal ? tr(" · {n} open", { n: bal.open }) : ""}</p>
-                      </button>
-                      <div className="flex items-center gap-3">
-                        <div className="text-right">
-                          <p className="text-sm font-black tabular-nums text-forest">{formatPaise(bal?.balancePaise ?? 0)}</p>
-                          {bal?.overduePaise ? <p className="text-[11px] font-bold text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
-                        </div>
-                        <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className="rounded-lg px-2 py-1 text-xs font-bold text-forest/60 hover:bg-mint" aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>
-                      </div>
-                      {(bal?.balancePaise ?? 0) > 0 || statementLinks.has(c.id) ? (
-                        <div className="w-full text-xs">
-                          {statementLinks.has(c.id) ? (
-                            <div className="flex flex-wrap items-center gap-2 rounded-xl bg-cream p-2">
-                              <label className="sr-only" htmlFor={`stmt-${c.id}`}>{tr("Statement link for {name}", { name: c.name })}</label>
-                              <input id={`stmt-${c.id}`} readOnly value={paylinkUrl(statementLinks.get(c.id)!.token)} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-lg border border-forest/10 bg-white px-2 py-1 font-mono text-[11px]" />
-                              <button type="button" className="rounded-lg bg-forest px-2.5 py-1 font-black text-white" onClick={async () => { try { await navigator.clipboard.writeText(paylinkUrl(statementLinks.get(c.id)!.token)); setFlash(tr("Statement link copied.")); } catch { /* select manually */ } }}>{tr("Copy")}</button>
-                              <button type="button" className="rounded-lg px-2 py-1 font-bold text-forest/50 hover:text-[#a8321d]" onClick={() => void revokeLink(statementLinks.get(c.id)!.token)}>{tr("Turn off")}</button>
-                            </div>
-                          ) : !signedIn ? (
-                            <span className="text-forest/60">{tr("📄 Statement links need a free account + Pro.")}</span>
-                          ) : isPro ? (
-                            <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="font-black text-leaf hover:underline disabled:opacity-50">{linkBusy === c.id ? tr("Creating…") : tr("📄 Share statement link — all dues + one UPI button")}</button>
-                          ) : (
-                            <a href="/app/?tab=settings&upgrade=monthly" className="font-bold text-forest/70 hover:text-leaf">{tr("📄 Statement link for all dues")} · <span className="text-leaf underline">Pro</span></a>
-                          )}
-                        </div>
-                      ) : null}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </div>
-        )}
 
-        {tab === "settings" && (
-          <div className="space-y-5">
-            <SyncPanel
-              state={sync}
-              paylinks={paylinks}
-              paidLinkTokens={paylinks ? Object.entries(paylinks.byInvoice).filter(([id]) => { if (id.startsWith("stmt:")) return false; const v = views.find((x) => x.invoice.id === id); return !v || v.balancePaise === 0; }).map(([, l]) => l.token) : []}
-              onRevokePaid={async (tokens) => { await Promise.all(tokens.map((t) => deletePaylink(t, "link"))); await refreshLinks(); setFlash(tr(tokens.length === 1 ? "Turned off {n} pay link for paid invoices." : "Turned off {n} pay links for paid invoices.", { n: tokens.length })); }}
-              invoiceCount={views.length}
-              onSyncNow={() => syncRef.current?.syncNow()}
-              onSignOut={async () => { await syncRef.current?.signOut(); setFlash(tr("Signed out. Your data stays on this device.")); }}
-              onDeleteCloud={async () => {
-                const ok = await syncRef.current?.deleteCloudCopy();
-                setFlash(ok ? tr("Cloud copy deleted and signed out. This device keeps its data.") : tr("Couldn't delete the cloud copy. Try again."));
-              }}
-            />
-            <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} />
-            <PlanPanel signedIn={signedIn} onFlash={setFlash} />
-            <InstallHint standalone={installer.standalone} ios={installer.ios} />
-            <SettingsPanel
-              ws={ws}
-              today={today}
-              onChange={(next, message) => { setWs(next); if (message) setFlash(message); }}
-            />
-          </div>
-        )}
+              <GatewaySavings ws={ws} today={today} isPro={isPro} />
+              <GettingStarted ws={ws} signedIn={signedIn} onAction={(step) => {
+                if (step === "invoice") setSheet({ kind: "invoice" });
+                else if (step === "remind" || step === "payment") setTab("invoices");
+                else if (step === "account") location.href = SIGN_UP_HREF;
+              }} />
+
+              <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+                <section className={card} aria-labelledby="chase-title">
+                  <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline px-4 py-3.5">
+                    <h2 id="chase-title" className={cardTitle}>{tr("Chase today")}</h2>
+                    {summary.openCount > 0 && <button type="button" onClick={() => setSheet({ kind: "statement" })} className="text-[13px] font-medium text-leaf hover:underline">{tr("Got paid? Import bank statement")}</button>}
+                  </div>
+                  {chase.length === 0 ? (
+                    <p className="px-4 py-6 text-sm text-muted">{views.length ? tr("Nothing overdue.") : tr("Add your first invoice to see who to follow up with.")}</p>
+                  ) : (
+                    <ul className="divide-y divide-hairline">
+                      {chase.map((v) => (
+                        <li key={v.invoice.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")} <span className="font-normal text-muted">· {v.invoice.number}</span></p>
+                            <p className="text-[13px] text-muted"><span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
+                          </div>
+                          <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatPaise(v.balancePaise)}</p>
+                          <div className="col-span-2 flex gap-2 sm:col-span-1 sm:justify-end">
+                            <button type="button" onClick={() => setSheet({ kind: "remind", id: v.invoice.id })} className={rowButton}><Icon name="whatsapp" className="h-3.5 w-3.5 text-[#1da851]" />{tr("Remind")}</button>
+                            <button type="button" onClick={() => setSheet({ kind: "payment", id: v.invoice.id })} className={rowButton}>{tr("Got paid")}</button>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </section>
+
+                <section className={`${card} p-4`} aria-labelledby="aging-title">
+                  <h2 id="aging-title" className={cardTitle}>{tr("Unpaid by age")}</h2>
+                  <div className="mt-4 space-y-3">
+                    {buckets.map((b) => (
+                      <div key={b.key} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3 text-sm">
+                        <span className="text-[13px] text-charcoal">{tr(b.label)}</span>
+                        <div className="h-1.5 overflow-hidden rounded-full bg-fog">
+                          <div className={`h-full rounded-full ${b.key === "current" ? "bg-[#1f7a52]" : b.key === "d45_plus" ? "bg-[#d84a3a]" : "bg-graphite"}`} style={{ width: `${(b.balancePaise / maxBucket) * 100}%` }} />
+                        </div>
+                        <span className="text-right text-[13px] font-medium tabular-nums text-ink">{formatPaise(b.balancePaise)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <p className="mt-4 border-t border-hairline pt-3 text-xs leading-5 text-muted">{tr("If you are a Udyam-registered micro or small enterprise, business buyers owe you interest on dues unpaid after 45 days (MSMED Act, 2006 §15–16).")}</p>
+                  {buckets[4].balancePaise > 0 && (
+                    <a href="/msmed-interest-calculator/" className="mt-2 inline-block text-[13px] font-medium text-leaf hover:underline">{tr("Calculate MSMED interest on 45+ day dues →")}</a>
+                  )}
+                </section>
+              </div>
+            </div>
+          )}
+
+          {tab === "invoices" && (
+            <div className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <div role="group" aria-label={tr("Filter invoices")} className="inline-flex rounded-[10px] bg-white p-0.5 ring-1 ring-hairline">
+                  {(["unpaid", "overdue", "paid", "all"] as Filter[]).map((f) => (
+                    <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
+                      className={`rounded-[8px] px-3 py-1.5 text-[13px] font-medium capitalize transition-colors duration-150 ${filter === f ? "bg-graphite text-white" : "text-charcoal hover:text-ink"}`}>
+                      {tr(f)}
+                    </button>
+                  ))}
+                </div>
+                {clientFilter && (
+                  <button type="button" onClick={() => setClientFilter(null)} className={rowButton}>
+                    {ws.clients[clientFilter]?.name ?? tr("Client")} ×
+                  </button>
+                )}
+                <div className="ml-auto flex w-full items-center gap-2 sm:w-auto">
+                  <label htmlFor="ws-search" className="sr-only">{tr("Search invoices")}</label>
+                  <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
+                    <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"><Icon name="search" /></span>
+                    <input id="ws-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("Search client or number")} className={`${inputClass} py-1.5 pl-8`} />
+                  </div>
+                  <button type="button" onClick={() => setSheet({ kind: "statement" })} className={rowButton}>{tr("Import bank statement")}</button>
+                </div>
+              </div>
+
+              {filtered.length === 0 ? (
+                <div className={`${card} p-10 text-center`}>
+                  <p className="text-sm text-muted">{views.length ? tr("No invoices match.") : tr("No invoices yet.")}</p>
+                  {!views.length && <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={`${primaryButton} mt-3`}>{tr("Add your first invoice")}</button>}
+                </div>
+              ) : (
+                <div className={`${card} overflow-hidden`}>
+                  <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem] gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid">
+                    <span>{tr("Client")}</span><span>{tr("Invoice")}</span><span className="text-right">{tr("Amount")}</span><span>{tr("Status")}</span>
+                  </div>
+                  <ul className="divide-y divide-hairline">
+                    {filtered.map((v) => (
+                      <InvoiceRow
+                        key={v.invoice.id}
+                        view={v}
+                        msme={msmeFor(v)}
+                        signedIn={signedIn}
+                        payLink={paylinks?.byInvoice[v.invoice.id] ? paylinkUrl(paylinks.byInvoice[v.invoice.id].token) : undefined}
+                        linkBusy={linkBusy === v.invoice.id}
+                        onCreateLink={() => void makeLink(v.invoice.id)}
+                        onRevokeLink={() => { const link = paylinks?.byInvoice[v.invoice.id]; if (link) void revokeLink(link.token); }}
+                        onPay={() => setSheet({ kind: "payment", id: v.invoice.id })}
+                        onRemind={() => setSheet({ kind: "remind", id: v.invoice.id })}
+                        onEdit={() => setSheet({ kind: "invoice", id: v.invoice.id })}
+                        onVoid={() => { setWs(upsertInvoice(ws, { ...v.invoice, voided: !v.invoice.voided }, Date.now())); }}
+                        onDelete={() => { setWs(deleteInvoice(ws, v.invoice.id, Date.now())); setFlash(tr("{number} deleted.", { number: v.invoice.number })); }}
+                        onUndoPayment={(paymentId) => setWs(removePayment(ws, v.invoice.id, paymentId, Date.now()))}
+                      />
+                    ))}
+                  </ul>
+                </div>
+              )}
+              <p className="text-right text-[13px] text-muted">
+                {tr("{n} shown", { n: filtered.length })} · <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(filtered), "text/csv;charset=utf-8")}>{tr("Export CSV")}</button>
+              </p>
+            </div>
+          )}
+
+          {tab === "clients" && (
+            <div className="space-y-4">
+              {liveRecurring(ws).length > 0 && (
+                <section className={card} aria-labelledby="monthly-title">
+                  <h2 id="monthly-title" className={`${cardTitle} border-b border-hairline px-4 py-3.5`}>{tr("Monthly billing")}</h2>
+                  <ul className="divide-y divide-hairline">
+                    {liveRecurring(ws).map((plan) => {
+                      const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
+                      return (
+                        <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatPaise(plan.amountPaise)}</span></p>
+                            <p className="text-[13px] text-muted">
+                              {tr("Day {d} of each month", { d: plan.dayOfMonth })}{plan.description ? ` · ${plan.description}` : ""}
+                              {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
+                            </p>
+                          </div>
+                          {!ended && (
+                            <div className="flex gap-2">
+                              <button type="button" className={rowButton}
+                                onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
+                                {plan.paused ? tr("Resume") : tr("Pause")}
+                              </button>
+                              <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
+                                onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
+                                {tr("Stop after this month")}
+                              </button>
+                            </div>
+                          )}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </section>
+              )}
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[13px] text-muted">{tr(clients.length === 1 ? "{n} client" : "{n} clients", { n: clients.length })}</p>
+                <button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>
+              </div>
+              {clients.length === 0 ? (
+                <p className={`${card} p-10 text-center text-sm text-muted`}>{tr("Clients are added automatically when you create an invoice.")}</p>
+              ) : (
+                <div className={`${card} overflow-hidden`}>
+                  <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem] gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid">
+                    <span>{tr("Client")}</span><span>{tr("WhatsApp number")}</span><span className="text-right">{tr("Balance")}</span><span />
+                  </div>
+                  <ul className="divide-y divide-hairline">
+                    {clients.map((c) => {
+                      const bal = balances.get(c.id);
+                      return (
+                        <li key={c.id} className="px-4 py-3">
+                          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]">
+                            <div className="flex min-w-0 items-center gap-2.5">
+                              <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fog text-xs font-semibold text-charcoal">{c.name.trim().charAt(0).toUpperCase()}</span>
+                              <button type="button" onClick={() => openClientInvoices(c.id)} className="min-w-0 text-left">
+                                <span className="block truncate text-sm font-medium text-ink hover:underline">{c.name}</span>
+                                <span className="block text-[13px] text-muted md:hidden">{c.phone || tr("No number")}{bal ? tr(" · {n} open", { n: bal.open }) : ""}</span>
+                                <span className="hidden text-[13px] text-muted md:block">{bal ? tr("{n} open", { n: bal.open }).trim() : "—"}</span>
+                              </button>
+                            </div>
+                            <span className="hidden truncate text-[13px] tabular-nums text-charcoal md:block">{c.phone || tr("No number")}</span>
+                            <div className="text-right">
+                              <p className="text-sm font-semibold tabular-nums text-ink">{formatPaise(bal?.balancePaise ?? 0)}</p>
+                              {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
+                            </div>
+                            <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className={`${ghostButton} justify-self-end`} aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>
+                          </div>
+                          {(bal?.balancePaise ?? 0) > 0 || statementLinks.has(c.id) ? (
+                            <div className="mt-2 text-[13px] md:pl-[2.375rem]">
+                              {statementLinks.has(c.id) ? (
+                                <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-fog p-2">
+                                  <label className="sr-only" htmlFor={`stmt-${c.id}`}>{tr("Statement link for {name}", { name: c.name })}</label>
+                                  <input id={`stmt-${c.id}`} readOnly value={paylinkUrl(statementLinks.get(c.id)!.token)} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-[8px] border border-hairline bg-white px-2 py-1 font-mono text-[11px] text-ink" />
+                                  <button type="button" className={rowPrimary} onClick={async () => { try { await navigator.clipboard.writeText(paylinkUrl(statementLinks.get(c.id)!.token)); setFlash(tr("Statement link copied.")); } catch { /* select manually */ } }}>{tr("Copy")}</button>
+                                  <button type="button" className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => void revokeLink(statementLinks.get(c.id)!.token)}>{tr("Turn off")}</button>
+                                </div>
+                              ) : !signedIn ? (
+                                <span className="text-muted">{tr("Statement links need a free account + Pro.")}</span>
+                              ) : isPro ? (
+                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : tr("Share statement link — all dues + one UPI button")}</button>
+                              ) : (
+                                <a href="/app/?tab=settings&upgrade=monthly" className="inline-flex items-center gap-1.5 text-charcoal hover:text-ink"><Icon name="link" className="h-3.5 w-3.5" />{tr("Statement link for all dues")} · <span className="font-medium text-leaf">Pro</span></a>
+                              )}
+                            </div>
+                          ) : null}
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {tab === "settings" && (
+            <div className="max-w-3xl space-y-4">
+              <SyncPanel
+                state={sync}
+                paylinks={paylinks}
+                paidLinkTokens={paylinks ? Object.entries(paylinks.byInvoice).filter(([id]) => { if (id.startsWith("stmt:")) return false; const v = views.find((x) => x.invoice.id === id); return !v || v.balancePaise === 0; }).map(([, l]) => l.token) : []}
+                onRevokePaid={async (tokens) => { await Promise.all(tokens.map((t) => deletePaylink(t, "link"))); await refreshLinks(); setFlash(tr(tokens.length === 1 ? "Turned off {n} pay link for paid invoices." : "Turned off {n} pay links for paid invoices.", { n: tokens.length })); }}
+                invoiceCount={views.length}
+                onSyncNow={() => syncRef.current?.syncNow()}
+                onSignOut={async () => { await syncRef.current?.signOut(); setFlash(tr("Signed out. Your data stays on this device.")); }}
+                onDeleteCloud={async () => {
+                  const ok = await syncRef.current?.deleteCloudCopy();
+                  setFlash(ok ? tr("Cloud copy deleted and signed out. This device keeps its data.") : tr("Couldn't delete the cloud copy. Try again."));
+                }}
+              />
+              <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} />
+              <PlanPanel signedIn={signedIn} onFlash={setFlash} />
+              <InstallHint standalone={installer.standalone} ios={installer.ios} />
+              <SettingsPanel
+                ws={ws}
+                today={today}
+                onChange={(next, message) => { setWs(next); if (message) setFlash(message); }}
+              />
+            </div>
+          )}
+        </div>
       </div>
 
       {sheet?.kind === "invoice" && (
@@ -675,6 +726,18 @@ function Workspace() {
   );
 }
 
+function ClaimsCard({ id, title, note, children }: { id: string; title: string; note: string; children: ReactNode }) {
+  return (
+    <section className={`${card} border-l-[3px] border-l-[#e8a33d]`} aria-labelledby={id}>
+      <div className="border-b border-hairline px-4 py-3.5">
+        <h2 id={id} className={cardTitle}>{title}</h2>
+        <p className={`mt-0.5 ${cardNote}`}>{note}</p>
+      </div>
+      <ul className="divide-y divide-hairline">{children}</ul>
+    </section>
+  );
+}
+
 const NUDGE_KEY = "proupiqr-sync-nudge-dismissed";
 const NUDGE_SNOOZE_MS = 14 * 86_400_000;
 /** Apps whose built-in browser keeps its own storage, which people lose easily. */
@@ -703,21 +766,19 @@ function SyncNudge({ ws, today }: { ws: Workspace; today: string }) {
     setHidden(true);
   };
   return (
-    <section className="flex flex-col gap-4 rounded-[1.5rem] bg-forest p-5 text-white shadow-[0_16px_40px_-20px_rgba(17,59,44,0.6)] sm:flex-row sm:items-center sm:justify-between" aria-labelledby="sync-nudge-title">
+    <section className={`${card} flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between`} aria-labelledby="sync-nudge-title">
       <div className="flex gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/10 text-sun" aria-hidden="true">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M7 18a4 4 0 01-.9-7.9 5.5 5.5 0 0110.7-1.4A4.5 4.5 0 0117 18H7zm5-7v5m0-5l-2 2m2-2l2 2" /></svg>
-        </span>
+        <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] bg-fog text-ink" aria-hidden="true"><Icon name="cloud" className="h-[18px] w-[18px]" /></span>
         <div className="min-w-0">
-          <h2 id="sync-nudge-title" className="text-base font-black">{real.length === 1 ? tr("Keep this invoice safe") : tr("Keep these {n} invoices safe", { n: real.length })}</h2>
-          <p className="mt-1 text-sm leading-6 text-white/80">{tr("They're saved only in this browser. Clearing it or switching phones loses them. A free account backs them up and syncs your phone and laptop.")}</p>
-          {inApp && <p className="mt-2 text-sm font-bold text-sun">{tr("You're in an app's built-in browser, which forgets data easily. Open this page in Chrome or Safari.")}</p>}
+          <h2 id="sync-nudge-title" className={cardTitle}>{real.length === 1 ? tr("Keep this invoice safe") : tr("Keep these {n} invoices safe", { n: real.length })}</h2>
+          <p className={`mt-0.5 ${cardNote}`}>{tr("They're saved only in this browser. Clearing it or switching phones loses them. A free account backs them up and syncs your phone and laptop.")}</p>
+          {inApp && <p className="mt-2 text-[13px] font-medium text-[#8a5a00]">{tr("You're in an app's built-in browser, which forgets data easily. Open this page in Chrome or Safari.")}</p>}
         </div>
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
-        <a href={SIGN_UP_HREF} className="inline-flex h-11 items-center rounded-full bg-sun px-5 text-sm font-black text-forest transition hover:brightness-95">{tr("Save with a free account")}</a>
-        <button type="button" onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")} className="inline-flex h-11 items-center rounded-full px-4 text-sm font-bold text-white ring-1 ring-white/30 transition hover:bg-white/10">{tr("Download backup")}</button>
-        <button type="button" onClick={dismiss} className="inline-flex h-11 items-center rounded-full px-3 text-sm font-bold text-white/70 hover:text-white">{tr("Not now")}</button>
+        <a href={SIGN_UP_HREF} className={primaryButton}>{tr("Save with a free account")}</a>
+        <button type="button" onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")} className={secondaryButton}>{tr("Download backup")}</button>
+        <button type="button" onClick={dismiss} className={ghostButton}>{tr("Not now")}</button>
       </div>
     </section>
   );
@@ -745,67 +806,45 @@ function GatewaySavings({ ws, today, isPro }: { ws: Workspace; today: string; is
   // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee.
   const breakEven = Math.ceil((PRO_PRICES.monthly.paise * 10_000) / UPI_MDR.gatewayRateBps / 100) * 100;
   return (
-    <section className="flex flex-col gap-3 rounded-[1.5rem] bg-mint p-5 sm:flex-row sm:items-center sm:justify-between">
-      <div className="flex gap-3">
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-leaf" aria-hidden="true">
-          <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 3l7 4v5c0 4.4-3 8.3-7 9-4-.7-7-4.6-7-9V7l7-4zm-3 9l2 2 4-4" /></svg>
-        </span>
-        <div className="min-w-0 text-sm leading-6 text-forest">
-          <p className="font-bold">{tr("You collected {amount} by UPI this month, straight to your bank. A card or payment gateway at 2.36% would have kept about {fee}.", { amount: formatPaise(collected), fee: formatPaise(gatewayFeePaise(collected)) })}</p>
-          {!isPro && <p className="mt-0.5 text-forest/70">{tr("Pro costs {price}/month, less than the gateway fee on {amount} of sales.", { price: PRO_PRICES.monthly.label, amount: formatPaise(breakEven) })}</p>}
-        </div>
+    <section className={`${card} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
+      <div className="min-w-0 text-sm leading-6">
+        <p className="font-medium text-ink">{tr("You collected {amount} by UPI this month, straight to your bank. A card or payment gateway at 2.36% would have kept about {fee}.", { amount: formatPaise(collected), fee: formatPaise(gatewayFeePaise(collected)) })}</p>
+        {!isPro && <p className={cardNote}>{tr("Pro costs {price}/month, less than the gateway fee on {amount} of sales.", { price: PRO_PRICES.monthly.label, amount: formatPaise(breakEven) })}</p>}
       </div>
-      <div className="flex shrink-0 flex-wrap gap-2">
-        {!isPro && <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>}
-        <a href="/upi-mdr-calculator/" className="inline-flex items-center px-2 text-xs font-bold text-leaf hover:underline">{tr("Compare UPI and gateway fees")}</a>
+      <div className="flex shrink-0 flex-wrap items-center gap-2">
+        {!isPro && <a href="/app/?tab=settings&upgrade=monthly" className={secondaryButton}>{tr("See Pro")}</a>}
+        <a href="/upi-mdr-calculator/" className="text-[13px] font-medium text-leaf hover:underline">{tr("Compare UPI and gateway fees")}</a>
       </div>
     </section>
   );
 }
 
-/** An invoice, a WhatsApp reminder and a paid tick: what the tracker does, at a glance. */
+/** An invoice, a reminder and a paid tick, drawn in the Ledger palette. */
 function EmptyIllustration() {
   return (
-    <svg className="h-28 w-40 shrink-0" viewBox="0 0 160 112" fill="none" aria-hidden="true">
-      <rect x="18" y="10" width="78" height="92" rx="10" fill="#eef1ec" />
-      <rect x="26" y="20" width="62" height="74" rx="7" fill="#fff" stroke="#113b2c" strokeOpacity=".12" />
-      <rect x="34" y="30" width="30" height="5" rx="2.5" fill="#113b2c" />
-      <rect x="34" y="41" width="44" height="4" rx="2" fill="#113b2c" fillOpacity=".18" />
-      <rect x="34" y="50" width="38" height="4" rx="2" fill="#113b2c" fillOpacity=".18" />
-      <rect x="34" y="66" width="20" height="5" rx="2.5" fill="#113b2c" fillOpacity=".3" />
-      <text x="80" y="72" textAnchor="end" fontSize="11" fontWeight="800" fill="#113b2c" fontFamily="system-ui, sans-serif">₹4,500</text>
-      <rect x="34" y="80" width="46" height="7" rx="3.5" fill="#f6b73c" />
-      <path d="M92 34h46a8 8 0 018 8v14a8 8 0 01-8 8h-30l-9 7v-7h-7a8 8 0 01-8-8V42a8 8 0 018-8z" fill="#25D366" />
-      <rect x="100" y="43" width="34" height="4" rx="2" fill="#fff" />
-      <rect x="100" y="51" width="22" height="4" rx="2" fill="#fff" fillOpacity=".75" />
-      <circle cx="128" cy="86" r="15" fill="#287a57" />
-      <path d="M121 86l5 5 9-10" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
+    <svg className="h-24 w-36 shrink-0" viewBox="0 0 160 112" fill="none" aria-hidden="true">
+      <rect x="22" y="12" width="70" height="88" rx="8" fill="#fff" stroke="#e4e7ec" />
+      <rect x="32" y="24" width="28" height="5" rx="2.5" fill="#1c1d1f" />
+      <rect x="32" y="36" width="44" height="4" rx="2" fill="#cad0d9" />
+      <rect x="32" y="45" width="36" height="4" rx="2" fill="#cad0d9" />
+      <rect x="32" y="64" width="18" height="4" rx="2" fill="#cad0d9" />
+      <text x="82" y="70" textAnchor="end" fontSize="11" fontWeight="600" fill="#1c1d1f" fontFamily="Inter Variable, system-ui, sans-serif">₹4,500</text>
+      <rect x="32" y="80" width="50" height="8" rx="4" fill="#f4f5f6" />
+      <rect x="98" y="30" width="48" height="30" rx="8" fill="#fff" stroke="#e4e7ec" />
+      <rect x="106" y="39" width="32" height="4" rx="2" fill="#cad0d9" />
+      <rect x="106" y="47" width="20" height="4" rx="2" fill="#e4e7ec" />
+      <circle cx="124" cy="84" r="14" fill="#1f7a52" />
+      <path d="M118 84l4.5 4.5 8-9" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
 
-const STAT_ACCENT = {
-  collect: { chip: "bg-sun/25 text-[#8a5a00]", bar: "bg-sun", icon: "M12 6v12m-4-9h6.5a2.5 2.5 0 010 5H8m0-5h8M8 9h5" },
-  overdue: { chip: "bg-coral/15 text-[#a8321d]", bar: "bg-coral", icon: "M12 8v5m0 3h.01M10.3 3.9L2.6 17a2 2 0 001.7 3h15.4a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z" },
-  soon: { chip: "bg-[#e3eefb] text-[#1d5fa8]", bar: "bg-[#4a8fd8]", icon: "M8 7V3m8 4V3M4 11h16M5 5h14a1 1 0 011 1v13a1 1 0 01-1 1H5a1 1 0 01-1-1V6a1 1 0 011-1z" },
-  collected: { chip: "bg-mint text-leaf", bar: "bg-leaf", icon: "M5 13l4 4L19 7" },
-} as const;
-
-function Stat({ label, value, note, tone, accent }: { label: string; value: string; note?: string; tone?: "good" | "bad"; accent: keyof typeof STAT_ACCENT }) {
-  const a = STAT_ACCENT[accent];
+function Stat({ label, value, note, tone, dot, className = "" }: { label: string; value: string; note?: string; tone?: "good" | "bad"; dot?: string; className?: string }) {
   return (
-    <div className="relative overflow-hidden rounded-[1.25rem] bg-white p-4 ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)]">
-      <span className={`absolute inset-x-0 top-0 h-1 ${a.bar}`} aria-hidden="true" />
-      <div className="flex items-center gap-2">
-        <span className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full ${a.chip}`} aria-hidden="true">
-          {accent === "collect"
-            ? <span className="text-sm font-black leading-none">₹</span>
-            : <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d={a.icon} /></svg>}
-        </span>
-        <p className="text-xs font-bold text-forest/60">{label}</p>
-      </div>
-      <p className={`mt-2 text-xl font-black tabular-nums md:text-2xl ${tone === "bad" ? "text-[#a8321d]" : tone === "good" ? "text-leaf" : "text-forest"}`}>{value}</p>
-      {note && <p className="mt-0.5 text-[11px] text-forest/55">{note}</p>}
+    <div className={`min-w-0 px-4 py-4 ${className}`}>
+      <p className="flex items-center gap-1.5 text-[13px] text-muted">{dot && <span aria-hidden="true" className={`h-1.5 w-1.5 rounded-full ${dot}`} />}{label}</p>
+      <p className={`mt-1 truncate text-xl font-semibold tabular-nums tracking-[-0.01em] md:text-[22px] ${tone === "bad" ? "text-[#a8321d]" : "text-ink"}`}>{value}</p>
+      {note && <p className="mt-0.5 text-xs text-muted">{note}</p>}
     </div>
   );
 }
@@ -832,73 +871,74 @@ function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onR
   const { tr, dateLocale } = useWs();
   const { invoice } = view;
   return (
-    <li className="rounded-[1.25rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)]">
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="flex w-full items-center justify-between gap-3 p-4 text-left">
+    <li className={open ? "bg-[#fafbfc]" : undefined}>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors duration-150 hover:bg-[#fafbfc] md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem]">
         <div className="min-w-0">
-          <p className="truncate font-bold text-forest">{view.client?.name ?? tr("Unknown client")}</p>
-          <p className="text-xs text-forest/60">{invoice.number} · {dueText(view, tr, dateLocale)}{invoice.recurringId ? tr(" · Monthly") : ""}</p>
+          <p className="truncate text-sm font-medium text-ink">{view.client?.name ?? tr("Unknown client")}</p>
+          <p className="truncate text-[13px] text-muted md:hidden">{invoice.number} · {dueText(view, tr, dateLocale)}{invoice.recurringId ? tr(" · Monthly") : ""}</p>
         </div>
-        <div className="shrink-0 text-right">
-          <p className="font-black tabular-nums text-forest">{formatPaise(view.state === "paid" || view.state === "void" ? invoice.amountPaise : view.balancePaise)}</p>
-          <StatusBadge state={view.state} />
+        <p className="hidden min-w-0 truncate text-[13px] text-charcoal md:block"><span className="font-mono text-[12px] text-ink">{invoice.number}</span> · {dueText(view, tr, dateLocale)}{invoice.recurringId ? tr(" · Monthly") : ""}</p>
+        <div className="text-right md:contents">
+          <p className="text-sm font-semibold tabular-nums text-ink md:text-right">{formatPaise(view.state === "paid" || view.state === "void" ? invoice.amountPaise : view.balancePaise)}</p>
+          <div className="md:justify-self-start"><StatusBadge state={view.state} /></div>
         </div>
       </button>
       {open && (
-        <div className="border-t border-forest/5 px-4 pb-4 pt-3 text-sm">
-          <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-forest/70 sm:grid-cols-4">
-            <div><dt className="font-bold">{tr("Invoice date")}</dt><dd>{shortDate(invoice.issueDate, dateLocale)}</dd></div>
-            <div><dt className="font-bold">{tr("Due")}</dt><dd>{shortDate(invoice.dueDate, dateLocale)}</dd></div>
-            <div><dt className="font-bold">{tr("Amount")}</dt><dd>{formatPaise(invoice.amountPaise)}</dd></div>
-            <div><dt className="font-bold">{tr("Received")}</dt><dd>{formatPaise(view.paidPaise)}</dd></div>
+        <div className="ws-row-detail border-t border-hairline px-4 pb-4 pt-3 text-sm">
+          <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
+            <div><dt className="text-muted">{tr("Invoice date")}</dt><dd className="text-ink">{shortDate(invoice.issueDate, dateLocale)}</dd></div>
+            <div><dt className="text-muted">{tr("Due")}</dt><dd className="text-ink">{shortDate(invoice.dueDate, dateLocale)}</dd></div>
+            <div><dt className="text-muted">{tr("Amount")}</dt><dd className="tabular-nums text-ink">{formatPaise(invoice.amountPaise)}</dd></div>
+            <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{formatPaise(view.paidPaise)}</dd></div>
           </dl>
-          {invoice.description && <p className="mt-2 text-xs text-forest/70">{invoice.description}</p>}
+          {invoice.description && <p className="mt-3 text-[13px] text-charcoal">{invoice.description}</p>}
           {invoice.payments.length > 0 && (
-            <ul className="mt-3 space-y-1 text-xs text-forest/70">
+            <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
               {invoice.payments.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 rounded-lg bg-mint/40 px-2 py-1">
-                  <span>{formatPaise(p.amountPaise)} · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}</span>
-                  <button type="button" onClick={() => onUndoPayment(p.id)} className="font-bold text-forest/50 hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>
+                <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
+                  <span className="text-charcoal"><span className="font-medium tabular-nums text-ink">{formatPaise(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}</span>
+                  <button type="button" onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>
                 </li>
               ))}
             </ul>
           )}
           {msme && (
-            <p className="mt-3 rounded-xl bg-sun/20 px-3 py-2 text-xs leading-5 text-forest">
-              <strong>{tr(msme.daysLate === 1 ? "MSME deadline passed {n} day ago ({date})." : "MSME deadline passed {n} days ago ({date}).", { n: msme.daysLate, date: shortDate(msme.deadline, dateLocale) })}</strong>{" "}
+            <p className="mt-3 rounded-[10px] bg-[#fdf4e6] px-3 py-2 text-[13px] leading-5 text-[#6b4600]">
+              <strong className="font-semibold">{tr(msme.daysLate === 1 ? "MSME deadline passed {n} day ago ({date})." : "MSME deadline passed {n} days ago ({date}).", { n: msme.daysLate, date: shortDate(msme.deadline, dateLocale) })}</strong>{" "}
               {msme.interestPaise !== null
                 ? tr("Section 16 interest so far: about {amount} at {rate}% a year.", { amount: formatPaise(msme.interestPaise), rate: MSMED_INTEREST_PCT })
                 : tr("Pro shows the Section 16 interest due and adds your MSME rights to reminders.")}
             </p>
           )}
           {view.balancePaise > 0 && (
-            <div className="mt-3 rounded-xl bg-cream p-3">
+            <div className="mt-3">
               {payLink ? (
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-white p-2 ring-1 ring-hairline">
                   <label className="sr-only" htmlFor={`link-${invoice.id}`}>{tr("Pay link")}</label>
-                  <input id={`link-${invoice.id}`} readOnly value={payLink} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-lg border border-forest/10 bg-white px-2 py-1.5 font-mono text-[11px] text-forest" />
-                  <button type="button" className="rounded-lg bg-forest px-3 py-1.5 text-xs font-black text-white" onClick={async () => { try { await navigator.clipboard.writeText(payLink); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* select manually */ } }}>{copied ? tr("Copied ✓") : tr("Copy link")}</button>
-                  <button type="button" className="rounded-lg px-2 py-1.5 text-xs font-bold text-forest/50 hover:text-[#a8321d]" onClick={onRevokeLink}>{tr("Turn off")}</button>
+                  <input id={`link-${invoice.id}`} readOnly value={payLink} onFocus={(e) => e.currentTarget.select()} className="min-w-0 flex-1 rounded-[8px] bg-fog px-2 py-1.5 font-mono text-[11px] text-ink outline-none" />
+                  <button type="button" className={rowPrimary} onClick={async () => { try { await navigator.clipboard.writeText(payLink); setCopied(true); setTimeout(() => setCopied(false), 2000); } catch { /* select manually */ } }}>{copied ? tr("Copied ✓") : tr("Copy link")}</button>
+                  <button type="button" className={`${ghostButton} hover:text-[#a8321d]`} onClick={onRevokeLink}>{tr("Turn off")}</button>
                 </div>
               ) : signedIn ? (
-                <button type="button" disabled={linkBusy} onClick={onCreateLink} className="text-xs font-black text-leaf hover:underline disabled:opacity-50">{linkBusy ? tr("Creating pay link…") : tr("🔗 Create pay link — client sees amount + UPI button")}</button>
+                <button type="button" disabled={linkBusy} onClick={onCreateLink} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy ? tr("Creating pay link…") : tr("Create pay link — client sees amount + UPI button")}</button>
               ) : (
-                <p className="text-xs text-forest/70">{tr("🔗 Pay links need a free account.")} <a className="font-bold text-leaf underline" href={"/sign-up/?redirect_url=" + encodeURIComponent("/app/?tab=invoices")}>{tr("Create one")}</a></p>
+                <p className="text-[13px] text-muted">{tr("Pay links need a free account.")} <a className="font-medium text-leaf hover:underline" href={"/sign-up/?redirect_url=" + encodeURIComponent("/app/?tab=invoices")}>{tr("Create one")}</a></p>
               )}
             </div>
           )}
-          <div className="mt-3 flex flex-wrap gap-2">
-            {view.balancePaise > 0 && <button type="button" onClick={onPay} className="rounded-xl bg-forest px-3 py-2 text-xs font-black text-white hover:bg-leaf">{tr("Record payment")}</button>}
-            {view.balancePaise > 0 && <button type="button" onClick={onRemind} className="rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white hover:bg-[#1da851]">{tr("Remind")}</button>}
-            <button type="button" onClick={onEdit} className="rounded-xl border border-forest/15 px-3 py-2 text-xs font-bold text-forest hover:bg-mint">{tr("Edit")}</button>
-            <button type="button" onClick={onVoid} className="rounded-xl border border-forest/15 px-3 py-2 text-xs font-bold text-forest hover:bg-mint">{invoice.voided ? tr("Restore") : tr("Cancel invoice")}</button>
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {view.balancePaise > 0 && <button type="button" onClick={onPay} className={rowPrimary}>{tr("Record payment")}</button>}
+            {view.balancePaise > 0 && <button type="button" onClick={onRemind} className={rowButton}><Icon name="whatsapp" className="h-3.5 w-3.5 text-[#1da851]" />{tr("Remind")}</button>}
+            <button type="button" onClick={onEdit} className={rowButton}>{tr("Edit")}</button>
+            <button type="button" onClick={onVoid} className={rowButton}>{invoice.voided ? tr("Restore") : tr("Cancel invoice")}</button>
             {confirmDelete ? (
-              <span className="flex items-center gap-2 text-xs font-bold text-[#a8321d]">
+              <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                 {tr("Delete for good?")}
-                <button type="button" onClick={onDelete} className="rounded-lg bg-[#a8321d] px-2 py-1 text-white">{tr("Delete")}</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-lg px-2 py-1 text-forest">{tr("Keep")}</button>
+                <button type="button" onClick={onDelete} className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white">{tr("Delete")}</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className={ghostButton}>{tr("Keep")}</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-xl px-3 py-2 text-xs font-bold text-forest/50 hover:text-[#a8321d]">{tr("Delete")}</button>
+              <button type="button" onClick={() => setConfirmDelete(true)} className={`${ghostButton} ml-auto hover:text-[#a8321d]`}>{tr("Delete")}</button>
             )}
           </div>
         </div>
@@ -913,9 +953,9 @@ function SetupCard({ ws, onSave }: { ws: Workspace; onSave: (next: Workspace) =>
   const [error, setError] = useState("");
   const { tr } = useWs();
   return (
-    <section className="rounded-[1.5rem] border-2 border-sun/60 bg-cream p-5">
-      <h2 className="text-lg font-black text-forest">{tr("Set up in 20 seconds")}</h2>
-      <p className="mt-1 text-sm text-forest/70">{tr("Your business name and UPI ID go on payment reminders. Stored only on this device.")}</p>
+    <section className={`${card} p-5`}>
+      <h2 className={cardTitle}>{tr("Set up in 20 seconds")}</h2>
+      <p className={`mt-0.5 ${cardNote}`}>{tr("Your business name and UPI ID go on payment reminders. Stored only on this device.")}</p>
       <form className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" noValidate onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return setError(tr("Enter your business or your own name."));
@@ -926,7 +966,7 @@ function SetupCard({ ws, onSave }: { ws: Workspace; onSave: (next: Workspace) =>
         <Field label={tr("UPI ID")} htmlFor="ws-setup-upi"><input id="ws-setup-upi" className={inputClass} value={upiId} onChange={(e) => { setUpiId(e.target.value); setError(""); }} maxLength={100} placeholder="name@okaxis" autoCapitalize="none" /></Field>
         <button type="submit" className={primaryButton}>{tr("Save")}</button>
       </form>
-      {error && <p role="alert" className="mt-2 text-xs font-bold text-[#a8321d]">{error}</p>}
+      {error && <p role="alert" className={`mt-2 text-[13px] font-medium ${dangerText}`}>{error}</p>}
     </section>
   );
 }
@@ -963,14 +1003,14 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         <Field label={tr("WhatsApp number")} htmlFor="ws-c-phone"><input id="ws-c-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} /></Field>
         <Field label={tr("Email (optional)")} htmlFor="ws-c-email"><input id="ws-c-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} /></Field>
         <Field label={tr("GSTIN (optional)")} htmlFor="ws-c-gstin"><input id="ws-c-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} autoCapitalize="characters" /></Field>
-        {error && <p role="alert" className="text-xs font-bold text-[#a8321d]">{error}</p>}
+        {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="submit" className={`${primaryButton} flex-1`}>{tr("Save")}</button>
           {existing && !hasInvoices && (
-            <button type="button" onClick={() => onSave(deleteClient(ws, existing.id, Date.now()), tr("{name} removed.", { name: existing.name }))} className="rounded-xl px-3 py-2 text-xs font-bold text-[#a8321d] hover:bg-coral/10">{tr("Remove client")}</button>
+            <button type="button" onClick={() => onSave(deleteClient(ws, existing.id, Date.now()), tr("{name} removed.", { name: existing.name }))} className={`${ghostButton} ${dangerText}`}>{tr("Remove client")}</button>
           )}
         </div>
-        {existing && hasInvoices && <p className="text-[11px] text-forest/55">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
+        {existing && hasInvoices && <p className="text-xs text-muted">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
       </form>
     </Sheet>
   );
@@ -1001,9 +1041,9 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
   }
 
   return (
-    <div className="space-y-5">
-      <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-        <h2 className="text-lg font-black text-forest">{tr("Business details")}</h2>
+    <div className="space-y-4">
+      <section className={`${card} p-5`}>
+        <h2 className={cardTitle}>{tr("Business details")}</h2>
         <form noValidate className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return setError(tr("Business name is required."));
@@ -1020,15 +1060,15 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
           <Field label={tr("GSTIN (optional)")} htmlFor="ws-s-gstin"><input id="ws-s-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} /></Field>
           <Field label={tr("Invoice number prefix")} htmlFor="ws-s-prefix"><input id="ws-s-prefix" className={inputClass} value={prefix} onChange={(e) => setPrefix(e.target.value)} maxLength={12} /></Field>
           <Field label={tr("Udyam number (micro/small enterprise, optional)")} htmlFor="ws-s-udyam"><input id="ws-s-udyam" className={inputClass} value={udyam} onChange={(e) => setUdyam(e.target.value)} maxLength={30} placeholder="UDYAM-MH-12-1234567" autoCapitalize="characters" /></Field>
-          <p className="text-[11px] leading-4 text-forest/60 sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the MSMED deadline on overdue invoices. We treat your invoice due date as the agreed date, capped at 45 days; without a written agreement the law allows only 15.")}</p>
-          <div className="flex items-end"><button type="submit" className={`${primaryButton} w-full`}>{tr("Save settings")}</button></div>
+          <p className="text-xs leading-5 text-muted sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the MSMED deadline on overdue invoices. We treat your invoice due date as the agreed date, capped at 45 days; without a written agreement the law allows only 15.")}</p>
+          <div className="flex items-end sm:col-span-2"><button type="submit" className={primaryButton}>{tr("Save settings")}</button></div>
         </form>
-        {error && <p role="alert" className="mt-2 text-xs font-bold text-[#a8321d]">{error}</p>}
+        {error && <p role="alert" className={`mt-2 text-[13px] font-medium ${dangerText}`}>{error}</p>}
       </section>
 
-      <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-        <h2 className="text-lg font-black text-forest">{tr("Your data")}</h2>
-        <p className="mt-1 text-sm text-forest/70">{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
+      <section className={`${card} p-5`}>
+        <h2 className={cardTitle}>{tr("Your data")}</h2>
+        <p className={`mt-0.5 ${cardNote}`}>{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")}>{tr("Download backup")}</button>
           <label className={`${secondaryButton} cursor-pointer`}>
@@ -1037,22 +1077,22 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
           </label>
           <button type="button" className={secondaryButton} onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(invoiceViews(ws, today)), "text/csv;charset=utf-8")}>{tr("Export all as CSV")}</button>
         </div>
-        <div className="mt-5 border-t border-forest/5 pt-4">
+        <div className="mt-5 border-t border-hairline pt-4">
           {confirmErase ? (
-            <p className="flex flex-wrap items-center gap-2 text-sm font-bold text-[#a8321d]">
+            <p className={`flex flex-wrap items-center gap-2 text-sm font-medium ${dangerText}`}>
               {tr("Erase every invoice and client from this browser?")}
-              <button type="button" className="rounded-lg bg-[#a8321d] px-3 py-1.5 text-xs text-white" onClick={() => { onChange(eraseWorkspace(ws, Date.now()), tr("Workspace erased.")); setConfirmErase(false); }}>{tr("Erase")}</button>
-              <button type="button" className="rounded-lg px-3 py-1.5 text-xs text-forest" onClick={() => setConfirmErase(false)}>{tr("Cancel")}</button>
+              <button type="button" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-3 text-[13px] text-white" onClick={() => { onChange(eraseWorkspace(ws, Date.now()), tr("Workspace erased.")); setConfirmErase(false); }}>{tr("Erase")}</button>
+              <button type="button" className={ghostButton} onClick={() => setConfirmErase(false)}>{tr("Cancel")}</button>
             </p>
           ) : (
-            <button type="button" className="text-xs font-bold text-forest/50 hover:text-[#a8321d]" onClick={() => setConfirmErase(true)}>{tr("Erase workspace on this device…")}</button>
+            <button type="button" className="text-[13px] font-medium text-muted hover:text-[#a8321d]" onClick={() => setConfirmErase(true)}>{tr("Erase workspace on this device…")}</button>
           )}
         </div>
       </section>
 
-      <section className="rounded-[1.5rem] border border-leaf/20 bg-mint/40 p-5">
-        <h2 className="text-lg font-black text-forest">{tr("Coming next")}</h2>
-        <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-forest/75">
+      <section className="rounded-[12px] border border-dashed border-pebble px-5 py-4">
+        <h2 className="text-[13px] font-medium text-charcoal">{tr("Coming next")}</h2>
+        <ul className="mt-1 list-disc space-y-1 pl-5 text-[13px] text-muted">
           <li>{tr("Automatic WhatsApp reminders to clients on the due date")}</li>
         </ul>
       </section>
@@ -1074,9 +1114,9 @@ function SyncPill({ state, onClick }: { state: SyncState; onClick: () => void })
     error: "Sync paused",
     too_large: "Sync stopped",
   };
-  const tone = state.status === "synced" ? "bg-mint text-leaf" : state.status === "error" || state.status === "too_large" ? "bg-coral/15 text-[#a8321d]" : "bg-white text-forest/70";
+  const tone = state.status === "synced" ? "text-[#17603f]" : state.status === "error" || state.status === "too_large" ? "text-[#a8321d]" : "text-charcoal";
   return (
-    <button type="button" onClick={onClick} aria-live="polite" className={`hidden rounded-full border border-forest/10 px-3 py-2 text-xs font-bold sm:inline-flex ${tone}`}>
+    <button type="button" onClick={onClick} aria-live="polite" className={`hidden h-9 items-center rounded-[10px] bg-white px-3 text-[13px] font-medium ring-1 ring-inset ring-hairline hover:bg-fog sm:inline-flex ${tone}`}>
       {tr(label[state.status])}
     </button>
   );
@@ -1101,12 +1141,12 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
   const { tr, dateLocale } = useWs();
 
   return (
-    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-      <h2 className="text-lg font-black text-forest">{tr("Sync across devices")}</h2>
-      {state.status === "checking" && <p className="mt-2 text-sm text-forest/60">{tr("Checking your account…")}</p>}
+    <section className={`${card} p-5`}>
+      <h2 className={cardTitle}>{tr("Sync across devices")}</h2>
+      {state.status === "checking" && <p className={`mt-1 ${cardNote}`}>{tr("Checking your account…")}</p>}
       {state.status === "signed_out" && (
         <>
-          <p className="mt-1 text-sm text-forest/70">
+          <p className={`mt-1 ${cardNote}`}>
             {tr(invoiceCount === 0
               ? "Free account. Your invoices are uploaded when you sign in, then stay in step on your phone and laptop. Without an account, nothing leaves this browser."
               : invoiceCount === 1
@@ -1121,7 +1161,7 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
       )}
       {signedIn && (
         <>
-          <p className="mt-1 text-sm text-forest/70">
+          <p className={`mt-1 ${cardNote}`}>
             {state.status === "synced" && (state.lastSyncedAt
               ? tr("Synced at {time}. Changes upload automatically.", { time: new Date(state.lastSyncedAt).toLocaleTimeString(dateLocale, { hour: "numeric", minute: "2-digit" }) })
               : tr("Synced. Changes upload automatically."))}
@@ -1130,32 +1170,32 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
             {(state.status === "error" || state.status === "too_large") && tr(state.message)}
           </p>
           {paylinks?.plan && (
-            <p className="mt-3 text-xs text-forest/70">
+            <p className="mt-3 text-[13px] text-charcoal">
               {tr("Pay links: {used} of {limit} active on the {plan} plan.", { used: paylinks.plan.used, limit: paylinks.plan.activePaylinks, plan: paylinks.plan.id === "pro" ? "Pro" : tr("Free") })}
-              {paidLinkTokens.length > 0 && <> <button type="button" className="font-bold text-leaf underline" onClick={() => onRevokePaid(paidLinkTokens)}>{tr("Turn off {n} for paid invoices", { n: paidLinkTokens.length })}</button></>}
+              {paidLinkTokens.length > 0 && <> <button type="button" className="font-medium text-leaf hover:underline" onClick={() => onRevokePaid(paidLinkTokens)}>{tr("Turn off {n} for paid invoices", { n: paidLinkTokens.length })}</button></>}
             </p>
           )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
             <button type="button" onClick={onSyncNow} className={secondaryButton} disabled={state.status === "syncing"}>{tr("Sync now")}</button>
             <button type="button" onClick={onSignOut} className={secondaryButton}>{tr("Sign out")}</button>
             {confirmDelete ? (
-              <span className="flex flex-wrap items-center gap-2 text-xs font-bold text-[#a8321d]">
+              <span className={`flex flex-wrap items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                 {tr("Delete the cloud copy and sign out? This device keeps its data.")}
-                <button type="button" onClick={() => { setConfirmDelete(false); onDeleteCloud(); }} className="rounded-lg bg-[#a8321d] px-2 py-1 text-white">{tr("Delete cloud copy")}</button>
-                <button type="button" onClick={() => setConfirmDelete(false)} className="rounded-lg px-2 py-1 text-forest">{tr("Keep")}</button>
+                <button type="button" onClick={() => { setConfirmDelete(false); onDeleteCloud(); }} className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white">{tr("Delete cloud copy")}</button>
+                <button type="button" onClick={() => setConfirmDelete(false)} className={ghostButton}>{tr("Keep")}</button>
               </span>
             ) : (
-              <button type="button" onClick={() => setConfirmDelete(true)} className="rounded-xl px-3 py-2 text-xs font-bold text-forest/50 hover:text-[#a8321d]">{tr("Delete cloud copy…")}</button>
+              <button type="button" onClick={() => setConfirmDelete(true)} className={`${ghostButton} hover:text-[#a8321d]`}>{tr("Delete cloud copy…")}</button>
             )}
           </div>
         </>
       )}
       {stash && (
-        <div className="mt-4 rounded-2xl bg-sun/20 p-3 text-xs text-forest/80">
+        <div className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
           {tr("Data from a different account that was on this device was set aside, not uploaded.")}
-          <div className="mt-2 flex gap-2">
-            <button type="button" className="font-bold underline" onClick={() => downloadText("proupiqr-other-account-backup.json", JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(stash) }, null, 2), "application/json")}>{tr("Download it")}</button>
-            <button type="button" className="font-bold underline" onClick={() => { try { localStorage.removeItem(STASH_KEY); } catch { /* ignore */ } setStash(null); }}>{tr("Discard")}</button>
+          <div className="mt-2 flex gap-3">
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText("proupiqr-other-account-backup.json", JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(stash) }, null, 2), "application/json")}>{tr("Download it")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { try { localStorage.removeItem(STASH_KEY); } catch { /* ignore */ } setStash(null); }}>{tr("Discard")}</button>
           </div>
         </div>
       )}
@@ -1183,23 +1223,27 @@ function GettingStarted({ ws, signedIn, onAction }: { ws: Workspace; signedIn: b
   const doneCount = steps.filter((s) => s.done).length;
   if (dismissed || doneCount === steps.length) return null;
   return (
-    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5" aria-labelledby="getting-started-title">
-      <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 id="getting-started-title" className="text-lg font-black text-forest">{tr("Get paid faster in 5 steps")}</h2>
-        <span className="text-xs font-bold text-forest/60">{tr("{done} of {total} done", { done: doneCount, total: steps.length })}</span>
+    <section className={`${card} p-4`} aria-labelledby="getting-started-title">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <h2 id="getting-started-title" className={cardTitle}>{tr("Get paid faster in 5 steps")}</h2>
+        <div className="flex items-center gap-3">
+          <span className="text-[13px] tabular-nums text-muted">{tr("{done} of {total} done", { done: doneCount, total: steps.length })}</span>
+          <button type="button" className="text-[13px] font-medium text-muted hover:text-ink" onClick={() => { setDismissed(true); try { localStorage.setItem(CHECKLIST_KEY, "1"); } catch { /* not remembered */ } }}>{tr("Hide this")}</button>
+        </div>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-forest/5"><div className="h-full rounded-full bg-leaf" style={{ width: `${(doneCount / steps.length) * 100}%` }} /></div>
-      <ol className="mt-3 space-y-1.5 text-sm">
+      <div className="mt-3 flex gap-1" aria-hidden="true">
+        {steps.map((step) => <span key={step.id} className={`h-1 flex-1 rounded-full ${step.done ? "bg-[#1f7a52]" : "bg-fog"}`} />)}
+      </div>
+      <ol className="mt-3 grid gap-x-6 gap-y-1.5 text-[13px] sm:grid-cols-2">
         {steps.map((step) => (
           <li key={step.id} className="flex items-center gap-2">
-            <span aria-hidden="true" className={`flex h-5 w-5 items-center justify-center rounded-full text-[11px] font-black ${step.done ? "bg-leaf text-white" : "border border-forest/20 text-forest/40"}`}>{step.done ? "✓" : ""}</span>
+            <span aria-hidden="true" className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full ${step.done ? "bg-[#1f7a52] text-white" : "ring-1 ring-inset ring-pebble"}`}>{step.done && <Icon name="check" className="h-3 w-3" />}</span>
             {step.done || step.id === "business"
-              ? <span className={step.done ? "text-forest/50 line-through" : "text-forest"}>{step.label}</span>
-              : <button type="button" className="text-left font-bold text-leaf hover:underline" onClick={() => onAction(step.id as "invoice" | "remind" | "payment" | "account")}>{step.label}</button>}
+              ? <span className={step.done ? "text-muted line-through decoration-pebble" : "text-ink"}>{step.label}</span>
+              : <button type="button" className="text-left font-medium text-leaf hover:underline" onClick={() => onAction(step.id as "invoice" | "remind" | "payment" | "account")}>{step.label}</button>}
           </li>
         ))}
       </ol>
-      <button type="button" className="mt-3 text-xs font-bold text-forest/50 hover:text-forest" onClick={() => { setDismissed(true); try { localStorage.setItem(CHECKLIST_KEY, "1"); } catch { /* not remembered */ } }}>{tr("Hide this")}</button>
     </section>
   );
 }

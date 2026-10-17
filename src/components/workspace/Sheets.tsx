@@ -145,7 +145,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
               type="button"
               onClick={() => isIsoDate(issueDate) && setDueDate(addDays(issueDate, term.days))}
               aria-pressed={termDays === term.days}
-              className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${termDays === term.days ? "bg-forest text-white" : "bg-mint text-forest hover:bg-leaf hover:text-white"}`}
+              className={`rounded-[7px] px-3 py-1.5 text-xs font-bold transition ${termDays === term.days ? "bg-forest text-white" : "bg-fog text-ink hover:bg-graphite hover:text-white"}`}
             >
               {tr(term.label)}
             </button>
@@ -155,10 +155,10 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
           <input id="ws-desc" className={inputClass} value={description} onChange={(e) => setDescription(e.target.value)} maxLength={300} placeholder={tr("October tuition fees")} />
         </Field>
         {!existing && (
-          <div className="rounded-xl bg-cream p-3">
-            <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-forest">
+          <div className="rounded-[10px] bg-cream p-3">
+            <label className="flex cursor-pointer items-start gap-2 text-sm font-bold text-ink">
               <input type="checkbox" className="mt-0.5 h-4 w-4 accent-[#287a57]" checked={repeat} onChange={(e) => setRepeat(e.target.checked)} />
-              <span>{tr("Repeat every month")}<span className="block text-xs font-normal text-forest/60">{tr("For tuition fees, rent, memberships, maintenance. A new invoice is created on day {d} of each month.", { d: isIsoDate(issueDate) ? Math.min(28, Number(issueDate.slice(8, 10))) : "—" })}</span></span>
+              <span>{tr("Repeat every month")}<span className="block text-xs font-normal text-muted">{tr("For tuition fees, rent, memberships, maintenance. A new invoice is created on day {d} of each month.", { d: isIsoDate(issueDate) ? Math.min(28, Number(issueDate.slice(8, 10))) : "—" })}</span></span>
             </label>
             {repeat && (
               <div className="mt-3">
@@ -206,7 +206,7 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
 
   return (
     <Sheet title={tr("Payment for {number}", { number: view.invoice.number })} onClose={onClose}>
-      <p className="mb-4 text-sm text-forest/70">
+      <p className="mb-4 text-sm text-charcoal">
         {view.client?.name ?? tr("Client")} · {tr("{due} still due of {total}", { due: formatPaise(view.balancePaise), total: formatPaise(view.invoice.amountPaise) })}
       </p>
       <form onSubmit={submit} noValidate className="space-y-4">
@@ -309,14 +309,14 @@ export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent
 
   return (
     <Sheet title={tr("Remind {name}", { name: view.client?.name ?? tr("client") })} onClose={onClose}>
-      <p className="mb-3 text-sm text-forest/70">
+      <p className="mb-3 text-sm text-charcoal">
         {view.invoice.number} · {tr("{amount} due", { amount: formatPaise(view.balancePaise) })}
         {last && <> · {tr("last reminded {date}", { date: new Date(last.at).toLocaleDateString(dateLocale, { day: "numeric", month: "short" }) })}</>}
       </p>
       <div className="mb-2 flex gap-1 rounded-full bg-cream p-1 text-xs font-bold w-fit" role="group" aria-label={tr("Message language")}>
         {(["en", "hi"] as ReminderLang[]).map((l) => (
           <button key={l} type="button" onClick={() => chooseLang(l)} aria-pressed={lang === l}
-            className={`rounded-full px-3 py-1 transition ${lang === l ? "bg-forest text-white" : "text-forest/70 hover:bg-mint"}`}>
+            className={`rounded-[10px] px-3 py-1 transition ${lang === l ? "bg-forest text-white" : "text-charcoal hover:bg-fog"}`}>
             {l === "en" ? "English" : "हिन्दी"}
           </button>
         ))}
@@ -324,7 +324,7 @@ export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent
       <div className="mb-3 flex flex-wrap gap-2" role="group" aria-label={tr("Tone")}>
         {TONES.map((t) => (
           <button key={t.id} type="button" onClick={() => chooseTone(t.id)} aria-pressed={tone === t.id}
-            className={`rounded-full px-3 py-1.5 text-xs font-bold transition ${tone === t.id ? "bg-forest text-white" : "bg-mint text-forest hover:bg-leaf hover:text-white"}`}>
+            className={`rounded-[7px] px-3 py-1.5 text-xs font-bold transition ${tone === t.id ? "bg-forest text-white" : "bg-fog text-ink hover:bg-graphite hover:text-white"}`}>
             {tr(t.label)}
           </button>
         ))}
@@ -332,21 +332,21 @@ export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent
       <label htmlFor="ws-reminder" className="sr-only">{tr("Message")}</label>
       <textarea id="ws-reminder" className={`${inputClass} min-h-[11rem] leading-6`} value={message} onChange={(e) => setMessage(e.target.value)} maxLength={1000} />
       {udyam && (msmeTools ? (
-        <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs leading-5 text-forest">
+        <label className="mt-2 flex cursor-pointer items-start gap-2 text-xs leading-5 text-ink">
           <input type="checkbox" checked={msmeRights} onChange={(e) => chooseRights(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" />
           {tr("Add my MSME payment rights (Section 16 and 43B(h))")}
         </label>
       ) : (
-        <p className="mt-2 text-xs text-forest/70">
+        <p className="mt-2 text-xs text-charcoal">
           {tr("Pro can add your MSME payment rights (Section 16 and 43B(h)) to this message.")}{" "}
           <a href="/app/?tab=settings&upgrade=monthly" className="font-bold text-leaf underline">{tr("See Pro")}</a>
         </p>
       ))}
       {payLink && <p className="mt-2 text-xs text-leaf">{tr("Includes your pay link — the client sees the live amount and a UPI button.")}</p>}
       {!ws.business.upiId && <p className="mt-2 text-xs font-bold text-[#7a4b00]">{tr("Add your UPI ID in Settings so reminders tell clients where to pay.")}</p>}
-      {!phone && <p className="mt-2 text-xs text-forest/60">{tr("No number saved for this client — WhatsApp will ask you to pick a chat.")}</p>}
+      {!phone && <p className="mt-2 text-xs text-muted">{tr("No number saved for this client — WhatsApp will ask you to pick a chat.")}</p>}
       <div className="mt-4 grid gap-2 sm:grid-cols-3">
-        <button type="button" onClick={() => send("whatsapp")} className="rounded-xl bg-[#25D366] px-4 py-2.5 text-sm font-black text-white hover:bg-[#1da851]">WhatsApp</button>
+        <button type="button" onClick={() => send("whatsapp")} className="rounded-[10px] bg-[#25D366] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#1da851]">WhatsApp</button>
         <button type="button" onClick={() => send("sms")} className={secondaryButton}>SMS</button>
         <button type="button" onClick={copy} className={secondaryButton}>{copied ? tr("Copied ✓") : tr("Copy text")}</button>
       </div>

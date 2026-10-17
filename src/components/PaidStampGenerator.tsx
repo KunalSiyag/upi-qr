@@ -211,7 +211,7 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
@@ -221,7 +221,7 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={downloadCanvas}
-              className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition"
+              className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white transition"
             >
               Download PNG
             </button>
@@ -229,7 +229,7 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               onClick={downloadStampedPdf}
               disabled={!imageSrc}
               title={imageSrc ? "" : "Upload an invoice image first"}
-              className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
+              className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition"
             >
               Download PDF
             </button>
@@ -256,7 +256,7 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         {!imageSrc && !error && <p className="mt-4 rounded-2xl bg-mint px-4 py-3 text-sm font-semibold text-forest/80">No image yet? You can still download a transparent PAID stamp PNG and overlay it on any document.</p>}
       </div>
 
-      <div className="rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <p className="text-sm font-semibold text-leaf">{tr("Live preview")}</p>
         <div className="mt-4 overflow-hidden rounded-2xl border border-forest/10 bg-[repeating-conic-gradient(#f3f4f6_0%_25%,#ffffff_0%_50%)] bg-[length:24px_24px] p-3">
           <canvas ref={canvasRef} className="mx-auto block h-auto w-full max-w-full rounded-xl shadow-inner" />

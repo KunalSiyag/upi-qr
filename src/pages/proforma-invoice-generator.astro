@@ -84,8 +84,8 @@ const schema = {
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free proforma invoice generator with advance-payment QR</h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Send clean estimates with line items, tax, discounts, validity dates, and your terms — plus an optional UPI QR so clients confirm with a token advance in one scan.</p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#proforma-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create proforma</a>
-            <a href="/invoice-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Convert to invoice later →</a>
+            <a href="#proforma-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Create proforma</a>
+            <a href="/invoice-generator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Convert to invoice later →</a>
           </div>
         </div>
       </div>
@@ -99,7 +99,7 @@ const schema = {
     </section>
 
     <section class="px-4 py-14 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
+      <div class="mx-auto max-w-7xl rounded-[14px] border border-white/75 bg-forest p-6 text-white md:p-10">
         <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">After they say yes</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight md:text-4xl">Quote → invoice → payment → receipt.</h2>
         <div class="mt-8 grid gap-4 md:grid-cols-3">
@@ -108,7 +108,7 @@ const schema = {
             ["Payment Receipt Generator", "Acknowledge advances and settlements with PAID-stamped receipts.", "/receipt-generator/"],
             ["Payment Reminder Generator", "Politely chase dues with ready-made WhatsApp and SMS messages.", "/payment-reminder-generator/"]
           ].map(([heading, copy, href]) => (
-            <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
+            <article class="flex flex-col rounded-[14px] border border-white/10 bg-white/8 p-5">
               <h3 class="text-xl font-black">{heading}</h3>
               <p class="mt-3 flex-1 text-sm leading-7 text-white/72">{copy}</p>
               <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">Open tool →</a>

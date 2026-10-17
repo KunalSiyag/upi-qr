@@ -309,7 +309,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
       {/* Editor Console */}
-      <div className="no-print space-y-6 rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-7">
+      <div className="no-print space-y-6 rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-7">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/10 pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">Creator & Brand Legal Tool</p>
@@ -318,21 +318,21 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
           <div className="flex flex-wrap gap-2">
             <button
               onClick={copyAgreementText}
-              className="rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-mint"
+              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:bg-mint"
             >
               {copiedState ? "✓ Copied Text" : "Copy Text"}
             </button>
             <button
               onClick={downloadPng}
               disabled={pngState === "busy"}
-              className="rounded-full border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
+              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
             >
               {pngState === "busy" ? "..." : tr("Export PNG")}
             </button>
             <button
               onClick={downloadPdf}
               disabled={pdfState === "busy"}
-              className="rounded-full bg-forest px-4 py-1.5 text-xs font-bold text-white transition hover:bg-leaf disabled:opacity-50"
+              className="rounded-[7px] bg-forest px-4 py-1.5 text-xs font-bold text-white transition hover:bg-graphite disabled:opacity-50"
             >
               {pdfState === "busy" ? tr("Generating...") : tr("Download PDF")}
             </button>
@@ -598,7 +598,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
       <div className="relative">
         <article
           ref={paperRef}
-          className="mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/15 bg-white p-7 text-forest shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-10 font-sans text-xs leading-relaxed"
+          className="mx-auto w-full max-w-[820px] rounded-[14px] border border-forest/15 bg-white p-7 text-forest shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-10 font-sans text-xs leading-relaxed"
         >
           {/* Header */}
           <header className="border-b-2 border-forest pb-5">

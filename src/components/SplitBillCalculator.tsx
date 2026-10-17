@@ -197,7 +197,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-sm font-semibold text-leaf">{tr("Split calculator")}</p>
@@ -217,7 +217,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="mt-5 flex flex-wrap gap-2">
           {([["items", "By items"], ["equal", "Equal split"], ["custom", `Custom ${symbol}`]] as const).map(([value, label]) => (
             <button key={value} type="button" onClick={() => setMode(value)} aria-pressed={mode === value}
-              className={`rounded-full border px-4 py-2 text-xs font-bold ${mode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
+              className={`rounded-[7px] border px-4 py-2 text-xs font-bold ${mode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
               {label}
             </button>
           ))}
@@ -234,7 +234,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <div className="mt-1 flex flex-wrap gap-1.5">
                 {([["none", "None"], ["percent", "%"], ["flat", symbol]] as const).map(([value, label]) => (
                   <button key={value} type="button" onClick={() => setTipMode(value)} aria-pressed={tipMode === value}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-bold ${tipMode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
+                    className={`rounded-[7px] border px-3 py-1.5 text-[11px] font-bold ${tipMode === value ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-white text-forest"}`}>
                     {label}
                   </button>
                 ))}
@@ -249,9 +249,9 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">
             People
             <div className="mt-2 flex items-center gap-2">
-              <button type="button" onClick={() => setCount(peopleCount - 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-leaf hover:text-white transition" aria-label="Remove person">−</button>
+              <button type="button" onClick={() => setCount(peopleCount - 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-graphite hover:text-white transition" aria-label="Remove person">−</button>
               <span className="w-10 text-center text-xl font-black text-forest">{peopleCount}</span>
-              <button type="button" onClick={() => setCount(peopleCount + 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-leaf hover:text-white transition" aria-label="Add person">+</button>
+              <button type="button" onClick={() => setCount(peopleCount + 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-graphite hover:text-white transition" aria-label="Add person">+</button>
             </div>
           </label>
           {mode === "equal" && (
@@ -287,7 +287,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                         type="button"
                         aria-pressed={on}
                         onClick={() => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, assigned: row.assigned.map((v, j) => j === i ? !v : v) } : row))}
-                        className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${on ? "bg-leaf text-white" : "bg-white text-forest/50 border border-forest/10"}`}
+                        className={`rounded-[7px] px-2.5 py-1 text-[11px] font-bold ${on ? "bg-leaf text-white" : "bg-white text-forest/50 border border-forest/10"}`}
                       >
                         {names[i]?.trim() || `P${i + 1}`}
                       </button>
@@ -299,7 +299,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <button
               type="button"
               onClick={() => setItems((cur) => [...cur, { id: Date.now(), name: "", amount: "", assigned: Array.from({ length: calc.n }, () => true) }])}
-              className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest"
+              className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest"
             >
               + Add dish
             </button>
@@ -327,13 +327,13 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         {!isValidUpiId(upiId) && <p className="mt-4 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">Enter your real UPI ID so friends can pay you back directly.</p>}
       </div>
 
-      <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print flex flex-col rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">{tr("Who owes what")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{money(calc.grandPaise)} across {calc.n}</h2>
           </div>
-          <button onClick={() => shareOnWhatsapp(null)} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm">
+          <button onClick={() => shareOnWhatsapp(null)} className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm">
             Share full split
           </button>
         </div>
@@ -353,11 +353,11 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <p className="truncate text-sm font-black text-forest">{names[i]?.trim() || `Person ${i + 1}`}</p>
                   <p className="text-sm font-bold text-leaf">{money(paise)}</p>
                 </div>
-                <button onClick={() => copyText(personMessage(i), i)} className="shrink-0 rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[11px] font-bold text-forest hover:border-leaf transition">
+                <button onClick={() => copyText(personMessage(i), i)} className="shrink-0 rounded-[7px] border border-forest/15 bg-white px-3 py-1.5 text-[11px] font-bold text-forest hover:border-leaf transition">
                   {copiedIndex === i ? tr("Copied") : "Copy"}
                 </button>
-                <button onClick={() => shareOnWhatsapp(i)} className="shrink-0 rounded-full bg-[#25D366] px-3 py-1.5 text-[11px] font-bold text-white">WA</button>
-                <button onClick={() => showQr(i)} className="shrink-0 rounded-full bg-forest px-3 py-1.5 text-[11px] font-bold text-white">QR</button>
+                <button onClick={() => shareOnWhatsapp(i)} className="shrink-0 rounded-[7px] bg-[#25D366] px-3 py-1.5 text-[11px] font-bold text-white">WA</button>
+                <button onClick={() => showQr(i)} className="shrink-0 rounded-[7px] bg-forest px-3 py-1.5 text-[11px] font-bold text-white">QR</button>
               </div>
               {qrIndex === i && qrUrl && (
                 <div className="mt-3 flex flex-col items-center gap-2">

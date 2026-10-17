@@ -83,8 +83,8 @@ const schema = {
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free paid stamp generator for invoices &amp; bills</h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Already printed or photographed the bill? Upload it, stamp PAID with the payment date and your signature, then download the stamped copy. Nothing is uploaded — stamping happens in your browser.</p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#stamp-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Stamp my invoice</a>
-            <a href="/receipt-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Create a fresh receipt →</a>
+            <a href="#stamp-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Stamp my invoice</a>
+            <a href="/receipt-generator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Create a fresh receipt →</a>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ const schema = {
     </section>
 
     <section id="related-tools" class="px-4 py-14 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
+      <div class="mx-auto max-w-7xl rounded-[14px] border border-white/75 bg-forest p-6 text-white md:p-10">
         <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">Complete the billing loop</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight md:text-5xl">Bill, collect, and prove payment.</h2>
         <div class="mt-8 grid gap-4 md:grid-cols-3">
@@ -106,7 +106,7 @@ const schema = {
             ["Payment Receipt Generator", "Acknowledge payments with a receipt PDF that includes mode, UTR, and UPI QR.", "/receipt-generator/", "Open receipt tool"],
             ["UPI QR Generator", "Print a permanent counter QR standee so customers pay you instantly.", "/", "Create counter QR"]
           ].map(([heading, copy, href, cta]) => (
-            <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
+            <article class="flex flex-col rounded-[14px] border border-white/10 bg-white/8 p-5">
               <h3 class="text-xl font-black">{heading}</h3>
               <p class="mt-3 flex-1 text-sm leading-7 text-white/72">{copy}</p>
               <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">{cta} →</a>

@@ -69,7 +69,7 @@ const schema = {
 
 <BaseLayout title={title} description={description} schema={schema}>
   <main class="px-3 sm:px-4 py-8 sm:py-12 md:py-16 w-full min-w-0">
-    <div class="mx-auto max-w-6xl rounded-[2rem] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
+    <div class="mx-auto max-w-6xl rounded-[14px] sm:rounded-[2.5rem] border border-white/75 bg-white/86 p-4 sm:p-8 md:p-12 shadow-[0_24px_64px_rgba(17,59,44,0.06)] backdrop-blur-md w-full min-w-0">
       {/* Breadcrumb Nav */}
       <nav class="flex items-center gap-2 text-xs font-bold text-leaf/80 mb-6">
         <a href="/" class="hover:underline">Home</a>
@@ -79,7 +79,7 @@ const schema = {
 
       {/* Hero Header */}
       <div class="max-w-3xl">
-        <p class="inline-flex rounded-full border border-leaf/15 bg-mint px-3.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.26em] text-leaf">
+        <p class="inline-flex rounded-[7px] border border-leaf/15 bg-mint px-3.5 py-1.5 sm:px-4 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] sm:tracking-[0.26em] text-leaf">
           Developer Toolkit
         </p>
         <h1 class="mt-4 sm:mt-5 text-3xl font-black leading-[1.08] tracking-tight text-forest sm:text-5xl md:text-6xl">
@@ -113,13 +113,13 @@ const schema = {
       </p>
 
       <nav class="mt-6 flex flex-wrap gap-2 text-xs font-bold text-forest/70" aria-label="On this page">
-        <a href="#sandbox" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Sandbox</a>
-        <a href="#checkout" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Checkout API</a>
-        <a href="#embed-params" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Embed params</a>
-        <a href="#intent" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">upi://pay</a>
-        <a href="#parser" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">URI parser</a>
-        <a href="#examples" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">React / Android</a>
-        <a href="#faq" class="rounded-full border border-forest/10 bg-white px-3 py-1 hover:text-leaf">FAQ</a>
+        <a href="#sandbox" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Sandbox</a>
+        <a href="#checkout" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Checkout API</a>
+        <a href="#embed-params" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">Embed params</a>
+        <a href="#intent" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">upi://pay</a>
+        <a href="#parser" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">URI parser</a>
+        <a href="#examples" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">React / Android</a>
+        <a href="#faq" class="rounded-[10px] border border-forest/10 bg-white px-3 py-1 hover:text-leaf">FAQ</a>
       </nav>
 
       {/* Main interactive Sandbox Console */}
@@ -129,7 +129,7 @@ const schema = {
 
       {/* API Documentation Section */}
       <section id="checkout" class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0 scroll-mt-24">
-        <p class="inline-flex rounded-full bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Merchant API key required</p>
+        <p class="inline-flex rounded-[7px] bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Merchant API key required</p>
         <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">Hosted Checkout Sessions</h2>
         <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/70 sm:text-base">
           Create a 24-hour checkout with an exact INR amount and public HTTPS return URL. Reusing the same <code>order_id</code> is idempotent. A customer-submitted UTR remains <code>verification_pending</code> until your server checks its bank records and confirms the session.
@@ -228,7 +228,7 @@ const schema = {
       </section>
 
       <section class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0">
-        <p class="inline-flex rounded-full bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Backend-only verification</p>
+        <p class="inline-flex rounded-[7px] bg-amber-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-amber-800">Backend-only verification</p>
         <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">Payment Response API</h2>
         <p class="mt-3 text-sm sm:text-base leading-relaxed text-forest/70 max-w-3xl">
           This API is for your server, not for the customer&apos;s browser. The browser can open a checkout screen or UPI link, but only your backend can receive and trust the final payment result from a verified gateway webhook or secure relay.
@@ -282,10 +282,10 @@ const schema = {
             The iframe and <code>upi://pay</code> link are not a payment gateway. Money goes bank-to-bank. That is not the same as “always 0% MDR”: from 15 Oct 2026 some P2M UPI above ₹2,000 may take 0.4% (cap ₹300). P2P, tickets of ₹2,000 or less, and small QR (P2PM) stay free.
           </p>
           <div class="mt-4 flex flex-wrap items-center gap-2">
-            <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
+            <span class="inline-flex items-center gap-1 rounded-[7px] bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
               ✓ No API key for the widget
             </span>
-            <span class="inline-flex items-center gap-1 rounded-full bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
+            <span class="inline-flex items-center gap-1 rounded-[7px] bg-forest/5 border border-forest/10 px-3 py-1 text-[10px] font-bold text-forest">
               ✓ No SDK to install
             </span>
           </div>
@@ -294,7 +294,7 @@ const schema = {
 
       {/* UPI URI Parser & Builder Library */}
       <section id="parser" class="mt-12 sm:mt-20 border-t border-forest/10 pt-10 sm:pt-16 w-full min-w-0 scroll-mt-24">
-        <p class="inline-flex rounded-full bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Open-source utility</p>
+        <p class="inline-flex rounded-[7px] bg-mint px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-leaf">Open-source utility</p>
         <h2 class="mt-3 text-2xl sm:text-3xl font-black text-forest tracking-tight">UPI URI Parser &amp; Builder</h2>
         <p class="mt-3 max-w-3xl text-sm leading-relaxed text-forest/70 sm:text-base">
           A single 4 kB TypeScript module that both constructs valid <code>upi://pay?...</code> links from typed fields and parses them back into structured data. Copy it into any JavaScript, React, Next.js, or Node project. Zero dependencies. Based on NPCI UPI Linking Specification v1.6.
@@ -344,7 +344,7 @@ const schema = {
 
         <div class="mt-8 grid gap-8 md:grid-cols-2">
           <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
-            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#61DAFB]/20 px-2 py-0.5 text-[10px] font-black text-forest">React 18+</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">TypeScript</span></div>
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-[7px] bg-[#61DAFB]/20 px-2 py-0.5 text-[10px] font-black text-forest">React 18+</span><span class="rounded-[7px] bg-black/10 px-2 py-0.5 text-[10px] font-bold">TypeScript</span></div>
             <h3 class="text-sm font-black text-forest mb-2">React Component</h3>
             <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
               <code>{`import React from 'react';
@@ -358,7 +358,7 @@ function UpiPayButton({ vpa, name, amount }: { vpa: string; name: string; amount
 
   return (
     <button onClick={pay}
-      className="rounded-full bg-emerald-800 px-6 py-3 text-white font-bold hover:bg-emerald-700">
+      className="rounded-[10px] bg-emerald-800 px-6 py-3 text-white font-bold hover:bg-emerald-700">
       Pay ₹{amount ? amount.toFixed(2) : "..."}
     </button>
   );
@@ -369,7 +369,7 @@ export default UpiPayButton;`}</code>
           </div>
 
           <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
-            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-black text-forest">Next.js 14+</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">App Router</span></div>
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-[7px] bg-black/10 px-2 py-0.5 text-[10px] font-black text-forest">Next.js 14+</span><span class="rounded-[7px] bg-black/10 px-2 py-0.5 text-[10px] font-bold">App Router</span></div>
             <h3 class="text-sm font-black text-forest mb-2">Next.js Server + Client</h3>
             <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
               <code>{`// app/api/upi-link/route.ts — Server Component
@@ -390,7 +390,7 @@ export async function GET(req: Request) {
           </div>
 
           <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
-            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#3DDC84]/20 px-2 py-0.5 text-[10px] font-black text-forest">Android</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">Kotlin</span></div>
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-[7px] bg-[#3DDC84]/20 px-2 py-0.5 text-[10px] font-black text-forest">Android</span><span class="rounded-[7px] bg-black/10 px-2 py-0.5 text-[10px] font-bold">Kotlin</span></div>
             <h3 class="text-sm font-black text-forest mb-2">Android (Kotlin)</h3>
             <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
               <code>{`// Open a UPI payment intent in any installed UPI app
@@ -417,7 +417,7 @@ fun payViaUpi(context: Context, vpa: String, name: String, amount: String?) {
           </div>
 
           <div class="rounded-2xl border border-forest/10 bg-white/80 p-5">
-            <div class="flex items-center gap-2 mb-3"><span class="rounded-full bg-[#007AFF]/20 px-2 py-0.5 text-[10px] font-black text-forest">iOS</span><span class="rounded-full bg-black/10 px-2 py-0.5 text-[10px] font-bold">Swift</span></div>
+            <div class="flex items-center gap-2 mb-3"><span class="rounded-[7px] bg-[#007AFF]/20 px-2 py-0.5 text-[10px] font-black text-forest">iOS</span><span class="rounded-[7px] bg-black/10 px-2 py-0.5 text-[10px] font-bold">Swift</span></div>
             <h3 class="text-sm font-black text-forest mb-2">iOS (Swift)</h3>
             <div class="rounded-xl bg-forest p-3 font-mono text-[10px] text-white overflow-x-auto max-h-80 overflow-y-auto">
               <code>{`// Open UPI payment via URL scheme (Swift)

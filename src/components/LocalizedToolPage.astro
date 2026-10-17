@@ -90,14 +90,14 @@ const waitlistTool = isWaitlistLang(lang) ? WAITLIST_COMPONENTS[tool.component] 
 
 <main class="px-3 py-8 sm:px-4 md:px-6 lg:px-8">
     <div class="mx-auto max-w-6xl space-y-8">
-      <section class="rounded-[2rem] border border-white/75 bg-white/86 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-8 md:p-10">
+      <section class="rounded-[14px] border border-white/75 bg-white/86 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-8 md:p-10">
         <a href={`/${lang}/`} class="text-xs font-bold text-leaf hover:underline">&larr; {chrome.home}</a>
-        <p class="mt-5 inline-flex rounded-full border border-leaf/15 bg-mint px-3 py-1.5 text-xs font-black text-leaf">{chrome.label}</p>
+        <p class="mt-5 inline-flex rounded-[7px] border border-leaf/15 bg-mint px-3 py-1.5 text-xs font-black text-leaf">{chrome.label}</p>
         <h1 class="mt-4 text-3xl font-black tracking-tight text-forest sm:text-5xl">{locale.name}</h1>
         <p class="mt-4 max-w-3xl text-sm leading-relaxed text-forest/75 sm:text-base">{locale.intro}</p>
-        <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold text-forest/75">{badges.map((badge) => <span class="rounded-full bg-mint px-3 py-2">{badge}</span>)}</div>
+        <div class="mt-5 flex flex-wrap gap-2 text-xs font-bold text-forest/75">{badges.map((badge) => <span class="rounded-[10px] bg-mint px-3 py-2">{badge}</span>)}</div>
       </section>
-      <section id="tool" class="rounded-[2rem] border border-white/75 bg-white/86 p-4 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-8 md:p-10">
+      <section id="tool" class="rounded-[14px] border border-white/75 bg-white/86 p-4 shadow-[0_18px_48px_rgba(17,59,44,0.08)] sm:p-8 md:p-10">
         {tool.component === "digitalCard" && <DigitalVisitingCard client:visible lang={lang} />}
         {tool.component === "dynamicQr" && <DynamicQrGenerator client:visible lang={lang} />}
         {tool.component === "dynamicQr" && <ClerkClient />}
@@ -144,7 +144,7 @@ const waitlistTool = isWaitlistLang(lang) ? WAITLIST_COMPONENTS[tool.component] 
       </section>
       {waitlistTool && isWaitlistLang(lang) && <WaitlistCard client:idle tool={waitlistTool} lang={lang} />}
       {locale.steps.length > 0 && (
-        <section class="rounded-[2rem] border border-white/75 bg-white/86 p-5 sm:p-8">
+        <section class="rounded-[14px] border border-white/75 bg-white/86 p-5 sm:p-8">
           <h2 class="text-xl font-black text-forest">{chrome.howTo}</h2>
           <ol class="mt-4 list-decimal space-y-2 pl-5 text-sm text-forest/80">
             {locale.steps.map((step) => <li>{step}</li>)}
@@ -152,7 +152,7 @@ const waitlistTool = isWaitlistLang(lang) ? WAITLIST_COMPONENTS[tool.component] 
         </section>
       )}
       {locale.faqs.length > 0 && (
-        <section class="rounded-[2rem] border border-white/75 bg-white/86 p-5 sm:p-8">
+        <section class="rounded-[14px] border border-white/75 bg-white/86 p-5 sm:p-8">
           <h2 class="text-xl font-black text-forest">{chrome.faq}</h2>
           <div class="mt-4 grid gap-4 md:grid-cols-2">
             {locale.faqs.map((faq) => (

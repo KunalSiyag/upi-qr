@@ -390,7 +390,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">{t.eyebrow}</p>
@@ -401,14 +401,14 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               onClick={shareOnWhatsapp}
               disabled={shareState === "busy"}
               title={t.whatsapp}
-              className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
+              className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
             >
               {shareState === "busy" ? t.preparing : `${t.whatsapp}`}
             </button>
             <button
               onClick={downloadInvoicePdf}
               disabled={downloadPdfState === "busy"}
-              className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition"
+              className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition"
             >
               {downloadPdfState === "busy" ? t.generating : `${t.downloadPdf}`}
             </button>
@@ -416,7 +416,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               <button
                 onClick={trackPayment}
                 title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
-                className="rounded-full border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-sun/30 transition"
+                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog transition"
               >
                 {`${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
               </button>
@@ -424,7 +424,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <button
               onClick={downloadInvoicePng}
               disabled={downloadPngState === "busy"}
-              className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition"
+              className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition"
             >
               {downloadPngState === "busy" ? t.generating : `${t.downloadPng}`}
             </button>
@@ -441,7 +441,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 type="button"
                 onClick={() => selectTemplate(tpl.id)}
                 aria-pressed={tpl.id === templateId}
-                className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${tpl.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
+                className={`rounded-[7px] border px-3.5 py-1.5 text-xs font-bold transition ${tpl.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
               >
                 {tpl.flag} {tpl.label}
               </button>
@@ -478,7 +478,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
       </div>
 
-      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
         <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{docTitle} · {template.flag} {template.currency}</p>

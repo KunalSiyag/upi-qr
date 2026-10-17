@@ -130,7 +130,7 @@ const dueText = view.dueDate
   </head>
   <body class="min-h-screen bg-[#fffdf6] px-4 py-8 font-sans text-forest">
     <main class="mx-auto max-w-md">
-      <div class="overflow-hidden rounded-[2rem] border border-forest/10 bg-white shadow-[0_18px_48px_rgba(17,59,44,0.12)]">
+      <div class="overflow-hidden rounded-[14px] border border-forest/10 bg-white shadow-[0_18px_48px_rgba(17,59,44,0.12)]">
         <div class="bg-forest p-6 text-center text-white">
           <p class="text-sm font-bold text-white/70">{view.merchantName}</p>
           <p class="mt-1 text-xs text-white/60">{statement ? `Statement · ${statement.lines.length} unpaid invoice${statement.lines.length === 1 ? "" : "s"}` : `Invoice ${view.invoiceNumber}${dueText ? ` · due ${dueText}` : ""}`}</p>
@@ -177,7 +177,7 @@ const dueText = view.dueDate
 
           {payable && (
             <>
-              <a href={upiIntent} class="block rounded-2xl bg-forest px-4 py-4 text-center text-base font-black text-white hover:bg-leaf">Pay {formatPaise(view.balancePaise)} with any UPI app</a>
+              <a href={upiIntent} class="block rounded-2xl bg-forest px-4 py-4 text-center text-base font-black text-white hover:bg-graphite">Pay {formatPaise(view.balancePaise)} with any UPI app</a>
               <div class="text-center">
                 <p class="text-xs font-bold text-forest/60">On a computer? Scan with your phone</p>
                 <img src={qr} alt={`UPI QR code to pay ${formatPaise(view.balancePaise)} to ${view.merchantName}`} width="224" height="224" class="mx-auto mt-2 rounded-2xl border border-forest/10" />

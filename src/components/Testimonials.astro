@@ -26,7 +26,7 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short
       </div>
       <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {TESTIMONIALS.map((item) => (
-          <article class="flex flex-col rounded-[1.75rem] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+          <article class="flex flex-col rounded-[14px] border border-white/75 bg-white/86 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
             <StarRating value={item.rating} size="sm" />
             <blockquote class="mt-4 flex-1 text-base leading-7 text-forest/80">
               <p>“{item.quote}”</p>

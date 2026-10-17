@@ -422,7 +422,7 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
             type="button"
             onClick={handleDownloadPng}
             disabled={isGenerating}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-leaf focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-graphite focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
           >
             {isGenerating ? tr("Generating...") : "Download sticker PNG"}
           </button>

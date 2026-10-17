@@ -369,7 +369,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="flex flex-wrap gap-3 sm:justify-between items-start">
           <div>
@@ -402,17 +402,17 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
         </div>
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <button onClick={addEntry} className="rounded-full bg-leaf px-4 py-2 text-xs font-bold text-white hover:bg-forest transition">+ Add invoice</button>
-          <label className="cursor-pointer rounded-full border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">
+          <button onClick={addEntry} className="rounded-[7px] bg-leaf px-4 py-2 text-xs font-bold text-white hover:bg-graphite transition">+ Add invoice</button>
+          <label className="cursor-pointer rounded-[7px] border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">
             Upload CSV
             <input type="file" accept=".csv" onChange={handleFileInput} className="hidden" />
           </label>
-          <button onClick={exportCsv} className="rounded-full border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
-          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">
+          <button onClick={exportCsv} className="rounded-[7px] border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
+          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">
             {pdfState === "busy" ? "PDF..." : tr("Export PDF")}
           </button>
           {entries.length > 0 && (
-            <button onClick={clearAll} className="rounded-full border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear all</button>
+            <button onClick={clearAll} className="rounded-[7px] border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear all</button>
           )}
         </div>
 
@@ -533,7 +533,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
           <div className="rounded-2xl border border-forest/10 bg-white p-4">
             <div className="flex items-center justify-between mb-2">
               <h3 className="text-xs font-black uppercase tracking-[0.15em] text-forest/50">Demand letter draft</h3>
-              <button onClick={copyDemandLetter} className="rounded-full border border-forest/20 px-3 py-1.5 text-[11px] font-bold text-forest hover:bg-mint transition">Copy letter</button>
+              <button onClick={copyDemandLetter} className="rounded-[7px] border border-forest/20 px-3 py-1.5 text-[11px] font-bold text-forest hover:bg-mint transition">Copy letter</button>
             </div>
             <pre className="text-[11px] leading-relaxed text-forest/80 font-mono whitespace-pre-wrap max-h-[40vh] overflow-y-auto bg-cream/50 rounded-xl p-3">{generateDemandLetter()}</pre>
             <p className="mt-2 text-[9px] text-forest/40">This is a starting point. Review with legal counsel, verify Udyam registration, and file via samadhaan.msme.gov.in.</p>

@@ -177,7 +177,7 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg space-y-4">
           <div className="flex items-center justify-between border-b border-forest/10 pb-3">
             <h3 className="text-lg font-black text-forest">WhatsApp Chat Preview</h3>
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">WhatsApp Business</span>
+            <span className="rounded-[7px] bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-800">WhatsApp Business</span>
           </div>
 
           <div className="rounded-2xl bg-[#efeae2] p-4 text-xs space-y-3 font-sans shadow-inner">

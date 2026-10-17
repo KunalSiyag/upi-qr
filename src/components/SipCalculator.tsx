@@ -138,7 +138,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
@@ -146,8 +146,8 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Project Your SIP Growth")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Projection PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Projection PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
 
@@ -160,7 +160,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="mt-5 flex flex-wrap gap-2">
           {[["5000", 12, 10, `${symbol}5k · 12% · 10y`], ["10000", 12, 15, `${symbol}10k · 12% · 15y`], ["25000", 11, 20, `${symbol}25k · 11% · 20y`]].map(([p, r, y, label]) => (
-            <button key={String(label)} type="button" onClick={() => { setMonthly(String(p)); setRate(String(r)); setYears(String(y)); }} className="rounded-full border border-forest/15 bg-cream px-3.5 py-1.5 text-xs font-bold text-forest hover:border-leaf transition">{label}</button>
+            <button key={String(label)} type="button" onClick={() => { setMonthly(String(p)); setRate(String(r)); setYears(String(y)); }} className="rounded-[7px] border border-forest/15 bg-cream px-3.5 py-1.5 text-xs font-bold text-forest hover:border-leaf transition">{label}</button>
           ))}
         </div>
 
@@ -179,7 +179,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="mt-4">
           <div className="flex h-3 overflow-hidden rounded-full">
             <div className="bg-forest" style={{ width: `${calc.gainPct}%` }} />
-            <div className="bg-sun" style={{ width: `${100 - calc.gainPct}%` }} />
+            <div className="bg-forest" style={{ width: `${100 - calc.gainPct}%` }} />
           </div>
           <div className="mt-2 flex justify-between text-xs font-bold text-forest/70">
             <span>● Your investment</span>
@@ -188,7 +188,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
+      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
         <header className="flex items-start justify-between border-b-2 border-forest pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("SIP growth projection")}</p>

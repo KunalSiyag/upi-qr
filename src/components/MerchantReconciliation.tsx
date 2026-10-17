@@ -307,14 +307,14 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
             <p className="text-xs text-forest/60">{entries.length} entries · {totals.settled} settled · {totals.mdr} UPI MDR · {totals.mismatch} mismatch · {totals.pending} pending</p>
           </div>
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer rounded-full bg-mint border border-leaf/20 px-4 py-2 text-xs font-bold text-forest hover:bg-leaf/10 transition">
+            <label className="cursor-pointer rounded-[7px] bg-mint border border-leaf/20 px-4 py-2 text-xs font-bold text-forest hover:bg-leaf/10 transition">
               Upload CSV<input type="file" accept=".csv" onChange={handleFileInput} className="hidden" />
             </label>
-            <button onClick={exportCsv} className="rounded-full bg-white border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest text-white px-4 py-2 text-xs font-bold hover:bg-leaf transition disabled:opacity-50">
+            <button onClick={exportCsv} className="rounded-[7px] bg-white border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest text-white px-4 py-2 text-xs font-bold hover:bg-graphite transition disabled:opacity-50">
               {pdfState === "busy" ? "PDF..." : tr("Export PDF")}
             </button>
-            <button onClick={clearAll} className="rounded-full bg-red-50 border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear</button>
+            <button onClick={clearAll} className="rounded-[7px] bg-red-50 border border-red-200 px-4 py-2 text-xs font-bold text-red-700 hover:bg-red-100 transition">Clear</button>
           </div>
         </div>
       )}
@@ -405,15 +405,15 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                   </td>
                   <td className="px-3 py-2">
                     {e.settled ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Settled</span>
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-700">✓ Settled</span>
                     ) : mdrKind(e) ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-mint px-2 py-0.5 text-[10px] font-bold text-leaf" title="Shortfall matches 0.4% UPI MDR from 15 Oct 2026">
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-mint px-2 py-0.5 text-[10px] font-bold text-leaf" title="Shortfall matches 0.4% UPI MDR from 15 Oct 2026">
                         UPI MDR{mdrKind(e) === "mdr_gst" ? " + GST" : ""}
                       </span>
                     ) : e.difference != null ? (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⚠ Mismatch</span>
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⚠ Mismatch</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-white border border-forest/20 px-2 py-0.5 text-[10px] font-bold text-forest/50">Pending</span>
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-white border border-forest/20 px-2 py-0.5 text-[10px] font-bold text-forest/50">Pending</span>
                     )}
                   </td>
                   <td className="px-2 py-2">

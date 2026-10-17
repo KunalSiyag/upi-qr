@@ -183,14 +183,14 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
 
   return (
     <div className="grid gap-8 lg:grid-cols-[1fr_0.95fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-forest/5 pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">Night close</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Count cash, then close the till</h2>
           </div>
-          <button onClick={clearAll} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600 transition">Clear all</button>
+          <button onClick={clearAll} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600 transition">Clear all</button>
         </div>
 
         <div className="mt-5 space-y-2">
@@ -201,7 +201,7 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
               </span>
               <span className="hidden min-w-[36px] text-[10px] font-bold uppercase tracking-wide text-forest/50 sm:block">{row.type}</span>
               <div className="ml-auto flex items-center gap-1">
-                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) - 1)} aria-label={`Remove one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">−</button>
+                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) - 1)} aria-label={`Remove one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-graphite hover:text-white transition">−</button>
                 <input
                   type="number"
                   min={0}
@@ -211,7 +211,7 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
                   onChange={(e) => setCount(row.index, Number(e.target.value))}
                   className="h-9 w-14 shrink-0 rounded-lg border border-forest/15 bg-white text-center text-sm font-black outline-none focus:border-leaf sm:w-16"
                 />
-                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) + 1)} aria-label={`Add one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-leaf hover:text-white transition">+</button>
+                <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) + 1)} aria-label={`Add one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-graphite hover:text-white transition">+</button>
               </div>
               <span className="min-w-[62px] shrink-0 text-right text-sm font-black text-forest tabular-nums">{money(row.lineTotal)}</span>
             </div>
@@ -256,12 +256,12 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
         {varianceLabel && <p className={`mt-4 rounded-2xl px-4 py-3 text-sm font-bold ${varianceLabel.cls}`}>{varianceLabel.text}</p>}
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Download summary PDF"}</button>
-          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
+          <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Download summary PDF"}</button>
+          <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
         </div>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[680px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
+      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[680px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
         <header className="flex items-start justify-between border-b-2 border-forest pb-4">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Cash denomination summary</p>

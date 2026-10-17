@@ -201,16 +201,16 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex flex-wrap gap-3 sm:justify-between">
           <div>
             <p className="text-sm font-semibold text-leaf">{tr("Payslip builder")}</p>
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Issue Salary Slips Free")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={shareOnWhatsapp} className="rounded-full bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">Share</button>
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
-            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-leaf hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
+            <button onClick={shareOnWhatsapp} className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition">Share</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Download PDF")}`}</button>
+            <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("Download PNG")}`}</button>
           </div>
         </div>
 
@@ -262,8 +262,8 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               </label>
             ))}
             <div className="flex gap-2 pt-1">
-              <button type="button" onClick={() => setRow("pf", String(Math.round(num(rows.basic) * 0.12)))} className="rounded-full border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PF 12%</button>
-              <button type="button" onClick={() => setRow("pt", "200")} className="rounded-full border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PT {moneySymbol(lang)}200</button>
+              <button type="button" onClick={() => setRow("pf", String(Math.round(num(rows.basic) * 0.12)))} className="rounded-[7px] border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PF 12%</button>
+              <button type="button" onClick={() => setRow("pt", "200")} className="rounded-[7px] border border-forest/15 bg-white px-3 py-1 text-[11px] font-bold hover:border-leaf transition">PT {moneySymbol(lang)}200</button>
             </div>
             <p className="flex justify-between border-t border-forest/10 pt-2 text-xs font-black text-forest"><span>Total deductions</span><span>{money(totals.deductions)}</span></p>
           </div>
@@ -275,7 +275,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
       </div>
 
-      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[800px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
+      <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[800px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9">
         <header className="flex flex-col gap-3 border-b-2 border-forest pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-forest">{company || "Your Company"}</h2>

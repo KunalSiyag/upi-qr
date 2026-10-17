@@ -74,7 +74,7 @@ const schema = {
     <section class="px-4 py-6 md:px-6 lg:px-8">
       <div class="mx-auto max-w-5xl">
         <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">The 30-second answer</h2>
-        <div class="mt-5 overflow-x-auto rounded-[1.5rem] border border-white/75 bg-white/88 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+        <div class="mt-5 overflow-x-auto rounded-[14px] border border-white/75 bg-white/88 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
           <table class="w-full min-w-[640px] text-left text-sm">
             <thead><tr class="bg-mint text-[11px] uppercase tracking-widest text-forest/70"><th class="p-4">Question</th><th class="p-4">Invoice</th><th class="p-4">Receipt</th><th class="p-4">Credit note</th></tr></thead>
             <tbody class="[&_td]:border-t [&_td]:border-forest/10 [&_td]:p-4 [&_strong]:text-forest">
@@ -93,7 +93,7 @@ const schema = {
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Invoice — the document that creates the debt</h2>
       <p class="mt-4 text-base leading-8 text-forest/80">Under GST law a tax invoice must carry your GSTIN, a consecutive number, date, recipient details, itemised values, tax rate and amount, and place of supply. It converts delivered work into a payable obligation — the document accountants file and buyers use for input tax credit.</p>
       <p class="mt-4 text-base leading-8 text-forest/85">Intra-state supplies split tax into CGST + SGST; inter-state uses IGST. If you are not GST-registered you issue a plain bill of supply instead and cannot charge GST at all.</p>
-      <a href="/invoice-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a tax invoice PDF →</a>
+      <a href="/invoice-generator/" class="mt-5 inline-block rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-graphite transition">Generate a tax invoice PDF →</a>
       <p class="mt-2 text-xs font-semibold text-forest/55">Country templates for India (CGST/SGST), US, UK, EU, UAE, and Australia.</p>
     </section>
 
@@ -101,7 +101,7 @@ const schema = {
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Receipt — proof that closes the loop</h2>
       <p class="mt-4 text-base leading-8 text-forest/80">A receipt acknowledges specific money received on a specific date via a specific mode — cash, UPI, bank transfer, cheque — ideally with the UTR/reference printed. It ends disputes ("I never paid") before they start and gives your customer documentation for their own records.</p>
       <p class="mt-4 text-base leading-8 text-forest/85">Issue receipts within minutes of payment, not at month-end. For rent specifically, tenants need the HRA format with amount in words and a revenue stamp box — see our <a href="/blog/rent-receipt-format-hra-exemption-india/" class="font-bold text-leaf hover:underline">rent receipt guide</a> for that variant.</p>
-      <a href="/receipt-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a paid receipt →</a>
+      <a href="/receipt-generator/" class="mt-5 inline-block rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-graphite transition">Generate a paid receipt →</a>
       <p class="mt-2 text-xs font-semibold text-forest/55">PAID-stamped, mode + UTR recorded, WhatsApp-shareable image attached.</p>
     </section>
 
@@ -109,13 +109,13 @@ const schema = {
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Credit note — the correction document</h2>
       <p class="mt-4 text-base leading-8 text-forest/80">Goods returned, discount granted after billing, rate corrected downward, invoice cancelled — none of these let you edit the original invoice. Section 34 of the CGST Act requires a credit note that references the original invoice's number and date while stating the reduced taxable value and tax.</p>
       <p class="mt-4 text-base leading-8 text-forest/85">Both sides adjust their returns: your GSTR-1 shows lower output tax; the buyer reduces input credit by the same amount. Deadline: issue before 30 November following the supply's financial year, and report in the period's GSTR-1.</p>
-      <a href="/credit-note-generator/" class="mt-5 inline-block rounded-full bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-leaf transition">Generate a compliant credit note →</a>
+      <a href="/credit-note-generator/" class="mt-5 inline-block rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white hover:bg-graphite transition">Generate a compliant credit note →</a>
       <p class="mt-2 text-xs font-semibold text-forest/55">Original-invoice validation, CGST/SGST ↔ IGST toggle, PDF export.</p>
     </section>
 
     <section class="mx-auto max-w-3xl px-4 py-8 md:px-6 lg:px-8">
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">A worked example</h2>
-      <div class="mt-4 space-y-3 rounded-[1.5rem] bg-cream p-5 text-sm leading-7 text-forest/85">
+      <div class="mt-4 space-y-3 rounded-[14px] bg-cream p-5 text-sm leading-7 text-forest/85">
         <p><strong class="text-forest">Day 1:</strong> Café owner asks for branding. You send <strong>QTN-0031</strong>: ₹45,000 + 18% GST, valid 30 days, 50% advance.</p>
         <p><strong>Day 3:</strong> She approves; ₹22,500 advance arrives by UPI. You issue receipt <strong>RCPT-0117</strong> referencing the quote.</p>
         <p><strong>Day 24:</strong> Work delivered. Tax invoice <strong>INV-2026-058</strong> raised for ₹53,100 total, advance adjusted, balance due in 7 days.</p>
@@ -149,13 +149,13 @@ const schema = {
     </section>
 
     <section class="mx-auto w-full max-w-7xl px-4 pb-16 pt-8 md:px-6 lg:px-8">
-      <div class="rounded-[2rem] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
+      <div class="rounded-[14px] border border-white/75 bg-forest p-6 text-center text-white md:p-10">
         <h2 class="text-2xl font-black tracking-tight md:text-3xl">Every document here, generated free in seconds.</h2>
         <div class="mt-6 flex flex-wrap justify-center gap-3">
-          <a href="/invoice-generator/" class="rounded-full bg-sun px-5 py-2.5 text-sm font-black text-forest hover:bg-white transition">Invoice Generator</a>
-          <a href="/receipt-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Receipt Generator</a>
-          <a href="/credit-note-generator/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Credit Note Generator</a>
-          <a href="/tools/" class="rounded-full bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">All tools →</a>
+          <a href="/invoice-generator/" class="rounded-[10px] bg-white px-5 py-2.5 text-sm font-black text-forest hover:bg-white/90 transition">Invoice Generator</a>
+          <a href="/receipt-generator/" class="rounded-[10px] bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Receipt Generator</a>
+          <a href="/credit-note-generator/" class="rounded-[10px] bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">Credit Note Generator</a>
+          <a href="/tools/" class="rounded-[10px] bg-white/10 px-5 py-2.5 text-sm font-bold hover:bg-white/20 transition">All tools →</a>
         </div>
       </div>
     </section>

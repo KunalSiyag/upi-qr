@@ -20,7 +20,7 @@ const products = featuredProducts();
 
   <div class="mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
     {products.map((product) => (
-      <article class="flex flex-col justify-between rounded-[2rem] border border-white/75 bg-white/86 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
+      <article class="flex flex-col justify-between rounded-[14px] border border-white/75 bg-white/86 p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-md">
         <div>
           <a href={`/products/${product.slug}/`} class="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf">
             <div class="relative flex h-48 w-full items-center justify-center overflow-hidden rounded-2xl border border-forest/5 bg-cream p-4">
@@ -37,7 +37,7 @@ const products = featuredProducts();
                   class="max-h-full max-w-full object-contain"
                 />
               </picture>
-              <span class="absolute right-3 top-3 rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-forest">
+              <span class="absolute right-3 top-3 rounded-[7px] bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-forest">
                 {product.tag}
               </span>
             </div>
@@ -51,7 +51,7 @@ const products = featuredProducts();
             href={product.affiliateUrl}
             target="_blank"
             rel="sponsored noopener noreferrer"
-            class="rounded-full bg-forest px-4 py-2 text-xs font-black text-white shadow-sm transition-colors hover:bg-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
+            class="rounded-[7px] bg-forest px-4 py-2 text-xs font-black text-white shadow-sm transition-colors hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
           >
             Check Price →
           </a>
@@ -62,7 +62,7 @@ const products = featuredProducts();
   <p class="mt-8 text-center">
     <a
       href="/products/"
-      class="inline-flex rounded-full border border-forest/15 bg-white px-5 py-2.5 text-sm font-black text-forest transition hover:border-leaf hover:text-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
+      class="inline-flex rounded-[10px] border border-forest/15 bg-white px-5 py-2.5 text-sm font-black text-forest transition hover:border-leaf hover:text-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
     >
       Browse all 12 hardware guides →
     </a>

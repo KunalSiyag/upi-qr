@@ -340,7 +340,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
             <h3 className="text-xl font-black text-forest flex items-center gap-2">
               Decoded UPI QR — Safety Report
             </h3>
-            <span className="text-xs font-mono bg-mint text-forest px-2.5 py-1 rounded-full border border-leaf/20 font-bold">
+            <span className="text-xs font-mono bg-mint text-forest px-2.5 py-1 rounded-[7px] border border-leaf/20 font-bold">
               100% Private & Decoded Locally
             </span>
           </div>
@@ -408,7 +408,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
                   {parsedData.vpa && (
                     <button
                       onClick={() => copyToClipboard(parsedData.vpa, "vpa")}
-                      className="ml-3 shrink-0 px-3 py-1.5 rounded-xl bg-forest text-white hover:bg-leaf text-xs font-bold transition-all shadow-sm"
+                      className="ml-3 shrink-0 px-3 py-1.5 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold transition-all shadow-sm"
                     >
                       {copiedField === "vpa" ? `${"✓"} ${tr("Copied!")}` : "Copy VPA"}
                     </button>
@@ -489,7 +489,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
                 <div className="pt-2 flex flex-col sm:flex-row gap-3">
                   <a
                     href={`/?upiId=${encodeURIComponent(parsedData.vpa)}&name=${encodeURIComponent(parsedData.name)}#generator`}
-                    className="inline-flex items-center justify-center flex-1 py-3 px-5 rounded-2xl bg-leaf text-white font-black text-sm hover:bg-forest transition-all shadow-md gap-2"
+                    className="inline-flex items-center justify-center flex-1 py-3 px-5 rounded-2xl bg-leaf text-white font-black text-sm hover:bg-graphite transition-all shadow-md gap-2"
                   >
                     Print Counter Standee →
                   </a>

@@ -167,7 +167,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
       <div className="rounded-3xl border border-forest/10 bg-forest p-6 sm:p-8 text-white flex flex-col justify-between shadow-xl" aria-live="polite">
         <div>
-          <span className="inline-block rounded-full bg-mint px-3.5 py-1 text-[10px] font-black uppercase text-leaf">
+          <span className="inline-block rounded-[7px] bg-mint px-3.5 py-1 text-[10px] font-black uppercase text-leaf">
             Yearly savings vs gateway
           </span>
 

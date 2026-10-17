@@ -94,7 +94,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-sm font-semibold text-leaf">{tr("Reminder builder")}</p>
@@ -105,7 +105,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
         <div className="mt-2 flex flex-wrap gap-2">
           {tones.map((t) => (
             <button key={t.id} type="button" onClick={() => setTone(t.id)} aria-pressed={t.id === tone}
-              className={`rounded-full border px-3.5 py-1.5 text-xs font-bold transition ${t.id === tone ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}>
+              className={`rounded-[7px] border px-3.5 py-1.5 text-xs font-bold transition ${t.id === tone ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}>
               {tr(t.label)}
             </button>
           ))}
@@ -128,24 +128,24 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
         )}
       </div>
 
-      <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print flex flex-col rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="flex items-center justify-between border-b border-forest/5 pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">{tr("Message preview")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{tr(tones.find((item) => item.id === tone)?.name ?? "")}</h2>
           </div>
-          <span className="rounded-full bg-mint px-3 py-1.5 text-[11px] font-black text-forest/70">{message.length} chars</span>
+          <span className="rounded-[7px] bg-mint px-3 py-1.5 text-[11px] font-black text-forest/70">{message.length} chars</span>
         </div>
 
-        <div className="mt-5 flex-1 rounded-[1.5rem] rounded-tr-md bg-[#e7f6ec] p-5 text-base leading-7 whitespace-pre-line text-[#113b2c] shadow-inner">
+        <div className="mt-5 flex-1 rounded-[14px] rounded-tr-md bg-[#e7f6ec] p-5 text-base leading-7 whitespace-pre-line text-[#113b2c] shadow-inner">
           {message}
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
-          <button onClick={copyMessage} className="rounded-full bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-leaf transition">{copied ? `${"✓"} ${tr("Copied!")}` : `${"📋"} ${tr("Copy message")}`}</button>
-          <button onClick={() => openWith("https://api.whatsapp.com/send?text=")} className="rounded-full bg-[#25D366] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1da851] transition">WhatsApp</button>
-          <button onClick={() => openWith("sms:?&body=")} className="rounded-full bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition">📱 SMS</button>
-          <button onClick={() => openWith(`mailto:?subject=${encodeURIComponent(`Payment reminder - Invoice ${invoiceNo}`)}&body=`)} className="rounded-full border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:bg-mint transition">✉️ Email</button>
+          <button onClick={copyMessage} className="rounded-[7px] bg-forest px-5 py-2.5 text-xs font-bold text-white hover:bg-graphite transition">{copied ? `${"✓"} ${tr("Copied!")}` : `${"📋"} ${tr("Copy message")}`}</button>
+          <button onClick={() => openWith("https://api.whatsapp.com/send?text=")} className="rounded-[7px] bg-[#25D366] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1da851] transition">WhatsApp</button>
+          <button onClick={() => openWith("sms:?&body=")} className="rounded-[7px] bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-graphite hover:text-white transition">📱 SMS</button>
+          <button onClick={() => openWith(`mailto:?subject=${encodeURIComponent(`Payment reminder - Invoice ${invoiceNo}`)}&body=`)} className="rounded-[7px] border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:bg-mint transition">✉️ Email</button>
         </div>
         <p className="mt-4 text-xs leading-5 font-semibold text-forest/60">
           Tip: pair the reminder with a scan-and-pay QR so customers can clear dues in one tap — create one with the UPI QR generator or attach an invoice PDF.

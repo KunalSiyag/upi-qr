@@ -26,7 +26,7 @@ function looksLikeNpciReturned(query: string): boolean {
 
 function OriginBadge({ origin, label }: { origin: UpiErrorCode["origin"]; label: string }) {
   return (
-    <span className="rounded-full border border-forest/10 bg-mint/60 px-2.5 py-0.5 text-[11px] font-bold text-forest">
+    <span className="rounded-[7px] border border-forest/10 bg-mint/60 px-2.5 py-0.5 text-[11px] font-bold text-forest">
       {label}
     </span>
   );
@@ -144,7 +144,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
               type="button"
               aria-pressed={pressed}
               onClick={() => setCategory(filter.id)}
-              className={`rounded-full border px-3 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 ${
+              className={`rounded-[7px] border px-3 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 ${
                 pressed
                   ? "border-forest bg-forest text-mint"
                   : "border-forest/15 bg-white text-forest hover:border-leaf/40 hover:bg-mint/40"
@@ -175,7 +175,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
           <p className="mt-2 text-sm text-forest/70">{ui.noMatchHint}</p>
           <button
             type="button"
-            className="mt-4 rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/40"
+            className="mt-4 rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/40"
             onClick={() => {
               setQuery("");
               setCategory("all");
@@ -201,17 +201,17 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
                   <span className="rounded-xl bg-forest px-3 py-1 text-xs font-black tracking-wide text-mint" translate="no">
                     {item.code}
                   </span>
-                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
+                  <span className="rounded-[7px] border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold text-amber-800">
                     {localized.refundTime}
                   </span>
                 </div>
                 <h3 className="text-base font-black text-forest text-pretty">{localized.title}</h3>
                 <div className="flex flex-wrap gap-2">
                   <OriginBadge origin={item.origin} label={ui.origin[item.origin]} />
-                  <span className="rounded-full border border-forest/10 bg-white px-2.5 py-0.5 text-[11px] font-bold text-forest/70">
+                  <span className="rounded-[7px] border border-forest/10 bg-white px-2.5 py-0.5 text-[11px] font-bold text-forest/70">
                     {ui.category[item.category]}
                   </span>
-                  <span className="rounded-full border border-forest/10 bg-white px-2.5 py-0.5 text-[11px] font-bold text-forest/70">
+                  <span className="rounded-[7px] border border-forest/10 bg-white px-2.5 py-0.5 text-[11px] font-bold text-forest/70">
                     {ui.debit[item.debitStatus]}
                   </span>
                 </div>
