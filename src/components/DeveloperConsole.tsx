@@ -217,14 +217,14 @@ export function UpiPayButton() {
           <button
             type="button"
             onClick={() => copyToClipboard(embedUrl)}
-            className="rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
+            className="rounded-[7px] border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
           >
             {copied ? "Copied" : "Copy embed URL"}
           </button>
           <button
             type="button"
             onClick={() => copyToClipboard(rawUpiLink)}
-            className="rounded-full border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
+            className="rounded-[7px] border border-forest/15 bg-white px-3 py-1.5 text-[10px] font-bold text-forest hover:bg-mint"
           >
             Copy upi://pay link
           </button>

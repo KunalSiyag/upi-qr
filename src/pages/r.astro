@@ -108,13 +108,13 @@ Astro.response.statusText = status === 200
       {resolvedDestination ? (
         <>
           <div class="break-all rounded-2xl border border-forest/10 bg-cream p-4 text-sm font-black text-forest">{destinationHost}</div>
-          <a href={resolvedDestination} rel="nofollow noopener noreferrer" referrerpolicy="no-referrer" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-leaf">
+          <a href={resolvedDestination} rel="nofollow noopener noreferrer" referrerpolicy="no-referrer" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-graphite">
             Continue to {destinationHost}
           </a>
           <a href="/" class="block text-xs font-bold text-leaf hover:underline">Cancel and return to Pro UPI QR</a>
         </>
       ) : (
-        <a href="/" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-leaf">
+        <a href="/" class="inline-flex w-full items-center justify-center rounded-2xl bg-forest px-6 py-3 text-xs font-black text-white transition hover:bg-graphite">
           Open Pro UPI QR
         </a>
       )}

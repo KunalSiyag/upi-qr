@@ -23,7 +23,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
   <div class="mx-auto max-w-6xl space-y-8">
     <header class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
       <a href={localeHome(lang)} class="text-xs font-bold text-leaf hover:underline">&larr; {copy.back}</a>
-      <div class="inline-flex items-center gap-2 rounded-full bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
+      <div class="inline-flex items-center gap-2 rounded-[7px] bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
         {copy.eyebrow}
       </div>
       <h1 class="text-3xl font-black tracking-tight text-forest text-pretty sm:text-5xl">{copy.h1}</h1>
@@ -39,7 +39,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       <UpiErrorCodeResolver client:visible lang={lang} />
     </section>
 
-    <section class="rounded-[2rem] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
+    <section class="rounded-[14px] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
       <h2 id="debit-decision-tree" class="scroll-mt-28 text-2xl font-black text-forest">{copy.debitHeading}</h2>
       <p class="text-sm leading-relaxed text-forest/75">{copy.debitIntro}</p>
       <ol class="grid gap-4 md:grid-cols-3 text-sm">
@@ -53,7 +53,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       </ol>
     </section>
 
-    <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
+    <section class="rounded-[14px] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
       <h2 id="bank-vs-npci-vs-app" class="scroll-mt-28 text-2xl font-black text-forest">{copy.originHeading}</h2>
       <p class="text-sm leading-relaxed text-forest/75">{copy.originIntro}</p>
       <div class="overflow-x-auto">
@@ -78,7 +78,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       </div>
     </section>
 
-    <section class="rounded-[2rem] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
+    <section class="rounded-[14px] border border-forest/10 bg-cream/70 p-6 md:p-8 space-y-5">
       <h2 id="refund-timelines" class="scroll-mt-28 text-2xl font-black text-forest">{copy.tatHeading}</h2>
       <p class="text-sm leading-relaxed text-forest/75">{copy.tatIntro}</p>
       <div class="overflow-x-auto">
@@ -109,7 +109,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       </p>
     </section>
 
-    <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
+    <section class="rounded-[14px] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-5">
       <h2 id="utr-and-escalation" class="scroll-mt-28 text-2xl font-black text-forest">{copy.utrHeading}</h2>
       <p class="text-sm leading-relaxed text-forest/75">{copy.utrIntro}</p>
       <ol class="space-y-3 text-sm text-forest/80 list-decimal pl-5">
@@ -117,7 +117,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       </ol>
     </section>
 
-    <section class="rounded-[2rem] bg-mint/30 border border-leaf/10 p-6 md:p-8 space-y-3">
+    <section class="rounded-[14px] bg-mint/30 border border-leaf/10 p-6 md:p-8 space-y-3">
       <h2 id="sources" class="scroll-mt-28 text-xl font-black text-forest">{copy.sourcesHeading}</h2>
       <p class="text-sm leading-relaxed text-forest/75">{copy.sourcesIntro}</p>
       <ul class="text-sm space-y-1">
@@ -128,7 +128,7 @@ const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLoc
       <p class="text-xs text-forest/55">{copy.sourcesFoot}</p>
     </section>
 
-    <section class="rounded-[2rem] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
+    <section class="rounded-[14px] border border-white/75 bg-white/86 p-6 md:p-8 shadow-[0_18px_48px_rgba(17,59,44,0.08)] space-y-4">
       <h2 id="faq" class="scroll-mt-28 text-2xl font-black text-forest">{copy.faqHeading}</h2>
       <dl class="space-y-4">
         {copy.faqs.map((faq) => (

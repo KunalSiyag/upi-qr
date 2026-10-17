@@ -50,10 +50,10 @@ export function initialWsLang(): WsLang {
 export function LangToggle() {
   const { lang, setLang } = useWs();
   return (
-    <div className="flex rounded-full border border-forest/10 bg-white p-0.5 text-xs font-bold" role="group" aria-label="App language / ऐप की भाषा">
+    <div className="inline-flex rounded-[10px] bg-white p-0.5 text-xs font-medium ring-1 ring-inset ring-hairline" role="group" aria-label="App language / ऐप की भाषा">
       {(["en", "hi"] as WsLang[]).map((l) => (
         <button key={l} type="button" lang={l} onClick={() => setLang(l)} aria-pressed={lang === l}
-          className={`rounded-full px-2.5 py-1.5 transition ${lang === l ? "bg-forest text-white" : "text-forest/70 hover:bg-mint"}`}>
+          className={`rounded-[8px] px-2.5 py-1.5 transition-colors duration-150 ${lang === l ? "bg-graphite text-white" : "text-charcoal hover:text-ink"}`}>
           {l === "en" ? "EN" : "हिं"}
         </button>
       ))}

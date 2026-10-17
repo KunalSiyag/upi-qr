@@ -78,19 +78,19 @@ export function StatementSheet({ ws, today, claimedUtrs, onRecord, onClose }: {
 
   return (
     <Sheet title={tr("Import bank statement")} onClose={onClose}>
-      <p className="text-sm text-forest/70">
+      <p className="text-sm text-charcoal">
         {tr("Download a CSV statement from your bank's net banking, then pick it here. It's read in this browser — the file is never uploaded.")}
       </p>
       <label className={`${secondaryButton} mt-4 inline-block cursor-pointer`}>
         {fileName ? tr("Choose another file") : tr("Choose CSV statement")}
         <input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" className="sr-only" onChange={choose} aria-label={tr("Bank statement CSV file")} />
       </label>
-      {fileName && <span className="ml-2 text-xs text-forest/60">{fileName}</span>}
+      {fileName && <span className="ml-2 text-xs text-muted">{fileName}</span>}
       {error && <p role="alert" className="mt-3 text-sm font-bold text-[#a8321d]">{error}</p>}
 
       {result && credits && (
         <div className="mt-4">
-          <p className="text-sm text-forest/80" role="status">
+          <p className="text-sm text-charcoal" role="status">
             {tr(credits.length === 1 ? "Read {n} incoming payment ({range})." : "Read {n} incoming payments ({range}).", { n: credits.length, range })}{" "}
             {result.suggestions.length
               ? tr("Found {n} that look like payments for your invoices.", { n: result.suggestions.length })
@@ -104,19 +104,19 @@ export function StatementSheet({ ws, today, claimedUtrs, onRecord, onClose }: {
                 const view = views.find((v) => v.invoice.id === s.invoiceId)!;
                 const id = `match-${s.credit.key}`;
                 return (
-                  <li key={s.credit.key} className={`rounded-xl border p-3 ${ticked[s.credit.key] ? "border-leaf/40 bg-mint/40" : "border-forest/10 bg-white"}`}>
+                  <li key={s.credit.key} className={`rounded-[10px] border p-3 ${ticked[s.credit.key] ? "border-leaf/40 bg-fog" : "border-hairline bg-white"}`}>
                     <label htmlFor={id} className="flex cursor-pointer gap-3">
                       <input id={id} type="checkbox" className="mt-1 h-4 w-4 shrink-0 accent-[#287a57]" checked={!!ticked[s.credit.key]}
                         onChange={(e) => setTicked((t) => ({ ...t, [s.credit.key]: e.target.checked }))} />
                       <span className="min-w-0 text-sm">
-                        <span className="block font-bold text-forest">
+                        <span className="block font-bold text-ink">
                           {tr("{amount} on {date}", { amount: formatPaise(s.credit.amountPaise), date: shortDate(s.credit.date, dateLocale) })} → {view.invoice.number} · {view.client?.name ?? tr("Client")}
                         </span>
-                        <span className="block truncate text-xs text-forest/60" title={s.credit.narration}>{s.credit.narration || s.credit.reference}</span>
+                        <span className="block truncate text-xs text-muted" title={s.credit.narration}>{s.credit.narration || s.credit.reference}</span>
                         <span className="mt-1 flex flex-wrap gap-1">
-                          {s.reasons.map((r) => <span key={r} className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold text-leaf ring-1 ring-leaf/20">{reasonText(r, tr)}</span>)}
-                          {s.amountPaise < s.credit.amountPaise && <span className="rounded-full bg-sun/30 px-2 py-0.5 text-[10px] font-bold text-forest">{tr("records {amount} (balance)", { amount: formatPaise(s.amountPaise) })}</span>}
-                          {!s.confident && <span className="rounded-full bg-sun/30 px-2 py-0.5 text-[10px] font-bold text-forest">{tr("check before ticking")}</span>}
+                          {s.reasons.map((r) => <span key={r} className="rounded-[7px] bg-white px-2 py-0.5 text-[10px] font-bold text-leaf ring-1 ring-leaf/20">{reasonText(r, tr)}</span>)}
+                          {s.amountPaise < s.credit.amountPaise && <span className="rounded-[7px] bg-fog px-2 py-0.5 text-[10px] font-bold text-ink">{tr("records {amount} (balance)", { amount: formatPaise(s.amountPaise) })}</span>}
+                          {!s.confident && <span className="rounded-[7px] bg-fog px-2 py-0.5 text-[10px] font-bold text-ink">{tr("check before ticking")}</span>}
                         </span>
                       </span>
                     </label>
@@ -126,7 +126,7 @@ export function StatementSheet({ ws, today, claimedUtrs, onRecord, onClose }: {
             </ul>
           )}
           {result.unmatched.length > 0 && (
-            <details className="mt-3 text-xs text-forest/70">
+            <details className="mt-3 text-xs text-charcoal">
               <summary className="cursor-pointer font-bold">{tr(result.unmatched.length === 1 ? "{n} other credit not matched" : "{n} other credits not matched", { n: result.unmatched.length })}</summary>
               <ul className="mt-2 space-y-1">
                 {result.unmatched.slice(0, 50).map((c) => (

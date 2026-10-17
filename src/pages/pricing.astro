@@ -140,7 +140,7 @@ const schema = {
         </nav>
         <h1 class="mx-auto max-w-3xl text-4xl font-black leading-[1.05] tracking-[-0.02em] text-obsidian md:text-6xl">Free for every shop. Pro when you send a lot of invoices.</h1>
         <p class="mx-auto mt-5 max-w-2xl text-lg leading-8">No signup for the tools. No commission on payments — money goes straight from your client's UPI app to your bank.</p>
-        <p class="mx-auto mt-6 inline-flex items-center gap-2 rounded-full bg-forest px-5 py-2 text-sm font-black text-sun shadow-[0_8px_24px_-8px_rgba(17,59,44,0.5)]">
+        <p class="mx-auto mt-6 inline-flex items-center gap-2 rounded-[10px] bg-forest px-5 py-2 text-sm font-black text-sun shadow-[0_8px_24px_-8px_rgba(17,59,44,0.5)]">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
           0% of your payments. Always.
         </p>
@@ -155,13 +155,13 @@ const schema = {
     <section class="px-4 pb-10 md:px-6 lg:px-8" aria-label="Plans">
       <div class="mx-auto grid max-w-6xl items-stretch gap-5 md:grid-cols-3">
         {tiers.map((tier) => (
-          <article class={`relative flex flex-col rounded-[28px] p-7 ${tier.featured ? "bg-forest text-white shadow-[0_24px_60px_-20px_rgba(17,59,44,0.55)] md:-my-3 md:py-10" : "bg-white text-forest ring-1 ring-forest/10 shadow-[0_1px_2px_rgba(13,31,23,0.04),0_16px_40px_-24px_rgba(13,31,23,0.25)]"}`}>
-            {tier.featured && <span class="absolute -top-3 left-7 rounded-full bg-sun px-3 py-1 text-xs font-black text-forest shadow-sm">{trialDays > 0 ? `${trialDays} days free` : "For growing businesses"}</span>}
+          <article class={`relative flex flex-col rounded-[14px] p-7 ${tier.featured ? "bg-forest text-white shadow-[0_24px_60px_-20px_rgba(17,59,44,0.55)] md:-my-3 md:py-10" : "bg-white text-forest ring-1 ring-forest/10 shadow-[0_1px_2px_rgba(13,31,23,0.04),0_16px_40px_-24px_rgba(13,31,23,0.25)]"}`}>
+            {tier.featured && <span class="absolute -top-3 left-7 rounded-[7px] bg-forest px-3 py-1 text-xs font-black text-white shadow-sm">{trialDays > 0 ? `${trialDays} days free` : "For growing businesses"}</span>}
             <h2 class={`text-xl font-black ${tier.featured ? "text-white" : "text-obsidian"}`}>{tier.name}</h2>
             <p class={`mt-1 text-xs font-bold ${tier.featured ? "text-sun" : "text-leaf"}`}>{tier.tag}</p>
             <p class="mt-6"><span class="text-5xl font-black tracking-tight tabular-nums">{tier.price}</span> <span class={`text-sm ${tier.featured ? "text-white/70" : "text-muted"}`}>{tier.per}</span></p>
             <p class={`mt-3 text-sm leading-6 ${tier.featured ? "text-white/80" : ""}`}>{tier.blurb}</p>
-            <a href={tier.cta.href} class={`mt-6 flex h-12 items-center justify-center rounded-full px-5 text-center text-sm font-black transition ${tier.featured ? "bg-sun text-forest hover:brightness-95" : "bg-white text-forest ring-1 ring-forest/25 hover:bg-mint"}`}>{tier.cta.label}</a>
+            <a href={tier.cta.href} class={`mt-6 flex h-12 items-center justify-center rounded-[10px] px-5 text-center text-sm font-black transition ${tier.featured ? "bg-forest text-white hover:bg-graphite" : "bg-white text-forest ring-1 ring-forest/25 hover:bg-mint"}`}>{tier.cta.label}</a>
             <ul class={`mt-6 flex-1 space-y-3 border-t pt-6 text-sm ${tier.featured ? "border-white/15" : "border-forest/10"}`}>
               {tier.features.map((feature) => (
                 <li class="flex gap-3">
@@ -187,7 +187,7 @@ const schema = {
         <div>
           <h2 class="text-3xl font-black tracking-tight text-obsidian md:text-4xl">See who owes you, at a glance</h2>
           <p class="mt-4 text-lg leading-8">Every plan runs the same payment tracker: what's due, what's late, and one-tap WhatsApp reminders. An account keeps your phone and laptop in step; Pro removes the pay-link limit.</p>
-          <a href="/app/" class="mt-6 inline-flex h-12 items-center rounded-full bg-forest px-6 text-sm font-black text-white transition hover:bg-leaf">Try it with sample data &rarr;</a>
+          <a href="/app/" class="mt-6 inline-flex h-12 items-center rounded-[10px] bg-forest px-6 text-sm font-black text-white transition hover:bg-graphite">Try it with sample data &rarr;</a>
         </div>
         <ProductShot />
       </div>
@@ -215,14 +215,14 @@ const schema = {
     </section>
 
     <section class="px-4 pb-16 md:px-6 lg:px-8">
-      <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[28px] bg-forest px-8 py-10 text-white md:flex-row md:items-center md:px-12">
+      <div class="mx-auto flex max-w-6xl flex-col items-start justify-between gap-6 rounded-[14px] bg-forest px-8 py-10 text-white md:flex-row md:items-center md:px-12">
         <div>
           <p class="text-2xl font-black md:text-3xl">Start free. Upgrade when your invoices grow.</p>
           <p class="mt-2 text-[#c8dccf]">No card needed for the free plans. 0% of your payments, always.</p>
         </div>
         <div class="flex flex-wrap gap-3">
-          <a href="/app/" class="inline-flex h-12 items-center rounded-full bg-sun px-6 text-sm font-black text-forest transition hover:brightness-95">Open the tracker</a>
-          <a href={signUp} class="inline-flex h-12 items-center rounded-full px-6 text-sm font-black text-white ring-1 ring-white/40 transition hover:bg-white/10">Create free account</a>
+          <a href="/app/" class="inline-flex h-12 items-center rounded-[10px] bg-forest px-6 text-sm font-black text-white transition hover:bg-graphite">Open the tracker</a>
+          <a href={signUp} class="inline-flex h-12 items-center rounded-[10px] px-6 text-sm font-black text-white ring-1 ring-white/40 transition hover:bg-white/10">Create free account</a>
         </div>
       </div>
     </section>

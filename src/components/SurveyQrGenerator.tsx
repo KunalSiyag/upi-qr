@@ -92,7 +92,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </button>
         </div>
 
-        <span className="text-xs font-mono font-bold text-leaf bg-mint px-3 py-1.5 rounded-full border border-leaf/20 hidden sm:inline-block">
+        <span className="text-xs font-mono font-bold text-leaf bg-mint px-3 py-1.5 rounded-[7px] border border-leaf/20 hidden sm:inline-block">
           ⭐ Direct Google Review QR
         </span>
       </div>
@@ -158,7 +158,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 <button
                   type="button"
                   onClick={addQuestion}
-                  className="px-3 py-1.5 rounded-xl bg-mint border border-leaf/20 text-xs font-bold text-forest hover:bg-leaf hover:text-white transition-all"
+                  className="px-3 py-1.5 rounded-xl bg-mint border border-leaf/20 text-xs font-bold text-forest hover:bg-graphite hover:text-white transition-all"
                 >
                   + Add Question
                 </button>
@@ -216,7 +216,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 <button
                   type="button"
                   onClick={copySurveyLink}
-                  className="w-full py-3 rounded-2xl bg-forest text-white text-xs font-black hover:bg-leaf transition-all shadow-md"
+                  className="w-full py-3 rounded-2xl bg-forest text-white text-xs font-black hover:bg-graphite transition-all shadow-md"
                 >
                   {copied ? "✓ Review Link Copied!" : "📋 Copy Review URL"}
                 </button>
@@ -225,7 +225,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <a
                     href={qrDataUrl}
                     download="feedback-survey-qr.png"
-                    className="block w-full py-2.5 rounded-xl bg-mint border border-leaf/20 text-forest text-xs font-bold hover:bg-leaf hover:text-white transition-all"
+                    className="block w-full py-2.5 rounded-xl bg-mint border border-leaf/20 text-forest text-xs font-bold hover:bg-graphite hover:text-white transition-all"
                   >
                     Download PNG QR
                   </a>
@@ -237,7 +237,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       ) : (
         /* Mobile Customer Preview Tab */
         <div className="max-w-md mx-auto rounded-[2.5rem] border-4 border-slate-900 bg-slate-900 p-3 shadow-2xl">
-          <div className="rounded-[2rem] bg-white p-6 space-y-6 min-h-[500px]">
+          <div className="rounded-[14px] bg-white p-6 space-y-6 min-h-[500px]">
             {/* Store Header */}
             <div className="text-center border-b border-forest/10 pb-4">
               <div className="w-12 h-12 rounded-2xl bg-mint border border-leaf/20 mx-auto flex items-center justify-center text-leaf font-black text-xl mb-2">

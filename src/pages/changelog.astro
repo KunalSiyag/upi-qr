@@ -49,9 +49,9 @@ const schema = {
       <ol class="mx-auto max-w-4xl space-y-6 border-l-2 border-leaf/20 pl-6">
         {CHANGELOG.map((entry, index) => (
           <li class="relative">
-            <span class={`absolute -left-[2.15rem] top-6 h-4 w-4 rounded-full border-4 border-cream ${index === 0 ? "bg-sun" : "bg-leaf"}`} aria-hidden="true"></span>
-            <article class="rounded-[2rem] border border-white/75 bg-white/90 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-              <p class="text-sm font-semibold text-leaf"><time datetime={entry.date}>{entry.month}</time>{index === 0 && <span class="ml-2 rounded-full bg-sun px-2 py-0.5 text-forest">Latest</span>}</p>
+            <span class={`absolute -left-[2.15rem] top-6 h-4 w-4 rounded-full border-4 border-cream ${index === 0 ? "bg-forest" : "bg-leaf"}`} aria-hidden="true"></span>
+            <article class="rounded-[14px] border border-white/75 bg-white/90 p-6 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+              <p class="text-sm font-semibold text-leaf"><time datetime={entry.date}>{entry.month}</time>{index === 0 && <span class="ml-2 rounded-[10px] bg-forest px-2 py-0.5 text-white">Latest</span>}</p>
               <h2 class="mt-2 text-2xl font-black tracking-tight text-forest">{entry.title}</h2>
               <ul class="mt-4 space-y-2 text-sm leading-6 text-forest/75">
                 {entry.items.map((item) => (

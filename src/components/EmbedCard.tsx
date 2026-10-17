@@ -96,7 +96,7 @@ export function EmbedCard() {
         </div>
 
         {params.am && (
-          <div className="my-2 inline-flex items-center gap-1 rounded-full border border-neutral-100 bg-neutral-50 px-4 py-1.5">
+          <div className="my-2 inline-flex items-center gap-1 rounded-[10px] border border-neutral-100 bg-neutral-50 px-4 py-1.5">
             <span className="text-xs font-bold text-neutral-400">Amount:</span>
             <span className="text-sm font-black text-neutral-800">₹{params.am}</span>
           </div>

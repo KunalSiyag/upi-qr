@@ -47,9 +47,9 @@ export function InstallHint({ standalone, ios }: { standalone: boolean; ios: boo
   const { tr } = useWs();
   if (standalone) return null;
   return (
-    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-      <h2 className="text-lg font-black text-forest">{tr("Use it like an app")}</h2>
-      <p className="mt-1 text-sm text-forest/70">
+    <section className="rounded-[14px] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
+      <h2 className="text-lg font-semibold text-ink">{tr("Use it like an app")}</h2>
+      <p className="mt-1 text-sm text-charcoal">
         {ios
           ? tr("In Safari, tap the Share button, then “Add to Home Screen”. The tracker opens full-screen and works offline.")
           : tr("In Chrome, open the ⋮ menu and choose “Install app” or “Add to Home screen”. The tracker opens full-screen and works offline.")}

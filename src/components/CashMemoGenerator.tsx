@@ -44,9 +44,9 @@ export function CashMemoGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   async function downloadPdf() { try { setPdfState("busy"); const [{ jsPDF }, du] = await Promise.all([withTimeout(import("jspdf"), "PDF"), renderPaper()]); const px = 0.2646; const w = 800 * px; const h = (paperRef.current?.offsetHeight || 900) * px; const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: [w, h] }); pdf.addImage(du, "PNG", 0, 0, w, h); pdf.save("cash-memo.pdf"); trackProductEvent("export_pdf", "cash-memo"); setPdfState("idle"); } catch (e) { console.error(e); notifyExportError("PDF failed"); setPdfState("error"); } }
 
   return (<div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-    <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+    <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
-      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-sm font-semibold text-leaf">{tr("Cash memo")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Retail billing slip")}</h2></div><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div>
+      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-sm font-semibold text-leaf">{tr("Cash memo")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Retail billing slip")}</h2></div><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-bold text-forest">{tr("Shop name")}<input value={shopName} onChange={e => setShopName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         <label className="text-sm font-bold text-forest">{tr("Phone")}<input value={shopPhone} onChange={e => setShopPhone(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -64,7 +64,7 @@ export function CashMemoGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>))}
       </div>
     </div>
-    <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
+    <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="text-center border-b-2 border-forest pb-4">
         <h2 className="text-2xl font-black text-forest">{shopName || tr("Shop Name")}</h2>
         {shopAddress && <p className="text-[11px] text-forest/60">{shopAddress}</p>}

@@ -48,10 +48,10 @@ const formatDate = (d: Date) => new Intl.DateTimeFormat("hi-IN", { day: "numeric
 
       <div class="mt-10 grid gap-5 md:grid-cols-2">
         {posts.map((post) => (
-          <a href={`/hi/blog/${post.id.replace(/\.mdx?$/, "")}/`} class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-6 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(17,59,44,0.12)]">
+          <a href={`/hi/blog/${post.id.replace(/\.mdx?$/, "")}/`} class="group flex flex-col rounded-[14px] border border-white/75 bg-white/88 p-6 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5 hover:shadow-[0_18px_44px_rgba(17,59,44,0.12)]">
             <div class="flex flex-wrap gap-1.5">
               {post.data.tags.slice(0, 3).map((tag) => (
-                <span class="rounded-full bg-mint px-2.5 py-1 text-[10px] font-bold text-forest/70">{tag}</span>
+                <span class="rounded-[7px] bg-mint px-2.5 py-1 text-[10px] font-bold text-forest/70">{tag}</span>
               ))}
             </div>
             <h2 class="mt-3 text-lg font-black leading-snug text-forest group-hover:text-leaf transition-colors">{post.data.title}</h2>
@@ -61,7 +61,7 @@ const formatDate = (d: Date) => new Intl.DateTimeFormat("hi-IN", { day: "numeric
         ))}
       </div>
 
-      <section class="mt-12 rounded-[2rem] border border-white/75 bg-white/86 p-6 text-sm leading-7 text-forest/72">
+      <section class="mt-12 rounded-[14px] border border-white/75 bg-white/86 p-6 text-sm leading-7 text-forest/72">
         बाकी guides (अंग्रेज़ी में) <a href="/blog/" class="font-bold text-leaf hover:underline">यहाँ पढ़ें →</a>। हर guide के साथ एक मुफ्त browser tool मिलता है — <a href="/tools/" class="font-bold text-leaf hover:underline">सभी tools यहाँ</a>।
       </section>
     </div>

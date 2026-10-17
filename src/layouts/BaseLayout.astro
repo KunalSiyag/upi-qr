@@ -233,13 +233,13 @@ if (cleanPath !== "/") {
       }
     </script>
   </head>
-  <body class="font-sans text-charcoal antialiased bg-white min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-hidden">
+  <body class="font-sans text-charcoal antialiased bg-white min-h-screen flex flex-col justify-between w-full max-w-[100vw] overflow-x-clip">
     <div class="fixed inset-x-0 top-0 z-50 w-full border-b border-forest/10 bg-white/95 backdrop-blur-md">
       <div class="relative mx-auto max-w-7xl px-4 md:px-6 lg:px-8">
         <HeaderNav isHindi={isHindi} currentPath={rawPath} />
       </div>
     </div>
-    <div class="flex-1 overflow-x-hidden pt-16">
+    <div class="flex-1 overflow-x-clip pt-16">
       <slot />
     </div>
     <Footer />

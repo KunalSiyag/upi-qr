@@ -215,14 +215,14 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
   const trialDays = billing?.trialDays ?? 0;
 
   return (
-    <section ref={panel} id="plan" className={`rounded-[1.5rem] border bg-white shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5 ${intent && !isPro ? "border-sun ring-2 ring-sun/50" : "border-forest/[0.07]"}`}>
+    <section ref={panel} id="plan" className={`rounded-[14px] border bg-white shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5 ${intent && !isPro ? "border-hairline ring-2 ring-sun/50" : "border-forest/[0.07]"}`}>
       <div className="flex flex-wrap items-baseline justify-between gap-2">
-        <h2 className="text-lg font-black text-forest">{tr("Plan")}</h2>
-        <span className={`rounded-full px-3 py-1 text-xs font-black ${isPro ? "bg-forest text-white" : "bg-mint text-leaf"}`}>{isPro ? "Pro" : tr("Free")}</span>
+        <h2 className="text-lg font-semibold text-ink">{tr("Plan")}</h2>
+        <span className={`rounded-[7px] px-3 py-1 text-xs font-semibold ${isPro ? "bg-forest text-white" : "bg-fog text-leaf"}`}>{isPro ? "Pro" : tr("Free")}</span>
       </div>
 
       {isPro && sub ? (
-        <div className="mt-2 text-sm text-forest/75">
+        <div className="mt-2 text-sm text-charcoal">
           {sub.cancelAtCycleEnd || sub.status === "cancelled"
             ? <p>{tr("Cancelled — Pro stays on until {date}, then you move to Free. Your data stays.", { date: longDate(sub.currentEnd, dateLocale) })}</p>
             : sub.status === "pending"
@@ -234,11 +234,11 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             confirmCancel ? (
               <p className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-[#a8321d]">
                 {tr("Cancel at the end of this period?")}
-                <button type="button" disabled={busy} onClick={cancel} className="rounded-lg bg-[#a8321d] px-2 py-1 text-white">{tr("Yes, cancel")}</button>
-                <button type="button" onClick={() => setConfirmCancel(false)} className="rounded-lg px-2 py-1 text-forest">{tr("Keep Pro")}</button>
+                <button type="button" disabled={busy} onClick={cancel} className="rounded-[8px] bg-[#a8321d] px-2 py-1 text-white">{tr("Yes, cancel")}</button>
+                <button type="button" onClick={() => setConfirmCancel(false)} className="rounded-[8px] px-2 py-1 text-ink">{tr("Keep Pro")}</button>
               </p>
             ) : (
-              <button type="button" onClick={() => setConfirmCancel(true)} className="mt-3 text-xs font-bold text-forest/50 hover:text-[#a8321d]">{tr("Cancel subscription…")}</button>
+              <button type="button" onClick={() => setConfirmCancel(true)} className="mt-3 text-xs font-bold text-muted hover:text-[#a8321d]">{tr("Cancel subscription…")}</button>
             )
           )}
           {billing?.manageAvailable && (
@@ -247,28 +247,28 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
         </div>
       ) : (
         <>
-          <ul className="mt-3 space-y-1.5 text-sm text-forest/80">
+          <ul className="mt-3 space-y-1.5 text-sm text-charcoal">
             {PRO_FEATURES.map((feature) => <li key={feature}>✓ {tr(feature)}</li>)}
           </ul>
           {!signedIn ? (
-            <p className="mt-4 text-sm text-forest/70">
+            <p className="mt-4 text-sm text-charcoal">
               {tr("Pro is {monthly}/month or {yearly}/year. Create a free account first, then upgrade here.", { monthly: PRO_PRICES.monthly.label, yearly: PRO_PRICES.yearly.label })}
               <a href={"/sign-up/?redirect_url=" + encodeURIComponent(`/app/?tab=settings&upgrade=${intent ?? "monthly"}`)} className={`${primaryButton} mt-3 block w-fit`}>{tr("Create free account")}</a>
             </p>
           ) : billing?.billingAvailable && billing.checkout && !startOver ? (
-            <div role="status" className="mt-4 rounded-xl border border-sun/60 bg-sun/15 p-3">
-              <p className="text-sm font-black text-forest">{tr("Waiting for your payment to be confirmed…")}</p>
-              <p className="mt-1 text-xs text-forest/70">{tr("Paid already? Pro switches on here by itself, usually within a minute. Not paid yet? Continue to the payment page.")}</p>
+            <div role="status" className="mt-4 rounded-[10px] border border-hairline bg-fog p-3">
+              <p className="text-sm font-semibold text-ink">{tr("Waiting for your payment to be confirmed…")}</p>
+              <p className="mt-1 text-xs text-charcoal">{tr("Paid already? Pro switches on here by itself, usually within a minute. Not paid yet? Continue to the payment page.")}</p>
               <div className="mt-3 flex flex-wrap gap-2">
                 <button type="button" disabled={checking} onClick={checkAgain} className={primaryButton}>{checking ? tr("Checking…") : tr("Check again")}</button>
                 {PAYMENT_PAGE.test(billing.checkout.url) && <a href={billing.checkout.url} className={secondaryButton}>{tr("Continue to payment")}</a>}
               </div>
-              <button type="button" onClick={() => setStartOver(true)} className="mt-2 text-xs font-bold text-forest/50 hover:text-forest">{tr("Choose a different plan")}</button>
+              <button type="button" onClick={() => setStartOver(true)} className="mt-2 text-xs font-bold text-muted hover:text-ink">{tr("Choose a different plan")}</button>
             </div>
           ) : billing?.billingAvailable ? (
             <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {trialDays > 0 && (
-                <p className="text-sm font-bold text-forest sm:col-span-2">
+                <p className="text-sm font-bold text-ink sm:col-span-2">
                   {tr("Try Pro free for {days} days: ₹0 today, first payment on {date}. Cancel before then and you pay nothing.", { days: trialDays, date: longDate(Date.now() + trialDays * 86_400_000, dateLocale) })}
                 </p>
               )}
@@ -282,16 +282,16 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
                   ? tr("Start free trial · then {price} / year (save ₹{saving})", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })
                   : tr("{price} / year · save ₹{saving}", { price: PRO_PRICES.yearly.label, saving: YEARLY_SAVING_RUPEES })}
               </button>
-              <p className="text-[11px] text-forest/55 sm:col-span-2">{billing.provider === "dodo"
+              <p className="text-[11px] text-muted sm:col-span-2">{billing.provider === "dodo"
                   ? tr("Secure checkout by Dodo Payments, our merchant of record: UPI or card, GST included. Cancel anytime; Pro runs to the end of the paid period.")
                   : tr("Pay with UPI AutoPay or card on Razorpay's secure page. Cancel anytime; Pro runs to the end of the paid period.")}</p>
             </div>
           ) : billing ? (
             joined ? (
-              <p role="status" className="mt-4 rounded-xl bg-mint px-3 py-2 text-sm font-bold text-leaf">{tr("You're on the Pro early-access list. We'll email you when it opens.")}</p>
+              <p role="status" className="mt-4 rounded-[10px] bg-fog px-3 py-2 text-sm font-bold text-leaf">{tr("You're on the Pro early-access list. We'll email you when it opens.")}</p>
             ) : (
               <form onSubmit={joinWaitlist} noValidate className="mt-4">
-                <p className="text-sm text-forest/70">{PRO_TRIAL_DAYS > 0
+                <p className="text-sm text-charcoal">{PRO_TRIAL_DAYS > 0
                   ? tr("Pro opens soon at {price}/month, with a {days}-day free trial. Get an email when it does:", { price: PRO_PRICES.monthly.label, days: PRO_TRIAL_DAYS })
                   : tr("Pro opens soon at {price}/month. Get an email when it does:", { price: PRO_PRICES.monthly.label })}</p>
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row">
@@ -302,7 +302,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
               </form>
             )
           ) : (
-            <p className="mt-4 text-sm text-forest/60">{tr("Checking your plan…")}</p>
+            <p className="mt-4 text-sm text-muted">{tr("Checking your plan…")}</p>
           )}
         </>
       )}

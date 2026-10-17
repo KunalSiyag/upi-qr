@@ -83,8 +83,8 @@ const schema = {
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free rent receipt generator with HRA-ready format</h1>
           <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Create signed-ready monthly rent receipts with amount in words, revenue stamp box, landlord PAN, and an optional UPI QR for next month's rent. Download as PDF or share straight to WhatsApp.</p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#rent-receipt-tool" class="rounded-full bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-leaf">Create rent receipt</a>
-            <a href="/receipt-generator/" class="rounded-full border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Business payment receipts →</a>
+            <a href="#rent-receipt-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Create rent receipt</a>
+            <a href="/receipt-generator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Business payment receipts →</a>
           </div>
         </div>
       </div>
@@ -97,7 +97,7 @@ const schema = {
     </section>
 
     <section class="px-4 py-14 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-white/75 bg-forest p-6 text-white md:p-10">
+      <div class="mx-auto max-w-7xl rounded-[14px] border border-white/75 bg-forest p-6 text-white md:p-10">
         <p class="text-sm font-black uppercase tracking-[0.2em] text-sun">More billing tools</p>
         <h2 class="mt-3 text-3xl font-black tracking-tight md:text-4xl">One toolkit for every money document.</h2>
         <div class="mt-8 grid gap-4 md:grid-cols-3">
@@ -106,7 +106,7 @@ const schema = {
             ["UPI Invoice Generator", "Bill customers with GST-ready invoices and an embedded payment QR.", "/invoice-generator/"],
             ["Paid Stamp Generator", "Stamp existing bill photos as PAID with date and signature.", "/paid-stamp-generator/"]
           ].map(([heading, copy, href]) => (
-            <article class="flex flex-col rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
+            <article class="flex flex-col rounded-[14px] border border-white/10 bg-white/8 p-5">
               <h3 class="text-xl font-black">{heading}</h3>
               <p class="mt-3 flex-1 text-sm leading-7 text-white/72">{copy}</p>
               <a href={href} class="mt-4 inline-block text-sm font-black text-sun hover:text-white">Open tool →</a>

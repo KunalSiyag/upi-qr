@@ -266,7 +266,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
             ))}
           </div>
 
-          <button type="button" onClick={addLine} className="mt-4 rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf">
+          <button type="button" onClick={addLine} className="mt-4 rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf">
             {tr("+ Add another item")}
           </button>
         </div>
@@ -296,7 +296,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
         <div className="rounded-3xl border border-forest/10 bg-white p-6 shadow-lg space-y-5">
           <div className="flex items-center justify-between border-b border-forest/10 pb-4">
             <h3 className="text-lg font-black text-forest">{tr("Tax breakdown")}</h3>
-            <span className="rounded-full bg-mint px-3 py-1 text-xs font-bold text-leaf">{composition ? "Composition" : supply === "intra" ? "CGST + SGST" : "IGST"}</span>
+            <span className="rounded-[7px] bg-mint px-3 py-1 text-xs font-bold text-leaf">{composition ? "Composition" : supply === "intra" ? "CGST + SGST" : "IGST"}</span>
           </div>
 
           <div className="space-y-2 text-sm">

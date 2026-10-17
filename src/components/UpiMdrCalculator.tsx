@@ -203,7 +203,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                     type="button"
                     onClick={() => setAmount(preset)}
                     aria-pressed={amount === preset}
-                    className={`rounded-full border px-3 py-1.5 text-[11px] font-bold transition-colors hover:border-leaf ${amount === preset ? "border-leaf bg-mint/60 text-forest" : "border-forest/15 bg-cream text-forest"}`}
+                    className={`rounded-[7px] border px-3 py-1.5 text-[11px] font-bold transition-colors hover:border-leaf ${amount === preset ? "border-leaf bg-mint/60 text-forest" : "border-forest/15 bg-cream text-forest"}`}
                   >
                     {formatInrPaise(rupeesToPaise(preset), 0)}
                   </button>
@@ -223,7 +223,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                       setCategory(p.category);
                       setSmallMerchant(false);
                     }}
-                    className="rounded-full border border-forest/15 bg-cream px-3 py-1.5 text-[11px] font-bold text-forest transition-colors hover:border-leaf"
+                    className="rounded-[7px] border border-forest/15 bg-cream px-3 py-1.5 text-[11px] font-bold text-forest transition-colors hover:border-leaf"
                   >
                     {tr(p.labelKey)}
                   </button>

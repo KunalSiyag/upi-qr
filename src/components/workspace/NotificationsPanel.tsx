@@ -101,21 +101,21 @@ export function NotificationsPanel({ signedIn, standalone, ios, onFlash }: {
   }
 
   return (
-    <section className="rounded-[1.5rem] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
-      <h2 className="text-lg font-black text-forest">{tr("Morning reminders")}</h2>
-      <p className="mt-1 text-sm text-forest/70">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}</p>
+    <section className="rounded-[14px] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
+      <h2 className="text-lg font-semibold text-ink">{tr("Morning reminders")}</h2>
+      <p className="mt-1 text-sm text-charcoal">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2" role="status">
-        {status === "loading" && <span className="text-sm text-forest/60">{tr("Checking…")}</span>}
-        {status === "unsupported" && <span className="text-sm text-forest/70">{tr("This browser doesn't support notifications.")}</span>}
-        {status === "ios-install" && <span className="text-sm text-forest/70">{tr("On iPhone, first add the tracker to your Home Screen (Share → Add to Home Screen), then open it from there to turn this on.")}</span>}
-        {status === "unavailable" && <span className="text-sm text-forest/70">{tr("Morning notifications are coming soon.")}</span>}
-        {status === "denied" && <span className="text-sm text-forest/70">{tr("Notifications are blocked for this site. Allow them in your browser's site settings, then reload.")}</span>}
+        {status === "loading" && <span className="text-sm text-muted">{tr("Checking…")}</span>}
+        {status === "unsupported" && <span className="text-sm text-charcoal">{tr("This browser doesn't support notifications.")}</span>}
+        {status === "ios-install" && <span className="text-sm text-charcoal">{tr("On iPhone, first add the tracker to your Home Screen (Share → Add to Home Screen), then open it from there to turn this on.")}</span>}
+        {status === "unavailable" && <span className="text-sm text-charcoal">{tr("Morning notifications are coming soon.")}</span>}
+        {status === "denied" && <span className="text-sm text-charcoal">{tr("Notifications are blocked for this site. Allow them in your browser's site settings, then reload.")}</span>}
         {status === "off" && <button type="button" disabled={busy} onClick={enable} className={primaryButton}>{tr("Turn on morning reminders")}</button>}
         {status === "on" && (
           <>
-            <span className="rounded-full bg-mint px-3 py-1 text-xs font-black text-leaf">{tr("On for this device")}</span>
+            <span className="rounded-[7px] bg-fog px-3 py-1 text-xs font-semibold text-leaf">{tr("On for this device")}</span>
             <button type="button" disabled={busy} onClick={test} className={secondaryButton}>{tr("Send a test")}</button>
-            <button type="button" disabled={busy} onClick={disable} className="rounded-xl px-3 py-2 text-xs font-bold text-forest/50 hover:text-[#a8321d]">{tr("Turn off")}</button>
+            <button type="button" disabled={busy} onClick={disable} className="rounded-[10px] px-3 py-2 text-xs font-bold text-muted hover:text-[#a8321d]">{tr("Turn off")}</button>
           </>
         )}
       </div>

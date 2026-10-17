@@ -63,7 +63,7 @@ export function ReviewForm() {
   return (
     <form
       onSubmit={onSubmit}
-      className="rounded-[1.75rem] border border-forest/10 bg-white p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-7"
+      className="rounded-[14px] border border-forest/10 bg-white p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)] md:p-7"
       noValidate
     >
       <fieldset className="space-y-2">
@@ -74,7 +74,7 @@ export function ReviewForm() {
             return (
               <label
                 key={star}
-                className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-full border px-3 text-sm font-black transition ${
+                className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[10px] border px-3 text-sm font-black transition ${
                   star <= rating
                     ? "border-sun bg-sun/15 text-forest"
                     : "border-forest/10 bg-cream text-forest/40"
@@ -182,14 +182,14 @@ export function ReviewForm() {
       <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
         <button
           type="submit"
-          className="rounded-full bg-forest px-5 py-3 text-sm font-bold text-white transition hover:bg-leaf"
+          className="rounded-[10px] bg-forest px-5 py-3 text-sm font-bold text-white transition hover:bg-graphite"
         >
           Open email to send review
         </button>
         <a
           href={`${PRODUCT_HUNT_REVIEWS_URL}?utm_source=proupiqr&utm_medium=site&utm_campaign=review-form`}
           rel="noopener noreferrer"
-          className="inline-flex items-center justify-center rounded-full border border-forest/15 px-5 py-3 text-sm font-bold text-forest transition hover:bg-mint"
+          className="inline-flex items-center justify-center rounded-[10px] border border-forest/15 px-5 py-3 text-sm font-bold text-forest transition hover:bg-mint"
         >
           Or review on Product Hunt
         </a>

@@ -247,7 +247,7 @@ export function WaitlistCard({ tool, lang = "en" }: { tool: WaitlistTool; lang?:
     <a
       href={trackerHref}
       onClick={() => trackProductEvent("tracker_opened", tool)}
-      className="mt-3 block rounded-xl bg-forest px-4 py-2.5 text-center text-sm font-black text-white transition hover:bg-leaf"
+      className="mt-3 block rounded-xl bg-forest px-4 py-2.5 text-center text-sm font-black text-white transition hover:bg-graphite"
     >
       {t.trackNow}
     </a>
@@ -256,7 +256,7 @@ export function WaitlistCard({ tool, lang = "en" }: { tool: WaitlistTool; lang?:
   return (
     <aside
       aria-labelledby="waitlist-title"
-      className="no-print fixed inset-x-3 z-40 mx-auto max-w-md rounded-[1.5rem] border border-forest/10 bg-white p-5 text-forest shadow-[0_24px_60px_rgba(17,59,44,0.22)] sm:inset-x-auto sm:right-6"
+      className="no-print fixed inset-x-3 z-40 mx-auto max-w-md rounded-[14px] border border-forest/10 bg-white p-5 text-forest shadow-[0_24px_60px_rgba(17,59,44,0.22)] sm:inset-x-auto sm:right-6"
       style={{ bottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
     >
       <button

@@ -604,14 +604,14 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
 
           {/* Actions */}
           <div className="mt-5 flex flex-wrap gap-3 items-center">
-            <button onClick={downloadPng} disabled={!isValid} className="rounded-full bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-leaf transition disabled:opacity-50">{tr("Download PNG")}</button>
-            <button onClick={downloadSvg} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download SVG</button>
-            <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-full border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
+            <button onClick={downloadPng} disabled={!isValid} className="rounded-[10px] bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-graphite transition disabled:opacity-50">{tr("Download PNG")}</button>
+            <button onClick={downloadSvg} disabled={!isValid} className="rounded-[10px] border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download SVG</button>
+            <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-[10px] border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
             {form.type === "upi" && (
-              <a href="/#generator" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">Print UPI standee →</a>
+              <a href="/#generator" className="rounded-[10px] border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">Print UPI standee →</a>
             )}
-            <a href="/qr-sticker-generator/?app=phonepe#tool" className="rounded-full border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">PhonePe / GPay sticker</a>
-            <button onClick={copyPayload} disabled={!isValid} className="rounded-full border border-forest/15 px-5 py-2.5 text-sm font-bold">Copy content</button>
+            <a href="/qr-sticker-generator/?app=phonepe#tool" className="rounded-[10px] border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">PhonePe / GPay sticker</a>
+            <button onClick={copyPayload} disabled={!isValid} className="rounded-[10px] border border-forest/15 px-5 py-2.5 text-sm font-bold">Copy content</button>
             <button onClick={reset} className="ml-auto text-sm text-forest/70 hover:text-forest">Reset</button>
           </div>
 

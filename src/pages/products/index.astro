@@ -114,7 +114,7 @@ const alternates = [
           {PRODUCT_CATEGORIES.map((category) => (
             <a
               href={`#${category.id}`}
-              class="rounded-full border border-forest/15 bg-white px-4 py-1.5 text-xs font-bold text-forest transition hover:border-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
+              class="rounded-[7px] border border-forest/15 bg-white px-4 py-1.5 text-xs font-bold text-forest transition hover:border-leaf focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf"
             >
               {category.label}
             </a>
@@ -139,7 +139,7 @@ const alternates = [
             <p class="mt-1 text-sm font-semibold text-forest/65">{category.blurb}</p>
             <div class="mt-5 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {items.map((product) => (
-                <article class="flex flex-col rounded-[1.75rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
+                <article class="flex flex-col rounded-[14px] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)]">
                   <a href={`/products/${product.slug}/`} class="group block focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf rounded-2xl">
                     <div class="relative flex h-48 items-center justify-center overflow-hidden rounded-2xl border border-forest/5 bg-cream p-4">
                       <picture>
@@ -155,7 +155,7 @@ const alternates = [
                           class="max-h-full max-w-full object-contain"
                         />
                       </picture>
-                      <span class="absolute right-3 top-3 rounded-full bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-forest">
+                      <span class="absolute right-3 top-3 rounded-[7px] bg-mint px-3 py-1 text-[10px] font-bold uppercase tracking-wider text-forest">
                         {product.tag}
                       </span>
                     </div>
@@ -180,7 +180,7 @@ const alternates = [
     })}
 
     <section class="px-4 py-8 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-7xl rounded-[2rem] border border-forest/10 bg-[#fffdf6] p-6 md:p-8">
+      <div class="mx-auto max-w-7xl rounded-[14px] border border-forest/10 bg-[#fffdf6] p-6 md:p-8">
         <h2 class="text-2xl font-black text-forest">How to choose hardware</h2>
         <div class="mt-5 grid gap-4 md:grid-cols-3 text-sm leading-7 text-forest/75">
           <p>

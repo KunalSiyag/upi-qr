@@ -213,7 +213,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
             <h3 className="text-base font-black text-forest flex items-center gap-2">
               Groq AI Auto-Menu Generator
             </h3>
-            <span className="text-[10px] font-bold uppercase tracking-wider bg-leaf/10 text-leaf px-2.5 py-0.5 rounded-full">
+            <span className="text-[10px] font-bold uppercase tracking-wider bg-leaf/10 text-leaf px-2.5 py-0.5 rounded-[7px]">
               Llama 3.3 70B
             </span>
           </div>
@@ -259,7 +259,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               type="button"
               onClick={generateMenuWithGroq}
               disabled={isAiGenerating}
-              className="w-full rounded-xl bg-forest py-2.5 text-xs font-black text-white hover:bg-leaf transition-all shadow-sm disabled:opacity-50"
+              className="w-full rounded-xl bg-forest py-2.5 text-xs font-black text-white hover:bg-graphite transition-all shadow-sm disabled:opacity-50"
             >
               {isAiGenerating ? "⚡ Parsing Menu with Groq AI..." : "✨ Auto-Generate Menu with Groq AI"}
             </button>

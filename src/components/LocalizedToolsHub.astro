@@ -41,7 +41,7 @@ const more = LOCALIZED_TOOLS.map((tool) => {
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">{chrome.toolsHubFeatured}</h2>
       <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {featured.map((tool) => (
-          <a href={tool.href} class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5">
+          <a href={tool.href} class="group flex flex-col rounded-[14px] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5">
             <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{tool.name}</h3>
             <p class="mt-2 flex-1 text-xs leading-6 text-forest/70">{tool.desc}</p>
             <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf">{chrome.openTool} →</span>
@@ -56,7 +56,7 @@ const more = LOCALIZED_TOOLS.map((tool) => {
       <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">{chrome.toolsHubMore}</h2>
       <div class="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
         {more.map((tool) => (
-          <a href={tool.href} class="group flex flex-col rounded-[1.5rem] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5">
+          <a href={tool.href} class="group flex flex-col rounded-[14px] border border-white/75 bg-white/88 p-5 shadow-[0_10px_30px_rgba(17,59,44,0.06)] transition hover:border-leaf/40 hover:-translate-y-0.5">
             <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">{tool.name}</h3>
             <p class="mt-2 flex-1 text-xs leading-6 text-forest/70 line-clamp-3">{tool.desc}</p>
             <span class="mt-3 text-[11px] font-black uppercase tracking-wider text-leaf">{chrome.openTool} →</span>

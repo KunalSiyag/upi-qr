@@ -1,17 +1,50 @@
+@import "@fontsource-variable/inter/wght.css";
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Direction "Ledger": Inter with Attio's ss03 and tabular money, ink text on white. */
 :root {
-  color: #3d4541;
+  color: #3a3f47;
   background: #ffffff;
+  font-feature-settings: "ss03", "cv11";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* Direction A ("Plain money"): headings break evenly; long copy avoids orphans. */
+/* Headings break evenly; long copy avoids orphans. Display sizes track tight, never loose. */
 h1,
 h2,
 h3 {
   text-wrap: balance;
+  letter-spacing: -0.02em;
+}
+
+h4,
+h5,
+h6 {
+  letter-spacing: -0.01em;
+}
+
+/* Amounts line up in tables and stat tiles. */
+.tabular,
+table,
+[data-money] {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Pressable feedback (Emil): a quick 0.97 press, released fast. Hover lifts only on real pointers. */
+button,
+a[class*="inline-flex"][class*="px-"] {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
+  transition-duration: 160ms;
+  transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+button:not(:disabled):active,
+a[class*="inline-flex"][class*="px-"]:active {
+  transform: scale(0.97);
 }
 
 p {
@@ -29,8 +62,8 @@ body {
 }
 
 :focus-visible {
-  outline: 3px solid #287a57;
-  outline-offset: 3px;
+  outline: 2px solid #1f7a52;
+  outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -47,6 +80,47 @@ body {
   }
 }
 
+/* Workspace motion (Emil): occasional surfaces only. Sheets rise from the bottom on phones with the
+   drawer curve and scale from 0.96 as a centered dialog; the backdrop fades; toasts enter from below.
+   Never scale from 0, keep everything under 300ms; reduced motion drops the movement (rule above). */
+@keyframes ws-fade {
+  from { opacity: 0; }
+}
+
+@keyframes ws-rise {
+  from { transform: translateY(100%); }
+}
+
+@keyframes ws-pop {
+  from { opacity: 0; transform: scale(0.96); }
+}
+
+@keyframes ws-toast {
+  from { opacity: 0; transform: translateY(8px) scale(0.98); }
+}
+
+.ws-backdrop {
+  animation: ws-fade 200ms ease-out;
+}
+
+.ws-sheet {
+  animation: ws-rise 280ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+@media (min-width: 640px) {
+  .ws-sheet {
+    animation: ws-pop 200ms cubic-bezier(0.23, 1, 0.32, 1);
+  }
+}
+
+.ws-toast {
+  animation: ws-toast 220ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+.ws-row-detail {
+  animation: ws-fade 160ms ease-out;
+}
+
 /* The old grid texture behind heroes: retired with the flat white canvas. */
 .grid-glow {
   display: none;
@@ -55,7 +129,7 @@ body {
 /* Flat surfaces: a hairline instead of large soft shadows. */
 .hero-card-shadow,
 .section-card {
-  box-shadow: 0 0 0 1px rgba(13, 31, 23, 0.08);
+  box-shadow: 0 1px 2px rgba(28, 40, 64, 0.06), 0 0 0 1px rgba(28, 40, 64, 0.06);
 }
 
 @media print {

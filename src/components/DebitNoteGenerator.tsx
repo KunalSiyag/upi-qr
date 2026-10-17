@@ -52,9 +52,9 @@ export function DebitNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   async function downloadPng() { try { setPngState("busy"); const du = await renderPaper(); downloadDataUrl(du, "debit-note.png"); trackProductEvent("export_png", "debit-note"); setPngState("idle"); } catch (e) { console.error(e); notifyExportError("PNG failed"); setPngState("error"); } }
 
   return (<div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-    <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+    <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
-      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-sm font-semibold text-leaf">{tr("GST debit note")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Debit Note (Section 34)")}</h2></div><div className="flex flex-wrap gap-2"><button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-full border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">{pngState === "busy" ? "..." : tr("Export PNG")}</button><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-full bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-leaf disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div></div>
+      <div className="flex flex-wrap gap-3 sm:justify-between"><div><p className="text-sm font-semibold text-leaf">{tr("GST debit note")}</p><h2 className="mt-1 text-2xl font-black text-forest">{tr("Debit Note (Section 34)")}</h2></div><div className="flex flex-wrap gap-2"><button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">{pngState === "busy" ? "..." : tr("Export PNG")}</button><button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? "..." : tr("Export PDF")}</button></div></div>
       <div className="mt-4 grid gap-3 sm:grid-cols-2">
         <label className="text-sm font-bold text-forest">{tr("Supplier (your business)")}<input value={supplierName} onChange={e => setSupplierName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         <label className="text-sm font-bold text-forest">{tr("Your GSTIN")}<input value={supplierGstin} onChange={e => setSupplierGstin(e.target.value)} placeholder="22AAAAA0000A1Z5" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -79,7 +79,7 @@ export function DebitNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>))}
       </div>
     </div>
-    <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[2rem] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
+    <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="flex items-start justify-between border-b-2 border-forest pb-4">
         <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Debit note")}</p><h2 className="mt-2 text-2xl font-black text-forest">{dnNo}</h2><p className="text-xs font-semibold text-forest/60">{tr("Date")}: {dnDate}</p></div>
         <div className="text-right"><span className="rounded-lg border-2 border-amber-500 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-amber-600">Section 34</span></div>

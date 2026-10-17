@@ -383,7 +383,7 @@ export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <p className="mt-1 text-xs leading-5 opacity-80">Campaign destinations and aggregate scan counts are stored in Vercel KV. Public QR links contain only a server-generated campaign ID.</p>
           </div>
           {accountStatus === "signed-out" && (
-            <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="shrink-0 rounded-xl bg-forest px-4 py-2 text-center text-xs font-black text-white hover:bg-leaf">
+            <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="shrink-0 rounded-xl bg-forest px-4 py-2 text-center text-xs font-black text-white hover:bg-graphite">
               Sign in to continue
             </a>
           )}
@@ -528,7 +528,7 @@ export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             </div>
 
             {accountStatus === "signed-out" ? (
-              <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="flex w-full items-center justify-center rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-leaf">
+              <a href="/sign-in/?redirect_url=/dynamic-qr-generator/" className="flex w-full items-center justify-center rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-graphite">
                 Sign in to Create a Dynamic QR
               </a>
             ) : (
@@ -536,7 +536,7 @@ export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 type="button"
                 onClick={createDynamicLink}
                 disabled={accountStatus === "checking" || isCreating}
-                className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-leaf disabled:cursor-wait disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-xl bg-forest py-3 text-xs font-black text-white shadow-md transition-all hover:bg-graphite disabled:cursor-wait disabled:opacity-60"
               >
                 <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
                   <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v16m8-8H4" />
@@ -713,7 +713,7 @@ export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                     <a
                       href={qrUrl}
                       download={`dynamic_qr_${activeLink.id}.png`}
-                      className="rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-leaf transition-all shadow-sm"
+                      className="rounded-xl bg-forest px-3 py-1.5 text-xs font-bold text-white hover:bg-graphite transition-all shadow-sm"
                     >
                       Download PNG
                     </a>
@@ -752,7 +752,7 @@ export function DynamicQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <button
                     onClick={updateDestination}
                     disabled={isUpdatingDest}
-                    className="w-full rounded-xl bg-leaf py-2 text-xs font-black text-white hover:bg-forest transition-all shadow-sm flex items-center justify-center gap-2"
+                    className="w-full rounded-xl bg-leaf py-2 text-xs font-black text-white hover:bg-graphite transition-all shadow-sm flex items-center justify-center gap-2"
                   >
                     {isUpdatingDest ? "Syncing Cloud..." : "Update Destination URL Instantly"}
                   </button>

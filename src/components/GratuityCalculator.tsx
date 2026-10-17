@@ -57,7 +57,7 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   return (
     <div className="grid gap-8 lg:grid-cols-[0.95fr_1.05fr]">
-      <div className="no-print rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
 
         <div className="border-b border-forest/5 pb-4">
           <p className="text-sm font-semibold text-leaf">{tr("Gratuity planner")}</p>
@@ -87,13 +87,13 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         )}
       </div>
 
-      <div className="no-print flex flex-col rounded-[2rem] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
+      <div className="no-print flex flex-col rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <div className="border-b border-forest/5 pb-4">
           <p className="text-sm font-semibold text-leaf">{tr("Estimated payout")}</p>
           <h2 className="mt-1 text-xl font-black text-forest">{result.eligible ? "Gratuity payable on exit" : "Not yet eligible"}</h2>
         </div>
 
-        <div className="mt-6 rounded-[1.5rem] bg-forest p-6 text-white">
+        <div className="mt-6 rounded-[14px] bg-forest p-6 text-white">
           <p className="text-[10px] font-black uppercase tracking-widest text-white/60">{tr("Estimated gratuity")}</p>
           <p className="mt-2 text-4xl font-black">{result.eligible ? money(result.gratuity) : money(0)}</p>
           {result.capped && <p className="mt-2 text-xs font-bold text-sun">Capped at the ₹20 lakh statutory limit — employer may pay more voluntarily.</p>}
