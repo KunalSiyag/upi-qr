@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import { trackDocument } from "../lib/workspace/localStore";
+import { trackDocument, workspaceReturnUrl } from "../lib/workspace/localStore";
 import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
@@ -327,8 +327,9 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       notifyExportError("Add a customer name, invoice number, date, and amount before tracking.");
       return;
     }
+    if ("pick" in result) { window.location.href = workspaceReturnUrl("/app/", result); return; }
     trackProductEvent("invoice_tracked", "invoice");
-    window.location.href = lang === "hi" ? "/app/?tab=invoices&lang=hi" : "/app/?tab=invoices";
+    window.location.href = workspaceReturnUrl(lang === "hi" ? "/app/?tab=invoices&lang=hi" : "/app/?tab=invoices", result);
   }
 
   function buildShareMessage() {

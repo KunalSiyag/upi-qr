@@ -1,27 +1,60 @@
-import { canonicalJson, mergeWorkspaces, sanitizeWorkspace, type Workspace } from "./model";
+import { canonicalJson, mergeWorkspaces, sanitizeWorkspace, type Workspace } from "./model.ts";
+import {
+  bookHash, emptyIndex, isBookId, liveBookIds, mergeBookIndex, parseBookIndex, PRIMARY_BOOK_ID, type BookIndex, type Shelf,
+} from "./books.ts";
+import type { PlanId } from "./entitlements.ts";
+import {
+  loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
+} from "./localStore.ts";
 
 /**
- * Browser side of optional cloud sync. The local workspace stays the source of
- * truth; when the user is signed in, changes are pushed (debounced, one
- * request in flight) and the server's merged copy is merged back in, so edits
- * made while a request is in flight are never lost.
+ * Browser side of optional cloud sync, one engine per book (business) under a
+ * small coordinator (docs/spec-multi-business.md §3.6). The local copy stays the
+ * source of truth; when the user is signed in, changes are pushed (debounced,
+ * one request in flight per book) and the server's merged copy is merged back
+ * in, so edits made while a request is in flight are never lost.
+ *
+ * - The primary book syncs through /api/v1/workspace/ (as before); other books
+ *   through /api/v1/workspace/books/<id>/. Every write carries expectedOwner.
+ * - A server without the books routes (404/405, or an answer without an index)
+ *   is a legacy server: only the primary syncs, exactly as before, and other
+ *   books are paused (no pull, no push, no pay links).
+ * - Books whose revision and hash didn't change since the last sync cost no request.
+ * - A 404 or 410 never deletes local data; only a tombstone in the index does,
+ *   and unsynced changes are set aside first (the caller's retire()).
  *
  * Account switching: local data is tagged with the account it last synced to.
  * Guest data (no tag) merges into the first account that signs in. Data tagged
- * with a different account is set aside, never uploaded to the new account.
+ * with a different account is moved aside (verified), never uploaded to the new account.
  */
 
 export const SYNC_URL = "/api/v1/workspace/";
-export const OWNER_KEY = "proupiqr-workspace-owner";
-export const STASH_KEY = "proupiqr-workspace-v1-other-account";
+export const BOOKS_URL = "/api/v1/workspace/books/";
+export { OWNER_KEY, STASH_KEY };
 const DEBOUNCE_MS = 1500;
 const RETRY_MS = 30_000;
+const INDEX_RETRY_MS = [30_000, 120_000];
+
+const UNAVAILABLE = "Sync is unavailable right now. Your data is safe on this device.";
+const SWITCHED = "Loaded this account's data. The previous account's data on this device was set aside (Settings).";
+export const STASH_OCCUPIED = "Data from another account is still set aside on this device. Download or discard it in Settings first.";
+export const STASH_NO_ROOM = "This browser is out of storage, so the previous account's data couldn't be set aside. Download a backup, then try again.";
+export const OWNER_MISMATCH = "This tab is signed in to a different account now. Reload the page.";
+export const READ_ONLY = "This business is read-only on the Free plan. Upgrade to edit it again.";
 
 export type SyncStatus = "checking" | "signed_out" | "syncing" | "synced" | "offline" | "error" | "too_large";
 export interface SyncState {
   status: SyncStatus;
   lastSyncedAt: number | null;
   message: string;
+}
+export type BookSyncStatus =
+  | "synced" | "syncing" | "offline" | "error" | "too_large" | "limit" | "unregistered" | "deleted" | "cloud_only" | "paused"
+  | "read_only" | "signed_out";
+export interface ShelfSyncState extends SyncState {
+  books: Record<string, BookSyncStatus>;
+  legacy: boolean;
+  plan: { id: PlanId; businesses: number } | null;
 }
 
 interface ClerkLike {
@@ -32,7 +65,7 @@ interface ClerkLike {
 }
 
 function clerk(): ClerkLike | undefined {
-  return (window as unknown as { Clerk?: ClerkLike }).Clerk;
+  return (globalThis as unknown as { Clerk?: ClerkLike }).Clerk;
 }
 
 /** Waits for the Clerk SDK (loaded by <ClerkClient />); undefined if it never arrives. */
@@ -66,72 +99,417 @@ export async function authedFetch(url: string, method: "GET" | "POST" | "PUT" | 
   return fetch(url, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), credentials: "same-origin" });
 }
 
-export function createSync(opts: {
-  get: () => Workspace;
-  apply: (ws: Workspace) => void;
-  onState: (state: SyncState) => void;
-  clerkTimeoutMs?: number;
-}) {
-  let state: SyncState = { status: "checking", lastSyncedAt: null, message: "" };
-  let lastJson = "";
+/** The sync URL of one book; only ids that passed BOOK_ID_RE ever reach a URL. */
+export function bookUrl(bookId: string): string {
+  if (!isBookId(bookId)) throw new RangeError("Invalid business id.");
+  return bookId === PRIMARY_BOOK_ID ? SYNC_URL : `${BOOKS_URL}${bookId}/`;
+}
+
+/** Statuses that stop pushes and retries until the coordinator releases the book. */
+const HOLD: ReadonlySet<BookSyncStatus> = new Set(["too_large", "limit", "deleted", "paused", "read_only", "unregistered", "cloud_only", "signed_out"]);
+
+export interface BookSyncOptions {
+  /** expectedOwner for every write (the owner this engine started with). */
+  owner: () => string | null;
+  get: () => Workspace | null;
+  /** Writes into this book whatever book is active; returns whether it was saved to storage. */
+  apply: (ws: Workspace) => boolean;
+  onStatus: (status: BookSyncStatus, message: string) => void;
+  /** A server copy was accepted (rev, bookHash of the server copy, saved locally). */
+  onSynced?: (rev: number, hash: string, saved: boolean) => void;
+  /** 404 unknown_business / 410 business_deleted: never a local delete. */
+  onGone?: (code: "unknown_business" | "business_deleted") => void;
+  onOwnerMismatch?: () => void;
+  onSignedOut?: () => void;
+}
+
+/** One book's engine: today's single-workspace engine, parameterized by book. */
+export function createBookSync(bookId: string, o: BookSyncOptions) {
+  const url = bookUrl(bookId);
+  let status: BookSyncStatus = "synced";
+  let lastJson: string | null = null;
   let inFlight = false;
   let again = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let stopped = false;
 
-  const set = (patch: Partial<SyncState>) => {
-    state = { ...state, ...patch };
-    opts.onState(state);
+  const set = (next: BookSyncStatus, message = "") => {
+    status = next;
+    o.onStatus(next, message);
   };
-  const active = () => !stopped && state.status !== "signed_out" && state.status !== "checking" && state.status !== "too_large";
-
-  const request = (method: "GET" | "PUT" | "DELETE", body?: unknown) => authedFetch(SYNC_URL, method, body);
+  const active = () => !stopped && !HOLD.has(status);
+  const local = () => o.get();
 
   function schedule(delay: number) {
     clearTimeout(timer);
     timer = setTimeout(() => void push(), delay);
   }
 
-  function acceptServer(serverRaw: unknown) {
-    const server = sanitizeWorkspace(serverRaw);
+  /** Merges a server answer into this book; answers for another book (a late reply) are dropped. */
+  function accept(body: { workspace?: unknown; rev?: unknown; businessId?: unknown }): boolean {
+    const answerFor = typeof body.businessId === "string" ? body.businessId : PRIMARY_BOOK_ID;
+    if (answerFor !== bookId) return false;
+    const server = sanitizeWorkspace(body.workspace);
     lastJson = canonicalJson(server);
-    const local = opts.get();
-    const next = mergeWorkspaces(local, server);
-    if (canonicalJson(next) !== canonicalJson(local)) opts.apply(next);
-    return next;
+    const mine = local();
+    const next = mine ? mergeWorkspaces(mine, server) : server;
+    const saved = mine && canonicalJson(next) === canonicalJson(mine) ? true : o.apply(next);
+    if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) o.onSynced?.(body.rev, bookHash(server), saved);
+    return true;
+  }
+
+  async function failed(response: Response): Promise<void> {
+    const body = await response.json().catch(() => ({})) as { error?: string; code?: string };
+    if (response.status === 401) { set("signed_out"); o.onSignedOut?.(); return; }
+    if (response.status === 413) return set("too_large", body.error ?? "Workspace too large to sync.");
+    if (response.status === 409 && body.code === "owner_mismatch") { set("error", OWNER_MISMATCH); o.onOwnerMismatch?.(); return; }
+    if (response.status === 402 && body.code === "plan_read_only") return set("read_only", READ_ONLY);
+    if (bookId !== PRIMARY_BOOK_ID && response.status === 404) { set("unregistered"); o.onGone?.("unknown_business"); return; }
+    if (bookId !== PRIMARY_BOOK_ID && response.status === 410) { set("deleted"); o.onGone?.("business_deleted"); return; }
+    set("error", body.error ?? "Sync failed. Retrying soon.");
+    schedule(RETRY_MS);
   }
 
   async function push(): Promise<void> {
-    if (stopped) return;
+    if (!active()) return;
     if (inFlight) { again = true; return; }
+    const mine = local();
+    if (!mine) return; // cloud-only: never push an empty copy
     inFlight = true;
     again = false;
-    set({ status: "syncing", message: "" });
+    set("syncing");
     try {
-      const response = await request("PUT", { workspace: opts.get() });
-      if (response.status === 401) return set({ status: "signed_out", message: "" });
-      if (response.status === 413) return set({ status: "too_large", message: (await response.json().catch(() => ({}))).error ?? "Workspace too large to sync." });
-      if (!response.ok) {
-        set({ status: "error", message: (await response.json().catch(() => ({}))).error ?? "Sync failed. Retrying soon." });
-        schedule(RETRY_MS);
-        return;
-      }
-      const body = await response.json();
-      acceptServer(body.workspace);
-      set({ status: "synced", lastSyncedAt: Date.now(), message: "" });
+      const response = await authedFetch(url, "PUT", { workspace: mine, expectedOwner: o.owner() ?? undefined });
+      if (!response.ok) return await failed(response);
+      if (!accept(await response.json())) return set("error", "Sync failed. Retrying soon.");
+      set("synced");
     } catch {
-      set({ status: "offline", message: "" });
+      set("offline");
       return;
     } finally {
       inFlight = false;
     }
-    if (again || canonicalJson(opts.get()) !== lastJson) schedule(200);
+    const after = local();
+    if (again || (after && canonicalJson(after) !== lastJson)) schedule(200);
   }
 
-  async function start(): Promise<void> {
+  async function pull(): Promise<void> {
+    if (!active()) return;
+    set("syncing");
+    let response: Response;
+    try {
+      response = await authedFetch(url, "GET");
+    } catch {
+      return set("offline");
+    }
+    if (!response.ok) return failed(response);
+    if (!accept(await response.json().catch(() => ({})))) return set("error", "Sync failed. Retrying soon.");
+    set("synced");
+    const after = local();
+    if (after && canonicalJson(after) !== lastJson) void push();
+  }
+
+  return {
+    id: bookId,
+    status: () => status,
+    push,
+    pull,
+    /** A server answer the coordinator already has (legacy start, account switch). */
+    acceptStart(body: { workspace?: unknown; rev?: unknown; businessId?: unknown }) {
+      if (!accept(body)) return;
+      set("synced");
+      const after = local();
+      if (after && canonicalJson(after) !== lastJson) void push();
+    },
+    /** Revision and hash say this copy equals the server's: synced without a request. */
+    markClean() {
+      const mine = local();
+      lastJson = mine ? canonicalJson(mine) : null;
+      set("synced");
+    },
+    hold(next: BookSyncStatus, message = "") {
+      clearTimeout(timer);
+      set(next, message);
+    },
+    /** The index lists the book as live again. A 410 the index didn't confirm stays held until the next page load (no loop). */
+    release() {
+      if (HOLD.has(status) && status !== "deleted") set("synced");
+    },
+    /** Call after every local change; cheap when nothing new needs uploading. */
+    changed() {
+      if (!active()) return;
+      const mine = local();
+      if (mine && lastJson !== null && canonicalJson(mine) === lastJson) return;
+      schedule(DEBOUNCE_MS);
+    },
+    /** Pushes now and resolves once the server has this device's latest copy. */
+    async flush(): Promise<boolean> {
+      if (!active()) return false;
+      clearTimeout(timer);
+      for (let i = 0; i < 50 && inFlight; i++) await new Promise((r) => setTimeout(r, 100));
+      await push();
+      const mine = local();
+      return status === "synced" && Boolean(mine) && canonicalJson(mine as Workspace) === lastJson;
+    },
+    forget() {
+      lastJson = null;
+    },
+    stop() {
+      stopped = true;
+      clearTimeout(timer);
+    },
+  };
+}
+
+type BookEngine = ReturnType<typeof createBookSync>;
+
+export interface ShelfSyncOptions {
+  getIndex: () => BookIndex;
+  /** Adopt an index (merged with the server's); the caller saves it. */
+  applyIndex: (index: BookIndex) => void;
+  getBook: (id: string) => Workspace | null;
+  applyBook: (id: string, ws: Workspace) => boolean;
+  /** Account switch: the shelf now holds only the new account's primary. */
+  replaceShelf: (shelf: Shelf) => void;
+  /** §2.4 removal of a book whose index entry is a tombstone (sets unsynced changes aside). */
+  retire: (id: string) => void;
+  onState: (state: ShelfSyncState) => void;
+  /** The tab's owner changed under it (409 owner_mismatch): the caller reloads. */
+  onOwnerChanged?: () => void;
+  activeId?: () => string;
+  clerkTimeoutMs?: number;
+}
+
+/** Coordinator over one engine per book. */
+export function createShelfSync(opts: ShelfSyncOptions) {
+  let phase: "checking" | "signed_out" | "running" | "blocked" | "stopped" = "checking";
+  let started = false;
+  let legacy = false;
+  let owner: string | null = null;
+  let plan: ShelfSyncState["plan"] = null;
+  let coord: { status: "offline" | "error"; message: string } | null = null;
+  let notice = "";
+  let lastSyncedAt: number | null = null;
+  let startTimer: ReturnType<typeof setTimeout> | undefined;
+  let indexTimer: ReturnType<typeof setTimeout> | undefined;
+  let indexAttempt = 0;
+  let refreshing: Promise<void> | null = null;
+  const engines = new Map<string, BookEngine>();
+  const statuses: Record<string, BookSyncStatus> = {};
+  const messages: Record<string, string> = {};
+  /** In-session revision and hash per book (also when the local save failed). */
+  const session = new Map<string, { rev: number; hash: string }>();
+  /** Ids the server refused for the plan in this session: local-only, never PUT again until the plan changes. */
+  const rejected = new Set<string>();
+
+  function emit() {
+    let status: SyncStatus;
+    let message = "";
+    if (phase === "checking") status = "checking";
+    else if (phase === "signed_out") status = "signed_out";
+    else if (coord) ({ status, message } = coord);
+    else {
+      const ids = Object.keys(statuses);
+      const first = (s: BookSyncStatus) => ids.find((id) => statuses[id] === s);
+      const err = first("error");
+      if (first("offline")) status = "offline";
+      else if (err) { status = "error"; message = messages[err] ?? ""; }
+      else if (statuses[PRIMARY_BOOK_ID] === "too_large") { status = "too_large"; message = messages[PRIMARY_BOOK_ID] ?? ""; }
+      else if (first("syncing")) status = "syncing";
+      else if (statuses[PRIMARY_BOOK_ID] === "signed_out") status = "signed_out";
+      else { status = "synced"; message = notice; }
+    }
+    opts.onState({ status, lastSyncedAt, message, books: { ...statuses }, legacy, plan });
+  }
+
+  function engineFor(id: string): BookEngine {
+    let engine = engines.get(id);
+    if (engine) return engine;
+    engine = createBookSync(id, {
+      owner: () => owner,
+      get: () => opts.getBook(id),
+      apply: (ws) => opts.applyBook(id, ws),
+      onStatus: (s, message) => {
+        statuses[id] = s;
+        messages[id] = message;
+        // The account-switch notice survives the uploads of the start itself; the next edit's push clears it.
+        if (s === "syncing" && !starting) notice = "";
+        emit();
+      },
+      onSynced: (rev, hash, saved) => {
+        session.set(id, { rev, hash });
+        // §2.5: the revision is recorded only once the book is safely in this browser's storage.
+        // Never in legacy mode: a rolled-back server's revisions can't be trusted for the skip check.
+        if (saved && owner && !legacy) writeSyncMeta(owner, id, rev, hash);
+        lastSyncedAt = Date.now();
+      },
+      onGone: (code) => {
+        if (code === "unknown_business") scheduleIndexRetry();
+        else void refreshIndex();
+      },
+      onOwnerMismatch: ownerMismatch,
+      onSignedOut: () => { phase = "signed_out"; emit(); },
+    });
+    engines.set(id, engine);
+    return engine;
+  }
+
+  function hold(id: string, status: BookSyncStatus) {
+    if (engines.has(id)) engines.get(id)!.hold(status);
+    else { statuses[id] = status; messages[id] = ""; }
+  }
+
+  function stopEngines() {
+    for (const engine of engines.values()) engine.stop();
+    engines.clear();
+    clearTimeout(startTimer);
+    clearTimeout(indexTimer);
+  }
+
+  function ownerMismatch() {
+    stopEngines();
+    phase = "blocked";
+    coord = { status: "error", message: OWNER_MISMATCH };
+    emit();
+    opts.onOwnerChanged?.();
+  }
+
+  function retryStart(delay: number) {
+    clearTimeout(startTimer);
+    startTimer = setTimeout(() => void start(), delay);
+  }
+
+  function scheduleIndexRetry() {
+    if (indexTimer || phase !== "running" || legacy) return;
+    const delay = INDEX_RETRY_MS[Math.min(indexAttempt, INDEX_RETRY_MS.length - 1)];
+    indexAttempt++;
+    indexTimer = setTimeout(() => { indexTimer = undefined; void refreshIndex(); }, delay);
+  }
+
+  /**
+   * The previous account's books move aside (verified) before the new account's
+   * primary copy replaces this device's. Nothing is adopted when that fails.
+   */
+  function adoptAccount(newOwner: string, previousOwner: string, primary: { workspace?: unknown; rev?: unknown; businessId?: unknown }): boolean {
+    const server = sanitizeWorkspace(primary.workspace);
+    const result = switchAccountStorage(previousOwner, newOwner, opts.getIndex(), server);
+    if (!result.ok) {
+      stopEngines();
+      phase = "blocked";
+      coord = { status: "error", message: result.reason === "occupied" ? STASH_OCCUPIED : STASH_NO_ROOM };
+      emit();
+      return false;
+    }
+    owner = newOwner;
+    ownerKeySeen = storageGet(OWNER_KEY);
+    session.clear();
+    // The shelf as stored now: the new account's primary (merged with its own stash when it was set aside
+    // here earlier) and any of its books given back. Anything that differs from the server is pushed.
+    opts.replaceShelf(loadShelf().shelf);
+    lastSyncedAt = Date.now();
+    notice = SWITCHED;
+    engineFor(PRIMARY_BOOK_ID).acceptStart(primary);
+    return true;
+  }
+
+  function signedOut() {
+    phase = "signed_out";
+    emit();
+  }
+
+  const stopped = () => phase === "stopped";
+
+  /**
+   * The account key this tab last saw: read at page load, updated only by this
+   * coordinator's own writes. A tab that launched offline has no owner yet; if
+   * another tab moved the device to another account meanwhile, its start must
+   * never run under that account's session (it would upload this tab's copy).
+   */
+  let ownerKeySeen = storageGet(OWNER_KEY);
+  const ownerMovedUnderUs = () => storageGet(OWNER_KEY) !== ownerKeySeen;
+  function adoptOwnerKey(value: string) {
+    storageSet(OWNER_KEY, value);
+    ownerKeySeen = storageGet(OWNER_KEY);
+  }
+
+  /**
+   * An older tab switched this device to `serverOwner` but left the previous
+   * account's extra books and index behind: set them aside, never merge or upload them.
+   */
+  function dropOtherAccountIndex(serverOwner: string): boolean {
+    const index = opts.getIndex();
+    if (!index.owner || index.owner === serverOwner) return true;
+    if (!setAsideOtherAccountBooks(index, serverOwner)) {
+      stopEngines();
+      phase = "blocked";
+      coord = { status: "error", message: STASH_NO_ROOM };
+      emit();
+      return false;
+    }
+    opts.replaceShelf(loadShelf().shelf);
+    return true;
+  }
+
+  function offline(knownAccount: boolean) {
+    if (!knownAccount) return signedOut();
+    phase = "running";
+    coord = { status: "offline", message: "" };
+    emit();
+    retryStart(RETRY_MS);
+  }
+
+  async function startLegacy(knownAccount: boolean): Promise<void> {
+    if (!legacy) resetSyncMeta(storageGet(OWNER_KEY));
+    legacy = true;
+    let response: Response;
+    try {
+      response = await authedFetch(SYNC_URL, "GET");
+    } catch {
+      return offline(knownAccount);
+    }
+    if (response.status === 401) return signedOut();
+    if (!response.ok) {
+      if (!knownAccount) return signedOut();
+      phase = "running";
+      coord = { status: "error", message: UNAVAILABLE };
+      emit();
+      retryStart(RETRY_MS);
+      return;
+    }
+    const body = await response.json() as { workspace: unknown; owner: string; rev?: number };
+    if (ownerMovedUnderUs()) return ownerMismatch();
+    const previousOwner = storageGet(OWNER_KEY);
+    phase = "running";
+    coord = null;
+    started = true;
+    for (const id of liveBookIds(opts.getIndex())) if (id !== PRIMARY_BOOK_ID) hold(id, "paused");
+    if (previousOwner && previousOwner !== body.owner) {
+      // Different account on this device: set local data aside, load this account's copy.
+      adoptAccount(body.owner, previousOwner, body);
+      return emit();
+    }
+    if (!dropOtherAccountIndex(body.owner)) return;
+    adoptOwnerKey(body.owner);
+    owner = body.owner;
+    engineFor(PRIMARY_BOOK_ID).acceptStart(body);
+    lastSyncedAt = Date.now();
+    emit();
+  }
+
+  let starting: Promise<void> | null = null;
+  /** Single flight: "online", visibility and the retry timer can all ask for a start at once. */
+  function start(): Promise<void> {
+    if (!starting) starting = run().finally(() => { starting = null; });
+    return starting;
+  }
+
+  async function run(): Promise<void> {
+    if (stopped()) return;
+    if (ownerMovedUnderUs()) return ownerMismatch();
+    clearTimeout(startTimer);
     const c = await clerkReady(opts.clerkTimeoutMs ?? 10_000);
-    if (stopped) return;
-    if (c && !c.user) return set({ status: "signed_out" });
+    if (stopped()) return;
+    if (c && !c.user) return signedOut();
     // Without the Clerk SDK (offline launch, blocked script) we can't tell who
     // is signed in: only a successful response, or an account that synced on
     // this device before, counts as signed in. Never show anonymous users a
@@ -139,65 +517,238 @@ export function createSync(opts: {
     const knownAccount = Boolean(c?.user) || Boolean(storageGet(OWNER_KEY));
     let response: Response;
     try {
-      response = await request("GET");
+      response = await authedFetch(BOOKS_URL, "GET");
     } catch {
-      return set({ status: knownAccount ? "offline" : "signed_out" });
+      return offline(knownAccount);
     }
-    if (response.status === 401) return set({ status: "signed_out" });
+    if (response.status === 401) return signedOut();
+    // No books routes: a server from before several businesses (or rolled back).
+    if (response.status === 404 || response.status === 405) return startLegacy(knownAccount);
     if (!response.ok) {
-      if (!knownAccount) return set({ status: "signed_out" });
-      set({ status: "error", message: "Sync is unavailable right now. Your data is safe on this device." });
-      schedule(RETRY_MS);
+      if (!knownAccount) return signedOut();
+      phase = "running";
+      coord = { status: "error", message: UNAVAILABLE };
+      emit();
+      retryStart(RETRY_MS);
       return;
     }
-    const body = await response.json() as { workspace: unknown; owner: string };
+    const body = await response.json().catch(() => null) as { index?: unknown; revs?: Record<string, number>; owner?: unknown; plan?: ShelfSyncState["plan"] } | null;
+    const serverIndex = body ? parseBookIndex(body.index) : null;
+    if (!body || !serverIndex || typeof body.owner !== "string") return startLegacy(knownAccount);
+    legacy = false;
+    if (ownerMovedUnderUs()) return ownerMismatch();
     const previousOwner = storageGet(OWNER_KEY);
     if (previousOwner && previousOwner !== body.owner) {
-      // Different account on this device: set local data aside, load this account's copy.
-      storageSet(STASH_KEY, canonicalJson(opts.get()));
-      const server = sanitizeWorkspace(body.workspace);
-      lastJson = canonicalJson(server);
-      opts.apply(server);
-      storageSet(OWNER_KEY, body.owner);
-      set({ status: "synced", lastSyncedAt: Date.now(), message: "Loaded this account's data. The previous account's data on this device was set aside (Settings)." });
-      return;
+      // Fetch the new account's primary first, so nothing is moved unless it can be replaced.
+      let primary: Response;
+      try {
+        primary = await authedFetch(SYNC_URL, "GET");
+      } catch {
+        return offline(true);
+      }
+      if (!primary.ok) {
+        phase = "running";
+        coord = { status: "error", message: UNAVAILABLE };
+        emit();
+        retryStart(RETRY_MS);
+        return;
+      }
+      if (ownerMovedUnderUs()) return ownerMismatch();
+      phase = "running";
+      coord = null;
+      if (!adoptAccount(body.owner, previousOwner, await primary.json())) return;
+    } else {
+      if (!dropOtherAccountIndex(body.owner)) return;
+      adoptOwnerKey(body.owner);
+      owner = body.owner;
     }
-    storageSet(OWNER_KEY, body.owner);
-    acceptServer(body.workspace);
-    set({ status: "synced", lastSyncedAt: Date.now() });
-    if (canonicalJson(opts.get()) !== lastJson) void push();
+    phase = "running";
+    coord = null;
+    started = true;
+    plan = body.plan ?? null;
+    await syncIndex(serverIndex, body.revs ?? {});
+    emit();
   }
 
-  const onOnline = () => { if (state.status === "offline" || state.status === "error") void push(); };
-  const onVisible = () => { if (document.visibilityState === "visible" && active()) void push(); };
+  /**
+   * Index sync and the per-book decisions (§3.6 steps 4–6): register local books
+   * the server doesn't list, adopt the server's tombstones (removal goes through
+   * retire()), then push or pull only the books whose hash or revision changed.
+   */
+  async function syncIndex(serverIndex: BookIndex, revs: Record<string, number>): Promise<void> {
+    if (!owner) return;
+    let server = serverIndex;
+    let serverRevs = revs;
+    const withOwner = (index: BookIndex): BookIndex => ({ ...index, owner: owner as string });
+    let merged = withOwner(mergeBookIndex(opts.getIndex(), server));
+    const serverLive = new Set(liveBookIds(server));
+    const needsPut = liveBookIds(merged).some((id) => !server.books[id] && !rejected.has(id))
+      || Object.values(merged.books).some((meta) => meta.deletedAt !== undefined && serverLive.has(meta.id));
+    if (needsPut) {
+      const { owner: _local, ...index } = merged;
+      try {
+        const response = await authedFetch(BOOKS_URL, "PUT", { index, expectedOwner: owner });
+        const reply = await response.json().catch(() => ({})) as { index?: unknown; revs?: Record<string, number>; rejected?: unknown; plan?: ShelfSyncState["plan"]; code?: string };
+        if (response.status === 409 && reply.code === "owner_mismatch") return ownerMismatch();
+        const replyIndex = response.ok ? parseBookIndex(reply.index) : null;
+        if (replyIndex) {
+          server = replyIndex;
+          serverRevs = reply.revs ?? {};
+          if (Array.isArray(reply.rejected)) for (const id of reply.rejected) if (isBookId(id)) rejected.add(id);
+          if (reply.plan !== undefined) plan = reply.plan ?? null;
+          merged = withOwner(mergeBookIndex(merged, replyIndex));
+          indexAttempt = 0;
+        } else scheduleIndexRetry();
+      } catch {
+        scheduleIndexRetry();
+      }
+    }
+    opts.applyIndex(merged);
+    // Tombstones (local deletes, the server's, other devices') leave the shelf through §2.4.
+    for (const meta of Object.values(merged.books)) {
+      if (meta.deletedAt === undefined) continue;
+      engines.get(meta.id)?.stop();
+      engines.delete(meta.id);
+      delete statuses[meta.id];
+      opts.retire(meta.id);
+    }
+    const registered = new Set(liveBookIds(server));
+    const active = opts.activeId?.() ?? PRIMARY_BOOK_ID;
+    const order = liveBookIds(merged);
+    const ordered = [...order.filter((id) => id === PRIMARY_BOOK_ID), ...order.filter((id) => id === active && id !== PRIMARY_BOOK_ID), ...order.filter((id) => id !== PRIMARY_BOOK_ID && id !== active)];
+    for (const id of ordered) {
+      if (phase !== "running") return;
+      if (rejected.has(id) && !registered.has(id)) { hold(id, "limit"); continue; }
+      if (!registered.has(id)) { hold(id, "unregistered"); scheduleIndexRetry(); continue; }
+      const engine = engineFor(id);
+      engine.release();
+      await decide(engine, serverRevs[id] ?? 0);
+    }
+    emit();
+  }
+
+  async function decide(engine: BookEngine, rev: number): Promise<void> {
+    const id = engine.id;
+    const mine = opts.getBook(id);
+    const meta = syncMetaFor(owner, id) ?? session.get(id);
+    if (!mine) {
+      // Cloud-only (§2.5): kept in the account, loaded when opened; never replaced by an empty copy.
+      if (meta && id !== PRIMARY_BOOK_ID) return engine.hold("cloud_only");
+      return engine.pull();
+    }
+    if (!meta) return engine.pull();
+    if (bookHash(mine) !== meta.hash) return engine.push();
+    if (meta.rev !== rev) return engine.pull();
+    engine.markClean();
+    lastSyncedAt = Date.now();
+  }
+
+  /** GET the index again and act on it (also the non-legacy "Sync now"). */
+  function refreshIndex(): Promise<void> {
+    if (phase !== "running" || legacy || !started) return Promise.resolve();
+    if (refreshing) return refreshing;
+    refreshing = (async () => {
+      try {
+        const response = await authedFetch(BOOKS_URL, "GET");
+        if (response.status === 401) return signedOut();
+        if (response.status === 404 || response.status === 405) {
+          // Rolled back mid-session: the primary keeps syncing, other books pause, revisions are forgotten.
+          resetSyncMeta(owner);
+          legacy = true;
+          for (const id of [...engines.keys()]) if (id !== PRIMARY_BOOK_ID) hold(id, "paused");
+          return emit();
+        }
+        if (!response.ok) return;
+        const body = await response.json().catch(() => null) as { index?: unknown; revs?: Record<string, number>; owner?: unknown; plan?: ShelfSyncState["plan"] } | null;
+        const serverIndex = body ? parseBookIndex(body.index) : null;
+        if (!body || !serverIndex) return;
+        if (body.owner !== owner) return ownerMismatch();
+        if (body.plan !== undefined) {
+          if (body.plan?.id !== plan?.id) rejected.clear();
+          plan = body.plan ?? null;
+        }
+        await syncIndex(serverIndex, body.revs ?? {});
+      } catch {
+        // Offline: the next "online" event or visibility change retries.
+      } finally {
+        refreshing = null;
+      }
+    })();
+    return refreshing;
+  }
+
+  function primary(): BookEngine | undefined {
+    return engines.get(PRIMARY_BOOK_ID);
+  }
+
+  const onOnline = () => {
+    if (phase === "stopped" || phase === "blocked" || phase === "signed_out") return;
+    if (!started) { coord = null; void start(); return; }
+    if (legacy) {
+      const s = primary()?.status();
+      if (s === "offline" || s === "error") void primary()?.push();
+      return;
+    }
+    for (const engine of engines.values()) if (engine.status() === "offline" || engine.status() === "error") void engine.push();
+    void refreshIndex();
+  };
+  const onVisible = () => {
+    if (document.visibilityState !== "visible" || phase !== "running") return;
+    // A start that failed (network blip at load) is retried when the tab comes back.
+    if (!started) { coord = null; void start(); return; }
+    if (legacy) void primary()?.push();
+    else void refreshIndex();
+  };
   window.addEventListener("online", onOnline);
   document.addEventListener("visibilitychange", onVisible);
 
+  async function signOut(): Promise<void> {
+    for (const engine of engines.values()) engine.hold("signed_out");
+    clearTimeout(startTimer);
+    clearTimeout(indexTimer);
+    try { await clerk()?.signOut?.(); } catch { /* ignore */ }
+    signedOut();
+  }
+
   return {
     start,
-    /** Call after every local change; cheap when nothing new needs uploading. */
-    changed() {
-      if (!active()) return;
-      if (canonicalJson(opts.get()) === lastJson) return;
-      schedule(DEBOUNCE_MS);
+    /** The account this engine syncs as (null until known). */
+    owner: () => owner,
+    /** The account this tab belongs to: the synced owner, else the one recorded when the page loaded. */
+    ownerKey: () => owner ?? ownerKeySeen,
+    legacy: () => legacy,
+    /** Call after every local change to a book; cheap when nothing new needs uploading. */
+    changed(id: string) {
+      if (phase !== "running") return;
+      engines.get(id)?.changed();
     },
-    /** Pushes now and resolves once the server has this device's latest copy. */
-    async flush(): Promise<boolean> {
-      if (state.status === "signed_out" || state.status === "checking") return false;
-      clearTimeout(timer);
-      for (let i = 0; i < 50 && inFlight; i++) await new Promise((r) => setTimeout(r, 100));
-      await push();
-      return state.status === "synced" && canonicalJson(opts.get()) === lastJson;
+    /** A book was added or deleted locally: register it now, then sync it. */
+    indexChanged(): Promise<void> {
+      return refreshIndex();
+    },
+    refreshIndex,
+    /** Pushes now and resolves once the server has this device's latest copy of the book. */
+    async flush(id: string = PRIMARY_BOOK_ID): Promise<boolean> {
+      if (phase !== "running") return false;
+      const engine = engines.get(id);
+      return engine ? engine.flush() : false;
     },
     syncNow() {
-      if (state.status === "signed_out" || state.status === "checking") return;
-      void push();
+      if (phase !== "running") return;
+      if (!started) { coord = null; void start(); return; }
+      if (legacy) void primary()?.push();
+      else {
+        for (const engine of engines.values()) if (engine.status() === "offline" || engine.status() === "error") void engine.push();
+        void refreshIndex();
+      }
     },
     async deleteCloudCopy(): Promise<boolean> {
       try {
-        const response = await request("DELETE");
+        const response = await authedFetch(SYNC_URL, "DELETE", owner ? { expectedOwner: owner } : undefined);
         if (!response.ok) return false;
-        lastJson = "";
+        session.clear();
+        resetSyncMeta(owner);
+        for (const engine of engines.values()) engine.forget();
         await signOut();
         return true;
       } catch {
@@ -206,16 +757,10 @@ export function createSync(opts: {
     },
     signOut,
     stop() {
-      stopped = true;
-      clearTimeout(timer);
+      phase = "stopped";
+      stopEngines();
       window.removeEventListener("online", onOnline);
       document.removeEventListener("visibilitychange", onVisible);
     },
   };
-
-  async function signOut(): Promise<void> {
-    clearTimeout(timer);
-    try { await clerk()?.signOut?.(); } catch { /* ignore */ }
-    set({ status: "signed_out", message: "" });
-  }
 }

@@ -2,15 +2,18 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
   liveRecurring, upsertPlan, allocatePayment,
-  invoicesCsv, liveClients, localToday, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
+  invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
 import { PLANS } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
-import { backupJson, loadWorkspace, onExternalChange, restoreBackup, saveWorkspace } from "../../lib/workspace/localStore";
-import { createSync, STASH_KEY, type SyncState } from "../../lib/workspace/sync";
-import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type PaylinkList } from "../../lib/workspace/paylinkClient";
+import {
+  backupJson, BOOKS_UI, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere, restoreBackup, storedOwner,
+  retireBook, saveBook, saveIndex, sweepStrayBooks, type AsideBook, type RestoreDone, type RestoreResult, type StashedAccount,
+} from "../../lib/workspace/localStore";
+import { createShelfSync, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
+import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type LinkContext, type PaylinkList } from "../../lib/workspace/paylinkClient";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
 import { InvoiceSheet, PaymentSheet, ReminderSheet } from "./Sheets";
@@ -19,7 +22,9 @@ import { StatementSheet } from "./StatementSheet";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
-import { parseLinkKey, PRIMARY_BOOK_ID } from "../../lib/workspace/books";
+import {
+  emptyIndex, isBookId, linkFor, liveBookIds, paidLinkTokens as paidTokensOf, parseLinkKey, PRIMARY_BOOK_ID, type BookIndex, type Shelf,
+} from "../../lib/workspace/books";
 import { PRO_PRICES } from "../../data/pricing";
 import { gatewayFeePaise, UPI_MDR } from "../../lib/upiMdr";
 import { card, cardNote, cardTitle, dangerText, downloadText, Field, ghostButton, Icon, inputClass, primaryButton, rowButton, rowPrimary, secondaryButton, Sheet, StatusBadge } from "./ui";
@@ -72,9 +77,37 @@ export function PaymentsWorkspace() {
   return <WsLangProvider value={value}><Workspace /></WsLangProvider>;
 }
 
+const withBook = (shelf: Shelf, id: string, ws: Workspace): Shelf => ({ index: shelf.index, books: { ...shelf.books, [id]: ws } });
+const EMPTY_WS = sanitizeWorkspace(null);
+
 function Workspace() {
   const { tr, dateLocale } = useWs();
-  const [ws, setWs] = useState<Workspace>(() => sanitizeWorkspace(null));
+  // One book per business (docs/spec-multi-business.md §7.1). Storage loads in the mount effect, so the server
+  // render and hydration stay identical and the first sync can never push an empty copy.
+  const [shelf, setShelf] = useState<Shelf>(() => ({ index: emptyIndex(), books: { [PRIMARY_BOOK_ID]: sanitizeWorkspace(null) } }));
+  const [active, setActive] = useState(PRIMARY_BOOK_ID);
+  const ws = shelf.books[active] ?? shelf.books[PRIMARY_BOOK_ID] ?? EMPTY_WS;
+  const shelfRef = useRef(shelf);
+  shelfRef.current = shelf;
+  const activeRef = useRef(active);
+  activeRef.current = active;
+  /** Edits from the UI always go to the book on screen. */
+  const setWs = useCallback((next: Workspace) => setShelf((s) => withBook(s, activeRef.current, next)), []);
+  const savedRef = useRef<Record<string, Workspace>>({});
+  /** Set once another account took over this device in another tab: nothing is saved any more, the page reloads. */
+  const frozenRef = useRef(false);
+  /** The account this tab belongs to: the synced owner, else the one stored when the page loaded (offline launches). */
+  const loadOwnerRef = useRef<string | null>(null);
+  const tabOwner = () => syncRef.current?.ownerKey() ?? loadOwnerRef.current;
+  /** Another tab moved the device to another account: stop syncing and reload, never write this tab's copy over it. */
+  const ownerChanged = useCallback(() => {
+    if (frozenRef.current) return;
+    frozenRef.current = true;
+    syncRef.current?.stop();
+    location.reload();
+  }, []);
+  const [syncEpoch, setSyncEpoch] = useState(0);
+  const [asideTick, setAsideTick] = useState(0);
   const [ready, setReady] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [today, setToday] = useState(() => localToday());
@@ -84,21 +117,74 @@ function Workspace() {
   const [query, setQuery] = useState("");
   const [sheet, setSheet] = useState<SheetState>(null);
   const [flash, setFlash] = useState("");
-  const [sync, setSync] = useState<SyncState>({ status: "checking", lastSyncedAt: null, message: "" });
-  const wsRef = useRef(ws);
-  wsRef.current = ws;
-  const syncRef = useRef<ReturnType<typeof createSync> | null>(null);
+  const [sync, setSync] = useState<ShelfSyncState>({ status: "checking", lastSyncedAt: null, message: "", books: {}, legacy: false, plan: null });
+  const syncRef = useRef<ReturnType<typeof createShelfSync> | null>(null);
   const [paylinks, setPaylinks] = useState<PaylinkList | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   const [upsell, setUpsell] = useState(false);
   const signedIn = sync.status !== "signed_out" && sync.status !== "checking";
   const installer = useInstallPrompt();
 
+  /** A server or another tab's copy of a book: merged into this tab's copy (never another book), saved, and returned saved-or-not. */
+  const applyBook = useCallback((id: string, next: Workspace): boolean => {
+    const current = shelfRef.current;
+    if (frozenRef.current || !liveBookIds(current.index).includes(id)) return false;
+    // Another tab switched this device to a different account: never write this tab's data over it.
+    if (ownerChangedElsewhere(tabOwner())) { ownerChanged(); return false; }
+    const before = current.books[id];
+    const value = before ? mergeWorkspaces(before, next) : next;
+    const saved = saveBook(current.index, id, value);
+    shelfRef.current = withBook(current, id, value);
+    setShelf((s) => withBook(s, id, s.books[id] && s.books[id] !== before ? mergeWorkspaces(s.books[id], value) : value));
+    return saved;
+  }, []);
+
+  const adoptIndex = useCallback((index: BookIndex) => {
+    if (frozenRef.current) return;
+    saveIndex(index);
+    shelfRef.current = { index, books: shelfRef.current.books };
+    setShelf((s) => ({ index, books: s.books }));
+  }, []);
+
+  /** §2.4: a book whose index entry became a tombstone leaves the shelf; unsynced changes are set aside first. */
+  const retire = useCallback((id: string) => {
+    if (frozenRef.current || id === PRIMARY_BOOK_ID) return;
+    const held = shelfRef.current.books[id] ?? null;
+    const stored = loadBook(id);
+    if (!held && !stored) return;
+    const result = retireBook(id, held ?? stored, syncRef.current?.owner() ?? null, stored === null);
+    if (result === "kept") return;
+    const { [id]: _gone, ...books } = shelfRef.current.books;
+    shelfRef.current = { index: shelfRef.current.index, books };
+    setShelf((s) => {
+      const { [id]: _drop, ...rest } = s.books;
+      return { index: s.index, books: rest };
+    });
+    if (activeRef.current === id) setActive(PRIMARY_BOOK_ID);
+    setAsideTick((n) => n + 1);
+  }, []);
+
   useEffect(() => {
-    setWs(loadWorkspace());
+    loadOwnerRef.current = storedOwner();
+    const { shelf: loaded } = loadShelf();
+    sweepStrayBooks(loaded.index);
+    let activeId = loadActiveBook(loaded.index);
+    const params = new URLSearchParams(location.search);
+    // ?business=<id> only while the business UI is on, only for a valid id that is live and stored here (§7.5).
+    const requested = params.get("business");
+    if (BOOKS_UI && requested !== null) {
+      if (isBookId(requested) && loaded.books[requested] && liveBookIds(loaded.index).includes(requested)) activeId = requested;
+      params.delete("business");
+      const rest = params.toString();
+      history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
+    }
+    shelfRef.current = loaded;
+    // Other books are written only when they change; the primary is saved on load as before.
+    for (const [id, book] of Object.entries(loaded.books)) if (id !== PRIMARY_BOOK_ID) savedRef.current[id] = book;
+    setShelf(loaded);
+    setActive(activeId);
     setReady(true);
     setToday(localToday());
-    const params = new URLSearchParams(location.search);
     const tabParam = params.get("tab");
     if (tabParam && TABS.some((t) => t.id === tabParam)) setTab(tabParam as Tab);
     const filterParam = params.get("filter");
@@ -110,34 +196,77 @@ function Workspace() {
       const rest = params.toString();
       history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
     }
-    return onExternalChange(() => wsRef.current, setWs);
+    return onShelfChange(tabOwner, () => shelfRef.current, {
+      book: (id, merged) => { applyBook(id, merged); },
+      index: (merged) => {
+        adoptIndex(merged);
+        for (const meta of Object.values(merged.books)) if (meta.deletedAt !== undefined) retire(meta.id);
+      },
+      // Another tab signed in to a different account: never push this tab's books with that session.
+      ownerChanged,
+    });
   }, []);
 
+  // Save every book that changed (each to its own key) and tell sync.
   useEffect(() => {
-    if (!ready) return;
-    setSaveFailed(!saveWorkspace(ws));
-    syncRef.current?.changed();
-  }, [ws, ready]);
-
-  // Monthly plans: create any invoices that have come due (idempotent; deterministic ids).
-  useEffect(() => {
-    if (!ready) return;
-    const { ws: next, created } = generateRecurring(ws, today, Date.now());
-    if (created.length) {
-      setWs(next);
-      setFlash(tr(created.length === 1 ? "Created {n} invoice from your monthly billing." : "Created {n} invoices from your monthly billing.", { n: created.length }));
+    if (!ready || frozenRef.current) return;
+    if (ownerChangedElsewhere(tabOwner())) { ownerChanged(); return; }
+    for (const [id, book] of Object.entries(shelf.books)) {
+      if (savedRef.current[id] === book) continue;
+      savedRef.current[id] = book;
+      const saved = saveBook(shelf.index, id, book);
+      if (id === active) setSaveFailed(!saved);
+      syncRef.current?.changed(id);
     }
-  }, [ws, today, ready, tr]);
+  }, [shelf, ready, active]);
 
-  // Start sync only after the stored workspace has rendered, so the first push
+  // Monthly plans: create any invoices that have come due in every book on this device (idempotent; deterministic ids).
+  useEffect(() => {
+    if (!ready) return;
+    const now = Date.now();
+    const updates: Record<string, Workspace> = {};
+    let createdHere = 0;
+    for (const id of liveBookIds(shelf.index)) {
+      const book = shelf.books[id];
+      if (!book) continue;
+      const { ws: next, created } = generateRecurring(book, today, now);
+      if (!created.length) continue;
+      updates[id] = next;
+      if (id === active) createdHere = created.length;
+    }
+    if (!Object.keys(updates).length) return;
+    setShelf((s) => {
+      const books = { ...s.books };
+      for (const [id, next] of Object.entries(updates)) books[id] = s.books[id] && s.books[id] !== shelf.books[id] ? mergeWorkspaces(s.books[id], next) : next;
+      return { index: s.index, books };
+    });
+    if (createdHere) setFlash(tr(createdHere === 1 ? "Created {n} invoice from your monthly billing." : "Created {n} invoices from your monthly billing.", { n: createdHere }));
+  }, [shelf, today, ready, active, tr]);
+
+  // Start sync only after the stored shelf has rendered, so the first push
   // can never send an empty in-memory copy.
   useEffect(() => {
     if (!ready) return;
-    const engine = createSync({ get: () => wsRef.current, apply: setWs, onState: setSync });
+    const engine = createShelfSync({
+      getIndex: () => shelfRef.current.index,
+      applyIndex: adoptIndex,
+      getBook: (id) => shelfRef.current.books[id] ?? null,
+      applyBook,
+      replaceShelf: (next) => {
+        shelfRef.current = next;
+        savedRef.current = { ...next.books };
+        setShelf(next);
+        setActive(PRIMARY_BOOK_ID);
+      },
+      retire,
+      onState: setSync,
+      onOwnerChanged: ownerChanged,
+      activeId: () => activeRef.current,
+    });
     syncRef.current = engine;
     void engine.start();
     return () => { engine.stop(); syncRef.current = null; };
-  }, [ready]);
+  }, [ready, syncEpoch, applyBook, adoptIndex, retire, ownerChanged]);
 
   useEffect(() => {
     if (sync.message && sync.status === "synced") setFlash(tr(sync.message));
@@ -156,14 +285,17 @@ function Workspace() {
     return () => clearInterval(timer);
   }, [signedIn, refreshLinks]);
 
+  /** Who asks for links: the account this tab syncs as, and whether the server has the business routes. */
+  const linkContext = (): LinkContext => ({ expectedOwner: syncRef.current?.owner() ?? null, legacy: syncRef.current?.legacy() ?? true });
+
   async function makeLink(invoiceId: string) {
     setLinkBusy(invoiceId);
     try {
-      if (!(await syncRef.current?.flush())) {
+      if (!(await syncRef.current?.flush(active))) {
         setFlash(tr("Couldn't sync this invoice yet. Check your connection and try again."));
         return;
       }
-      const result = await createPaylinkFor(invoiceId);
+      const result = await createPaylinkFor(invoiceId, active, linkContext());
       if ("error" in result) {
         if (result.code === "limit") {
           setUpsell(true);
@@ -200,32 +332,38 @@ function Workspace() {
   const chase = useMemo(() => chaseList(views).slice(0, 6), [views]);
   const balances = useMemo(() => clientBalances(views), [views]);
   const clients = useMemo(() => liveClients(ws), [ws]);
-  // Rollback guard: this screen shows one business, so it only ever reads that business's links. Keys of other
-  // businesses ("<bookId>/<subject>", from a later server) are skipped: never offered to turn off, clear or confirm here.
-  const primaryLinks = useMemo(
-    () => (paylinks ? Object.entries(paylinks.byInvoice).filter(([key]) => parseLinkKey(key).bookId === PRIMARY_BOOK_ID) : []),
-    [paylinks],
+  // This screen shows one business, so it only ever reads that business's links (§4.4): entries are filtered by the
+  // book in their key ("<bookId>/<subject>", bare = the primary) and looked up with linkFor. Other businesses' links are
+  // never offered to turn off, clear or confirm here, so allocatePayment always runs on the owning book.
+  const bookLinks = useMemo(
+    () => (paylinks ? Object.entries(paylinks.byInvoice).flatMap(([key, link]) => {
+      const { bookId, subject } = parseLinkKey(key);
+      return bookId === active ? [[subject, link] as const] : [];
+    }) : []),
+    [paylinks, active],
   );
   const claimedUtrs = useMemo(() => {
     const map = new Map<string, string>();
-    for (const [invoiceId, link] of primaryLinks) for (const c of link.claims) map.set(c.utr, invoiceId);
+    for (const [invoiceId, link] of bookLinks) for (const c of link.claims) map.set(c.utr, invoiceId);
     return map;
-  }, [primaryLinks]);
+  }, [bookLinks]);
 
   const pendingClaims = useMemo(() => {
     if (!paylinks) return [];
-    return primaryLinks.flatMap(([invoiceId, link]) => {
+    return bookLinks.flatMap(([invoiceId, link]) => {
       const view = views.find((v) => v.invoice.id === invoiceId);
       return view ? link.claims.map((claim) => ({ invoiceId, token: link.token, claim, view })) : [];
     });
-  }, [paylinks, primaryLinks, views]);
+  }, [paylinks, bookLinks, views]);
 
   // Statement links are keyed "stmt:<clientId>"; their claims are applied oldest invoice first.
   const statementLinks = useMemo(() => {
     const map = new Map<string, { token: string; claims: { utr: string; amountPaise: number | null; at: number }[] }>();
-    for (const [key, link] of primaryLinks) if (key.startsWith("stmt:")) map.set(key.slice(5), link);
+    for (const [subject, link] of bookLinks) if (subject.startsWith("stmt:")) map.set(subject.slice(5), link);
     return map;
-  }, [primaryLinks]);
+  }, [bookLinks]);
+  /** Books whose copy on this device matches the server's in this session: only their links can be called "paid". */
+  const syncedBooks = useMemo(() => new Set(Object.entries(sync.books).filter(([, s]) => s === "synced").map(([id]) => id)), [sync.books]);
   const statementClaims = useMemo(
     () => [...statementLinks.entries()].flatMap(([clientId, link]) => link.claims.map((claim) => ({ clientId, token: link.token, claim }))),
     [statementLinks],
@@ -244,8 +382,8 @@ function Workspace() {
   async function makeStatementLink(clientId: string) {
     setLinkBusy(clientId);
     try {
-      if (!(await syncRef.current?.flush())) { setFlash(tr("Couldn't sync yet. Check your connection and try again.")); return; }
-      const result = await createStatementLinkFor(clientId);
+      if (!(await syncRef.current?.flush(active))) { setFlash(tr("Couldn't sync yet. Check your connection and try again.")); return; }
+      const result = await createStatementLinkFor(clientId, active, linkContext());
       if ("error" in result) setFlash(tr(result.error));
       else { await refreshLinks(); setFlash(tr("Statement link ready — it always shows this client's current dues.")); }
     } finally {
@@ -264,6 +402,10 @@ function Workspace() {
     void deletePaylink(token, "claims").then(() => refreshLinks());
   }
   const needsSetup = ready && !ws.business.name;
+  const remindLink = sheet?.kind === "remind" ? linkFor(paylinks?.byInvoice, active, sheet.id) : undefined;
+  /** The backup and the sync nudge cover every business on this device. */
+  const liveBooks = useMemo(() => liveBookIds(shelf.index).flatMap((id) => (shelf.books[id] ? [shelf.books[id]] : [])), [shelf]);
+  const allInvoiceCount = useMemo(() => liveBooks.reduce((n, book) => n + liveInvoices(book).length, 0), [liveBooks]);
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -416,7 +558,7 @@ function Workspace() {
                 </ClaimsCard>
               )}
 
-              {ready && !signedIn && <SyncNudge ws={ws} today={today} />}
+              {ready && !signedIn && <SyncNudge books={liveBooks} today={today} backup={() => backupJson(shelf, "all")} />}
               {hasSampleData(ws) && (
                 <p className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] text-charcoal ring-1 ring-hairline">
                   {tr("You're looking at sample data.")}
@@ -435,7 +577,7 @@ function Workspace() {
                   </div>
                 </div>
               )}
-              {needsSetup && <SetupCard ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
+              {needsSetup && <SetupCard key={active} ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
 
               <section aria-label={tr("Summary")} className={`${card} grid grid-cols-2 md:grid-cols-4`}>
                 <Stat label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} className="border-b border-r border-hairline md:border-b-0" />
@@ -445,7 +587,7 @@ function Workspace() {
               </section>
 
               <GatewaySavings ws={ws} today={today} isPro={isPro} />
-              <GettingStarted ws={ws} signedIn={signedIn} onAction={(step) => {
+              <GettingStarted ws={ws} businessReady={liveBooks.some((book) => Boolean(book.business.name && book.business.upiId))} signedIn={signedIn} onAction={(step) => {
                 if (step === "invoice") setSheet({ kind: "invoice" });
                 else if (step === "remind" || step === "payment") setTab("invoices");
                 else if (step === "account") location.href = SIGN_UP_HREF;
@@ -537,16 +679,18 @@ function Workspace() {
                     <span>{tr("Client")}</span><span>{tr("Invoice")}</span><span className="text-right">{tr("Amount")}</span><span>{tr("Status")}</span>
                   </div>
                   <ul className="divide-y divide-hairline">
-                    {filtered.map((v) => (
+                    {filtered.map((v) => {
+                      const link = linkFor(paylinks?.byInvoice, active, v.invoice.id);
+                      return (
                       <InvoiceRow
                         key={v.invoice.id}
                         view={v}
                         msme={msmeFor(v)}
                         signedIn={signedIn}
-                        payLink={paylinks?.byInvoice[v.invoice.id] ? paylinkUrl(paylinks.byInvoice[v.invoice.id].token) : undefined}
+                        payLink={link ? paylinkUrl(link.token) : undefined}
                         linkBusy={linkBusy === v.invoice.id}
                         onCreateLink={() => void makeLink(v.invoice.id)}
-                        onRevokeLink={() => { const link = paylinks?.byInvoice[v.invoice.id]; if (link) void revokeLink(link.token); }}
+                        onRevokeLink={() => { if (link) void revokeLink(link.token); }}
                         onPay={() => setSheet({ kind: "payment", id: v.invoice.id })}
                         onRemind={() => setSheet({ kind: "remind", id: v.invoice.id })}
                         onEdit={() => setSheet({ kind: "invoice", id: v.invoice.id })}
@@ -554,7 +698,8 @@ function Workspace() {
                         onDelete={() => { setWs(deleteInvoice(ws, v.invoice.id, Date.now())); setFlash(tr("{number} deleted.", { number: v.invoice.number })); }}
                         onUndoPayment={(paymentId) => setWs(removePayment(ws, v.invoice.id, paymentId, Date.now()))}
                       />
-                    ))}
+                      );
+                    })}
                   </ul>
                 </div>
               )}
@@ -663,23 +808,46 @@ function Workspace() {
               <SyncPanel
                 state={sync}
                 paylinks={paylinks}
-                paidLinkTokens={paylinks ? primaryLinks.filter(([id]) => { if (id.startsWith("stmt:")) return false; const v = views.find((x) => x.invoice.id === id); return !v || v.balancePaise === 0; }).map(([, l]) => l.token) : []}
+                paidLinkTokens={paylinks ? paidTokensOf(paylinks.byInvoice, shelf, syncedBooks, today) : []}
                 onRevokePaid={async (tokens) => { await Promise.all(tokens.map((t) => deletePaylink(t, "link"))); await refreshLinks(); setFlash(tr(tokens.length === 1 ? "Turned off {n} pay link for paid invoices." : "Turned off {n} pay links for paid invoices.", { n: tokens.length })); }}
-                invoiceCount={views.length}
+                invoiceCount={allInvoiceCount}
                 onSyncNow={() => syncRef.current?.syncNow()}
                 onSignOut={async () => { await syncRef.current?.signOut(); setFlash(tr("Signed out. Your data stays on this device.")); }}
                 onDeleteCloud={async () => {
                   const ok = await syncRef.current?.deleteCloudCopy();
                   setFlash(ok ? tr("Cloud copy deleted and signed out. This device keeps its data.") : tr("Couldn't delete the cloud copy. Try again."));
                 }}
+                asideTick={asideTick}
+                onStashCleared={() => { if (sync.status === "error") setSyncEpoch((n) => n + 1); }}
               />
               <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} />
               <PlanPanel signedIn={signedIn} onFlash={setFlash} />
               <InstallHint standalone={installer.standalone} ios={installer.ios} />
               <SettingsPanel
+                key={active}
                 ws={ws}
+                shelf={shelf}
+                active={active}
+                restoreLimit={signedIn && sync.plan ? PLANS[sync.plan.id].businesses : PLANS.free.businesses}
                 today={today}
                 onChange={(next, message) => { setWs(next); if (message) setFlash(message); }}
+                onRestored={(done) => {
+                  setShelf((s) => {
+                    const books = { ...s.books };
+                    for (const id of done.into) books[id] = s.books[id] ? mergeWorkspaces(s.books[id], done.shelf.books[id]) : done.shelf.books[id];
+                    return { index: done.shelf.index === shelf.index ? s.index : done.shelf.index, books };
+                  });
+                  if (done.shelf.index !== shelf.index) {
+                    saveIndex(done.shelf.index);
+                    void syncRef.current?.indexChanged();
+                  }
+                  // Entries that weren't restored are named, never reported as merged.
+                  const total = done.restored + done.skipped;
+                  const skipped = !done.skipped ? ""
+                    : !signedIn ? tr("Sign in to restore all {n} businesses.", { n: total })
+                    : tr(done.skipped === 1 ? "{n} business wasn't restored: your plan includes {limit}." : "{n} businesses weren't restored: your plan includes {limit}.", { n: done.skipped, limit: signedIn && sync.plan ? PLANS[sync.plan.id].businesses : PLANS.free.businesses });
+                  setFlash(done.restored ? `${tr("Backup merged into this workspace.")}${skipped ? ` ${skipped}` : ""}` : skipped);
+                }}
               />
             </div>
           )}
@@ -706,7 +874,7 @@ function Workspace() {
         }} />
       )}
       {sheet?.kind === "remind" && ws.invoices[sheet.id] && (
-        <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={paylinks?.byInvoice[sheet.id] ? paylinkUrl(paylinks.byInvoice[sheet.id].token) : undefined} onClose={closeSheet} onSent={(next) => {
+        <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={remindLink ? paylinkUrl(remindLink.token) : undefined} onClose={closeSheet} onSent={(next) => {
           setWs(next);
           trackProductEvent("reminder_sent", "workspace");
         }} />
@@ -720,7 +888,7 @@ function Workspace() {
           // A statement credit with a pay-link UTR settles that claim too.
           const tokens = new Set<string>();
           for (const r of recorded) {
-            const link = paylinks?.byInvoice[r.invoiceId];
+            const link = linkFor(paylinks?.byInvoice, active, r.invoiceId);
             if (link && r.credit.utr && link.claims.some((c) => c.utr === r.credit.utr)) tokens.add(link.token);
           }
           if (tokens.size) void Promise.all([...tokens].map((t) => deletePaylink(t, "claims"))).then(() => refreshLinks());
@@ -755,7 +923,7 @@ const IN_APP_BROWSER = /Instagram|FBAN|FBAV|FB_IAB|Line\/|Snapchat/i;
  * lose (two, or one with a payment), ask them to keep a free cloud copy; sign-up
  * uploads what's here. "Not now" hides it for 14 days.
  */
-function SyncNudge({ ws, today }: { ws: Workspace; today: string }) {
+function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string; backup: () => string }) {
   const { tr } = useWs();
   const [hidden, setHidden] = useState(true);
   const [inApp, setInApp] = useState(false);
@@ -765,7 +933,7 @@ function SyncNudge({ ws, today }: { ws: Workspace; today: string }) {
     setHidden(Date.now() - dismissedAt < NUDGE_SNOOZE_MS);
     setInApp(IN_APP_BROWSER.test(navigator.userAgent));
   }, []);
-  const real = Object.values(ws.invoices).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const real = books.flatMap((ws) => Object.values(ws.invoices)).filter((i) => !i.deletedAt && !isSampleId(i.id));
   const atRisk = real.length >= 2 || real.some((i) => i.payments.length > 0) || (inApp && real.length > 0);
   if (hidden || !atRisk) return null;
   const dismiss = () => {
@@ -784,7 +952,7 @@ function SyncNudge({ ws, today }: { ws: Workspace; today: string }) {
       </div>
       <div className="flex shrink-0 flex-wrap gap-2">
         <a href={SIGN_UP_HREF} className={primaryButton}>{tr("Save with a free account")}</a>
-        <button type="button" onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")} className={secondaryButton}>{tr("Download backup")}</button>
+        <button type="button" onClick={() => downloadText(`proupiqr-backup-${today}.json`, backup(), "application/json")} className={secondaryButton}>{tr("Download backup")}</button>
         <button type="button" onClick={dismiss} className={ghostButton}>{tr("Not now")}</button>
       </div>
     </section>
@@ -1023,7 +1191,15 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   );
 }
 
-function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; onChange: (next: Workspace, message?: string) => void }) {
+function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRestored }: {
+  ws: Workspace;
+  shelf: Shelf;
+  active: string;
+  restoreLimit: number;
+  today: string;
+  onChange: (next: Workspace, message?: string) => void;
+  onRestored: (done: RestoreDone) => void;
+}) {
   const [name, setName] = useState(ws.business.name);
   const [upiId, setUpiId] = useState(ws.business.upiId);
   const [phone, setPhone] = useState(ws.business.phone);
@@ -1032,6 +1208,7 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
   const [udyam, setUdyam] = useState(ws.business.udyam);
   const [error, setError] = useState("");
   const [confirmErase, setConfirmErase] = useState(false);
+  const [confirmRestore, setConfirmRestore] = useState<Extract<RestoreResult, { kind: "confirm" }> | null>(null);
   const { tr } = useWs();
 
   async function restore(event: ChangeEvent<HTMLInputElement>) {
@@ -1040,8 +1217,14 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
     if (!file) return;
     if (file.size > 5_000_000) return setError(tr("That file is too large to be a workspace backup."));
     try {
-      onChange(restoreBackup(ws, await file.text()), tr("Backup merged into this workspace."));
+      // Routed by identity (§2.3); a backup of another business is never merged without asking.
+      const result = restoreBackup(shelf, await file.text(), active, restoreLimit, Date.now());
       setError("");
+      if (result.kind === "confirm") setConfirmRestore(result);
+      else {
+        setConfirmRestore(null);
+        onRestored(result);
+      }
     } catch (err) {
       setError(err instanceof Error && err.message.startsWith("Not a") ? tr(err.message) : tr("Couldn't read that backup file."));
     }
@@ -1077,13 +1260,25 @@ function SettingsPanel({ ws, today, onChange }: { ws: Workspace; today: string; 
         <h2 className={cardTitle}>{tr("Your data")}</h2>
         <p className={`mt-0.5 ${cardNote}`}>{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(ws), "application/json")}>{tr("Download backup")}</button>
+          <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(shelf, { book: active }), "application/json")}>{tr("Download backup")}</button>
           <label className={`${secondaryButton} cursor-pointer`}>
             {tr("Restore backup")}
             <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
           </label>
           <button type="button" className={secondaryButton} onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(invoiceViews(ws, today)), "text/csv;charset=utf-8")}>{tr("Export all as CSV")}</button>
         </div>
+        {confirmRestore && (() => {
+          const target = shelf.books[confirmRestore.target]?.business.name || tr("Your business");
+          return (
+            <div role="alert" className="mt-3 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
+              <p>{tr("This backup is for {backup} ({upi}). Restore it into {target}?", { backup: confirmRestore.backup.name || tr("Your business"), upi: confirmRestore.backup.upiId || "—", target })}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" className={rowPrimary} onClick={() => { const done = confirmRestore.apply(); setConfirmRestore(null); onRestored(done); }}>{tr("Restore into {business}", { business: target })}</button>
+                <button type="button" className={ghostButton} onClick={() => setConfirmRestore(null)}>{tr("Cancel")}</button>
+              </div>
+            </div>
+          );
+        })()}
         <div className="mt-5 border-t border-hairline pt-4">
           {confirmErase ? (
             <p className={`flex flex-wrap items-center gap-2 text-sm font-medium ${dangerText}`}>
@@ -1129,7 +1324,7 @@ function SyncPill({ state, onClick }: { state: SyncState; onClick: () => void })
   );
 }
 
-function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount, onSyncNow, onSignOut, onDeleteCloud }: {
+function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount, onSyncNow, onSignOut, onDeleteCloud, asideTick, onStashCleared }: {
   state: SyncState;
   paylinks: PaylinkList | null;
   paidLinkTokens: string[];
@@ -1138,12 +1333,16 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
   onSyncNow: () => void;
   onSignOut: () => void;
   onDeleteCloud: () => void;
+  asideTick: number;
+  onStashCleared: () => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
-  const [stash, setStash] = useState<string | null>(null);
+  const [stash, setStash] = useState<StashedAccount | null>(null);
+  const [aside, setAside] = useState<AsideBook[]>([]);
   useEffect(() => {
-    try { setStash(localStorage.getItem(STASH_KEY)); } catch { setStash(null); }
-  }, [state.status]);
+    setStash(loadStash());
+    setAside(listAside());
+  }, [state.status, asideTick]);
   const signedIn = state.status !== "signed_out" && state.status !== "checking";
   const { tr, dateLocale } = useWs();
 
@@ -1201,11 +1400,23 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
         <div className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
           {tr("Data from a different account that was on this device was set aside, not uploaded.")}
           <div className="mt-2 flex gap-3">
-            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText("proupiqr-other-account-backup.json", JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(stash) }, null, 2), "application/json")}>{tr("Download it")}</button>
-            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { try { localStorage.removeItem(STASH_KEY); } catch { /* ignore */ } setStash(null); }}>{tr("Discard")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText("proupiqr-other-account-backup.json", backupJson(stash.shelf, "all"), "application/json")}>{tr("Download it")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardStash(); setStash(null); onStashCleared(); }}>{tr("Discard")}</button>
           </div>
         </div>
       )}
+      {aside.map((book) => (
+        <div key={book.id} className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
+          {tr("{business}: changes that weren't synced were set aside on this device.", { business: book.name || tr("Your business") })}
+          <div className="mt-2 flex gap-3">
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, book.fromPrimary
+              // A first business of some account: a plain workspace backup, restorable anywhere (it asks before merging into another business).
+              ? JSON.stringify({ app: "proupiqr-workspace", exportedAt: new Date().toISOString(), workspace: book.workspace }, null, 2)
+              : backupJson({ index: { v: 1, books: { [PRIMARY_BOOK_ID]: { id: PRIMARY_BOOK_ID, createdAt: 0 }, [book.id]: { id: book.id, createdAt: 1 } } }, books: { [book.id]: book.workspace } }, { book: book.id }), "application/json")}>{tr("Download it")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardAside(book.id); setAside(listAside()); }}>{tr("Discard")}</button>
+          </div>
+        </div>
+      ))}
     </section>
   );
 }
@@ -1213,7 +1424,7 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
 const CHECKLIST_KEY = "proupiqr-checklist-dismissed";
 
 /** First-week path: business details → invoice → reminder → payment → free account. */
-function GettingStarted({ ws, signedIn, onAction }: { ws: Workspace; signedIn: boolean; onAction: (step: "invoice" | "remind" | "payment" | "account") => void }) {
+function GettingStarted({ ws, businessReady, signedIn, onAction }: { ws: Workspace; businessReady: boolean; signedIn: boolean; onAction: (step: "invoice" | "remind" | "payment" | "account") => void }) {
   const { tr } = useWs();
   const [dismissed, setDismissed] = useState(true);
   useEffect(() => {
@@ -1221,7 +1432,7 @@ function GettingStarted({ ws, signedIn, onAction }: { ws: Workspace; signedIn: b
   }, []);
   const real = Object.values(ws.invoices).filter((i) => !i.deletedAt && !isSampleId(i.id));
   const steps: { id: "business" | "invoice" | "remind" | "payment" | "account"; label: string; done: boolean }[] = [
-    { id: "business", label: tr("Add your business name and UPI ID"), done: Boolean(ws.business.name && ws.business.upiId) },
+    { id: "business", label: tr("Add your business name and UPI ID"), done: businessReady },
     { id: "invoice", label: tr("Add an invoice you're waiting on"), done: real.length > 0 },
     { id: "remind", label: tr("Send a WhatsApp reminder"), done: real.some((i) => i.reminders.length > 0) },
     { id: "payment", label: tr("Record a payment you received"), done: real.some((i) => i.payments.length > 0) },
