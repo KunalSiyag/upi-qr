@@ -10,6 +10,9 @@ const lists = new Map();
 const sets = new Map();
 const expiry = new Map();
 const log = [];
+// Test hooks (/__admin/fault): the next `count` data requests whose commands mention `match`
+// fail (Upstash-style error), or are delayed by `delayMs` instead.
+const faults = [];
 const stats = { bytesOut: 0, requests: 0 };
 
 const now = () => Date.now();
@@ -26,6 +29,15 @@ function evalScript(script, keys, args) {
     strings.set(keys[0], String(count));
     if (count === 1) expiry.set(keys[0], now() + Number(args[0]) * 1000);
     return [count, Math.ceil(((expiry.get(keys[0]) ?? now()) - now()) / 1000)];
+  }
+  if (script.includes("redis.call('INCRBY', KEYS[1], units)")) {
+    const count = Number(get(keys[0]) || 0);
+    const units = Number(args[1]);
+    const ttl = () => (expiry.has(keys[0]) ? Math.ceil((expiry.get(keys[0]) - now()) / 1000) : -1);
+    if (count + units > Number(args[2])) return [count, ttl(), 0];
+    strings.set(keys[0], String(count + units));
+    if (count === 0) expiry.set(keys[0], now() + Number(args[0]) * 1000);
+    return [count + units, ttl(), 1];
   }
   if (script.includes("return { redis.call('GET', KEYS[1]), redis.call('GET', KEYS[2]) }")) return [get(keys[0]), get(keys[1])];
   if (script.includes("if rev ~= tonumber(ARGV[2]) then return -1 end")) {
@@ -106,11 +118,18 @@ async function handle(req, send) {
   if (req.url === "/__admin/keys") return send(200, { keys: [...strings.keys(), ...hashes.keys(), ...lists.keys(), ...sets.keys()] });
   if (req.url === "/__admin/set") { const { key, value, hash, field } = JSON.parse(body); if (hash) run(["hset", hash, field, value]); else set(key, value); return send(200, { ok: true }); }
   if (req.url === "/__admin/get") { const { key, list, hash, set: setKey } = JSON.parse(body); return send(200, { value: list ? lists.get(list) ?? [] : hash ? Object.fromEntries(hashes.get(hash) ?? []) : setKey ? [...(sets.get(setKey) ?? [])] : get(key) }); }
-  if (req.url === "/__admin/reset") { strings.clear(); hashes.clear(); lists.clear(); sets.clear(); expiry.clear(); return send(200, { ok: true }); }
+  if (req.url === "/__admin/reset") { strings.clear(); hashes.clear(); lists.clear(); sets.clear(); expiry.clear(); faults.length = 0; return send(200, { ok: true }); }
+  if (req.url === "/__admin/fault") { const { match, count = 1, delayMs = 0 } = JSON.parse(body); faults.push({ match: String(match), count: Number(count), delayMs: Number(delayMs) }); return send(200, { ok: true }); }
   if (req.headers.authorization !== `Bearer ${TOKEN}`) return send(401, { error: "Unauthorized" });
   const encode = req.headers["upstash-encoding"] === "base64" ? b64 : (v) => v;
   try {
     const parsed = JSON.parse(body || "[]");
+    const fault = faults.find((f) => f.count > 0 && body.includes(f.match));
+    if (fault) {
+      fault.count--;
+      if (fault.delayMs) await new Promise((r) => setTimeout(r, fault.delayMs));
+      else return send(500, { error: `ERR injected fault (${fault.match})` });
+    }
     if (req.url?.startsWith("/pipeline") || req.url?.startsWith("/multi-exec")) {
       return send(200, parsed.map((cmd) => { try { return { result: encode(run(cmd)) }; } catch (e) { return { error: String(e.message) }; } }));
     }

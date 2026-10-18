@@ -8,7 +8,7 @@
 // Dodo Payments or Razorpay.
 // Needs google-chrome and python3 on PATH.
 import { spawn, spawnSync } from "node:child_process";
-import { createECDH } from "node:crypto";
+import { createECDH, generateKeyPairSync } from "node:crypto";
 import { connect } from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
@@ -20,11 +20,12 @@ const STATIC_DIR = join(ROOT, ".vercel", "output", "static");
 const SUITES = [
   "waitlist-e2e", "workspace-e2e", "bridge-e2e", "sync-e2e", "paylink-ui-e2e",
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
+  "books-server-e2e",
 ];
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");
 // --prod runs the server-backed suites against the real production bundle (scripts/e2e/prod-server.mjs).
-const SERVER_SUITES = ["waitlist-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e", "load-paypage", "load-digest"];
+const SERVER_SUITES = ["waitlist-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e", "books-server-e2e", "load-paypage", "load-digest"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Another project's dev server may hold :4321 (it happened); take the first port nothing answers on.
 const portBusy = (port) => new Promise((resolve) => {
@@ -49,6 +50,11 @@ process.env.E2E_VAPID_PUBLIC_KEY = vapid.getPublicKey().toString("base64url");
 process.env.E2E_VAPID_PRIVATE_KEY = vapid.getPrivateKey().toString("base64url");
 process.env.E2E_CRON_SECRET = "cron-secret-for-e2e";
 process.env.E2E_DODO_WEBHOOK_KEY = `whsec_${Buffer.from("proupiqr-e2e-dodo-signing-key-32").toString("base64")}`;
+// Throwaway session-signing key: the server verifies Clerk session tokens with its public half
+// (Clerk's networkless CLERK_JWT_KEY), so server suites can sign in without Clerk's network.
+const sessionKeys = generateKeyPairSync("rsa", { modulusLength: 2048 });
+process.env.E2E_JWT_PRIVATE_KEY = sessionKeys.privateKey.export({ type: "pkcs8", format: "pem" });
+const sessionPublicKey = sessionKeys.publicKey.export({ type: "spki", format: "pem" });
 
 const children = [];
 function start(cmd, args, env = {}) {
@@ -90,6 +96,7 @@ try {
     VAPID_PUBLIC_KEY: process.env.E2E_VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY: process.env.E2E_VAPID_PRIVATE_KEY,
     CRON_SECRET: process.env.E2E_CRON_SECRET,
+    CLERK_JWT_KEY: sessionPublicKey,
   };
   if (PROD) {
     if (!existsSync(join(ROOT, ".vercel/output/functions/_render.func"))) throw new Error("No production function bundle; run npx astro build");

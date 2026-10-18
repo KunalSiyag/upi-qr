@@ -158,4 +158,87 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
   assert.equal(parseSnapshot("{bad"), null);
 }
 
+// ---------------------------------------------------------------------------
+// Several businesses: book-qualified keys, owning-book snapshots, per-book views and revocation.
+{
+  const { refreshViews, snapshotFor, snapshotsForLinks, createStatementLink: stmt } = await import("../src/lib/workspace/paylinks.ts");
+  const { linkKey } = await import("../src/lib/workspace/books.ts");
+  const B = "biz_bbbbbb01";
+  let wa = updateBusiness(upsertClient(emptyWorkspace(), client, T), { name: "Sharma Stores", upiId: "stores@okaxis" }, T);
+  wa = upsertInvoice(wa, inv("inv_0000000X", 300000), T);
+  let wb = updateBusiness(upsertClient(emptyWorkspace(), client, T), { name: "Sharma Tutors", upiId: "tutors@okhdfc" }, T);
+  wb = upsertInvoice(wb, inv("inv_0000000X", 120000), T);
+
+  // An invoice in book B renders B's business and nothing from A.
+  const vb = payPageView(wb, "inv_0000000X", "2026-10-10");
+  assert.deepEqual([vb.merchantName, vb.upiId, vb.balancePaise], ["Sharma Tutors", "tutors@okhdfc", 120000]);
+  assert.doesNotMatch(JSON.stringify(snapshotFor(wb, "inv_0000000X")), /Sharma Stores|stores@okaxis/);
+
+  // The same inv_X in the primary and in B: two fields, two tokens; the primary's record stays byte-identical.
+  const store = memoryPaylinkStore();
+  const pa = await createPaylink(store, "o1", wa, "inv_0000000X", token, T, 10, vpa);
+  const pb = await createPaylink(store, "o1", wb, "inv_0000000X", token, T, 10, vpa, linkKey(B, "inv_0000000X"));
+  assert.ok(pa.created && pb.created && pa.token !== pb.token);
+  assert.deepEqual(await store.get(pa.token), { owner: "o1", invoiceId: "inv_0000000X", createdAt: T });
+  assert.deepEqual(await store.get(pb.token), { owner: "o1", invoiceId: "biz_bbbbbb01/inv_0000000X", createdAt: T, businessId: B });
+  assert.deepEqual(await store.list("o1"), { inv_0000000X: pa.token, "biz_bbbbbb01/inv_0000000X": pb.token });
+  // Idempotent per book.
+  assert.equal((await createPaylink(store, "o1", wb, "inv_0000000X", token, T, 10, vpa, linkKey(B, "inv_0000000X"))).token, pb.token);
+  // Old-path resolution (the primary workspace + the record's invoiceId) finds nothing for B's record: 404, never A's payee.
+  assert.equal(snapshotFor(wa, (await store.get(pb.token)).invoiceId), null);
+  // A non-primary book without a UPI ID names that business.
+  const noUpi = await createPaylink(memoryPaylinkStore(), "o1", updateBusiness(wb, { upiId: "" }, T + 1), "inv_0000000X", token, T, 10, vpa, linkKey(B, "inv_0000000X"));
+  assert.deepEqual([noUpi.status, noUpi.message], ["no_upi", "Add a UPI ID for Sharma Tutors in Settings before sharing pay links."]);
+  // Statement links are book-qualified the same way.
+  const sb = await stmt(store, "o1", wb, client.id, token, T, { statementLinks: true, activePaylinks: 100 }, vpa, linkKey(B, "stmt:cli_aaaaaaaa"));
+  assert.deepEqual(await store.get(sb.token), { owner: "o1", invoiceId: "biz_bbbbbb01/stmt:cli_aaaaaaaa", createdAt: T, businessId: B });
+  // The account-wide active-link limit counts every book.
+  assert.equal((await createPaylink(store, "o1", wb, "inv_0000000X", token, T, 3, vpa, linkKey("biz_cccccc01", "inv_0000000X"))).status, "limit");
+
+  // parseRecord: a valid businessId is kept, an invalid one dropped, a mismatch rejected.
+  assert.deepEqual(parseRecord({ owner: "o", invoiceId: "biz_bbbbbb01/inv_00000001", createdAt: 1, businessId: B }), { owner: "o", invoiceId: "biz_bbbbbb01/inv_00000001", createdAt: 1, businessId: B });
+  assert.deepEqual(parseRecord({ owner: "o", invoiceId: "inv_00000001", createdAt: 1, businessId: "../x" }), { owner: "o", invoiceId: "inv_00000001", createdAt: 1 });
+  assert.equal(parseRecord({ owner: "o", invoiceId: "biz_bbbbbb01/inv_00000001", createdAt: 1, businessId: "biz_cccccc01" }), null);
+  assert.equal(parseRecord({ owner: "o", invoiceId: "biz_bbbbbb01/inv_00000001", createdAt: 1 }), null);
+
+  // refreshViews for B sets only B's snapshots and leaves A's untouched (and never puts A's name on B's token).
+  await refreshViews(store, "o1", "biz_primary", wa);
+  const aView = await store.getView("o1", pa.token);
+  assert.equal(aView.view.upiId, "stores@okaxis");
+  assert.equal(await store.getView("o1", pb.token), null, "the primary refresh never renders B's links");
+  await refreshViews(store, "o1", B, wb);
+  assert.deepEqual(await store.getView("o1", pa.token), aView);
+  assert.deepEqual([(await store.getView("o1", pb.token)).view.merchantName, (await store.getView("o1", pb.token)).view.upiId], ["Sharma Tutors", "tutors@okhdfc"]);
+  // A paid-off (deleted) invoice in B drops only B's snapshot.
+  await refreshViews(store, "o1", B, deleteInvoice(wb, "inv_0000000X", T + 5));
+  assert.equal(await store.getView("o1", pb.token), null);
+  assert.deepEqual(await store.getView("o1", pa.token), aView);
+
+  // Single-business accounts keep today's exact write: one replace of the owner's snapshots.
+  const calls = [];
+  const solo = memoryPaylinkStore();
+  const spy = { ...solo, putViews: (o, v) => { calls.push(["put", Object.keys(v)]); return solo.putViews(o, v); }, patchViews: (o, a, b) => { calls.push(["patch"]); return solo.patchViews(o, a, b); } };
+  const sp = await createPaylink(solo, "o2", wa, "inv_0000000X", token, T, 10, vpa);
+  await refreshViews(spy, "o2", "biz_primary", wa);
+  await refreshViews(spy, "o2", "biz_primary", wa, { skipWhenNoLinks: true });
+  await refreshViews(spy, "o3", "biz_primary", wa, { skipWhenNoLinks: true });
+  assert.deepEqual(calls, [["put", [sp.token]], ["put", [sp.token]]]);
+  assert.deepEqual(await solo.getView("o2", sp.token), snapshotsForLinks(wa, { inv_0000000X: sp.token })[sp.token]);
+
+  // remove also drops the link's snapshot; removeBook revokes only that book's tokens.
+  await refreshViews(store, "o1", B, wb);
+  await store.remove("o1", pb.token, "biz_bbbbbb01/inv_0000000X");
+  assert.deepEqual([await store.get(pb.token), await store.getView("o1", pb.token)], [null, null]);
+  const pb2 = await createPaylink(store, "o1", wb, "inv_0000000X", token, T, 10, vpa, linkKey(B, "inv_0000000X"));
+  await refreshViews(store, "o1", B, wb);
+  await store.addClaim(pb2.token, { utr: "412345678901", amountPaise: null, at: T });
+  await store.removeBook("o1", B);
+  assert.deepEqual(Object.keys(await store.list("o1")), ["inv_0000000X"]);
+  assert.deepEqual([await store.get(pb2.token), await store.get(sb.token), await store.getView("o1", pb2.token), (await store.claims(pb2.token)).length], [null, null, null, 0]);
+  assert.ok(await store.get(pa.token));
+  assert.deepEqual(await store.getView("o1", pa.token), aView);
+  await store.removeBook("o1", "biz_primary");
+  assert.ok(await store.get(pa.token), "removeBook never touches the primary");
+}
+
 console.log("[paylinks] public view privacy, live balance, create guards, free limit, revoke, and claims checks passed");

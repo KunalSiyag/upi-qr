@@ -41,3 +41,33 @@ export function rateLimitHeaders(result: RateLimitResult): Record<string, string
     "X-RateLimit-Remaining": String(result.remaining),
   };
 }
+
+/**
+ * All-or-nothing budget: adds `units` to the window's count only if the result
+ * stays within `limit` (a refused request costs nothing). One atomic script.
+ */
+export async function consumeRateLimitUnits(
+  scope: string,
+  identifier: string,
+  limit: number,
+  windowSeconds: number,
+  units: number,
+): Promise<RateLimitResult> {
+  const digest = createHash("sha256").update(identifier).digest("hex").slice(0, 32);
+  const key = `pro-upi-qr:rate:${scope}:${digest}`;
+  const script = `
+    local count = tonumber(redis.call('GET', KEYS[1]) or '0')
+    local units = tonumber(ARGV[2])
+    if count + units > tonumber(ARGV[3]) then
+      local ttl = redis.call('TTL', KEYS[1])
+      return { count, ttl, 0 }
+    end
+    count = redis.call('INCRBY', KEYS[1], units)
+    if count == units then redis.call('EXPIRE', KEYS[1], ARGV[1]) end
+    return { count, redis.call('TTL', KEYS[1]), 1 }
+  `;
+  const [rawCount, rawTtl, rawOk] = await kv.eval<string[], [number, number, number]>(script, [key], [String(windowSeconds), String(units), String(limit)]);
+  const count = Number(rawCount);
+  const ttl = Math.max(1, Number(rawTtl) || windowSeconds);
+  return { allowed: Number(rawOk) === 1, limit, remaining: Math.max(0, limit - count), retryAfter: ttl };
+}

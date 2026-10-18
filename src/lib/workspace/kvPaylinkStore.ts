@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { kv } from "@vercel/kv";
 import { MAX_PENDING_CLAIMS, memoryPaylinkStore, parseClaims, parseRecord, parseSnapshot, type PaylinkStore } from "./paylinks.ts";
+import { parseLinkKey, PRIMARY_BOOK_ID } from "./books.ts";
 
 /** Vercel KV implementation of PaylinkStore. */
 
@@ -24,6 +25,17 @@ export const kvPaylinkStore: PaylinkStore = {
     if (entries.length) pipe.hset(viewsKey(owner), Object.fromEntries(entries.map(([token, view]) => [token, JSON.stringify(view)])));
     await pipe.exec();
   },
+  async viewTokens(owner) {
+    return Object.keys((await kv.hgetall<Record<string, unknown>>(viewsKey(owner))) ?? {});
+  },
+  async patchViews(owner, set, drop) {
+    const entries = Object.entries(set);
+    if (!entries.length && !drop.length) return;
+    const pipe = kv.pipeline();
+    if (entries.length) pipe.hset(viewsKey(owner), Object.fromEntries(entries.map(([token, view]) => [token, JSON.stringify(view)])));
+    if (drop.length) pipe.hdel(viewsKey(owner), ...drop);
+    await pipe.exec();
+  },
   async get(token) {
     return parseRecord(await kv.get(tokenKey(token)));
   },
@@ -45,6 +57,19 @@ export const kvPaylinkStore: PaylinkStore = {
     const pipe = kv.pipeline();
     pipe.del(tokenKey(token), claimsKey(token));
     pipe.hdel(ownerKey(owner), invoiceId);
+    pipe.hdel(viewsKey(owner), token);
+    await pipe.exec();
+  },
+  async removeBook(owner, bookId) {
+    if (bookId === PRIMARY_BOOK_ID) return;
+    const all = (await kv.hgetall<Record<string, unknown>>(ownerKey(owner))) ?? {};
+    const mine = Object.entries(all).filter(([key, token]) => typeof token === "string" && parseLinkKey(key).bookId === bookId) as [string, string][];
+    if (!mine.length) return;
+    const tokens = mine.map(([, token]) => token);
+    const pipe = kv.pipeline();
+    pipe.del(...tokens.flatMap((token) => [tokenKey(token), claimsKey(token)]));
+    pipe.hdel(ownerKey(owner), ...mine.map(([key]) => key));
+    pipe.hdel(viewsKey(owner), ...tokens);
     await pipe.exec();
   },
   async claims(token) {

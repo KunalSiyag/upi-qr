@@ -1,4 +1,11 @@
-import { chaseList, emptyWorkspace, formatPaise, generateRecurring, invoiceViews, liveInvoices, liveRecurring, recurringInvoiceId, viewInvoice, type Workspace } from "./model.ts";
+import { chaseList, emptyWorkspace, formatPaise, generateRecurring, invoiceViews, liveInvoices, liveRecurring, recurringInvoiceId, viewInvoice, type InvoiceView, type Workspace } from "./model.ts";
+import { PRIMARY_BOOK_ID } from "./books.ts";
+
+/**
+ * Lock-screen business names (spec Open question 6): off. When on, multi-business
+ * digests and claim alerts name the business; the privacy lines ship with the flip.
+ */
+export const NAME_BUSINESSES_ON_LOCK_SCREEN = false;
 
 /** The morning "who to chase today" notification, or null when nothing is due. */
 export interface Digest {
@@ -26,6 +33,46 @@ export function morningDigest(ws: Workspace, today: string): Digest | null {
     title: `${chase.length} invoice${chase.length === 1 ? "" : "s"} to chase today`,
     body: body.length > 180 ? `${body.slice(0, 177)}…` : body,
     url: "/app/",
+    tag: `digest-${today}`,
+    count: chase.length,
+  };
+}
+
+/**
+ * One notification for all of an account's books. One book: exactly
+ * morningDigest (byte-identical). Several: each book's views are built inside
+ * that book (never one merged workspace, which would collapse same-named
+ * clients), then chased together. With nameBooks the top client is followed by
+ * its business name. The URL opens the top book.
+ */
+export function morningDigestBooks(books: { id: string; name: string; ws: Workspace }[], today: string, nameBooks: boolean): Digest | null {
+  if (books.length === 0) return null;
+  if (books.length === 1) return morningDigest(books[0].ws, today);
+  const owner = new Map<InvoiceView, { id: string; name: string }>();
+  const views: InvoiceView[] = [];
+  for (const book of books) {
+    for (const view of invoiceViews(generateRecurring(book.ws, today, 0).ws, today)) {
+      owner.set(view, book);
+      views.push(view);
+    }
+  }
+  const chase = chaseList(views);
+  if (chase.length === 0) return null;
+  const overdue = chase.filter((v) => v.state === "overdue");
+  const dueToday = chase.filter((v) => v.daysPastDue === 0);
+  const parts: string[] = [];
+  if (overdue.length) parts.push(`${formatPaise(overdue.reduce((sum, v) => sum + v.balancePaise, 0))} overdue`);
+  if (dueToday.length) parts.push(`${dueToday.length} due today`);
+  const top = chase[0];
+  const book = owner.get(top) as { id: string; name: string };
+  const who = top.client?.name ?? top.invoice.number;
+  const label = nameBooks && book.name.trim() ? ` (${book.name.trim()})` : "";
+  const when = top.daysPastDue > 0 ? `${top.daysPastDue} day${top.daysPastDue === 1 ? "" : "s"} late` : "due today";
+  const body = `${parts.join(", ")}. Start with ${who}${label} — ${formatPaise(top.balancePaise)}, ${when}.`;
+  return {
+    title: `${chase.length} invoice${chase.length === 1 ? "" : "s"} to chase today`,
+    body: body.length > 180 ? `${body.slice(0, 177)}…` : body,
+    url: book.id === PRIMARY_BOOK_ID ? "/app/" : `/app/?business=${encodeURIComponent(book.id)}`,
     tag: `digest-${today}`,
     count: chase.length,
   };
@@ -75,6 +122,11 @@ export function digestProjection(ws: Workspace): DigestProjection {
   return { v: PROJECTION_VERSION, open, plans };
 }
 
+/** v2 projection of a non-primary book: v1 plus the book's business name. The primary keeps writing v1. */
+export function bookProjection(ws: Workspace): DigestProjection {
+  return { ...digestProjection(ws), v: 2, name: ws.business.name.trim().slice(0, MAX_PROJECTED_NAME) };
+}
+
 /** Rebuilds just enough of a workspace from a projection to run morningDigest. */
 export function workspaceFromProjection(p: DigestProjection): Workspace {
   const ws = emptyWorkspace();
@@ -108,4 +160,62 @@ export function parseProjection(raw: unknown): DigestProjection | null {
   if (r.v >= 2 && typeof r.name !== "string") return null;
   const name = r.v >= 2 ? (r.name as string).slice(0, MAX_PROJECTED_NAME) : "";
   return { v: r.v, name, open: r.open as DigestProjection["open"], plans: r.plans as DigestProjection["plans"] };
+}
+
+// ---------------------------------------------------------------------------
+// Projection storage (KV implementation in kvCloudStore.ts)
+
+export interface AccountProjections {
+  /** Book id → projection (the primary from the legacy key). */
+  projections: Record<string, DigestProjection>;
+  /** The stored book index, raw (null when the account never registered a book). */
+  index: unknown;
+}
+
+export interface ProjectionStore {
+  /** The primary book's projection. */
+  get(owner: string): Promise<DigestProjection | null>;
+  put(owner: string, bookId: string, projection: DigestProjection): Promise<void>;
+  /** Non-primary books only; the primary's projection is kept. */
+  drop(owner: string, bookId: string): Promise<void>;
+  /** Ids of the stored non-primary projections. */
+  bookIds(owner: string): Promise<string[]>;
+  /** Everything the digest needs for one account, in one request. */
+  getAll(owner: string): Promise<AccountProjections>;
+}
+
+/** Assembles getAll's result from the raw primary value, the book hash and the index. */
+export function projectionsFrom(primary: unknown, hash: Record<string, unknown> | null | undefined, index: unknown): AccountProjections {
+  const projections: Record<string, DigestProjection> = {};
+  for (const [id, raw] of Object.entries(hash ?? {})) {
+    if (id === PRIMARY_BOOK_ID) continue;
+    const parsed = parseProjection(raw);
+    if (parsed) projections[id] = parsed;
+  }
+  const first = parseProjection(primary ?? null);
+  if (first) projections[PRIMARY_BOOK_ID] = first;
+  return { projections, index: index ?? null };
+}
+
+/** In-memory ProjectionStore for tests and local development. `index` reads the account's book index (raw). */
+export function memoryProjectionStore(index: (owner: string) => Promise<unknown> = async () => null): ProjectionStore & { primary: Map<string, string>; books: Map<string, Map<string, string>> } {
+  const primary = new Map<string, string>();
+  const books = new Map<string, Map<string, string>>();
+  return {
+    primary,
+    books,
+    async get(owner) { return parseProjection(primary.get(owner) ?? null); },
+    async put(owner, bookId, projection) {
+      if (bookId === PRIMARY_BOOK_ID) primary.set(owner, JSON.stringify(projection));
+      else {
+        if (!books.has(owner)) books.set(owner, new Map());
+        books.get(owner)!.set(bookId, JSON.stringify(projection));
+      }
+    },
+    async drop(owner, bookId) { if (bookId !== PRIMARY_BOOK_ID) books.get(owner)?.delete(bookId); },
+    async bookIds(owner) { return [...(books.get(owner)?.keys() ?? [])]; },
+    async getAll(owner) {
+      return projectionsFrom(primary.get(owner) ?? null, Object.fromEntries(books.get(owner) ?? []), await index(owner));
+    },
+  };
 }
