@@ -19,6 +19,8 @@ export const METRICS = [
   "webhook_rejected",
   "billing_reconciled",
   "mcp_tool_call",
+  "business_added",
+  "business_limit",
 ] as const;
 export type MetricName = (typeof METRICS)[number];
 
@@ -39,6 +41,8 @@ export const METRIC_LABELS: Record<MetricName, string> = {
   webhook_rejected: "Billing webhooks rejected (bad signature — check DODO_PAYMENTS_WEBHOOK_KEY / RAZORPAY_WEBHOOK_SECRET)",
   billing_reconciled: "Billing records fixed by re-reading the payment provider (lost webhooks)",
   mcp_tool_call: "Tool calls from AI assistants (Claude connector at /mcp/)",
+  business_added: "Businesses added beyond the first",
+  business_limit: "Add-business attempts blocked by the plan",
 };
 
 export const metricKey = (name: MetricName, day: string) => `metrics:${name}:${day}`;

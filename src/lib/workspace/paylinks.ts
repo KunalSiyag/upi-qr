@@ -1,4 +1,5 @@
 import { isIsoDate, viewInvoice, type InvoiceState, type Workspace } from "./model.ts";
+import { isBookId, parseLinkKey, PRIMARY_BOOK_ID } from "./books.ts";
 
 /**
  * Hosted pay links (/i/<token>/). A link stores only { owner, invoiceId }; the
@@ -19,8 +20,11 @@ export function validPaylinkToken(value: unknown): value is string {
 
 export interface PaylinkRecord {
   owner: string;
+  /** The store key: a bare subject (inv_… or stmt:cli_…) for the primary book; "<bookId>/<subject>" for other books (books.ts linkKey). */
   invoiceId: string;
   createdAt: number;
+  /** Non-primary books only: the owning book, a redundant check of the invoiceId prefix. Absent on primary links. */
+  businessId?: string;
 }
 
 export interface PaylinkClaim {
@@ -199,9 +203,13 @@ export function parseRecord(raw: unknown): PaylinkRecord | null {
   const value = typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw;
   if (!value || typeof value !== "object") return null;
   const r = value as Record<string, unknown>;
-  return typeof r.owner === "string" && typeof r.invoiceId === "string" && typeof r.createdAt === "number"
-    ? { owner: r.owner, invoiceId: r.invoiceId, createdAt: r.createdAt }
-    : null;
+  if (typeof r.owner !== "string" || typeof r.invoiceId !== "string" || typeof r.createdAt !== "number") return null;
+  const record: PaylinkRecord = { owner: r.owner, invoiceId: r.invoiceId, createdAt: r.createdAt };
+  // A businessId is kept only if valid, and must agree with the book the key names (no "/" = primary).
+  const businessId = isBookId(r.businessId) ? r.businessId : undefined;
+  if (parseLinkKey(r.invoiceId).bookId !== (businessId ?? PRIMARY_BOOK_ID)) return null;
+  if (businessId && businessId !== PRIMARY_BOOK_ID) record.businessId = businessId;
+  return record;
 }
 
 export function memoryPaylinkStore(): PaylinkStore {
