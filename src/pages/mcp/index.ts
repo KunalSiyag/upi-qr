@@ -1,8 +1,9 @@
 import type { APIRoute } from "astro";
 import { handleMcpHttp } from "../../lib/mcp/protocol.ts";
-import { proUpiQrServer, SITE, type CatalogEntry } from "../../lib/mcp/tools.ts";
+import { isCatalogEligible, proUpiQrServer, SITE, type CatalogEntry } from "../../lib/mcp/tools.ts";
 import { TOPIC_HUBS } from "../../data/topicHubs";
 import { requestFingerprint } from "../../lib/apiSecurity";
+import { clientAddress, isAnthropicEgress } from "../../lib/mcp/egress.ts";
 import { consumeRateLimit } from "../../lib/rateLimit";
 import { recordMetric } from "../../lib/metrics";
 import { rateLimitsAvailable } from "../../lib/workspace/kvCloudStore";
@@ -22,14 +23,14 @@ function buildCatalog(): CatalogEntry[] {
   for (const hub of TOPIC_HUBS) {
     for (const group of hub.groups) {
       for (const tool of group.tools) {
-        if (!tool.href.startsWith("/") || seen.has(tool.href)) continue;
+        if (!isCatalogEligible(tool.href) || seen.has(tool.href)) continue;
         seen.add(tool.href);
         entries.push({ name: tool.name, href: tool.href, description: tool.description, topic: hub.shortName });
       }
     }
   }
   for (const hub of TOPIC_HUBS) {
-    if (seen.has(hub.path)) continue;
+    if (!isCatalogEligible(hub.path) || seen.has(hub.path)) continue;
     seen.add(hub.path);
     entries.push({ name: hub.shortName, href: hub.path, description: hub.blurb, topic: hub.shortName });
   }
@@ -38,16 +39,23 @@ function buildCatalog(): CatalogEntry[] {
 
 const server = proUpiQrServer({ catalog: buildCatalog() });
 
-/** Server-side clients (Claude) send no Origin; browsers may call only from these. */
-const ALLOWED_ORIGINS = [SITE, "https://claude.ai", "https://claude.com"];
+/** Server-side clients (Claude, Codex) send no Origin; browsers may call only from these (ChatGPT and OpenAI's plugin review call from theirs). */
+const ALLOWED_ORIGINS = [SITE, "https://claude.ai", "https://claude.com", "https://chatgpt.com", "https://platform.openai.com"];
 
-/** Tool calls per minute from one network address. Claude calls from shared Anthropic addresses, so this only stops runaway loops. */
+/** Tool calls per minute from one network address: only stops runaway loops. */
 const CALLS_PER_MINUTE = 300;
+/**
+ * Claude's connectors call from Anthropic's shared egress range (160.79.104.0/21), so every Claude user
+ * would share one 300/minute bucket. That range gets one larger shared allowance instead.
+ */
+const SHARED_EGRESS_CALLS_PER_MINUTE = 6000;
 
 async function beforeToolCall(request: Request): Promise<string | null> {
   try {
     if (rateLimitsAvailable()) {
-      const rate = await consumeRateLimit("mcp-call", requestFingerprint(request), CALLS_PER_MINUTE, 60);
+      const rate = isAnthropicEgress(clientAddress(request))
+        ? await consumeRateLimit("mcp-call-anthropic", "shared", SHARED_EGRESS_CALLS_PER_MINUTE, 60)
+        : await consumeRateLimit("mcp-call", requestFingerprint(request), CALLS_PER_MINUTE, 60);
       if (!rate.allowed) return `Too many requests from this network. Try again in ${rate.retryAfter} seconds.`;
     }
     await recordMetric("mcp_tool_call");

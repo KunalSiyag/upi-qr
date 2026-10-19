@@ -267,6 +267,7 @@ for (const [name, src] of [["route", mcpRoute], ["protocol", mcpProtocol], ["too
   assert.doesNotMatch(src, /\bfetch\(/, `MCP ${name} makes no outside calls (openWorldHint: false)`);
 }
 assert.match(mcpRoute, /consumeRateLimit\("mcp-call", requestFingerprint\(request\)/, "tool calls are rate-limited per network");
+assert.match(mcpRoute, /consumeRateLimit\("mcp-call-anthropic", "shared"/, "Claude's shared egress range has one shared allowance, not a per-address one");
 assert.match(mcpRoute, /recordMetric\("mcp_tool_call"\)/, "only an aggregate counter");
 assert.doesNotMatch(mcpRoute, /locals|auth\(|clerk/i, "the connector never reads a signed-in session");
 assert.doesNotMatch(mcpRoute, /public, max-age|s-maxage/, "no /mcp/ response may be cached at the edge (it would be replayed to MCP clients)");
@@ -274,7 +275,9 @@ assert.match(mcpProtocol, /options\.allowedOrigins\.includes\(origin\)/, "browse
 assert.match(mcpProtocol, /readLimitedText\(request, options\.maxBodyBytes \?\? 64 \* 1024\)/, "request bodies are capped");
 assert.doesNotMatch(mcpProtocol, /["']Mcp-Session-Id["']\s*:/i, "no session id is ever sent");
 assert.match(mcpProtocol, /readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false/);
-assert.match(mcpTools, /`\$\{SITE\}\/#pay\?/, "poster links carry the payment after #, never in the query string");
+assert.match(mcpTools, /siteLink\(`\/#pay\?\$\{/, "poster links carry the payment after #, never in the query string");
+assert.match(mcpTools, /export const MCP_UTM = "utm_source=mcp&utm_medium=tool";/, "the only query string on links back to the site is the fixed campaign tag");
+assert.match(mcpRoute, /isCatalogEligible\(tool\.href\)/, "the tool catalog skips sponsored /products/ pages (directory policy)");
 assert.match(middleware, /PRIVATE_ROUTE_PREFIXES = \[[^\]]*"\/mcp"\]/, "the endpoint is noindex");
 assert.doesNotMatch(middleware.match(/CLERK_ROUTE_PREFIXES = \[[^\]]*\]/)[0], /\/mcp/, "Clerk stays off /mcp/");
 

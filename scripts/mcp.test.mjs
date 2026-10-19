@@ -5,7 +5,8 @@ import assert from "node:assert/strict";
 import jsQR from "jsqr";
 import { PNG } from "pngjs"; // qrcode's own PNG encoder dependency
 import { decodeHeaderValue, handleMcpHttp, LEGACY_VERSIONS, SUPPORTED_VERSIONS } from "../src/lib/mcp/protocol.ts";
-import { findErrorCode, formatInr, posterUrl, proUpiQrServer, rupeesInWords, rupeesToPaise, searchCatalog } from "../src/lib/mcp/tools.ts";
+import { findErrorCode, formatInr, isCatalogEligible, posterUrl, proUpiQrServer, rupeesInWords, rupeesToPaise, searchCatalog, siteLink } from "../src/lib/mcp/tools.ts";
+import { isAnthropicEgress } from "../src/lib/mcp/egress.ts";
 import { parseUpiUri } from "../src/lib/upi-uri.ts";
 import { UPI_ERROR_CODES } from "../src/data/upiErrorCodes.ts";
 
@@ -239,8 +240,10 @@ assert.equal(formatInr(5), "₹0.05");
 
   // The poster link carries the payment in the #fragment, which GeneratorForm reads back.
   const poster = r.structuredContent.qr_and_poster_url;
-  assert.ok(poster.startsWith(`${SITE}/#pay?`));
-  assert.equal(new URL(poster).search, "", "nothing in the query string (servers would log it)");
+  assert.ok(poster.startsWith(`${SITE}/?utm_source=mcp&utm_medium=tool#pay?`));
+  // The query string (which servers log) holds only the campaign tags, never payment data.
+  assert.equal(new URL(poster).search, "?utm_source=mcp&utm_medium=tool", "only the MCP campaign tags in the query string (servers would log it)");
+  for (const secret of ["ramesh", "1250", "Invoice"]) assert.ok(!new URL(poster).search.includes(secret), `no payment data (${secret}) in the query string`);
   const fromFragment = parseUpiUri(`upi://pay?${new URL(poster).hash.slice(5)}`);
   assert.deepEqual([fromFragment.pa, fromFragment.pn, fromFragment.am, fromFragment.tn], ["ramesh@okaxis", "Ramesh Stores", "1250.50", "Invoice 42"]);
 
@@ -311,7 +314,7 @@ assert.equal(formatInr(5), "₹0.05");
   for (const item of UPI_ERROR_CODES) assert.equal(findErrorCode(item.code)?.code, item.code, item.code);
   const r = await call("explain_upi_error", { code: "U30" });
   assert.match(text(r), /^U30: /);
-  assert.equal(r.structuredContent.url, `${SITE}/upi-error-codes/#u30`);
+  assert.equal(r.structuredContent.url, `${SITE}/upi-error-codes/?utm_source=mcp&utm_medium=tool#u30`);
   assert.equal((await call("explain_upi_error", { code: "Q99" })).isError, true);
 }
 
@@ -388,8 +391,42 @@ assert.equal(searchCatalog(CATALOG, "payslips", 5)[0].href, "/salary-slip-genera
 assert.deepEqual(searchCatalog(CATALOG, "xyzzy", 5), []);
 assert.equal(searchCatalog(CATALOG, "generator", 2).length, 2, "limit respected");
 const found = await call("find_merchant_tools", { query: "rent receipt" });
-assert.equal(found.structuredContent.tools[0].url, `${SITE}/rent-receipt-generator/`);
+assert.equal(found.structuredContent.tools[0].url, `${SITE}/rent-receipt-generator/?utm_source=mcp&utm_medium=tool`);
 
-assert.equal(posterUrl("upi://pay?pa=a%40b&pn=A"), `${SITE}/#pay?pa=a%40b&pn=A`);
+assert.equal(posterUrl("upi://pay?pa=a%40b&pn=A"), `${SITE}/?utm_source=mcp&utm_medium=tool#pay?pa=a%40b&pn=A`);
+// Links back to the site carry the MCP campaign tags before any #fragment (the payment stays in the fragment).
+assert.equal(siteLink("/tools/"), `${SITE}/tools/?utm_source=mcp&utm_medium=tool`);
+assert.equal(siteLink("/a/?x=1#y"), `${SITE}/a/?x=1&utm_source=mcp&utm_medium=tool#y`);
+// Directory policies exclude tools that move money: the model is told plainly that none do.
+assert.match(proUpiQrServer({ catalog: [] }).instructions, /never send, receive or hold money/);
+for (const name of ["create_upi_payment_link", "generate_upi_qr_code"]) {
+  assert.match(proUpiQrServer({ catalog: [] }).tools.find((t) => t.name === name).description, /never moves money/);
+}
+// Claude's shared egress range gets one shared allowance; everything else is per address.
+assert.equal(isAnthropicEgress("160.79.104.0"), true);
+assert.equal(isAnthropicEgress("160.79.111.255"), true);
+assert.equal(isAnthropicEgress("160.79.112.1"), false);
+assert.equal(isAnthropicEgress("160.79.103.9"), false);
+assert.equal(isAnthropicEgress("160.79.104.999"), false);
+assert.equal(isAnthropicEgress("2001:db8::1"), false);
+assert.equal(isAnthropicEgress(""), false);
 
 console.log("[mcp] both protocol eras, header validation, transport edges, and all 9 tools (QR round-trip, paise-exact GST/MSMED/MDR) passed");
+
+// The MCP Registry entry (server.json) must describe this exact server and version.
+{
+  const { readFileSync } = await import("node:fs");
+  const entry = JSON.parse(readFileSync(new URL("../server.json", import.meta.url), "utf8"));
+  const { MCP_SERVER_VERSION } = await import("../src/lib/mcp/tools.ts");
+  assert.equal(entry.version, MCP_SERVER_VERSION, "server.json version matches MCP_SERVER_VERSION (bump both together)");
+  assert.equal(entry.remotes[0].url, `${SITE}/mcp/`);
+  assert.equal(entry.remotes[0].type, "streamable-http");
+  assert.equal(entry.name, "in.proupiqr/upi-tools");
+}
+
+// Directory policies exclude sponsored content: the affiliate hardware guides never enter the tool catalog.
+assert.equal(isCatalogEligible("/rent-receipt-generator/"), true);
+assert.equal(isCatalogEligible("/products/"), false);
+assert.equal(isCatalogEligible("/products/acrylic-qr-standee/"), false);
+assert.equal(isCatalogEligible("//evil.example/"), false);
+assert.equal(isCatalogEligible("https://amzn.to/x"), false);
