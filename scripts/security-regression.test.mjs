@@ -398,7 +398,7 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.doesNotMatch(belongs, /name/, "a stash without an owner is never attributed by business name");
   assert.match(syncClient, /async function run\(\): Promise<void> \{\s*if \(stopped\(\)\) return;\s*if \(ownerMovedUnderUs\(\)\) return ownerMismatch\(\);/, "a (re)start never runs after another tab moved the device to another account");
   assert.match(readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8"), /if \(ownerChangedElsewhere\(tabOwner\(\)\)\) \{ ownerChanged\(\); return/, "saves after another tab's account switch reload instead of vanishing");
-  assert.match(store, /export const BOOKS_UI = false;/, "PR 3 ships with the business UI off");
+  assert.match(store, /export const BOOKS_UI = true;/, "PR 5 turns the business UI on together with the pricing copy");
   const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
   assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
   assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");

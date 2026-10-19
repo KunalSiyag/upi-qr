@@ -729,7 +729,7 @@ function Workspace() {
           <section role="status" className={`${card} mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
             <div className="min-w-0 text-sm">
               <p className="font-semibold text-ink">{tr("You've used all {n} free pay links.", { n: paylinks?.plan?.activePaylinks ?? 10 })}</p>
-              <p className={cardNote}>{tr("Pro gives unlimited pay links and client statement links for {price}/month. Or turn off links for paid invoices in Settings.", { price: PRO_PRICES.monthly.label })}</p>
+              <p className={cardNote}>{tr("Pro gives unlimited pay links, client statement links and up to {limit} businesses for {price}/month. Or turn off links for paid invoices in Settings.", { limit: PLANS.pro.businesses, price: PRO_PRICES.monthly.label })}</p>
             </div>
             <div className="flex gap-2">
               <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>
@@ -1089,7 +1089,7 @@ function Workspace() {
                 asideTick={asideTick}
                 onStashCleared={() => { if (sync.status === "error") setSyncEpoch((n) => n + 1); }}
               />
-              <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} />
+              <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} severalBusinesses={BOOKS_UI && liveIds.length > 1} />
               <PlanPanel
                 signedIn={signedIn}
                 onFlash={setFlash}

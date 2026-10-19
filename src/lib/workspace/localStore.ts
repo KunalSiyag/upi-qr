@@ -39,7 +39,7 @@ const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
 const PLACEHOLDER_VPA = "merchant@upi";
 
 /** PR 3: false. Flipped by the UI release (spec §10); until then only the first business is ever shown. */
-export const BOOKS_UI = false;
+export const BOOKS_UI = true;
 
 export const bookKey = (id: string): string => (id === PRIMARY_BOOK_ID ? WORKSPACE_KEY : `${BOOK_PREFIX}${id}`);
 

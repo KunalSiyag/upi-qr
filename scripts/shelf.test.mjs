@@ -32,7 +32,8 @@ const json = (ws) => canonicalJson(pruneTombstones(ws, Date.now()));
 const withUnsynced = (ws) => upsertInvoice(ws, inv("inv_0000000u", "INV-0099", "cli_aaaaaaaa", 12300), T + 50);
 const indexWith = (...ids) => ids.reduce((index, id, i) => addBook(index, id, T + i), emptyIndex());
 
-assert.equal(BOOKS_UI, false, "PR 3 ships with the business UI off");
+// PR 3/4 shipped with the business UI off, PR 5 turns it on: the flag-dependent checks below cover both.
+assert.equal(typeof BOOKS_UI, "boolean");
 assert.equal(bookKey(PRIMARY_BOOK_ID), "proupiqr-workspace-v1");
 assert.equal(bookKey(B), "proupiqr-book-v1:biz_bbbbbbbb");
 
@@ -157,10 +158,13 @@ assert.equal(store.getItem(bookKey(B)), null);
 assert.deepEqual(listAside().map((a) => [a.id, a.reason]), [[C, "stray"]]);
 assert.deepEqual(sweepStrayBooks(indexWith(B)), [], "live ids are never strays");
 
-/* ---------- active book: always the primary while the business UI is off ---------- */
+/* ---------- active book: the last-used live book while the business UI is on, else always the primary ---------- */
 store = installBrowser();
 store.setItem(ACTIVE_BOOK_KEY, B);
-assert.equal(loadActiveBook(indexWith(B)), PRIMARY_BOOK_ID);
+assert.equal(loadActiveBook(indexWith(B)), BOOKS_UI ? B : PRIMARY_BOOK_ID);
+assert.equal(loadActiveBook(emptyIndex()), PRIMARY_BOOK_ID, "a stored id that isn't live falls back to the primary");
+store.setItem(ACTIVE_BOOK_KEY, "biz_../x");
+assert.equal(loadActiveBook(indexWith(B)), PRIMARY_BOOK_ID, "an invalid stored id falls back to the primary");
 
 /* ---------- cross-tab (onShelfChange) ---------- */
 store = installBrowser();
@@ -533,10 +537,10 @@ assert.deepEqual(result.apply().into, [B]);
 // V2 while the business UI is off: only books that exist locally; others skipped, never created.
 const v2Text = JSON.stringify({ app: "proupiqr-workspace", formatVersion: 2, exportedAt: AT, workspace: primary,
   businesses: [{ id: PRIMARY_BOOK_ID, workspace: primary }, { id: B, workspace: two }, { id: C, workspace: three }] });
-result = restoreBackup(shelf2, v2Text, PRIMARY_BOOK_ID, 20, NOW);
+result = restoreBackup(shelf2, v2Text, PRIMARY_BOOK_ID, 20, NOW, false);
 assert.deepEqual([result.kind, result.restored, result.skipped, result.into], ["done", 2, 1, [PRIMARY_BOOK_ID, B]]);
 assert.equal(result.shelf.index, shelf2.index);
-result = restoreBackup(single, v2Text, PRIMARY_BOOK_ID, 20, NOW);
+result = restoreBackup(single, v2Text, PRIMARY_BOOK_ID, 20, NOW, false);
 assert.deepEqual([result.restored, result.skipped, Object.keys(result.shelf.books)], [1, 2, [PRIMARY_BOOK_ID]]);
 // With new books allowed (UI on): unknown and deleted ids become new ids, within the limit; a deleted id is never revived.
 const withDeleted = { index: deleteBook(indexWith(B), B, NOW), books: { [PRIMARY_BOOK_ID]: sanitizeWorkspace(primary) } };
@@ -580,12 +584,21 @@ saved = recordReceipt({ ...receipt, merchant: "Book Two", upiId: " TWO@okaxis " 
 assert.deepEqual([saved.bookId, saved.appliedPaise], [B, 100000]);
 assert.equal(store.getItem(WORKSPACE_KEY), primaryRaw);
 assert.equal(sanitizeWorkspace(JSON.parse(store.getItem(bookKey(B)))).invoices.inv_00000001.payments[0].amountPaise, 100000);
-assert.equal(workspaceReturnUrl("/app/?tab=invoices", saved), "/app/?tab=invoices", "?business= only once the business UI is on");
-// An unmatched real UPI ID asks only while the UI is on; until then the active book (the primary), never a new book.
+assert.equal(workspaceReturnUrl("/app/?tab=invoices", saved), BOOKS_UI ? `/app/?tab=invoices&business=${B}` : "/app/?tab=invoices", "?business= only once the business UI is on");
+assert.equal(workspaceReturnUrl("/app/?tab=invoices", { bookId: PRIMARY_BOOK_ID }), "/app/?tab=invoices", "the primary is never named");
+// An unmatched real UPI ID asks while the UI is on (the document waits in session storage); with the UI off it goes to
+// the active book (the primary). Never a new book.
 store = twoBooks();
 saved = recordReceipt({ ...receipt, merchant: "Someone Else", upiId: "else@okicici" });
-assert.equal(saved.bookId, PRIMARY_BOOK_ID);
-assert.equal(store.getItem(PENDING_DOCUMENT_KEY), null);
+if (BOOKS_UI) {
+  assert.deepEqual(saved, { pick: true });
+  assert.equal(JSON.parse(globalThis.sessionStorage.getItem(PENDING_DOCUMENT_KEY)).receipt.upiId, "else@okicici");
+  assert.equal(workspaceReturnUrl("/app/", saved), "/app/?pick=document");
+  globalThis.sessionStorage.removeItem(PENDING_DOCUMENT_KEY);
+} else {
+  assert.equal(saved.bookId, PRIMARY_BOOK_ID);
+  assert.equal(store.getItem(PENDING_DOCUMENT_KEY), null);
+}
 assert.deepEqual(Object.keys(JSON.parse(store.getItem(BOOK_INDEX_KEY)).books).sort(), [B, PRIMARY_BOOK_ID]);
 // trackDocument with two books: a document named for Book Two but from another UPI ID never overwrites Book Two's INV-0001.
 store = twoBooks();

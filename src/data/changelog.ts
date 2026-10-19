@@ -1,3 +1,5 @@
+import { PLANS } from "../lib/workspace/entitlements";
+
 /**
  * What's new on /changelog/, newest first. One entry per month of shipped,
  * user-facing work (taken from the git history); every link must point at a live page.
@@ -25,6 +27,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       { text: "Match bank statement credits to invoices, and turn a recorded payment into a receipt", href: "/payment-tracker/" },
       { text: "Free accounts: sync between phone and laptop, plus pay links your clients can pay from", href: "/pricing/" },
       { text: "Pro: unlimited pay links, client statement links, and MSME mode with 45-day deadlines and Section 16 interest", href: "/pricing/" },
+      { text: `Pro: up to ${PLANS.pro.businesses} businesses in one account after the first payment, each with its own UPI ID, invoice numbers and pay links, with a switcher in the tracker`, href: "/pricing/" },
       { text: "New guide: Section 43B(h) and the 45-day MSME payment rule", href: "/blog/section-43b-h-msme-45-day-payment-rule/" },
       { text: "Use Pro UPI QR inside Claude: an MCP server for UPI QR codes, payment links, error codes, GST and MSMED interest", href: "/mcp-server/" },
     ],

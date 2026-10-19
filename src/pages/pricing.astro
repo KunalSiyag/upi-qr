@@ -3,6 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductShot from "../components/ProductShot.astro";
 import { PRO_PRICES, PRO_TRIAL_DAYS, REFUND_WINDOW_DAYS, YEARLY_SAVING_RUPEES } from "../data/pricing";
 import { FREE_ACTIVE_PAYLINKS } from "../lib/workspace/paylinks";
+import { PLANS } from "../lib/workspace/entitlements";
 import { billingProviders } from "../lib/billing/config";
 import { checkoutProvider } from "../lib/billing/provider";
 
@@ -26,6 +27,7 @@ const tiers = [
       "All UPI QR generators, posters and stickers",
       "Invoices, receipts, quotations and business calculators",
       "Payment tracker: who owes you, overdue first",
+      `${PLANS.free.businesses} business in the payment tracker`,
       "Monthly fees: invoices that repeat every month",
       "WhatsApp and SMS reminders in one tap (English or Hindi)",
       "Match bank statement credits to invoices",
@@ -43,6 +45,7 @@ const tiers = [
     features: [
       "Everything in Free",
       "Sync between your devices",
+      `${PLANS.free.businesses} business in the payment tracker`,
       `${FREE_ACTIVE_PAYLINKS} active pay links with live amount, UPI button and QR`,
       "Clients send their UTR back; you confirm with one tap",
       "Delete your cloud copy anytime",
@@ -63,6 +66,7 @@ const tiers = [
     features: [
       "Everything in Free account",
       "Unlimited active pay links",
+      `Up to ${PLANS.pro.businesses} businesses in one account after your first payment, each with its own UPI ID, invoice numbers and pay links`,
       "Client statement links: all dues on one page with one UPI button",
       "Pay pages without our “send your own pay links” line",
       "MSME mode: 45-day MSMED deadlines, Section 16 interest, and your rights in reminders",
@@ -80,7 +84,7 @@ const faqs = [
   },
   {
     question: "Is Pro UPI QR really free?",
-    answer: "Yes. Every QR generator, document tool, calculator, and the payment tracker work without an account and without paying. A free account adds sync and pay links. Pro is only for businesses that need more than the free pay link limit.",
+    answer: "Yes. Every QR generator, document tool, calculator, and the payment tracker work without an account and without paying. A free account adds sync and pay links. Pro is for businesses that need more pay links, client statement links, MSME mode, or more than one business.",
   },
   {
     question: "How do I pay for Pro?",
@@ -88,7 +92,7 @@ const faqs = [
   },
   ...(PRO_TRIAL_DAYS > 0 ? [{
     question: "Is there a free trial?",
-    answer: `Yes. Your first Pro subscription starts with ${PRO_TRIAL_DAYS} days free. You add a payment method at checkout and pay ₹0 that day; the first payment is taken when the trial ends. Cancel from Settings before then and you pay nothing. One trial per account.${checkout ? "" : " Pro checkout opens soon; join early access in Settings to hear when."}`,
+    answer: `Yes. Your first Pro subscription starts with ${PRO_TRIAL_DAYS} days free. You add a payment method at checkout and pay ₹0 that day; the first payment is taken when the trial ends. Cancel from Settings before then and you pay nothing. One trial per account. During the trial your account keeps ${PLANS.free.businesses} business; up to ${PLANS.pro.businesses} unlock with the first payment.${checkout ? "" : " Pro checkout opens soon; join early access in Settings to hear when."}`,
   }] : []),
   {
     question: "Can I cancel anytime?",
@@ -103,6 +107,10 @@ const faqs = [
   {
     question: "What happens to my pay links if I go back to Free?",
     answer: `Pay links you already shared keep working. You can't create new ones while more than ${FREE_ACTIVE_PAYLINKS} are active, so turn off links for paid invoices to make room.`,
+  },
+  {
+    question: "What happens to my extra businesses if I go back to Free?",
+    answer: "Nothing is deleted. Every business stays in your tracker, where you can open it, export it and back it up, and its pay links keep working. On Free only your first business can be edited; the others are read-only, and you can't add another business, until you upgrade again.",
   },
   {
     question: "Where is my data stored?",

@@ -6,6 +6,7 @@
 export const WS_HI: Record<string, string> = {
   // Several businesses, client storage and sync (docs/spec-multi-business.md §7.6)
   "Businesses": "व्यवसाय",
+  "Covers all your businesses.": "आपके सभी व्यवसायों के लिए।",
   "+ Add business": "+ व्यवसाय जोड़ें",
   "Add business": "व्यवसाय जोड़ें",
   "New business": "नया व्यवसाय",
@@ -313,7 +314,7 @@ export const WS_HI: Record<string, string> = {
   "Plan": "प्लान",
   "Please download the statement as CSV (most net banking sites offer CSV next to Excel and PDF).": "कृपया स्टेटमेंट CSV में डाउनलोड करें (ज़्यादातर नेट बैंकिंग में Excel और PDF के साथ CSV का विकल्प होता है)।",
   "Pro can add your MSME payment rights (Section 16 and 43B(h)) to this message.": "Pro इस संदेश में आपके MSME भुगतान अधिकार (धारा 16 और 43B(h)) जोड़ सकता है।",
-  "Pro gives unlimited pay links and client statement links for {price}/month. Or turn off links for paid invoices in Settings.": "Pro में {price}/महीना पर असीमित पेमेंट लिंक और ग्राहक स्टेटमेंट लिंक मिलते हैं। या सेटिंग्स में भुगतान हो चुके इनवॉइस के लिंक बंद करें।",
+  "Pro gives unlimited pay links, client statement links and up to {limit} businesses for {price}/month. Or turn off links for paid invoices in Settings.": "Pro में {price}/महीना पर असीमित पेमेंट लिंक, ग्राहक स्टेटमेंट लिंक और {limit} तक व्यवसाय मिलते हैं। या सेटिंग्स में भुगतान हो चुके इनवॉइस के लिंक बंद करें।",
   "Pro is not available for purchase yet.": "Pro अभी ख़रीद के लिए उपलब्ध नहीं है।",
   "Pro is {monthly}/month or {yearly}/year. Create a free account first, then upgrade here.": "Pro {monthly}/महीना या {yearly}/साल है। पहले मुफ्त अकाउंट बनाएँ, फिर यहाँ अपग्रेड करें।",
   "Pro monthly": "Pro मासिक",
@@ -498,7 +499,7 @@ export const WS_HI: Record<string, string> = {
   "Every invoice you're waiting on, and what's been paid.": "हर इनवॉइस जिसका पैसा आना है, और जो मिल चुका है।",
   "Balances by client.": "हर ग्राहक का बकाया।",
   "Business details, sync, reminders and your plan.": "बिज़नेस की जानकारी, सिंक, रिमाइंडर और आपका प्लान।",
-  "Your business": "आपका बिज़नेस",
+  "Your business": "आपका व्यवसाय",
   "Free plan": "फ़्री प्लान",
   "Summary": "सारांश",
   "Filter invoices": "इनवॉइस छाँटें",
