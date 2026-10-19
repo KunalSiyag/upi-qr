@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
-  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
+  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
   liveRecurring, upsertPlan, allocatePayment,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
@@ -10,9 +10,10 @@ import { PLANS } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
   backupJson, BOOKS_UI, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere, restoreBackup, storedOwner,
-  retireBook, saveBook, saveIndex, sweepStrayBooks, type AsideBook, type RestoreDone, type RestoreResult, type StashedAccount,
+  recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
+  type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
-import { createShelfSync, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
+import { createShelfSync, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
 import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type LinkContext, type PaylinkList } from "../../lib/workspace/paylinkClient";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
@@ -23,8 +24,10 @@ import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
 import {
-  emptyIndex, isBookId, linkFor, liveBookIds, paidLinkTokens as paidTokensOf, parseLinkKey, PRIMARY_BOOK_ID, type BookIndex, type Shelf,
+  addBook, bookRank, deleteBook, emptyIndex, isBookId, isTombstoned, linkFor, liveBookIds, newBookId, paidLinkTokens as paidTokensOf, parseLinkKey, PRIMARY_BOOK_ID,
+  type BookIndex, type Shelf,
 } from "../../lib/workspace/books";
+import { BusinessSwitcher, UsageLine, type SwitcherBook, type SwitcherUsage } from "./BusinessSwitcher";
 import { PRO_PRICES } from "../../data/pricing";
 import { gatewayFeePaise, UPI_MDR } from "../../lib/upiMdr";
 import { card, cardNote, cardTitle, dangerText, downloadText, Field, ghostButton, Icon, inputClass, primaryButton, rowButton, rowPrimary, secondaryButton, Sheet, StatusBadge } from "./ui";
@@ -86,13 +89,23 @@ function Workspace() {
   // render and hydration stay identical and the first sync can never push an empty copy.
   const [shelf, setShelf] = useState<Shelf>(() => ({ index: emptyIndex(), books: { [PRIMARY_BOOK_ID]: sanitizeWorkspace(null) } }));
   const [active, setActive] = useState(PRIMARY_BOOK_ID);
-  const ws = shelf.books[active] ?? shelf.books[PRIMARY_BOOK_ID] ?? EMPTY_WS;
+  // A business that isn't loaded on this device yet (cloud-only) shows nothing of another business meanwhile.
+  const ws = shelf.books[active] ?? EMPTY_WS;
   const shelfRef = useRef(shelf);
   shelfRef.current = shelf;
   const activeRef = useRef(active);
   activeRef.current = active;
-  /** Edits from the UI always go to the book on screen. */
-  const setWs = useCallback((next: Workspace) => setShelf((s) => withBook(s, activeRef.current, next)), []);
+  /** True while the book on screen takes no edits (read-only after a downgrade); see readOnly below. */
+  const readOnlyRef = useRef(false);
+  /**
+   * Edits from the UI always go to the book on screen. Never into a read-only book, and never
+   * into a book that isn't loaded on this device yet (a cloud-only book shows an empty screen meanwhile).
+   */
+  const setWs = useCallback((next: Workspace) => {
+    const id = activeRef.current;
+    if (readOnlyRef.current || !shelfRef.current.books[id]) return;
+    setShelf((s) => withBook(s, id, next));
+  }, []);
   const savedRef = useRef<Record<string, Workspace>>({});
   /** Set once another account took over this device in another tab: nothing is saved any more, the page reloads. */
   const frozenRef = useRef(false);
@@ -121,9 +134,29 @@ function Workspace() {
   const syncRef = useRef<ReturnType<typeof createShelfSync> | null>(null);
   const [paylinks, setPaylinks] = useState<PaylinkList | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
-  const [upsell, setUpsell] = useState(false);
+  const [upsell, setUpsell] = useState<null | "paylinks" | "businesses" | "business_paylink">(null);
+  const [addOpen, setAddOpen] = useState(false);
+  /** A generator document waiting for "Which business is this for?" (§7.5). */
+  const [pickDoc, setPickDoc] = useState<PendingDocument | null>(null);
+  /** Books whose server copy didn't fit in this browser's storage (kept in memory for this visit). */
+  const [unsaved, setUnsaved] = useState<string[]>([]);
+  /** A book added on this device that the server may still refuse for the plan (then it stays local). */
+  const justAddedRef = useRef<string | null>(null);
   const signedIn = sync.status !== "signed_out" && sync.status !== "checking";
   const installer = useInstallPrompt();
+  const liveIds = useMemo(() => liveBookIds(shelf.index), [shelf.index]);
+  /** The business limit the server reported for this account (from PLANS: paid Pro, or Free and the trial); null while unknown. */
+  const planLimit = BOOKS_UI && signedIn && !sync.legacy && sync.plan ? (sync.plan.businesses ?? PLANS[sync.plan.id].businesses) : null;
+  /**
+   * Downgrade = read-only (owner decision 2026-10-18): a signed-in account's businesses ranked past its plan's
+   * limit take no edits, as the server enforces (402 plan_read_only). The first business never is. Books the
+   * server never registered (limit, unregistered) stay editable on this device.
+   */
+  const readOnlyIds = useMemo(() => new Set(BOOKS_UI && signedIn ? liveIds.filter((id) => id !== PRIMARY_BOOK_ID
+    && sync.books[id] !== "limit" && sync.books[id] !== "unregistered"
+    && (sync.books[id] === "read_only" || (planLimit !== null && bookRank(shelf.index, id) >= planLimit))) : []), [liveIds, signedIn, sync.books, planLimit, shelf.index]);
+  const readOnly = readOnlyIds.has(active);
+  readOnlyRef.current = readOnly;
 
   /** A server or another tab's copy of a book: merged into this tab's copy (never another book), saved, and returned saved-or-not. */
   const applyBook = useCallback((id: string, next: Workspace): boolean => {
@@ -136,6 +169,8 @@ function Workspace() {
     const saved = saveBook(current.index, id, value);
     shelfRef.current = withBook(current, id, value);
     setShelf((s) => withBook(s, id, s.books[id] && s.books[id] !== before ? mergeWorkspaces(s.books[id], value) : value));
+    // §2.5: a pulled book that doesn't fit stays usable in memory for this visit, with a banner.
+    if (id !== PRIMARY_BOOK_ID) setUnsaved((list) => (saved ? (list.includes(id) ? list.filter((x) => x !== id) : list) : list.includes(id) ? list : [...list, id]));
     return saved;
   }, []);
 
@@ -191,8 +226,20 @@ function Workspace() {
     if (filterParam === "unpaid" || filterParam === "overdue" || filterParam === "paid" || filterParam === "all") setFilter(filterParam);
     if (params.get("new") === "1") setSheet({ kind: "invoice" });
     if (params.get("saved") === "receipt") {
-      setFlash(tr("Receipt saved to your payment book."));
+      // With several businesses the toast names the one the receipt went into.
+      const stored = liveBookIds(loaded.index).filter((id) => loaded.books[id]);
+      setFlash(BOOKS_UI && stored.length > 1
+        ? tr("Saved to {business}.", { business: loaded.books[activeId]?.business.name || tr("Your business") })
+        : tr("Receipt saved to your payment book."));
       params.delete("saved");
+      const rest = params.toString();
+      history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
+    }
+    // A generator document whose UPI ID matched no business: ask which one it is for (§7.5).
+    if (BOOKS_UI && params.get("pick") === "document") {
+      const pending = takePendingDocument();
+      if (pending) setPickDoc(pending);
+      params.delete("pick");
       const rest = params.toString();
       history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
     }
@@ -228,7 +275,7 @@ function Workspace() {
     let createdHere = 0;
     for (const id of liveBookIds(shelf.index)) {
       const book = shelf.books[id];
-      if (!book) continue;
+      if (!book || readOnlyIds.has(id)) continue;
       const { ws: next, created } = generateRecurring(book, today, now);
       if (!created.length) continue;
       updates[id] = next;
@@ -241,7 +288,7 @@ function Workspace() {
       return { index: s.index, books };
     });
     if (createdHere) setFlash(tr(createdHere === 1 ? "Created {n} invoice from your monthly billing." : "Created {n} invoices from your monthly billing.", { n: createdHere }));
-  }, [shelf, today, ready, active, tr]);
+  }, [shelf, today, ready, active, tr, readOnlyIds]);
 
   // Start sync only after the stored shelf has rendered, so the first push
   // can never send an empty in-memory copy.
@@ -292,14 +339,19 @@ function Workspace() {
     setLinkBusy(invoiceId);
     try {
       if (!(await syncRef.current?.flush(active))) {
-        setFlash(tr("Couldn't sync this invoice yet. Check your connection and try again."));
+        // The plan changed under us (a downgrade): the business is read-only now, so say what still works.
+        if (BOOKS_UI && syncRef.current?.bookStatus(active) === "read_only") setUpsell("business_paylink");
+        else setFlash(tr("Couldn't sync this invoice yet. Check your connection and try again."));
         return;
       }
       const result = await createPaylinkFor(invoiceId, active, linkContext());
       if ("error" in result) {
         if (result.code === "limit") {
-          setUpsell(true);
+          setUpsell("paylinks");
           trackProductEvent("upgrade_prompt", "paylinks");
+        } else if (BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) {
+          setUpsell("business_paylink");
+          trackProductEvent("upgrade_prompt", "businesses");
         } else setFlash(tr(result.error));
       }
       else {
@@ -382,9 +434,14 @@ function Workspace() {
   async function makeStatementLink(clientId: string) {
     setLinkBusy(clientId);
     try {
-      if (!(await syncRef.current?.flush(active))) { setFlash(tr("Couldn't sync yet. Check your connection and try again.")); return; }
+      if (!(await syncRef.current?.flush(active))) {
+        if (BOOKS_UI && syncRef.current?.bookStatus(active) === "read_only") setUpsell("business_paylink");
+        else setFlash(tr("Couldn't sync yet. Check your connection and try again."));
+        return;
+      }
       const result = await createStatementLinkFor(clientId, active, linkContext());
-      if ("error" in result) setFlash(tr(result.error));
+      if ("error" in result && BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) setUpsell("business_paylink");
+      else if ("error" in result) setFlash(tr(result.error));
       else { await refreshLinks(); setFlash(tr("Statement link ready — it always shows this client's current dues.")); }
     } finally {
       setLinkBusy(null);
@@ -406,6 +463,169 @@ function Workspace() {
   /** The backup and the sync nudge cover every business on this device. */
   const liveBooks = useMemo(() => liveBookIds(shelf.index).flatMap((id) => (shelf.books[id] ? [shelf.books[id]] : [])), [shelf]);
   const allInvoiceCount = useMemo(() => liveBooks.reduce((n, book) => n + liveInvoices(book).length, 0), [liveBooks]);
+
+  // ---- Several businesses (docs/spec-multi-business.md §7). Everything below renders only while BOOKS_UI is on.
+
+  /** §7.1: one business on screen; switching clears whatever belonged to the previous one. */
+  const switchBook = useCallback((id: string) => {
+    if (!BOOKS_UI || !liveBookIds(shelfRef.current.index).includes(id)) return;
+    activeRef.current = id;
+    setActive(id);
+    saveActiveBook(id);
+    setSheet(null);
+    setClientFilter(null);
+    setQuery("");
+    setUpsell(null);
+    // A business kept only in the account (it didn't fit in this browser) is pulled when opened.
+    if (!shelfRef.current.books[id]) void syncRef.current?.open(id);
+  }, []);
+
+  /** §6.3: what adding a business is limited to right now. Anonymous browsers are always Free. */
+  const addLimit: number | "loading" | "offline" | "unavailable" = !signedIn
+    ? (sync.status === "checking" ? "loading" : PLANS.free.businesses)
+    : sync.legacy ? "unavailable"
+      : planLimit !== null ? planLimit
+        : sync.status === "offline" || (typeof navigator !== "undefined" && navigator.onLine === false) ? "offline" : "loading";
+  const usage: SwitcherUsage = typeof addLimit === "number"
+    ? { used: liveIds.length, limit: addLimit }
+    : { used: liveIds.length, limit: null, note: addLimit === "loading" ? "Checking your plan…" : addLimit === "offline" ? "Connect to the internet to add a business." : "Adding businesses isn't available right now." };
+  const canAddMore = typeof addLimit === "number" && liveIds.length < addLimit;
+
+  /** "+ Add business": the New business sheet, or at the limit an upgrade prompt (never a broken state). */
+  function requestAdd() {
+    if (typeof addLimit !== "number") return;
+    if (!canAddMore) {
+      setUpsell("businesses");
+      if (signedIn) trackProductEvent("upgrade_prompt", "businesses");
+      return;
+    }
+    setAddOpen(true);
+  }
+
+  /** §7.3: saved locally first (aborted when storage is full), registered with the account by the index sync. */
+  function addBusiness(name: string, upiId: string): string | null {
+    const now = Date.now();
+    const id = newBookId();
+    const current = shelfRef.current;
+    const index = addBook(current.index, id, now);
+    const book = updateBusiness(emptyWorkspace(now), { name, upiId, invoicePrefix: "INV-" }, now);
+    const full = "This browser is out of storage. Download a backup and delete old invoices first.";
+    if (!saveBook(index, id, book)) return full;
+    if (!saveIndex(index)) { removeBookStorage(id); return full; }
+    savedRef.current[id] = book;
+    shelfRef.current = { index, books: { ...current.books, [id]: book } };
+    setShelf((s) => ({ index: addBook(s.index, id, now), books: { ...s.books, [id]: book } }));
+    justAddedRef.current = id;
+    switchBook(id);
+    setAddOpen(false);
+    setFlash(tr("Business added."));
+    void syncRef.current?.indexChanged();
+    return null;
+  }
+
+  /** §7.3: the first business can't be deleted. Others are tombstoned in the index; the server removes their data and links. */
+  async function deleteBusiness(id: string) {
+    if (!BOOKS_UI || id === PRIMARY_BOOK_ID) return;
+    const now = Date.now();
+    const index = deleteBook(shelfRef.current.index, id, now);
+    saveIndex(index);
+    retireBook(id, null, syncRef.current?.owner() ?? null, true);
+    const { [id]: _gone, ...books } = shelfRef.current.books;
+    delete savedRef.current[id];
+    shelfRef.current = { index, books };
+    setShelf((s) => {
+      const { [id]: _drop, ...rest } = s.books;
+      return { index: deleteBook(s.index, id, now), books: rest };
+    });
+    switchBook(PRIMARY_BOOK_ID);
+    const confirmed = signedIn && !sync.legacy ? await syncRef.current?.indexChanged() : false;
+    setFlash(confirmed ? tr("Business deleted.") : tr("Business deleted on this device. Other devices update when you're back online."));
+  }
+
+  /** "Erase all businesses on this device": every writable book's contents (the books themselves stay). */
+  function eraseAll() {
+    const now = Date.now();
+    setShelf((s) => {
+      const books = { ...s.books };
+      for (const id of liveBookIds(s.index)) if (books[id] && !readOnlyIds.has(id)) books[id] = eraseWorkspace(books[id], now);
+      return { index: s.index, books };
+    });
+    setFlash(tr("Workspace erased."));
+  }
+
+  /** §7.5: the picker's answer. The document goes into that business only (never a new one). */
+  function placeDocument(bookId: string) {
+    const doc = pickDoc;
+    setPickDoc(null);
+    if (!doc || !shelfRef.current.books[bookId]) return;
+    const result = doc.kind === "receipt" ? recordReceiptInto(bookId, doc.receipt, shelfRef.current) : trackDocumentInto(bookId, doc.doc, shelfRef.current);
+    if (!result) { setFlash(tr("Couldn't save that document here. Download it from the generator instead.")); return; }
+    const fresh = loadBook(bookId);
+    if (fresh) applyBook(bookId, fresh);
+    switchBook(bookId);
+    setTab("invoices");
+    setFilter("all");
+    setFlash(tr("Saved to {business}.", { business: shelfRef.current.books[bookId]?.business.name || tr("Your business") }));
+  }
+
+  // A business added here that the server refused for the plan stays on this device (never removed).
+  useEffect(() => {
+    const id = justAddedRef.current;
+    const status = id ? sync.books[id] : undefined;
+    if (!id || !status) return;
+    if (status === "limit") setFlash(tr("Your plan doesn't include another business, so {business} stays on this device only.", { business: shelfRef.current.books[id]?.business.name || tr("Your business") }));
+    if (status !== "unregistered") justAddedRef.current = null;
+  }, [sync.books, tr]);
+
+  const upsellRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!upsell) return;
+    const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    upsellRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
+  }, [upsell]);
+
+  const claimCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    if (paylinks) for (const [key, link] of Object.entries(paylinks.byInvoice)) {
+      const { bookId } = parseLinkKey(key);
+      counts[bookId] = (counts[bookId] ?? 0) + link.claims.length;
+    }
+    return counts;
+  }, [paylinks]);
+  const switcherBooks: SwitcherBook[] = useMemo(() => liveIds.map((id) => ({
+    id,
+    name: shelf.books[id]?.business.name ?? "",
+    status: shelf.books[id] ? sync.books[id] : "cloud_only" as BookSyncStatus,
+    claims: claimCounts[id] ?? 0,
+    readOnly: readOnlyIds.has(id),
+  })), [liveIds, shelf.books, sync.books, claimCounts, readOnlyIds]);
+  const primaryName = shelf.books[PRIMARY_BOOK_ID]?.business.name || tr("Your business");
+  const activeName = ws.business.name || tr("Your business");
+  const activeStatus = sync.books[active];
+  const loadedHere = Boolean(shelf.books[active]);
+  /** Shown once per device after a downgrade leaves businesses read-only (§7.4). */
+  const [downgradeSeen, setDowngradeSeen] = useState(true);
+  useEffect(() => {
+    try { setDowngradeSeen(localStorage.getItem(DOWNGRADE_NOTICE_KEY) === "1"); } catch { setDowngradeSeen(false); }
+  }, []);
+  const showDowngrade = BOOKS_UI && !downgradeSeen && readOnlyIds.size > 0;
+  const dismissDowngrade = () => {
+    setDowngradeSeen(true);
+    try { localStorage.setItem(DOWNGRADE_NOTICE_KEY, "1"); } catch { /* shown again next visit */ }
+  };
+  /** On phones the switcher sits in the tab strip once there's a choice to make (§7.2). */
+  const showChip = BOOKS_UI && (liveIds.length > 1 || canAddMore && signedIn);
+  const switcher = (variant: "sidebar" | "chip") => (
+    <BusinessSwitcher
+      variant={variant}
+      books={switcherBooks}
+      active={active}
+      planLabel={isPro ? "Pro" : tr("Free plan")}
+      usage={usage}
+      onSelect={switchBook}
+      onAdd={requestAdd}
+    />
+  );
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
@@ -441,14 +661,20 @@ function Workspace() {
         className="sticky z-30 -mx-4 border-b border-hairline bg-fog/95 px-4 backdrop-blur-sm md:-mx-6 md:px-6 lg:mx-0 lg:w-56 lg:shrink-0 lg:border-0 lg:bg-transparent lg:px-0 lg:backdrop-blur-none"
         style={{ top: "calc(4rem + env(safe-area-inset-top, 0px))" }}
       >
-        <div className="hidden items-center gap-2.5 px-2 pb-5 pt-1 lg:flex">
-          <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-graphite text-sm font-semibold text-white">{(ws.business.name || "P").trim().charAt(0).toUpperCase()}</span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-ink">{ws.business.name || tr("Your business")}</p>
-            <p className="text-xs text-muted">{isPro ? "Pro" : tr("Free plan")}</p>
+        {BOOKS_UI ? (
+          <div className="hidden pb-4 lg:block">{switcher("sidebar")}</div>
+        ) : (
+          <div className="hidden items-center gap-2.5 px-2 pb-5 pt-1 lg:flex">
+            <span aria-hidden="true" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] bg-graphite text-sm font-semibold text-white">{(ws.business.name || "P").trim().charAt(0).toUpperCase()}</span>
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-ink">{ws.business.name || tr("Your business")}</p>
+              <p className="text-xs text-muted">{isPro ? "Pro" : tr("Free plan")}</p>
+            </div>
           </div>
-        </div>
-        <div className="flex gap-1 overflow-x-auto py-2 [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:py-0">
+        )}
+        <div className={showChip ? "flex items-center gap-2 lg:block" : undefined}>
+        {showChip && <div className="shrink-0 lg:hidden">{switcher("chip")}</div>}
+        <div className={`flex gap-1 overflow-x-auto py-2 [scrollbar-width:none] lg:flex-col lg:gap-0.5 lg:overflow-visible lg:py-0${showChip ? " min-w-0 flex-1" : ""}`}>
           {TABS.map((t) => (
             <button
               key={t.id}
@@ -462,6 +688,7 @@ function Workspace() {
               {t.id === "invoices" && summary.overdueCount > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{summary.overdueCount}</span>}
             </button>
           ))}
+        </div>
         </div>
         <div className="mt-6 hidden space-y-3 border-t border-hairline px-2 pt-4 lg:block">
           <LangToggle />
@@ -478,7 +705,7 @@ function Workspace() {
             <span className="lg:hidden"><LangToggle /></span>
             {installer.canInstall && <button type="button" onClick={() => void installer.install()} className={secondaryButton}>{tr("Install app")}</button>}
             <SyncPill state={sync} onClick={() => setTab("settings")} />
-            <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={primaryButton}>{tr("+ New invoice")}</button>
+            <button type="button" onClick={() => setSheet({ kind: "invoice" })} disabled={readOnly || !loadedHere} className={primaryButton}>{tr("+ New invoice")}</button>
           </div>
         </header>
 
@@ -498,7 +725,7 @@ function Workspace() {
             </p>
           </div>
         )}
-        {upsell && (
+        {upsell === "paylinks" && (
           <section role="status" className={`${card} mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
             <div className="min-w-0 text-sm">
               <p className="font-semibold text-ink">{tr("You've used all {n} free pay links.", { n: paylinks?.plan?.activePaylinks ?? 10 })}</p>
@@ -506,12 +733,53 @@ function Workspace() {
             </div>
             <div className="flex gap-2">
               <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>
-              <button type="button" onClick={() => setUpsell(false)} className={ghostButton}>{tr("Not now")}</button>
+              <button type="button" onClick={() => setUpsell(null)} className={ghostButton}>{tr("Not now")}</button>
             </div>
           </section>
         )}
+        {BOOKS_UI && (upsell === "businesses" || upsell === "business_paylink") && (
+          <section ref={upsellRef} role="status" data-upsell={upsell} className={`${card} mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
+            <p className="min-w-0 max-w-xl text-sm font-medium text-ink">
+              {upsell === "business_paylink"
+                ? tr("On Free, new pay links work only in {primary}. {business} and its existing links keep working.", { primary: primaryName, business: activeName })
+                : !signedIn
+                  ? tr("Create a free account and upgrade to Pro to add another business.")
+                  : !isPro
+                    ? tr("Pro gives up to {limit} businesses in one account for {price}/month, from your first payment.", { limit: PLANS.pro.businesses, price: PRO_PRICES.monthly.label })
+                    : planLimit !== null && planLimit < PLANS.pro.businesses
+                      ? tr("During the free trial your account keeps {free} business. Pro gives up to {limit} from your first payment.", { free: PLANS.free.businesses, limit: PLANS.pro.businesses })
+                      : tr("Your plan includes {limit} businesses, and all of them are in use.", { limit: planLimit ?? PLANS.pro.businesses })}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {upsell === "businesses" && !signedIn ? (
+                <>
+                  <a href={UPGRADE_SIGN_UP_HREF} className={primaryButton}>{tr("Create free account")}</a>
+                  <a href={UPGRADE_SIGN_IN_HREF} className={secondaryButton}>{tr("Sign in")}</a>
+                </>
+              ) : !isPro ? (
+                <a href={upsell === "businesses" ? "/app/?tab=settings&upgrade=monthly&then=add-business" : "/app/?tab=settings&upgrade=monthly"} className={primaryButton}>{tr("See Pro")}</a>
+              ) : null}
+              <button type="button" onClick={() => setUpsell(null)} className={ghostButton}>{tr("Not now")}</button>
+            </div>
+          </section>
+        )}
+        {BOOKS_UI && (
+          <BookBanners
+            name={activeName}
+            primaryName={primaryName}
+            readOnly={readOnly}
+            status={activeStatus}
+            deletedElsewhere={isTombstoned(shelf.index, active)}
+            loadedHere={loadedHere}
+            signedIn={signedIn}
+            unsaved={unsaved.includes(active)}
+            limit={planLimit ?? PLANS.free.businesses}
+            downgrade={showDowngrade ? { n: liveIds.length, onDismiss: dismissDowngrade } : null}
+            backup={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(shelf, { book: active }), "application/json")}
+          />
+        )}
 
-        <div className="mt-5">
+        <div className={loadedHere ? "mt-5" : "hidden"}>
           {tab === "overview" && (
             <div className="space-y-4">
               {statementClaims.length > 0 && (
@@ -523,7 +791,7 @@ function Workspace() {
                         <p className="text-[13px] text-muted">UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
-                        {claim.amountPaise && (balances.get(clientId)?.balancePaise ?? 0) > 0 && (
+                        {!readOnly && claim.amountPaise && (balances.get(clientId)?.balancePaise ?? 0) > 0 && (
                           <button type="button" className={rowPrimary} onClick={() => applyStatementClaim(clientId, token, claim)}>{tr("Confirm & apply")}</button>
                         )}
                         <button type="button" className={rowButton} onClick={async () => { await deletePaylink(token, "claims"); await refreshLinks(); }}>{tr("Not received")}</button>
@@ -542,7 +810,7 @@ function Workspace() {
                         <p className="text-[13px] text-muted">{view.invoice.number} · UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
-                        {view.balancePaise > 0 && (
+                        {!readOnly && view.balancePaise > 0 && (
                           <button type="button" className={rowPrimary}
                             onClick={() => setSheet({ kind: "payment", id: invoiceId, amountPaise: claim.amountPaise ?? view.balancePaise, reference: claim.utr, claimToken: token })}>
                             {tr("Confirm & record")}
@@ -559,7 +827,7 @@ function Workspace() {
               )}
 
               {ready && !signedIn && <SyncNudge books={liveBooks} today={today} backup={() => backupJson(shelf, "all")} />}
-              {hasSampleData(ws) && (
+              {hasSampleData(ws) && !readOnly && (
                 <p className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] text-charcoal ring-1 ring-hairline">
                   {tr("You're looking at sample data.")}
                   <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { setWs(removeSampleData(ws, Date.now())); setFlash(tr("Sample data cleared.")); }}>{tr("Clear sample data")}</button>
@@ -577,7 +845,7 @@ function Workspace() {
                   </div>
                 </div>
               )}
-              {needsSetup && <SetupCard key={active} ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
+              {needsSetup && !readOnly && <SetupCard key={active} ws={ws} onSave={(next) => { setWs(next); setFlash(tr("Business details saved.")); }} />}
 
               <section aria-label={tr("Summary")} className={`${card} grid grid-cols-2 md:grid-cols-4`}>
                 <Stat label={tr("To collect")} value={formatPaise(summary.outstandingPaise)} note={tr(summary.openCount === 1 ? "{n} open invoice" : "{n} open invoices", { n: summary.openCount })} className="border-b border-r border-hairline md:border-b-0" />
@@ -597,7 +865,7 @@ function Workspace() {
                 <section className={card} aria-labelledby="chase-title">
                   <div className="flex flex-wrap items-baseline justify-between gap-2 border-b border-hairline px-4 py-3.5">
                     <h2 id="chase-title" className={cardTitle}>{tr("Chase today")}</h2>
-                    {summary.openCount > 0 && <button type="button" onClick={() => setSheet({ kind: "statement" })} className="text-[13px] font-medium text-leaf hover:underline">{tr("Got paid? Import bank statement")}</button>}
+                    {summary.openCount > 0 && !readOnly && <button type="button" onClick={() => setSheet({ kind: "statement" })} className="text-[13px] font-medium text-leaf hover:underline">{tr("Got paid? Import bank statement")}</button>}
                   </div>
                   {chase.length === 0 ? (
                     <p className="px-4 py-6 text-sm text-muted">{views.length ? tr("Nothing overdue.") : tr("Add your first invoice to see who to follow up with.")}</p>
@@ -612,7 +880,7 @@ function Workspace() {
                           <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatPaise(v.balancePaise)}</p>
                           <div className="col-span-2 flex gap-2 sm:col-span-1 sm:justify-end">
                             <button type="button" onClick={() => setSheet({ kind: "remind", id: v.invoice.id })} className={rowButton}><Icon name="whatsapp" className="h-3.5 w-3.5 text-[#1da851]" />{tr("Remind")}</button>
-                            <button type="button" onClick={() => setSheet({ kind: "payment", id: v.invoice.id })} className={rowButton}>{tr("Got paid")}</button>
+                            {!readOnly && <button type="button" onClick={() => setSheet({ kind: "payment", id: v.invoice.id })} className={rowButton}>{tr("Got paid")}</button>}
                           </div>
                         </li>
                       ))}
@@ -664,14 +932,14 @@ function Workspace() {
                     <span className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted"><Icon name="search" /></span>
                     <input id="ws-search" type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder={tr("Search client or number")} className={`${inputClass} py-1.5 pl-8`} />
                   </div>
-                  <button type="button" onClick={() => setSheet({ kind: "statement" })} className={rowButton}>{tr("Import bank statement")}</button>
+                  {!readOnly && <button type="button" onClick={() => setSheet({ kind: "statement" })} className={rowButton}>{tr("Import bank statement")}</button>}
                 </div>
               </div>
 
               {filtered.length === 0 ? (
                 <div className={`${card} p-10 text-center`}>
                   <p className="text-sm text-muted">{views.length ? tr("No invoices match.") : tr("No invoices yet.")}</p>
-                  {!views.length && <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={`${primaryButton} mt-3`}>{tr("Add your first invoice")}</button>}
+                  {!views.length && !readOnly && <button type="button" onClick={() => setSheet({ kind: "invoice" })} className={`${primaryButton} mt-3`}>{tr("Add your first invoice")}</button>}
                 </div>
               ) : (
                 <div className={`${card} overflow-hidden`}>
@@ -687,6 +955,7 @@ function Workspace() {
                         view={v}
                         msme={msmeFor(v)}
                         signedIn={signedIn}
+                        readOnly={readOnly}
                         payLink={link ? paylinkUrl(link.token) : undefined}
                         linkBusy={linkBusy === v.invoice.id}
                         onCreateLink={() => void makeLink(v.invoice.id)}
@@ -726,7 +995,7 @@ function Workspace() {
                               {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
                             </p>
                           </div>
-                          {!ended && (
+                          {!ended && !readOnly && (
                             <div className="flex gap-2">
                               <button type="button" className={rowButton}
                                 onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
@@ -746,7 +1015,7 @@ function Workspace() {
               )}
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[13px] text-muted">{tr(clients.length === 1 ? "{n} client" : "{n} clients", { n: clients.length })}</p>
-                <button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>
+                {!readOnly && <button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>}
               </div>
               {clients.length === 0 ? (
                 <p className={`${card} p-10 text-center text-sm text-muted`}>{tr("Clients are added automatically when you create an invoice.")}</p>
@@ -774,7 +1043,7 @@ function Workspace() {
                               <p className="text-sm font-semibold tabular-nums text-ink">{formatPaise(bal?.balancePaise ?? 0)}</p>
                               {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
                             </div>
-                            <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className={`${ghostButton} justify-self-end`} aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>
+                            {readOnly ? <span /> : <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className={`${ghostButton} justify-self-end`} aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>}
                           </div>
                           {(bal?.balancePaise ?? 0) > 0 || statementLinks.has(c.id) ? (
                             <div className="mt-2 text-[13px] md:pl-[2.375rem]">
@@ -785,7 +1054,7 @@ function Workspace() {
                                   <button type="button" className={rowPrimary} onClick={async () => { try { await navigator.clipboard.writeText(paylinkUrl(statementLinks.get(c.id)!.token)); setFlash(tr("Statement link copied.")); } catch { /* select manually */ } }}>{tr("Copy")}</button>
                                   <button type="button" className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => void revokeLink(statementLinks.get(c.id)!.token)}>{tr("Turn off")}</button>
                                 </div>
-                              ) : !signedIn ? (
+                              ) : readOnly ? null : !signedIn ? (
                                 <span className="text-muted">{tr("Statement links need a free account + Pro.")}</span>
                               ) : isPro ? (
                                 <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : tr("Share statement link — all dues + one UPI button")}</button>
@@ -821,7 +1090,12 @@ function Workspace() {
                 onStashCleared={() => { if (sync.status === "error") setSyncEpoch((n) => n + 1); }}
               />
               <NotificationsPanel signedIn={signedIn} standalone={installer.standalone} ios={installer.ios} onFlash={setFlash} />
-              <PlanPanel signedIn={signedIn} onFlash={setFlash} />
+              <PlanPanel
+                signedIn={signedIn}
+                onFlash={setFlash}
+                businesses={BOOKS_UI ? { count: liveIds.length, primary: primaryName } : undefined}
+                onPlanChange={() => { void syncRef.current?.refreshIndex(); }}
+              />
               <InstallHint standalone={installer.standalone} ios={installer.ios} />
               <SettingsPanel
                 key={active}
@@ -830,6 +1104,8 @@ function Workspace() {
                 active={active}
                 restoreLimit={signedIn && sync.plan ? PLANS[sync.plan.id].businesses : PLANS.free.businesses}
                 today={today}
+                readOnly={readOnly}
+                books={BOOKS_UI ? { usage, onAdd: requestAdd, onDelete: () => void deleteBusiness(active), onEraseAll: eraseAll, count: liveIds.length } : null}
                 onChange={(next, message) => { setWs(next); if (message) setFlash(message); }}
                 onRestored={(done) => {
                   setShelf((s) => {
@@ -880,7 +1156,7 @@ function Workspace() {
         }} />
       )}
       {sheet?.kind === "statement" && (
-        <StatementSheet ws={ws} today={today} claimedUtrs={claimedUtrs} onClose={closeSheet} onRecord={(next, recorded) => {
+        <StatementSheet ws={ws} today={today} claimedUtrs={claimedUtrs} businessName={BOOKS_UI && liveIds.length > 1 ? activeName : undefined} onClose={closeSheet} onRecord={(next, recorded) => {
           setWs(next);
           setSheet(null);
           setFlash(tr(recorded.length === 1 ? "Recorded {n} payment from your statement." : "Recorded {n} payments from your statement.", { n: recorded.length }));
@@ -897,7 +1173,120 @@ function Workspace() {
       {sheet?.kind === "client" && (
         <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { setWs(next); setSheet(null); setFlash(message); }} />
       )}
+      {BOOKS_UI && addOpen && <AddBusinessSheet onClose={() => setAddOpen(false)} onAdd={addBusiness} />}
+      {BOOKS_UI && pickDoc && (
+        <Sheet title={tr("Which business is this for?")} onClose={() => setPickDoc(null)}>
+          <p className={cardNote}>{tr("Its UPI ID doesn't match any of your businesses. Pick the one it belongs to.")}</p>
+          <div className="mt-4 divide-y divide-hairline rounded-[12px] ring-1 ring-hairline">
+            {liveIds.filter((id) => shelf.books[id]).map((id) => {
+              const business = shelf.books[id].business;
+              return (
+                <button key={id} type="button" data-pick-business={id} disabled={readOnlyIds.has(id)} onClick={() => placeDocument(id)}
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 first:rounded-t-[12px] last:rounded-b-[12px] hover:bg-fog disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent">
+                  <span className="min-w-0">
+                    <span className="block truncate text-sm font-medium text-ink">{business.name || tr("Your business")}</span>
+                    <span className="block truncate font-mono text-[12px] text-muted">{business.upiId || "—"}</span>
+                  </span>
+                  {readOnlyIds.has(id) && <span className="shrink-0 text-xs text-muted">{tr("Read-only")}</span>}
+                </button>
+              );
+            })}
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button type="button" className={ghostButton} onClick={() => setPickDoc(null)}>{tr("Cancel")}</button>
+          </div>
+        </Sheet>
+      )}
     </div>
+  );
+}
+
+const DOWNGRADE_NOTICE_KEY = "proupiqr-downgrade-notice";
+const UPGRADE_SIGN_UP_HREF = "/sign-up/?redirect_url=" + encodeURIComponent("/app/?tab=settings&upgrade=monthly");
+const UPGRADE_SIGN_IN_HREF = "/sign-in/?redirect_url=" + encodeURIComponent("/app/?tab=settings&upgrade=monthly");
+const bannerClass = "mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-2 rounded-[10px] bg-white px-4 py-2.5 text-[13px] text-charcoal ring-1 ring-hairline";
+
+/**
+ * The calm states of one business (§7.4): read-only after a downgrade, not syncing because the plan
+ * refused it, waiting to be registered, deleted on another device, not loaded here, or too big for
+ * this browser. Every one says what still works; none of them hides data.
+ */
+function BookBanners({ name, primaryName, readOnly, status, deletedElsewhere, loadedHere, signedIn, unsaved, limit, downgrade, backup }: {
+  name: string;
+  primaryName: string;
+  readOnly: boolean;
+  status?: BookSyncStatus;
+  deletedElsewhere: boolean;
+  loadedHere: boolean;
+  signedIn: boolean;
+  unsaved: boolean;
+  limit: number;
+  downgrade: { n: number; onDismiss: () => void } | null;
+  backup: () => void;
+}) {
+  const { tr } = useWs();
+  const seePro = <a href="/app/?tab=settings&upgrade=monthly" className={rowButton}>{tr("See Pro")}</a>;
+  const download = <button type="button" onClick={backup} className={rowButton}><Icon name="download" className="h-3.5 w-3.5" />{tr("Download backup")}</button>;
+  return (
+    <>
+      {downgrade && (
+        <div role="status" className={bannerClass}>
+          <p className="min-w-0 max-w-2xl">{tr("You're on Free now. Your {n} businesses all stay, and their pay links keep working. {primary} stays editable; the others are read-only until you upgrade.", { n: downgrade.n, primary: primaryName })}</p>
+          <div className="flex gap-2">{seePro}<button type="button" onClick={downgrade.onDismiss} className={ghostButton}>{tr("Got it")}</button></div>
+        </div>
+      )}
+      {deletedElsewhere ? (
+        <div role="alert" className={bannerClass}>
+          <p className="min-w-0">{tr("This business was deleted on another device. Download its data before it's removed.")}</p>
+          {download}
+        </div>
+      ) : !loadedHere ? (
+        <p role="status" className={bannerClass}>{signedIn ? tr("Loading {business} from your account…", { business: name }) : tr("Sign in to open this business.")}</p>
+      ) : readOnly ? (
+        <div role="status" data-read-only className={bannerClass}>
+          <p className="flex min-w-0 items-center gap-2"><Icon name="lock" className="h-3.5 w-3.5 shrink-0 text-muted" />{tr("This business is read-only on the Free plan. Upgrade to edit it again.")}</p>
+          <div className="flex gap-2">{seePro}{download}</div>
+        </div>
+      ) : status === "limit" ? (
+        <div role="status" className={bannerClass}>
+          <p className="min-w-0">{tr(limit === 1 ? "This business isn't syncing: your plan includes {limit} business. Upgrade, or download a backup." : "This business isn't syncing: your plan includes {limit} businesses. Upgrade, or download a backup.", { limit })}</p>
+          <div className="flex gap-2">{seePro}{download}</div>
+        </div>
+      ) : status === "unregistered" ? (
+        <p role="status" className={`${bannerClass} text-muted`}>{tr("Waiting to add {business} to your account. Your changes are safe on this device.", { business: name })}</p>
+      ) : null}
+      {unsaved && loadedHere && (
+        <p role="status" className={bannerClass}>{tr("{business} doesn't fit in this browser's storage. It stays in your account; it is loaded when you open it.", { business: name })}</p>
+      )}
+    </>
+  );
+}
+
+/** "New business": the same two fields as the first-run setup card (§7.3). */
+function AddBusinessSheet({ onClose, onAdd }: { onClose: () => void; onAdd: (name: string, upiId: string) => string | null }) {
+  const { tr } = useWs();
+  const [name, setName] = useState("");
+  const [upiId, setUpiId] = useState("");
+  const [error, setError] = useState("");
+  return (
+    <Sheet title={tr("New business")} onClose={onClose}>
+      <p className={cardNote}>{tr("Each business keeps its own invoices, clients, invoice numbers and pay links.")}</p>
+      <form noValidate className="mt-4 space-y-3" onSubmit={(e) => {
+        e.preventDefault();
+        if (!name.trim()) return setError(tr("Enter your business or your own name."));
+        if (upiId.trim() && !isValidVpa(upiId.trim())) return setError(tr("That UPI ID doesn't look right (example: name@okaxis)."));
+        const failed = onAdd(name.trim().slice(0, 80), upiId.trim().slice(0, 100));
+        if (failed) setError(tr(failed));
+      }}>
+        <Field label={tr("Business name")} htmlFor="ws-book-name"><input id="ws-book-name" className={inputClass} value={name} onChange={(e) => { setName(e.target.value); setError(""); }} maxLength={80} placeholder="Sharma Stores" /></Field>
+        <Field label={tr("UPI ID")} htmlFor="ws-book-upi"><input id="ws-book-upi" className={inputClass} value={upiId} onChange={(e) => { setUpiId(e.target.value); setError(""); }} maxLength={100} placeholder="name@okaxis" autoCapitalize="none" /></Field>
+        {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
+        <div className="flex flex-wrap gap-2 pt-1">
+          <button type="submit" className={`${primaryButton} flex-1`}>{tr("Add business")}</button>
+          <button type="button" onClick={onClose} className={ghostButton}>{tr("Cancel")}</button>
+        </div>
+      </form>
+    </Sheet>
   );
 }
 
@@ -1024,8 +1413,10 @@ function Stat({ label, value, note, tone, dot, className = "" }: { label: string
   );
 }
 
-function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment }: {
+function InvoiceRow({ view, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment }: {
   view: InvoiceView;
+  /** A read-only business (after a downgrade): no edits, payments or new links. */
+  readOnly: boolean;
   /** Set when a Udyam-registered business's invoice is past its MSMED deadline; interest is null without MSME tools. */
   msme?: { deadline: string; daysLate: number; interestPaise: number | null };
   signedIn: boolean;
@@ -1072,7 +1463,7 @@ function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onR
               {invoice.payments.map((p) => (
                 <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
                   <span className="text-charcoal"><span className="font-medium tabular-nums text-ink">{formatPaise(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}</span>
-                  <button type="button" onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>
+                  {!readOnly && <button type="button" onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
                 </li>
               ))}
             </ul>
@@ -1085,7 +1476,7 @@ function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onR
                 : tr("Pro shows the Section 16 interest due and adds your MSME rights to reminders.")}
             </p>
           )}
-          {view.balancePaise > 0 && (
+          {view.balancePaise > 0 && (!readOnly || payLink) && (
             <div className="mt-3">
               {payLink ? (
                 <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-white p-2 ring-1 ring-hairline">
@@ -1102,11 +1493,11 @@ function InvoiceRow({ view, msme, signedIn, payLink, linkBusy, onCreateLink, onR
             </div>
           )}
           <div className="mt-4 flex flex-wrap items-center gap-2">
-            {view.balancePaise > 0 && <button type="button" onClick={onPay} className={rowPrimary}>{tr("Record payment")}</button>}
+            {view.balancePaise > 0 && !readOnly && <button type="button" onClick={onPay} className={rowPrimary}>{tr("Record payment")}</button>}
             {view.balancePaise > 0 && <button type="button" onClick={onRemind} className={rowButton}><Icon name="whatsapp" className="h-3.5 w-3.5 text-[#1da851]" />{tr("Remind")}</button>}
-            <button type="button" onClick={onEdit} className={rowButton}>{tr("Edit")}</button>
-            <button type="button" onClick={onVoid} className={rowButton}>{invoice.voided ? tr("Restore") : tr("Cancel invoice")}</button>
-            {confirmDelete ? (
+            {!readOnly && <button type="button" onClick={onEdit} className={rowButton}>{tr("Edit")}</button>}
+            {!readOnly && <button type="button" onClick={onVoid} className={rowButton}>{invoice.voided ? tr("Restore") : tr("Cancel invoice")}</button>}
+            {readOnly ? null : confirmDelete ? (
               <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                 {tr("Delete for good?")}
                 <button type="button" onClick={onDelete} className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white">{tr("Delete")}</button>
@@ -1191,12 +1582,15 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   );
 }
 
-function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRestored }: {
+function SettingsPanel({ ws, shelf, active, restoreLimit, today, readOnly, books, onChange, onRestored }: {
   ws: Workspace;
   shelf: Shelf;
   active: string;
   restoreLimit: number;
   today: string;
+  readOnly: boolean;
+  /** The business controls (§7.3), present only while the business UI is on. */
+  books: { usage: SwitcherUsage; count: number; onAdd: () => void; onDelete: () => void; onEraseAll: () => void } | null;
   onChange: (next: Workspace, message?: string) => void;
   onRestored: (done: RestoreDone) => void;
 }) {
@@ -1208,6 +1602,8 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
   const [udyam, setUdyam] = useState(ws.business.udyam);
   const [error, setError] = useState("");
   const [confirmErase, setConfirmErase] = useState(false);
+  const [confirmEraseAll, setConfirmEraseAll] = useState(false);
+  const [confirmDeleteBook, setConfirmDeleteBook] = useState(false);
   const [confirmRestore, setConfirmRestore] = useState<Extract<RestoreResult, { kind: "confirm" }> | null>(null);
   const { tr } = useWs();
 
@@ -1234,7 +1630,7 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
     <div className="space-y-4">
       <section className={`${card} p-5`}>
         <h2 className={cardTitle}>{tr("Business details")}</h2>
-        <form noValidate className="mt-4 grid gap-3 sm:grid-cols-2" onSubmit={(e) => {
+        <form noValidate className="mt-4" onSubmit={(e) => {
           e.preventDefault();
           if (!name.trim()) return setError(tr("Business name is required."));
           if (upiId.trim() && !isValidVpa(upiId.trim())) return setError(tr("That UPI ID doesn't look right (example: name@okaxis)."));
@@ -1244,6 +1640,7 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
           setUdyam(normalizeUdyam(udyam));
           onChange(updateBusiness(ws, { name: name.trim(), upiId: upiId.trim(), phone: phone.trim(), gstin: gstin.trim().toUpperCase(), invoicePrefix: prefix, udyam: normalizeUdyam(udyam) }, Date.now()), tr("Settings saved."));
         }}>
+          <fieldset disabled={readOnly} className="m-0 grid min-w-0 gap-3 border-0 p-0 sm:grid-cols-2">
           <Field label={tr("Business name")} htmlFor="ws-s-name"><input id="ws-s-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
           <Field label={tr("UPI ID for payments")} htmlFor="ws-s-upi"><input id="ws-s-upi" className={inputClass} value={upiId} onChange={(e) => setUpiId(e.target.value)} maxLength={100} autoCapitalize="none" /></Field>
           <Field label={tr("Your phone (optional)")} htmlFor="ws-s-phone"><input id="ws-s-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} /></Field>
@@ -1252,8 +1649,18 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
           <Field label={tr("Udyam number (micro/small enterprise, optional)")} htmlFor="ws-s-udyam"><input id="ws-s-udyam" className={inputClass} value={udyam} onChange={(e) => setUdyam(e.target.value)} maxLength={30} placeholder="UDYAM-MH-12-1234567" autoCapitalize="characters" /></Field>
           <p className="text-xs leading-5 text-muted sm:col-span-2">{tr("Registered on Udyam as a micro or small manufacturer or service provider? Add your number to see the MSMED deadline on overdue invoices. We treat your invoice due date as the agreed date, capped at 45 days; without a written agreement the law allows only 15.")}</p>
           <div className="flex items-end sm:col-span-2"><button type="submit" className={primaryButton}>{tr("Save settings")}</button></div>
+          </fieldset>
         </form>
         {error && <p role="alert" className={`mt-2 text-[13px] font-medium ${dangerText}`}>{error}</p>}
+        {books && (
+          <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-hairline pt-4">
+            <div className="min-w-0">
+              <p className="text-[13px] font-medium text-ink">{tr("Businesses")}</p>
+              <UsageLine usage={books.usage} className="mt-0.5" />
+            </div>
+            <button type="button" data-add-business disabled={books.usage.limit === null} onClick={books.onAdd} className={rowButton}>{tr("+ Add business")}</button>
+          </div>
+        )}
       </section>
 
       <section className={`${card} p-5`}>
@@ -1261,6 +1668,9 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
         <p className={`mt-0.5 ${cardNote}`}>{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
         <div className="mt-4 flex flex-wrap gap-2">
           <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-${today}.json`, backupJson(shelf, { book: active }), "application/json")}>{tr("Download backup")}</button>
+          {books && books.count > 1 && (
+            <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-all-${today}.json`, backupJson(shelf, "all"), "application/json")}>{tr("Download all businesses")}</button>
+          )}
           <label className={`${secondaryButton} cursor-pointer`}>
             {tr("Restore backup")}
             <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
@@ -1279,16 +1689,36 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, onChange, onRes
             </div>
           );
         })()}
-        <div className="mt-5 border-t border-hairline pt-4">
-          {confirmErase ? (
+        <div className="mt-5 space-y-3 border-t border-hairline pt-4">
+          {readOnly ? null : confirmErase ? (
             <p className={`flex flex-wrap items-center gap-2 text-sm font-medium ${dangerText}`}>
               {tr("Erase every invoice and client from this browser?")}
               <button type="button" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-3 text-[13px] text-white" onClick={() => { onChange(eraseWorkspace(ws, Date.now()), tr("Workspace erased.")); setConfirmErase(false); }}>{tr("Erase")}</button>
               <button type="button" className={ghostButton} onClick={() => setConfirmErase(false)}>{tr("Cancel")}</button>
             </p>
           ) : (
-            <button type="button" className="text-[13px] font-medium text-muted hover:text-[#a8321d]" onClick={() => setConfirmErase(true)}>{tr("Erase workspace on this device…")}</button>
+            <button type="button" className="block text-[13px] font-medium text-muted hover:text-[#a8321d]" onClick={() => setConfirmErase(true)}>{tr("Erase workspace on this device…")}</button>
           )}
+          {books && books.count > 1 && (confirmEraseAll ? (
+            <p className={`flex flex-wrap items-center gap-2 text-sm font-medium ${dangerText}`}>
+              {tr("Erase every invoice and client of all {n} businesses from this browser?", { n: books.count })}
+              <button type="button" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-3 text-[13px] text-white" onClick={() => { books.onEraseAll(); setConfirmEraseAll(false); }}>{tr("Erase all")}</button>
+              <button type="button" className={ghostButton} onClick={() => setConfirmEraseAll(false)}>{tr("Cancel")}</button>
+            </p>
+          ) : (
+            <button type="button" className="block text-[13px] font-medium text-muted hover:text-[#a8321d]" onClick={() => setConfirmEraseAll(true)}>{tr("Erase all businesses on this device…")}</button>
+          ))}
+          {books && active !== PRIMARY_BOOK_ID && (confirmDeleteBook ? (
+            <div role="alert" className={`rounded-[10px] bg-[#fdeeec] p-3 text-[13px] ${dangerText}`}>
+              <p className="font-medium">{tr("Its invoices, clients and pay links are deleted from your account and your other devices. This can't be undone; download a backup first if you may need it.")}</p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <button type="button" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-3 text-[13px] font-medium text-white" onClick={() => { setConfirmDeleteBook(false); books.onDelete(); }}>{tr("Delete business")}</button>
+                <button type="button" className={ghostButton} onClick={() => setConfirmDeleteBook(false)}>{tr("Cancel")}</button>
+              </div>
+            </div>
+          ) : (
+            <button type="button" className="block text-[13px] font-medium text-muted hover:text-[#a8321d]" onClick={() => setConfirmDeleteBook(true)}>{tr("Delete this business…")}</button>
+          ))}
         </div>
       </section>
 
@@ -1398,7 +1828,7 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
       )}
       {stash && (
         <div className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
-          {tr("Data from a different account that was on this device was set aside, not uploaded.")}
+          {tr("Data from another account that used this device was set aside, not uploaded to this account. Download it to keep a copy, or discard it if you don't need it.")}
           <div className="mt-2 flex gap-3">
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText("proupiqr-other-account-backup.json", backupJson(stash.shelf, "all"), "application/json")}>{tr("Download it")}</button>
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardStash(); setStash(null); onStashCleared(); }}>{tr("Discard")}</button>
@@ -1407,7 +1837,10 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
       )}
       {aside.map((book) => (
         <div key={book.id} className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
-          {tr("{business}: changes that weren't synced were set aside on this device.", { business: book.name || tr("Your business") })}
+          <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: book.name || tr("Your business") })}</p>
+          <p className="mt-0.5">{book.reason === "deleted_elsewhere"
+            ? tr("These are this account's changes, made before the business was deleted on another device. Download them to keep them; Discard removes them for good.")
+            : tr("They were made on this device and never reached your account. Download them to keep them; Discard removes them for good.")}</p>
           <div className="mt-2 flex gap-3">
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, book.fromPrimary
               // A first business of some account: a plain workspace backup, restorable anywhere (it asks before merging into another business).

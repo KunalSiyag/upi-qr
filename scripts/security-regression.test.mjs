@@ -402,6 +402,13 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
   assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
   assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");
+  // The business switcher (PR 4): a listbox that never looks like a dialog, a section tab or an invoice row to the e2e selectors.
+  const switcherSrc = readFileSync(join(projectRoot, "src/components/workspace/BusinessSwitcher.tsx"), "utf8");
+  assert.match(switcherSrc, /role="listbox"/);
+  assert.doesNotMatch(switcherSrc, /role="dialog"|aria-current=|<li[\s>]|type="file"/, "the switcher has no dialog, aria-current, li or file input");
+  // Edits never land in a read-only business or in one that isn't loaded here.
+  assert.match(ui, /if \(readOnlyRef\.current \|\| !shelfRef\.current\.books\[id\]\) return;/, "setWs refuses read-only and unloaded businesses");
+  assert.match(ui, /if \(!BOOKS_UI \|\| id === PRIMARY_BOOK_ID\) return;/, "the first business can't be deleted");
   const linkClient = readFileSync(join(projectRoot, "src/lib/workspace/paylinkClient.ts"), "utf8");
   assert.match(linkClient, /\/api\/v1\/paylinks\/\?books=1/, "new clients list every business's links");
   assert.match(linkClient, /if \(!isBookId\(bookId\) \|\| ctx\.legacy\) return null;/, "no book link route on a legacy server");

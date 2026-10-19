@@ -23,9 +23,11 @@ function reasonText(reason: string, tr: Tr): string {
  * credits are matched to open invoices. Nothing is recorded until the user
  * confirms the ticked rows.
  */
-export function StatementSheet({ ws, today, claimedUtrs, onRecord, onClose }: {
+export function StatementSheet({ ws, today, claimedUtrs, businessName, onRecord, onClose }: {
   ws: Workspace;
   today: string;
+  /** Set when the account has several businesses: credits are matched to this one's invoices only. */
+  businessName?: string;
   /** UTR → invoiceId from pending pay-link claims. */
   claimedUtrs: ReadonlyMap<string, string>;
   onRecord: (next: Workspace, recorded: MatchSuggestion[]) => void;
@@ -81,6 +83,7 @@ export function StatementSheet({ ws, today, claimedUtrs, onRecord, onClose }: {
       <p className="text-sm text-charcoal">
         {tr("Download a CSV statement from your bank's net banking, then pick it here. It's read in this browser — the file is never uploaded.")}
       </p>
+      {businessName && <p className="mt-2 text-[13px] text-muted">{tr("Credits are matched to {business}'s invoices.", { business: businessName })}</p>}
       <label className={`${secondaryButton} mt-4 inline-block cursor-pointer`}>
         {fileName ? tr("Choose another file") : tr("Choose CSV statement")}
         <input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" className="sr-only" onChange={choose} aria-label={tr("Bank statement CSV file")} />

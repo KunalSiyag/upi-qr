@@ -2,11 +2,12 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { authedFetch } from "../../lib/workspace/sync";
 import { trackProductEvent } from "../../lib/productEvents";
 import { PRO_PRICES, PRO_TRIAL_DAYS, YEARLY_SAVING_RUPEES } from "../../data/pricing";
+import { PLANS } from "../../lib/workspace/entitlements";
 import { inputClass, primaryButton, secondaryButton } from "./ui";
 import { useWs } from "./i18n";
 
 interface BillingState {
-  plan: { id: "free" | "pro"; activePaylinks: number };
+  plan: { id: "free" | "pro"; activePaylinks: number; businesses?: number };
   subscription: { status: string; interval: "monthly" | "yearly"; currentEnd: number | null; cancelAtCycleEnd: boolean; trialEndsAt?: number | null } | null;
   /** A checkout the customer started that the payment provider hasn't confirmed yet. */
   checkout?: { interval: "monthly" | "yearly"; url: string } | null;
@@ -37,7 +38,14 @@ function longDate(ms: number | null, locale = "en-IN") {
   return ms ? new Date(ms).toLocaleDateString(locale, { day: "numeric", month: "short", year: "numeric" }) : "";
 }
 
-export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (message: string) => void }) {
+export function PlanPanel({ signedIn, onFlash, businesses, onPlanChange }: {
+  signedIn: boolean;
+  onFlash: (message: string) => void;
+  /** Present while the business UI is on: how many businesses this device holds, and the first one's name. */
+  businesses?: { count: number; primary: string };
+  /** Called whenever a load sees a different plan than before, so the business limit refreshes (§6.3). */
+  onPlanChange?: (planId: "free" | "pro") => void;
+}) {
   const [billing, setBilling] = useState<BillingState | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -52,8 +60,8 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
   const billingRef = useRef<BillingState | null>(null);
   const generation = useRef(0);
   const { tr, dateLocale } = useWs();
-  const latest = useRef({ onFlash, tr });
-  latest.current = { onFlash, tr };
+  const latest = useRef({ onFlash, tr, onPlanChange });
+  latest.current = { onFlash, tr, onPlanChange };
 
   const load = useCallback(async () => {
     const asked = generation.current;
@@ -68,6 +76,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
       if (previous?.checkout && previous.plan.id !== "pro" && next.plan.id === "pro") {
         latest.current.onFlash(latest.current.tr("Welcome to Pro! Thanks for upgrading."));
       }
+      if (previous && (previous.plan.id !== next.plan.id || previous.plan.businesses !== next.plan.businesses)) latest.current.onPlanChange?.(next.plan.id);
     } catch {
       // Offline: the panel keeps what it showed (prices, or the last known plan).
     }
@@ -228,12 +237,16 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
             : sub.status === "pending"
               ? <p>{tr("Your last renewal payment failed. Update your payment method to keep Pro.")}</p>
               : sub.trialEndsAt
-                ? <p>{tr("Free trial · first payment of {price} on {date}.", { price: PRO_PRICES[sub.interval].label, date: longDate(sub.trialEndsAt, dateLocale) })} {tr("Cancel before then and you won't be charged.")}</p>
+                ? <p>{tr("Free trial · first payment of {price} on {date}.", { price: PRO_PRICES[sub.interval].label, date: longDate(sub.trialEndsAt, dateLocale) })} {tr("Cancel before then and you won't be charged.")}{businesses ? <> {tr("Up to {limit} businesses after your first payment.", { limit: PLANS.pro.businesses })}</> : null}</p>
                 : <p>{tr(sub.interval === "yearly" ? "Pro yearly" : "Pro monthly")}{sub.currentEnd ? tr(" · renews on {date}", { date: longDate(sub.currentEnd, dateLocale) }) : null}.</p>}
+          {businesses && businesses.count > 1 && (sub.cancelAtCycleEnd || sub.status === "cancelled") && (
+            <p className="mt-2 text-[13px] text-charcoal">{tr("You have {n} businesses. On Free they all stay and their pay links keep working, but only {primary} can be edited and you can't add more.", { n: businesses.count, primary: businesses.primary })}</p>
+          )}
           {!sub.cancelAtCycleEnd && (sub.status === "active" || sub.status === "authenticated") && (
             confirmCancel ? (
               <p className="mt-3 flex flex-wrap items-center gap-2 text-xs font-bold text-[#a8321d]">
                 {tr("Cancel at the end of this period?")}
+                {businesses && businesses.count > 1 && <span className="basis-full font-medium">{tr("You have {n} businesses. On Free they all stay and their pay links keep working, but only {primary} can be edited and you can't add more.", { n: businesses.count, primary: businesses.primary })}</span>}
                 <button type="button" disabled={busy} onClick={cancel} className="rounded-[8px] bg-[#a8321d] px-2 py-1 text-white">{tr("Yes, cancel")}</button>
                 <button type="button" onClick={() => setConfirmCancel(false)} className="rounded-[8px] px-2 py-1 text-ink">{tr("Keep Pro")}</button>
               </p>
@@ -248,6 +261,7 @@ export function PlanPanel({ signedIn, onFlash }: { signedIn: boolean; onFlash: (
       ) : (
         <>
           <ul className="mt-3 space-y-1.5 text-sm text-charcoal">
+            {businesses && <li>✓ {tr("Up to {limit} businesses in one account after your first payment (Free: {free})", { limit: PLANS.pro.businesses, free: PLANS.free.businesses })}</li>}
             {PRO_FEATURES.map((feature) => <li key={feature}>✓ {tr(feature)}</li>)}
           </ul>
           {!signedIn ? (
