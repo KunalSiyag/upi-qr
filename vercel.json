@@ -1,4 +1,8 @@
 {
+  "rewrites": [
+    { "source": "/mcp", "destination": "/mcp/" },
+    { "source": "/mcp/.well-known/:path*", "destination": "/__mcp-no-oauth__/" }
+  ],
   "redirects": [
     {
       "source": "/:path*",
