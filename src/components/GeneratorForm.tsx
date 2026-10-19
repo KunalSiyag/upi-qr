@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
@@ -315,8 +315,12 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
   const sampleSuffix = { en: " (Sample)", hi: " (नमूना)", ta: " (மாதிரி)", te: " (నమూనా)", mr: " (नमुना)" }[lang];
 
   const [showOptionalFields, setShowOptionalFields] = useState(false);
+  /** Phones: the customize controls open as a bottom panel over the page, the poster stays visible above. */
   const [showBrandingFields, setShowBrandingFields] = useState(false);
   const [mode, setMode] = useState<"simple" | "advanced">("simple");
+  /** Large screens, poster mode: the left column shows the poster details or the customize controls, beside the live poster. */
+  const [panel, setPanel] = useState<"details" | "customize">("details");
+  const posterPanelRef = useRef<HTMLDivElement>(null);
 
   const upiUrl = useMemo(() => buildUpiUrl(form), [form]);
 
@@ -346,7 +350,6 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     let initialTemplate: TemplateId = "shop-standee";
     let initialMode: "simple" | "advanced" = "simple";
     let initialShowOptional = false;
-    let initialShowBranding = false;
 
     // 1. Try to load from draft
     const savedDraft = window.localStorage.getItem(draftKey);
@@ -361,9 +364,6 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
         };
         if (parsed.amount || parsed.note) {
           initialShowOptional = true;
-        }
-        if ((parsed.logoType && parsed.logoType !== "none") || (parsed.coverType && parsed.coverType !== "none")) {
-          initialShowBranding = true;
         }
       } catch {
         window.localStorage.removeItem(draftKey);
@@ -388,7 +388,6 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       } else {
         initialForm.logoType = presetType;
         initialForm.logoPosition = "qr-center";
-        initialShowBranding = true;
       }
     }
 
@@ -397,7 +396,6 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     setSelectedTemplate(initialTemplate);
     setMode(initialMode);
     setShowOptionalFields(initialShowOptional);
-    setShowBrandingFields(initialShowBranding);
     
     // Mark as initialized so saving effect can write updates
     isInitialized.current = true;
@@ -490,17 +488,17 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
 
   async function handleGenerate() {
     if (!form.payee.trim()) {
-      setError(t.enterNameError);
+      showFieldError(t.enterNameError);
       return;
     }
 
     if (!isValidUpiId(form.upiId)) {
-      setError("Enter a valid UPI ID like name@bank.");
+      showFieldError("Enter a valid UPI ID like name@bank.");
       return;
     }
 
     if (form.amount && Number(form.amount) <= 0) {
-      setError("Amount must be greater than zero.");
+      showFieldError("Amount must be greater than zero.");
       return;
     }
 
@@ -1515,6 +1513,191 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
     }
   }
 
+  const reduceMotion = () => typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const sheetRef = useRef<HTMLElement>(null);
+  const previewCustomizeRef = useRef<HTMLButtonElement>(null);
+  const customizeOpener = useRef<HTMLElement | null>(null);
+  const customizeTitleId = useId();
+  const WIDE = "(min-width: 1024px)";
+
+  /** Customize sits beside the live poster: in the left column on large screens, in a bottom panel on phones. */
+  function openCustomize() {
+    customizeOpener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setMode("advanced");
+    if (window.matchMedia(WIDE).matches) {
+      setShowBrandingFields(false);
+      setPanel("customize");
+    } else {
+      setShowBrandingFields(true);
+    }
+  }
+
+  function closeCustomize(restoreFocus = false) {
+    setShowBrandingFields(false);
+    setPanel("details");
+    if (!restoreFocus) return;
+    requestAnimationFrame(() => {
+      const opener = customizeOpener.current;
+      (opener?.isConnected && opener.offsetParent ? opener : previewCustomizeRef.current)?.focus({ preventScroll: true });
+    });
+  }
+
+  /** A failed check names a field, so show the fields again (they are hidden while customizing). */
+  function showFieldError(message: string) {
+    setError(message);
+    setShowBrandingFields(false);
+    setPanel("details");
+  }
+
+  // Keep the open Customize controls in the right place when the screen crosses the large-screen width (resize, rotation).
+  const customizeState = useRef({ sheet: false, panel: "details" as "details" | "customize" });
+  customizeState.current = { sheet: showBrandingFields, panel };
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE);
+    const onChange = (event: MediaQueryListEvent) => {
+      const { sheet, panel: current } = customizeState.current;
+      if (event.matches && sheet) { setShowBrandingFields(false); setPanel("customize"); }
+      if (!event.matches && current === "customize") { setPanel("details"); setShowBrandingFields(true); }
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  // Phones: keep the QR (where logo and colour changes show) just above the panel, below the site header,
+  // re-aligning when the panel grows (the logo-size and opacity rows appear). Focus moves into the panel.
+  useEffect(() => {
+    if (!showBrandingFields) return;
+    const HEADER = 72;
+    const align = (behavior: ScrollBehavior) => {
+      const sheet = sheetRef.current;
+      const poster = posterRef.current;
+      if (!sheet || !poster) return;
+      // The QR is the largest image/canvas on the poster (covers and logo badges are smaller).
+      const target = [...poster.querySelectorAll<HTMLElement>("img, canvas, svg")]
+        .map((el) => ({ el, area: el.getBoundingClientRect().width * el.getBoundingClientRect().height }))
+        .filter((x) => x.area > 100 * 100)
+        .sort((a, b) => b.area - a.area)[0]?.el ?? poster;
+      const box = target.getBoundingClientRect();
+      // Resting top of the panel: measured from layout, not getBoundingClientRect, which includes the slide-in transform.
+      const sheetTop = window.innerHeight - sheet.offsetHeight;
+      let delta = box.bottom - (sheetTop - 8);
+      if (box.top - delta < HEADER) delta = box.top - HEADER;
+      if (Math.abs(delta) > 2) window.scrollBy({ top: delta, behavior });
+    };
+    const frame = requestAnimationFrame(() => {
+      align(reduceMotion() ? "auto" : "smooth");
+      sheetRef.current?.focus({ preventScroll: true });
+    });
+    const resize = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(() => align("auto"));
+    if (sheetRef.current && resize) resize.observe(sheetRef.current);
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") closeCustomize(true); };
+    document.addEventListener("keydown", onKey);
+    return () => { cancelAnimationFrame(frame); resize?.disconnect(); document.removeEventListener("keydown", onKey); };
+  }, [showBrandingFields]);
+
+  const customizeHeader = (
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <p id={customizeTitleId} className="text-sm font-semibold text-ink">{t.customizeDesign}</p>
+        <p className="mt-1 text-xs leading-5 text-muted">{t.customizeHint}</p>
+      </div>
+      <button type="button" onClick={() => closeCustomize(true)} className="shrink-0 rounded-[8px] bg-white px-3 py-1.5 text-xs font-medium text-ink ring-1 ring-inset ring-hairline hover:bg-fog">{t.close}</button>
+    </div>
+  );
+
+  const customizeControls = (
+    <div className="space-y-4 text-left text-xs">
+          <div>
+            <p className="mb-2 font-bold text-forest">{t.logoBadge}</p>
+            <div className="flex flex-wrap gap-1.5 max-lg:-mx-4 max-lg:flex-nowrap max-lg:overflow-x-auto max-lg:px-4 max-lg:pb-1 max-lg:[scrollbar-width:none]">
+              {(["none", "phonepe", "paytm", "gpay", "bhim", "whatsapp", "amazon", "sbi", "hdfc", "icici", "custom"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => {
+                    updateField("logoType", type);
+                    if (type !== "none") updateField("logoPosition", "qr-center");
+                  }}
+                  className={`shrink-0 whitespace-nowrap rounded-[7px] px-3 py-1 text-[11px] font-bold ${form.logoType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
+                >
+                  {type === "none"
+                    ? "none"
+                    : type === "gpay"
+                      ? "GPay"
+                      : type === "phonepe"
+                        ? "PhonePe"
+                        : type === "paytm"
+                          ? "Paytm"
+                          : type === "bhim"
+                            ? "BHIM"
+                            : type === "whatsapp"
+                              ? "WhatsApp"
+                              : type === "amazon"
+                                ? "Amazon Pay"
+                                : type === "sbi"
+                                  ? "SBI"
+                                  : type === "hdfc"
+                                    ? "HDFC"
+                                    : type === "icici"
+                                      ? "ICICI"
+                                      : type}
+                </button>
+              ))}
+            </div>
+            {form.logoType === "custom" && (
+              <input type="file" accept="image/*" onChange={handleLogoUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
+            )}
+            {form.logoType !== "none" && (
+              <label className="mt-3 grid gap-1">
+                <span className="font-bold text-forest/70">QR logo size</span>
+                <input type="range" min="28" max="72" value={form.logoSize} onChange={(event) => updateField("logoSize", event.target.value)} />
+              </label>
+            )}
+          </div>
+
+          <div>
+            <p className="mb-2 font-bold text-forest">Cover style</p>
+            <div className="flex flex-wrap gap-1.5 max-lg:-mx-4 max-lg:flex-nowrap max-lg:overflow-x-auto max-lg:px-4 max-lg:pb-1 max-lg:[scrollbar-width:none]">
+              {(["none", "saffron", "grid", "cafe", "waves", "ruled", "custom"] as const).map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() => selectCoverType(type)}
+                  className={`shrink-0 whitespace-nowrap rounded-[7px] px-3 py-1 text-[11px] font-bold capitalize ${form.coverType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+            {form.coverType === "custom" && (
+              <input type="file" accept="image/*" onChange={handleCoverUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
+            )}
+            {form.coverType !== "none" && (
+              <label className="mt-3 grid gap-1">
+                <span className="font-bold text-forest/70">Cover opacity</span>
+                <input type="range" min="10" max="80" value={form.coverOpacity} onChange={(event) => updateField("coverOpacity", event.target.value)} />
+              </label>
+            )}
+          </div>
+
+          <div>
+            <div className="mb-2 flex items-center justify-between gap-3">
+              <p className="font-bold text-forest">Brand colors</p>
+              <button type="button" onClick={() => updateField("themeType", form.themeType === "custom" ? "default" : "custom")} className="rounded-[7px] bg-cream px-3 py-1 text-[11px] font-bold text-forest">
+                {form.themeType === "custom" ? "Use template colors" : "Use custom colors"}
+              </button>
+            </div>
+            {form.themeType === "custom" && (
+              <div className="grid grid-cols-3 gap-2">
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Background</span><input type="color" value={form.customBgColor} onChange={(event) => updateField("customBgColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Text</span><input type="color" value={form.customTextColor} onChange={(event) => updateField("customTextColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Accent</span><input type="color" value={form.customAccentColor} onChange={(event) => updateField("customAccentColor", event.target.value)} className="h-9 w-full rounded" /></label>
+              </div>
+            )}
+          </div>
+    </div>
+  );
+
   return (
     <div className={`w-full max-w-full ${fullScreen ? 'flex flex-col lg:flex-row gap-6 lg:gap-8 min-h-[70dvh] lg:min-h-[78dvh]' : 'grid gap-6 lg:grid-cols-[1.05fr_0.95fr] items-start'}`}>
       {/* Hidden canvas for QR Code generation */}
@@ -1522,32 +1705,25 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
 
       {/* Form Inputs */}
       <div className={`w-full min-w-0 ${fullScreen ? 'lg:w-5/12 rounded-3xl border border-forest/10 bg-white p-4 md:p-5 lg:overflow-auto lg:max-h-[78dvh]' : 'rounded-[28px] bg-fog p-4 sm:p-6 md:p-7'}`}>
-        {/* Simple vs Advanced Mode Tab Selector */}
-        <div className={`mb-4 flex w-full max-w-[280px] rounded-2xl bg-cream p-1 border border-forest/10 ${fullScreen ? 'text-sm' : ''}`}>
-          <button
-            key="tab-simple"
-            type="button"
-            onClick={() => setMode("simple")}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition ${
-              mode === "simple"
-                ? "bg-forest text-white shadow-sm"
-                : "text-forest/70 hover:text-forest"
-            }`}
-          >
-            {t.simpleQr}
-          </button>
-          <button
-            key="tab-advanced"
-            type="button"
-            onClick={() => setMode("advanced")}
-            className={`flex-1 py-2 text-center text-xs font-bold rounded-xl transition ${
-              mode === "advanced"
-                ? "bg-forest text-white shadow-sm"
-                : "text-forest/70 hover:text-forest"
-            }`}
-          >
-            {t.advancedPoster}
-          </button>
+        {/* Simple QR · Advanced Poster · Customize (large screens; phones open Customize from the poster) */}
+        <div role="group" className={`mb-4 flex w-full max-w-[380px] rounded-[10px] bg-white p-0.5 ring-1 ring-inset ring-hairline ${fullScreen ? 'text-sm' : ''}`}>
+          {([
+            { id: "simple", label: t.simpleQr, active: mode === "simple", onClick: () => { setMode("simple"); closeCustomize(); }, className: "" },
+            { id: "advanced", label: t.advancedPoster, active: mode === "advanced" && panel === "details", onClick: () => { setMode("advanced"); closeCustomize(); }, className: "" },
+            { id: "customize", label: t.customize, active: mode === "advanced" && panel === "customize", onClick: openCustomize, className: "hidden lg:block" },
+          ] as const).map((tab) => (
+            <button
+              key={`tab-${tab.id}`}
+              type="button"
+              onClick={tab.onClick}
+              aria-pressed={tab.active}
+              className={`min-w-0 flex-1 truncate rounded-[8px] px-2 py-2 text-center text-xs font-medium xl:px-3 transition-colors duration-150 ${tab.className} ${
+                tab.active ? "bg-graphite text-white" : "text-charcoal hover:text-ink"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
         </div>
 
         {mode === "simple" ? (
@@ -1631,6 +1807,11 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
               </div>
             )}
           </div>
+        ) : panel === "customize" ? (
+          <section aria-labelledby={customizeTitleId} className="ws-row-detail grid gap-4 rounded-[12px] bg-white p-4 ring-1 ring-hairline">
+            {customizeHeader}
+            {customizeControls}
+          </section>
         ) : (
           <div className="grid gap-3">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1824,7 +2005,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           </div>
         </div>
       ) : (
-        <div className="w-full min-w-0 rounded-[14px] bg-white p-3 ring-1 ring-forest/10 sm:p-5 md:p-7 lg:sticky lg:top-20 lg:self-start">
+        <div ref={posterPanelRef} className={`w-full min-w-0 scroll-mt-20 ${fullScreen ? 'lg:w-7/12' : ''} rounded-[14px] bg-white p-3 ring-1 ring-forest/10 sm:p-5 md:p-7 lg:sticky lg:top-20 lg:self-start`}>
           <div className="mb-3 flex items-start justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-muted">
@@ -1833,11 +2014,13 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
               <h3 className="mt-1 text-lg font-black text-forest">{activeTemplate.name}</h3>
             </div>
             <button
+              ref={previewCustomizeRef}
               type="button"
-              onClick={() => setShowBrandingFields((current) => !current)}
-              className="rounded-[7px] border border-forest/20 bg-white px-3 py-1.5 text-xs font-black text-forest transition hover:bg-mint hover:text-leaf"
-              aria-expanded={showBrandingFields}
+              onClick={() => (showBrandingFields || panel === "customize" ? closeCustomize(true) : openCustomize())}
+              className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors duration-150 ${showBrandingFields || panel === "customize" ? "bg-graphite text-white ring-graphite" : "bg-white text-ink ring-hairline hover:bg-fog"}`}
+              aria-expanded={showBrandingFields || panel === "customize"}
             >
+              <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4" /></svg>
               {t.customize}
             </button>
           </div>
@@ -1886,107 +2069,21 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
             </div>
           </div>
 
-          {showBrandingFields && (
-            <div className="mt-3 space-y-4 rounded-2xl border border-forest/10 bg-white p-4 text-left text-xs shadow-sm">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-black text-forest">{t.customizeDesign}</p>
-                  <p className="mt-1 text-[11px] leading-5 text-forest/60">{t.customizeHint}</p>
-                </div>
-                <button type="button" onClick={() => setShowBrandingFields(false)} className="rounded-[7px] bg-cream px-3 py-1 text-[11px] font-bold text-forest">{t.close}</button>
-              </div>
-
-              <div>
-                <p className="mb-2 font-bold text-forest">{t.logoBadge}</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(["none", "phonepe", "paytm", "gpay", "bhim", "whatsapp", "amazon", "sbi", "hdfc", "icici", "custom"] as const).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => {
-                        updateField("logoType", type);
-                        if (type !== "none") updateField("logoPosition", "qr-center");
-                      }}
-                      className={`rounded-[7px] px-3 py-1 text-[11px] font-bold ${form.logoType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
-                    >
-                      {type === "none"
-                        ? "none"
-                        : type === "gpay"
-                          ? "GPay"
-                          : type === "phonepe"
-                            ? "PhonePe"
-                            : type === "paytm"
-                              ? "Paytm"
-                              : type === "bhim"
-                                ? "BHIM"
-                                : type === "whatsapp"
-                                  ? "WhatsApp"
-                                  : type === "amazon"
-                                    ? "Amazon Pay"
-                                    : type === "sbi"
-                                      ? "SBI"
-                                      : type === "hdfc"
-                                        ? "HDFC"
-                                        : type === "icici"
-                                          ? "ICICI"
-                                          : type}
-                    </button>
-                  ))}
-                </div>
-                {form.logoType === "custom" && (
-                  <input type="file" accept="image/*" onChange={handleLogoUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
-                )}
-                {form.logoType !== "none" && (
-                  <label className="mt-3 grid gap-1">
-                    <span className="font-bold text-forest/70">QR logo size</span>
-                    <input type="range" min="28" max="72" value={form.logoSize} onChange={(event) => updateField("logoSize", event.target.value)} />
-                  </label>
-                )}
-              </div>
-
-              <div>
-                <p className="mb-2 font-bold text-forest">Cover style</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {(["none", "saffron", "grid", "cafe", "waves", "ruled", "custom"] as const).map((type) => (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => selectCoverType(type)}
-                      className={`rounded-[7px] px-3 py-1 text-[11px] font-bold capitalize ${form.coverType === type ? "bg-forest text-white" : "bg-cream text-forest hover:bg-mint"}`}
-                    >
-                      {type}
-                    </button>
-                  ))}
-                </div>
-                {form.coverType === "custom" && (
-                  <input type="file" accept="image/*" onChange={handleCoverUpload} className="mt-3 w-full text-[11px] text-forest/70 file:mr-2 file:rounded-full file:border-0 file:bg-mint file:px-3 file:py-1.5 file:text-[11px] file:font-bold file:text-forest" />
-                )}
-                {form.coverType !== "none" && (
-                  <label className="mt-3 grid gap-1">
-                    <span className="font-bold text-forest/70">Cover opacity</span>
-                    <input type="range" min="10" max="80" value={form.coverOpacity} onChange={(event) => updateField("coverOpacity", event.target.value)} />
-                  </label>
-                )}
-              </div>
-
-              <div>
-                <div className="mb-2 flex items-center justify-between gap-3">
-                  <p className="font-bold text-forest">Brand colors</p>
-                  <button type="button" onClick={() => updateField("themeType", form.themeType === "custom" ? "default" : "custom")} className="rounded-[7px] bg-cream px-3 py-1 text-[11px] font-bold text-forest">
-                    {form.themeType === "custom" ? "Use template colors" : "Use custom colors"}
-                  </button>
-                </div>
-                {form.themeType === "custom" && (
-                  <div className="grid grid-cols-3 gap-2">
-                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Background</span><input type="color" value={form.customBgColor} onChange={(event) => updateField("customBgColor", event.target.value)} className="h-9 w-full rounded" /></label>
-                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Text</span><input type="color" value={form.customTextColor} onChange={(event) => updateField("customTextColor", event.target.value)} className="h-9 w-full rounded" /></label>
-                    <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Accent</span><input type="color" value={form.customAccentColor} onChange={(event) => updateField("customAccentColor", event.target.value)} className="h-9 w-full rounded" /></label>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
+      )}
+      {showBrandingFields && mode === "advanced" && (
+        <section
+          ref={sheetRef}
+          role="dialog"
+          aria-labelledby={customizeTitleId}
+          tabIndex={-1}
+          className="ws-sheet fixed inset-x-0 bottom-0 z-40 max-h-[min(52dvh,calc(100dvh-330px))] min-h-[200px] overflow-y-auto outline-none rounded-t-[16px] bg-white px-4 pt-3 shadow-[0_-2px_6px_rgba(28,40,64,0.06),0_-18px_48px_rgba(28,40,64,0.18)] ring-1 ring-hairline lg:hidden"
+          style={{ paddingBottom: "calc(1rem + env(safe-area-inset-bottom, 0px))" }}
+        >
+          <div aria-hidden="true" className="mx-auto mb-3 h-1 w-10 rounded-full bg-pebble" />
+          <div className="sticky -top-3 z-10 -mx-4 bg-white px-4 pb-3 pt-1">{customizeHeader}</div>
+          {customizeControls}
+        </section>
       )}
       {isWaitlistLang(lang) && <WaitlistCard tool="upi-qr" lang={lang} />}
     </div>
