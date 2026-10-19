@@ -10,7 +10,7 @@ import { PLANS } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
   backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
-  readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
+  markBookReset, readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
   recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
@@ -179,8 +179,12 @@ function Workspace() {
    * device's account. Unknown for guests and legacy servers.
    */
   const knownLimit = planLimit ?? (BOOKS_UI && sync.status !== "signed_out" && !sync.legacy ? cachedLimit : null);
-  /** Whether the plan is known well enough to generate monthly invoices in businesses other than the first. */
-  const planSettled = !BOOKS_UI || sync.status === "signed_out" || sync.legacy || knownLimit !== null;
+  /**
+   * Whether monthly invoices may be generated in businesses other than the first: only once the server has
+   * answered with the plan in this session (a cached limit can be stale after a downgrade), or offline from the
+   * cache. Guests and legacy servers have no plan to wait for.
+   */
+  const planSettled = !BOOKS_UI || sync.status === "signed_out" || sync.legacy || planLimit !== null || (sync.status === "offline" && cachedLimit !== null);
   /**
    * Downgrade = read-only (owner decision 2026-10-18): a signed-in account's businesses ranked past its plan's
    * limit take no edits, as the server enforces (402 plan_read_only). The first business never is. Books the
@@ -206,6 +210,15 @@ function Workspace() {
     // §2.5: a pulled book that doesn't fit stays usable in memory for this visit, with a banner.
     if (id !== PRIMARY_BOOK_ID) setUnsaved((list) => (saved ? (list.includes(id) ? list.filter((x) => x !== id) : list) : list.includes(id) ? list : [...list, id]));
     return saved;
+  }, []);
+
+  /** Puts a book's copy in place as is (no merge): the server copy of a read-only business, here or from another tab. */
+  const replaceBook = useCallback((id: string, next: Workspace) => {
+    const current = shelfRef.current;
+    if (frozenRef.current || !liveBookIds(current.index).includes(id)) return;
+    savedRef.current[id] = next;
+    shelfRef.current = withBook(current, id, next);
+    setShelf((s) => withBook(s, id, next));
   }, []);
 
   const adoptIndex = useCallback((index: BookIndex) => {
@@ -283,7 +296,7 @@ function Workspace() {
       history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
     }
     return onShelfChange(tabOwner, () => shelfRef.current, {
-      book: (id, merged) => { applyBook(id, merged); },
+      book: (id, ws, replace) => { if (replace) replaceBook(id, ws); else applyBook(id, ws); },
       index: (merged) => {
         adoptIndex(merged);
         for (const meta of Object.values(merged.books)) if (meta.deletedAt !== undefined) retire(meta.id);
@@ -348,12 +361,11 @@ function Workspace() {
       retire,
       // A read-only business whose copy here held unsynced changes: those were set aside (verified) by sync; show the server's copy.
       resetBook: (id, next) => {
-        const current = shelfRef.current;
-        if (frozenRef.current || !liveBookIds(current.index).includes(id)) return false;
-        const saved = saveBook(current.index, id, next);
-        savedRef.current[id] = next;
-        shelfRef.current = withBook(current, id, next);
-        setShelf((s) => withBook(s, id, next));
+        if (frozenRef.current || !liveBookIds(shelfRef.current.index).includes(id)) return false;
+        // Other tabs replace their copy too, instead of merging the set-aside changes back.
+        markBookReset(id);
+        const saved = saveBook(shelfRef.current.index, id, next);
+        replaceBook(id, next);
         return saved;
       },
       onAside: () => {

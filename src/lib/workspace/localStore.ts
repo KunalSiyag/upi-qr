@@ -38,6 +38,11 @@ const STASH_BOOK_PREFIX = "proupiqr-stash-v2:";
 const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
 /** The last business limit the server reported for an account: { owner, limit }. Read before the first request and offline. */
 export const PLAN_LIMIT_KEY = "proupiqr-plan-limit-v1";
+/**
+ * { [bookId]: generation }: bumped when a book is replaced by the server's copy (a read-only business whose
+ * device-only changes were set aside). Other tabs then replace their copy instead of merging it back.
+ */
+export const BOOK_RESET_KEY = "proupiqr-book-reset-v1";
 const PLACEHOLDER_VPA = "merchant@upi";
 
 /** PR 3: false. Flipped by the UI release (spec §10); until then only the first business is ever shown. */
@@ -154,6 +159,20 @@ export function cachedPlanLimit(owner: string | null): number | null {
   if (!owner) return null;
   const raw = parseJson(get(PLAN_LIMIT_KEY)) as { owner?: unknown; limit?: unknown } | null;
   return raw && raw.owner === owner && Number.isSafeInteger(raw.limit) && (raw.limit as number) >= 1 ? (raw.limit as number) : null;
+}
+
+function readResets(): Record<string, number> {
+  const raw = parseJson(get(BOOK_RESET_KEY)) as Record<string, unknown> | null;
+  const out: Record<string, number> = {};
+  if (raw && typeof raw === "object") for (const [id, n] of Object.entries(raw)) if (isBookId(id) && Number.isSafeInteger(n)) out[id] = n as number;
+  return out;
+}
+
+/** Records that this book was just replaced by the server's copy; call before writing the replacement. */
+export function markBookReset(id: string): void {
+  if (!isBookId(id) || id === PRIMARY_BOOK_ID) return;
+  const resets = readResets();
+  put(BOOK_RESET_KEY, JSON.stringify({ ...resets, [id]: (resets[id] ?? 0) + 1 }));
 }
 
 /** Businesses ranked past the limit (never the first): read-only after a downgrade, as the server enforces. */
@@ -391,9 +410,10 @@ export function saveActiveBook(id: string): void {
 export function onShelfChange(
   owner: () => string | null,
   current: () => Shelf,
-  h: { book(id: string, ws: Workspace): void; index(index: BookIndex): void; ownerChanged(): void },
+  h: { book(id: string, ws: Workspace, replace?: boolean): void; index(index: BookIndex): void; ownerChanged(): void },
 ): () => void {
   let switched = false;
+  let seenResets = readResets();
   const otherAccount = () => {
     const mine = owner();
     const stored = get(OWNER_KEY);
@@ -422,6 +442,14 @@ export function onShelfChange(
       const stored = parseBookIndex(get(BOOK_INDEX_KEY));
       if (!liveBookIds(shelf.index).includes(id) || (stored && isTombstoned(stored, id))) return;
       const incoming = sanitizeWorkspace(JSON.parse(event.newValue));
+      // Another tab replaced this book with the server's copy (its device-only changes were set aside):
+      // take the stored copy as is; merging would bring the set-aside changes back.
+      const resets = readResets();
+      if (id !== PRIMARY_BOOK_ID && resets[id] !== undefined && resets[id] !== seenResets[id]) {
+        seenResets = resets;
+        h.book(id, incoming, true);
+        return;
+      }
       const mine = shelf.books[id];
       h.book(id, mine ? mergeWorkspaces(mine, incoming) : incoming);
     } catch {

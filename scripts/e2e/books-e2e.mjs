@@ -709,6 +709,38 @@ try {
   await b.go(BASE + "/app/?tab=settings", 2500);
   check("R8: other-account data says whose it is", /Other Shop: data from another account that used this device, kept safe here\./.test(await text()) && /it won't be added to this account/.test(await text()) && !/never reached your account/.test(await text()));
 
+  // R9. A stale cached limit (20, from before a downgrade) never generates monthly invoices into a business that
+  //     the server now says is read-only: other businesses wait for this session's plan answer.
+  const two9 = JSON.parse(JSON.stringify(bookTwo));
+  two9.recurring = { rec_aaaaaaaa: { id: "rec_aaaaaaaa", clientId: "cli_bbbbbbbb", amountPaise: 50000, description: "Monthly", dayOfMonth: 1, dueAfterDays: 7, startMonth: "2026-09", endMonth: "", paused: false, createdAt: T, updatedAt: T } };
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: two9, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-downgrade-notice', '1'); localStorage.setItem('proupiqr-book-sync-v1', JSON.stringify({ owner: '${OWNER}', books: {} })); true`);
+  await cacheLimit(20);
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor(synced);
+  await sleep(2000);
+  check("R9: stale cached limit → no monthly invoices in the now read-only business", Object.keys(JSON.parse(await storage(`proupiqr-book-v1:${B}`)).invoices).length === 1);
+  check("R9: no invented 'unsynced changes' set aside", (await storage(`proupiqr-aside-v1:${B}`)) === null && !/Unsynced changes to Book Two/.test(await text()));
+  check("R9: the cache is corrected from the server", JSON.parse(await storage("proupiqr-plan-limit-v1")).limit === 1);
+
+  // R10. Another tab replaced a read-only business with the server copy (its device-only invoice set aside):
+  //      this tab, which still holds the invoice in memory, takes the stored copy instead of merging it back.
+  const three10 = JSON.parse(JSON.stringify(bookThree));
+  three10.invoices.inv_77777777 = { ...three10.invoices.inv_00000002, id: "inv_77777777", number: "TS-0777", amountPaise: 777700, createdAt: Date.now(), updatedAt: Date.now() };
+  await setup({ signedIn: false, books: { [B]: bookTwo, [C]: three10 } });
+  await b.go(BASE + `/app/?tab=invoices&business=${C}`, 2500);
+  check("R10: this tab shows the device-only invoice first", (await text()).includes("TS-0777"));
+  await b.eval(`(async () => { const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; document.body.appendChild(f);
+    await new Promise((r) => { f.onload = r; });
+    const ls = f.contentWindow.localStorage;
+    ls.setItem('proupiqr-aside-v1:${C}', JSON.stringify({ at: Date.now(), reason: 'read_only', name: 'Third Shop', workspace: ${JSON.stringify(three10)} }));
+    ls.setItem('proupiqr-book-reset-v1', JSON.stringify({ '${C}': 1 }));
+    ls.setItem('proupiqr-book-v1:${C}', ${JSON.stringify(JSON.stringify(bookThree))});
+    return true; })()`);
+  await sleep(1200);
+  check("R10: the other tab's reset is honoured (stored copy, not merged back)", !(await storage(`proupiqr-book-v1:${C}`)).includes("TS-0777") && !(await text()).includes("TS-0777"));
+  check("R10: the set-aside copy still holds it", (await storage(`proupiqr-aside-v1:${C}`)).includes("TS-0777"));
+
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load|402|404|503/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));

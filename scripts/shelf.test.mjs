@@ -9,7 +9,7 @@ import {
   loadIndex, loadShelf, loadStash, loadWorkspace, onShelfChange, OWNER_KEY, ownerChangedElsewhere, setAsideOtherAccountBooks, readSyncMeta, recordReceipt, removeBookStorage, restoreBackup,
   retireBook, saveBook, saveIndex, saveWorkspace, setAside, STASH_KEY, STASH_V2_KEY, sweepStrayBooks, switchAccountStorage, takePendingDocument,
   trackDocument, workspaceReturnUrl, WORKSPACE_KEY, writeSyncMeta, PENDING_DOCUMENT_KEY,
-  cachedPlanLimit, keepAside, PLAN_LIMIT_KEY, readOnlyBookIds, savePlanLimit,
+  cachedPlanLimit, keepAside, markBookReset, PLAN_LIMIT_KEY, readOnlyBookIds, savePlanLimit, BOOK_RESET_KEY,
 } from "../src/lib/workspace/localStore.ts";
 import { addBook, bookHash, deleteBook, emptyIndex, liveBookIds, PRIMARY_BOOK_ID } from "../src/lib/workspace/books.ts";
 import {
@@ -708,6 +708,34 @@ if (BOOKS_UI) {
   assert.ok(s.getItem(bookKey(B)), "the book itself stays");
   assert.deepEqual(listAside().map((a) => [a.id, a.reason]), [[B, "read_only"]]);
   assert.equal(keepAside(PRIMARY_BOOK_ID, "read_only", primary), false, "the first business is never set aside this way");
+}
+
+{
+  // Another tab replaced a read-only business with the server's copy (its device-only changes set aside):
+  // this tab replaces its copy too instead of merging the set-aside changes back. Ordinary writes still merge.
+  const s = installBrowser();
+  s.setItem(OWNER_KEY, OWNER_A);
+  const i = { ...indexWith(B), owner: OWNER_A };
+  saveIndex(i);
+  const local = upsertInvoice(two, inv("inv_00000777", "TS-0777", "cli_aaaaaaaa", 77700), T + 7);
+  saveBook(i, B, local);
+  const events = [];
+  const off = onShelfChange(() => OWNER_A, () => ({ index: i, books: { [PRIMARY_BOOK_ID]: primary, [B]: local } }), {
+    book: (id, ws, replace) => events.push([id, ws, replace === true]), index: () => {}, ownerChanged: () => {},
+  });
+  storageEvent(bookKey(B), JSON.stringify(updateBusiness(two, { name: "Merged" }, T + 9)));
+  assert.equal(events[0][2], false, "an ordinary write merges");
+  assert.ok(events[0][1].invoices.inv_00000777, "…keeping this tab's changes");
+  markBookReset(B);
+  assert.equal(JSON.parse(s.getItem(BOOK_RESET_KEY))[B], 1);
+  storageEvent(bookKey(B), JSON.stringify(two));
+  assert.equal(events[1][2], true, "after a reset the stored copy replaces this tab's copy");
+  assert.equal(events[1][1].invoices.inv_00000777, undefined, "the set-aside invoice doesn't come back");
+  storageEvent(bookKey(B), JSON.stringify(two));
+  assert.equal(events[2][2], false, "one reset replaces once; later writes merge again");
+  markBookReset(PRIMARY_BOOK_ID);
+  assert.equal(JSON.parse(s.getItem(BOOK_RESET_KEY))[PRIMARY_BOOK_ID], undefined, "the first business is never reset this way");
+  off();
 }
 
 console.log("[shelf] local storage, removal, account-switch stash, backups and bridges: all checks passed");
