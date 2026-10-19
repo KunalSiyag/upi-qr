@@ -9,11 +9,12 @@ import {
 import { PLANS } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
-  backupJson, BOOKS_UI, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere, restoreBackup, storedOwner,
+  backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
+  readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
   recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
-import { createShelfSync, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
+import { createShelfSync, READ_ONLY, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
 import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type LinkContext, type PaylinkList } from "../../lib/workspace/paylinkClient";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
@@ -35,13 +36,17 @@ import { initialWsLang, LangToggle, makeTr, useWs, WS_LANG_KEY, WsLangProvider, 
 
 type Tab = "overview" | "invoices" | "clients" | "settings";
 type Filter = "unpaid" | "overdue" | "paid" | "all";
-type SheetState =
+type SheetInput =
   | { kind: "invoice"; id?: string }
   | { kind: "payment"; id: string; amountPaise?: number; reference?: string; claimToken?: string }
   | { kind: "remind"; id: string }
   | { kind: "client"; id?: string }
-  | { kind: "statement" }
-  | null;
+  | { kind: "statement" };
+/** Every open sheet remembers the business it was opened in; its save is refused anywhere else. */
+type SheetState = (SheetInput & { bookId: string }) | null;
+/** Sheets that write into the business (the reminder sheet only sends a message). */
+const WRITE_SHEETS: ReadonlySet<SheetInput["kind"]> = new Set(["invoice", "payment", "client", "statement"]);
+const BUSINESS_CHANGED = "The business on screen changed while this was open, so nothing was saved.";
 
 const TABS: { id: Tab; label: string }[] = [
   { id: "overview", label: "Overview" },
@@ -97,14 +102,33 @@ function Workspace() {
   activeRef.current = active;
   /** True while the book on screen takes no edits (read-only after a downgrade); see readOnly below. */
   const readOnlyRef = useRef(false);
+  const trRef = useRef(tr);
+  trRef.current = tr;
   /**
-   * Edits from the UI always go to the book on screen. Never into a read-only book, and never
-   * into a book that isn't loaded on this device yet (a cloud-only book shows an empty screen meanwhile).
+   * Edits from the UI always go to the book on screen, and say whether they were taken. Never into a read-only
+   * book (the user is told), never into a book that isn't loaded on this device yet (a cloud-only book shows an
+   * empty screen meanwhile), and never from a sheet opened in another business (`from`).
    */
-  const setWs = useCallback((next: Workspace) => {
+  const setWs = useCallback((next: Workspace, from?: string): boolean => {
     const id = activeRef.current;
-    if (readOnlyRef.current || !shelfRef.current.books[id]) return;
+    if (from !== undefined && from !== id) { setFlash(trRef.current(BUSINESS_CHANGED)); return false; }
+    if (!shelfRef.current.books[id]) return false;
+    if (readOnlyRef.current) { setFlash(trRef.current(READ_ONLY)); return false; }
     setShelf((s) => withBook(s, id, next));
+    return true;
+  }, []);
+  /**
+   * Every change of the business on screen goes through here (a switch, a business deleted elsewhere, an account
+   * switch): whatever belonged to the previous business closes, so nothing typed there can land in this one.
+   */
+  const goToBook = useCallback((id: string) => {
+    activeRef.current = id;
+    setActive(id);
+    saveActiveBook(id);
+    setSheetState(null);
+    setClientFilter(null);
+    setQuery("");
+    setUpsell(null);
   }, []);
   const savedRef = useRef<Record<string, Workspace>>({});
   /** Set once another account took over this device in another tab: nothing is saved any more, the page reloads. */
@@ -128,7 +152,8 @@ function Workspace() {
   const [filter, setFilter] = useState<Filter>("unpaid");
   const [clientFilter, setClientFilter] = useState<string | null>(null);
   const [query, setQuery] = useState("");
-  const [sheet, setSheet] = useState<SheetState>(null);
+  const [sheet, setSheetState] = useState<SheetState>(null);
+  const setSheet = useCallback((next: SheetInput | null) => setSheetState(next ? ({ ...next, bookId: activeRef.current } as SheetState) : null), []);
   const [flash, setFlash] = useState("");
   const [sync, setSync] = useState<ShelfSyncState>({ status: "checking", lastSyncedAt: null, message: "", books: {}, legacy: false, plan: null });
   const syncRef = useRef<ReturnType<typeof createShelfSync> | null>(null);
@@ -138,6 +163,8 @@ function Workspace() {
   const [addOpen, setAddOpen] = useState(false);
   /** A generator document waiting for "Which business is this for?" (§7.5). */
   const [pickDoc, setPickDoc] = useState<PendingDocument | null>(null);
+  /** The account's last known business limit on this device (until the server answers, and offline). */
+  const [cachedLimit, setCachedLimit] = useState<number | null>(null);
   /** Books whose server copy didn't fit in this browser's storage (kept in memory for this visit). */
   const [unsaved, setUnsaved] = useState<string[]>([]);
   /** A book added on this device that the server may still refuse for the plan (then it stays local). */
@@ -148,13 +175,20 @@ function Workspace() {
   /** The business limit the server reported for this account (from PLANS: paid Pro, or Free and the trial); null while unknown. */
   const planLimit = BOOKS_UI && signedIn && !sync.legacy && sync.plan ? (sync.plan.businesses ?? PLANS[sync.plan.id].businesses) : null;
   /**
+   * The limit read-only rules use: the server's, else (still checking, or offline) the last one it gave this
+   * device's account. Unknown for guests and legacy servers.
+   */
+  const knownLimit = planLimit ?? (BOOKS_UI && sync.status !== "signed_out" && !sync.legacy ? cachedLimit : null);
+  /** Whether the plan is known well enough to generate monthly invoices in businesses other than the first. */
+  const planSettled = !BOOKS_UI || sync.status === "signed_out" || sync.legacy || knownLimit !== null;
+  /**
    * Downgrade = read-only (owner decision 2026-10-18): a signed-in account's businesses ranked past its plan's
    * limit take no edits, as the server enforces (402 plan_read_only). The first business never is. Books the
    * server never registered (limit, unregistered) stay editable on this device.
    */
-  const readOnlyIds = useMemo(() => new Set(BOOKS_UI && signedIn ? liveIds.filter((id) => id !== PRIMARY_BOOK_ID
+  const readOnlyIds = useMemo(() => new Set(BOOKS_UI && sync.status !== "signed_out" ? liveIds.filter((id) => id !== PRIMARY_BOOK_ID
     && sync.books[id] !== "limit" && sync.books[id] !== "unregistered"
-    && (sync.books[id] === "read_only" || (planLimit !== null && bookRank(shelf.index, id) >= planLimit))) : []), [liveIds, signedIn, sync.books, planLimit, shelf.index]);
+    && (sync.books[id] === "read_only" || (knownLimit !== null && bookRank(shelf.index, id) >= knownLimit))) : []), [liveIds, sync.status, sync.books, knownLimit, shelf.index]);
   const readOnly = readOnlyIds.has(active);
   readOnlyRef.current = readOnly;
 
@@ -195,7 +229,7 @@ function Workspace() {
       const { [id]: _drop, ...rest } = s.books;
       return { index: s.index, books: rest };
     });
-    if (activeRef.current === id) setActive(PRIMARY_BOOK_ID);
+    if (activeRef.current === id) goToBook(PRIMARY_BOOK_ID);
     setAsideTick((n) => n + 1);
   }, []);
 
@@ -207,8 +241,9 @@ function Workspace() {
     const params = new URLSearchParams(location.search);
     // ?business=<id> only while the business UI is on, only for a valid id that is live and stored here (§7.5).
     const requested = params.get("business");
+    let named: string | null = null;
     if (BOOKS_UI && requested !== null) {
-      if (isBookId(requested) && loaded.books[requested] && liveBookIds(loaded.index).includes(requested)) activeId = requested;
+      if (isBookId(requested) && loaded.books[requested] && liveBookIds(loaded.index).includes(requested)) activeId = named = requested;
       params.delete("business");
       const rest = params.toString();
       history.replaceState(null, "", `${location.pathname}${rest ? `?${rest}` : ""}${location.hash}`);
@@ -217,19 +252,23 @@ function Workspace() {
     // Other books are written only when they change; the primary is saved on load as before.
     for (const [id, book] of Object.entries(loaded.books)) if (id !== PRIMARY_BOOK_ID) savedRef.current[id] = book;
     setShelf(loaded);
+    activeRef.current = activeId;
     setActive(activeId);
+    // The last known business limit of this device's account: read-only businesses are known before the first request.
+    const knownLimit = BOOKS_UI ? cachedPlanLimit(loadOwnerRef.current) : null;
+    setCachedLimit(knownLimit);
     setReady(true);
     setToday(localToday());
     const tabParam = params.get("tab");
     if (tabParam && TABS.some((t) => t.id === tabParam)) setTab(tabParam as Tab);
     const filterParam = params.get("filter");
     if (filterParam === "unpaid" || filterParam === "overdue" || filterParam === "paid" || filterParam === "all") setFilter(filterParam);
-    if (params.get("new") === "1") setSheet({ kind: "invoice" });
+    // ?new=1 (the PWA shortcut) opens a new invoice, but never in a business that is read-only.
+    if (params.get("new") === "1" && !readOnlyBookIds(loaded.index, knownLimit).has(activeId)) setSheet({ kind: "invoice" });
     if (params.get("saved") === "receipt") {
-      // With several businesses the toast names the one the receipt went into.
-      const stored = liveBookIds(loaded.index).filter((id) => loaded.books[id]);
-      setFlash(BOOKS_UI && stored.length > 1
-        ? tr("Saved to {business}.", { business: loaded.books[activeId]?.business.name || tr("Your business") })
+      // With several businesses the toast names the business the receipt was saved to (the URL says which).
+      setFlash(named
+        ? tr("Saved to {business}.", { business: loaded.books[named]?.business.name || tr("Your business") })
         : tr("Receipt saved to your payment book."));
       params.delete("saved");
       const rest = params.toString();
@@ -275,7 +314,8 @@ function Workspace() {
     let createdHere = 0;
     for (const id of liveBookIds(shelf.index)) {
       const book = shelf.books[id];
-      if (!book || readOnlyIds.has(id)) continue;
+      // Other businesses wait until the plan is known: a read-only business never gets device-only invoices.
+      if (!book || readOnlyIds.has(id) || (id !== PRIMARY_BOOK_ID && !planSettled)) continue;
       const { ws: next, created } = generateRecurring(book, today, now);
       if (!created.length) continue;
       updates[id] = next;
@@ -288,7 +328,7 @@ function Workspace() {
       return { index: s.index, books };
     });
     if (createdHere) setFlash(tr(createdHere === 1 ? "Created {n} invoice from your monthly billing." : "Created {n} invoices from your monthly billing.", { n: createdHere }));
-  }, [shelf, today, ready, active, tr, readOnlyIds]);
+  }, [shelf, today, ready, active, tr, readOnlyIds, planSettled]);
 
   // Start sync only after the stored shelf has rendered, so the first push
   // can never send an empty in-memory copy.
@@ -303,9 +343,24 @@ function Workspace() {
         shelfRef.current = next;
         savedRef.current = { ...next.books };
         setShelf(next);
-        setActive(PRIMARY_BOOK_ID);
+        goToBook(PRIMARY_BOOK_ID);
       },
       retire,
+      // A read-only business whose copy here held unsynced changes: those were set aside (verified) by sync; show the server's copy.
+      resetBook: (id, next) => {
+        const current = shelfRef.current;
+        if (frozenRef.current || !liveBookIds(current.index).includes(id)) return false;
+        const saved = saveBook(current.index, id, next);
+        savedRef.current[id] = next;
+        shelfRef.current = withBook(current, id, next);
+        setShelf((s) => withBook(s, id, next));
+        return saved;
+      },
+      onAside: () => {
+        setAsideTick((n) => n + 1);
+        const tr = trRef.current;
+        setFlash(tr("Changes made here after this business became read-only were set aside. Download them in Settings."));
+      },
       onState: setSync,
       onOwnerChanged: ownerChanged,
       activeId: () => activeRef.current,
@@ -469,13 +524,7 @@ function Workspace() {
   /** §7.1: one business on screen; switching clears whatever belonged to the previous one. */
   const switchBook = useCallback((id: string) => {
     if (!BOOKS_UI || !liveBookIds(shelfRef.current.index).includes(id)) return;
-    activeRef.current = id;
-    setActive(id);
-    saveActiveBook(id);
-    setSheet(null);
-    setClientFilter(null);
-    setQuery("");
-    setUpsell(null);
+    goToBook(id);
     // A business kept only in the account (it didn't fit in this browser) is pulled when opened.
     if (!shelfRef.current.books[id]) void syncRef.current?.open(id);
   }, []);
@@ -567,6 +616,21 @@ function Workspace() {
     setFilter("all");
     setFlash(tr("Saved to {business}.", { business: shelfRef.current.books[bookId]?.business.name || tr("Your business") }));
   }
+
+  // The server's business limit is remembered for this account, so read-only rules hold before the next request and offline.
+  useEffect(() => {
+    const owner = syncRef.current?.owner();
+    if (planLimit === null || !owner) return;
+    savePlanLimit(owner, planLimit);
+    setCachedLimit(planLimit);
+  }, [planLimit]);
+
+  // A business that turns read-only (plan read, mid-session downgrade) closes any form that would write into it.
+  useEffect(() => {
+    if (!readOnly || !sheet || !WRITE_SHEETS.has(sheet.kind)) return;
+    setSheetState(null);
+    setFlash(tr(READ_ONLY));
+  }, [readOnly, sheet, tr]);
 
   // A business added here that the server refused for the plan stays on this device (never removed).
   useEffect(() => {
@@ -729,7 +793,7 @@ function Workspace() {
           <section role="status" className={`${card} mt-4 flex flex-wrap items-center justify-between gap-3 px-4 py-3`}>
             <div className="min-w-0 text-sm">
               <p className="font-semibold text-ink">{tr("You've used all {n} free pay links.", { n: paylinks?.plan?.activePaylinks ?? 10 })}</p>
-              <p className={cardNote}>{tr("Pro gives unlimited pay links, client statement links and up to {limit} businesses for {price}/month. Or turn off links for paid invoices in Settings.", { limit: PLANS.pro.businesses, price: PRO_PRICES.monthly.label })}</p>
+              <p className={cardNote}>{tr("Pro gives unlimited pay links, client statement links and, after your first payment, up to {limit} businesses for {price}/month. Or turn off links for paid invoices in Settings.", { limit: PLANS.pro.businesses, price: PRO_PRICES.monthly.label })}</p>
             </div>
             <div className="flex gap-2">
               <a href="/app/?tab=settings&upgrade=monthly" className={primaryButton}>{tr("See Pro")}</a>
@@ -1102,7 +1166,8 @@ function Workspace() {
                 ws={ws}
                 shelf={shelf}
                 active={active}
-                restoreLimit={signedIn && sync.plan ? PLANS[sync.plan.id].businesses : PLANS.free.businesses}
+                restoreLimit={planLimit ?? PLANS.free.businesses}
+                readOnlyIds={readOnlyIds}
                 today={today}
                 readOnly={readOnly}
                 books={BOOKS_UI ? { usage, onAdd: requestAdd, onDelete: () => void deleteBusiness(active), onEraseAll: eraseAll, count: liveIds.length } : null}
@@ -1110,7 +1175,10 @@ function Workspace() {
                 onRestored={(done) => {
                   setShelf((s) => {
                     const books = { ...s.books };
-                    for (const id of done.into) books[id] = s.books[id] ? mergeWorkspaces(s.books[id], done.shelf.books[id]) : done.shelf.books[id];
+                    for (const id of done.into) {
+                      if (readOnlyIds.has(id)) continue;
+                      books[id] = s.books[id] ? mergeWorkspaces(s.books[id], done.shelf.books[id]) : done.shelf.books[id];
+                    }
                     return { index: done.shelf.index === shelf.index ? s.index : done.shelf.index, books };
                   });
                   if (done.shelf.index !== shelf.index) {
@@ -1121,8 +1189,12 @@ function Workspace() {
                   const total = done.restored + done.skipped;
                   const skipped = !done.skipped ? ""
                     : !signedIn ? tr("Sign in to restore all {n} businesses.", { n: total })
-                    : tr(done.skipped === 1 ? "{n} business wasn't restored: your plan includes {limit}." : "{n} businesses weren't restored: your plan includes {limit}.", { n: done.skipped, limit: signedIn && sync.plan ? PLANS[sync.plan.id].businesses : PLANS.free.businesses });
-                  setFlash(done.restored ? `${tr("Backup merged into this workspace.")}${skipped ? ` ${skipped}` : ""}` : skipped);
+                    : tr(done.skipped === 1 ? "{n} business wasn't restored: your plan includes {limit}." : "{n} businesses weren't restored: your plan includes {limit}.", { n: done.skipped, limit: planLimit ?? PLANS.free.businesses });
+                  const blocked = done.blocked.length
+                    ? tr("Not restored into {business}: it's read-only on the Free plan.", { business: done.blocked.map((id) => shelf.books[id]?.business.name || tr("Your business")).join(", ") })
+                    : "";
+                  const notes = [skipped, blocked].filter(Boolean).join(" ");
+                  setFlash(done.restored ? `${tr("Backup merged into this workspace.")}${notes ? ` ${notes}` : ""}` : notes);
                 }}
               />
             </div>
@@ -1133,8 +1205,9 @@ function Workspace() {
       {sheet?.kind === "invoice" && (
         <InvoiceSheet ws={ws} today={today} invoiceId={sheet.id} onClose={closeSheet} onSave={(next, id) => {
           const isNew = !sheet.id;
-          setWs(next);
+          const taken = setWs(next, sheet.bookId);
           setSheet(null);
+          if (!taken) return;
           setFlash(isNew ? tr("{number} added.", { number: next.invoices[id].number }) : tr("Invoice updated."));
           if (isNew) trackProductEvent("invoice_tracked", "workspace");
         }} />
@@ -1142,8 +1215,9 @@ function Workspace() {
       {sheet?.kind === "payment" && ws.invoices[sheet.id] && (
         <PaymentSheet ws={ws} today={today} invoiceId={sheet.id} initialAmountPaise={sheet.amountPaise} initialReference={sheet.reference} onClose={closeSheet} onSave={(next) => {
           const claimToken = sheet.claimToken;
-          setWs(next);
+          const taken = setWs(next, sheet.bookId);
           setSheet(null);
+          if (!taken) return;
           setFlash(tr("Payment recorded."));
           trackProductEvent("payment_recorded", "workspace");
           if (claimToken) void deletePaylink(claimToken, "claims").then(() => refreshLinks());
@@ -1151,14 +1225,16 @@ function Workspace() {
       )}
       {sheet?.kind === "remind" && ws.invoices[sheet.id] && (
         <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={remindLink ? paylinkUrl(remindLink.token) : undefined} onClose={closeSheet} onSent={(next) => {
-          setWs(next);
+          // The message is sent either way; the reminder log is kept only where the business takes edits.
+          if (!readOnlyRef.current) setWs(next, sheet.bookId);
           trackProductEvent("reminder_sent", "workspace");
         }} />
       )}
       {sheet?.kind === "statement" && (
         <StatementSheet ws={ws} today={today} claimedUtrs={claimedUtrs} businessName={BOOKS_UI && liveIds.length > 1 ? activeName : undefined} onClose={closeSheet} onRecord={(next, recorded) => {
-          setWs(next);
+          const taken = setWs(next, sheet.bookId);
           setSheet(null);
+          if (!taken) return;
           setFlash(tr(recorded.length === 1 ? "Recorded {n} payment from your statement." : "Recorded {n} payments from your statement.", { n: recorded.length }));
           trackProductEvent("statement_imported", "workspace");
           // A statement credit with a pay-link UTR settles that claim too.
@@ -1171,7 +1247,7 @@ function Workspace() {
         }} />
       )}
       {sheet?.kind === "client" && (
-        <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { setWs(next); setSheet(null); setFlash(message); }} />
+        <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { const taken = setWs(next, sheet.bookId); setSheet(null); if (taken) setFlash(message); }} />
       )}
       {BOOKS_UI && addOpen && <AddBusinessSheet onClose={() => setAddOpen(false)} onAdd={addBusiness} />}
       {BOOKS_UI && pickDoc && (
@@ -1229,7 +1305,8 @@ function BookBanners({ name, primaryName, readOnly, status, deletedElsewhere, lo
   const download = <button type="button" onClick={backup} className={rowButton}><Icon name="download" className="h-3.5 w-3.5" />{tr("Download backup")}</button>;
   return (
     <>
-      {downgrade && (
+      {/* One banner: the downgrade explained the first time, the short read-only line afterwards. */}
+      {downgrade && (!readOnly || deletedElsewhere || !loadedHere) && (
         <div role="status" className={bannerClass}>
           <p className="min-w-0 max-w-2xl">{tr("You're on Free now. Your {n} businesses all stay, and their pay links keep working. {primary} stays editable; the others are read-only until you upgrade.", { n: downgrade.n, primary: primaryName })}</p>
           <div className="flex gap-2">{seePro}<button type="button" onClick={downgrade.onDismiss} className={ghostButton}>{tr("Got it")}</button></div>
@@ -1244,8 +1321,14 @@ function BookBanners({ name, primaryName, readOnly, status, deletedElsewhere, lo
         <p role="status" className={bannerClass}>{signedIn ? tr("Loading {business} from your account…", { business: name }) : tr("Sign in to open this business.")}</p>
       ) : readOnly ? (
         <div role="status" data-read-only className={bannerClass}>
-          <p className="flex min-w-0 items-center gap-2"><Icon name="lock" className="h-3.5 w-3.5 shrink-0 text-muted" />{tr("This business is read-only on the Free plan. Upgrade to edit it again.")}</p>
-          <div className="flex gap-2">{seePro}{download}</div>
+          <div className="flex min-w-0 max-w-2xl gap-2">
+            <Icon name="lock" className="mt-0.5 h-3.5 w-3.5 shrink-0 text-muted" />
+            <div className="min-w-0">
+              <p>{tr("This business is read-only on the Free plan. Upgrade to edit it again.")}</p>
+              {downgrade && <p className="mt-0.5 text-muted">{tr("You're on Free now. Your {n} businesses all stay, and their pay links keep working. {primary} stays editable; the others are read-only until you upgrade.", { n: downgrade.n, primary: primaryName })}</p>}
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">{seePro}{download}{downgrade && <button type="button" onClick={downgrade.onDismiss} className={ghostButton}>{tr("Got it")}</button>}</div>
         </div>
       ) : status === "limit" ? (
         <div role="status" className={bannerClass}>
@@ -1582,11 +1665,13 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   );
 }
 
-function SettingsPanel({ ws, shelf, active, restoreLimit, today, readOnly, books, onChange, onRestored }: {
+function SettingsPanel({ ws, shelf, active, restoreLimit, readOnlyIds, today, readOnly, books, onChange, onRestored }: {
   ws: Workspace;
   shelf: Shelf;
   active: string;
   restoreLimit: number;
+  /** Read-only businesses: a backup is never merged into them. */
+  readOnlyIds: ReadonlySet<string>;
   today: string;
   readOnly: boolean;
   /** The business controls (§7.3), present only while the business UI is on. */
@@ -1614,7 +1699,7 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, readOnly, books
     if (file.size > 5_000_000) return setError(tr("That file is too large to be a workspace backup."));
     try {
       // Routed by identity (§2.3); a backup of another business is never merged without asking.
-      const result = restoreBackup(shelf, await file.text(), active, restoreLimit, Date.now());
+      const result = restoreBackup(shelf, await file.text(), active, restoreLimit, Date.now(), BOOKS_UI, readOnlyIds);
       setError("");
       if (result.kind === "confirm") setConfirmRestore(result);
       else {
@@ -1681,9 +1766,11 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, today, readOnly, books
           const target = shelf.books[confirmRestore.target]?.business.name || tr("Your business");
           return (
             <div role="alert" className="mt-3 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
-              <p>{tr("This backup is for {backup} ({upi}). Restore it into {target}?", { backup: confirmRestore.backup.name || tr("Your business"), upi: confirmRestore.backup.upiId || "—", target })}</p>
+              <p>{confirmRestore.newBusiness
+                ? tr("This backup is for {backup} ({upi}), which isn't one of your businesses here. Add it as a new business?", { backup: confirmRestore.backup.name || tr("Your business"), upi: confirmRestore.backup.upiId || "—" })
+                : tr("This backup is for {backup} ({upi}). Restore it into {target}?", { backup: confirmRestore.backup.name || tr("Your business"), upi: confirmRestore.backup.upiId || "—", target })}</p>
               <div className="mt-2 flex flex-wrap gap-2">
-                <button type="button" className={rowPrimary} onClick={() => { const done = confirmRestore.apply(); setConfirmRestore(null); onRestored(done); }}>{tr("Restore into {business}", { business: target })}</button>
+                <button type="button" className={rowPrimary} onClick={() => { const done = confirmRestore.apply(); setConfirmRestore(null); onRestored(done); }}>{confirmRestore.newBusiness ? tr("Add as a new business") : tr("Restore into {business}", { business: target })}</button>
                 <button type="button" className={ghostButton} onClick={() => setConfirmRestore(null)}>{tr("Cancel")}</button>
               </div>
             </div>
@@ -1837,10 +1924,21 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
       )}
       {aside.map((book) => (
         <div key={book.id} className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
-          <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: book.name || tr("Your business") })}</p>
-          <p className="mt-0.5">{book.reason === "deleted_elsewhere"
-            ? tr("These are this account's changes, made before the business was deleted on another device. Download them to keep them; Discard removes them for good.")
-            : tr("They were made on this device and never reached your account. Download them to keep them; Discard removes them for good.")}</p>
+          {book.reason === "other_account" ? (
+            <>
+              <p className="font-medium text-ink">{tr("{business}: data from another account that used this device, kept safe here.", { business: book.name || tr("Your business") })}</p>
+              <p className="mt-0.5">{tr("Download it if it's yours; it won't be added to this account.")}</p>
+            </>
+          ) : (
+            <>
+              <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: book.name || tr("Your business") })}</p>
+              <p className="mt-0.5">{book.reason === "deleted_elsewhere"
+                ? tr("These are this account's changes, made before the business was deleted on another device. Download them to keep them; Discard removes them for good.")
+                : book.reason === "read_only"
+                  ? tr("They were made after this business became read-only on the Free plan, so they aren't in your account. Download them to keep them; Discard removes them for good.")
+                  : tr("They were made on this device and never reached your account. Download them to keep them; Discard removes them for good.")}</p>
+            </>
+          )}
           <div className="mt-2 flex gap-3">
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, book.fromPrimary
               // A first business of some account: a plain workspace backup, restorable anywhere (it asks before merging into another business).

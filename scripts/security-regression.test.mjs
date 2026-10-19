@@ -407,7 +407,9 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(switcherSrc, /role="listbox"/);
   assert.doesNotMatch(switcherSrc, /role="dialog"|aria-current=|<li[\s>]|type="file"/, "the switcher has no dialog, aria-current, li or file input");
   // Edits never land in a read-only business or in one that isn't loaded here.
-  assert.match(ui, /if \(readOnlyRef\.current \|\| !shelfRef\.current\.books\[id\]\) return;/, "setWs refuses read-only and unloaded businesses");
+  assert.match(ui, /if \(from !== undefined && from !== id\) \{ setFlash\(trRef\.current\(BUSINESS_CHANGED\)\); return false; \}/, "a sheet's save never lands in another business");
+  assert.match(ui, /if \(readOnlyRef\.current\) \{ setFlash\(trRef\.current\(READ_ONLY\)\); return false; \}/, "setWs refuses read-only businesses, and says so");
+  assert.doesNotMatch(ui, /setActive\(PRIMARY_BOOK_ID\)/, "every change of business goes through goToBook (closes sheets, clears filters)");
   assert.match(ui, /if \(!BOOKS_UI \|\| id === PRIMARY_BOOK_ID\) return;/, "the first business can't be deleted");
   const linkClient = readFileSync(join(projectRoot, "src/lib/workspace/paylinkClient.ts"), "utf8");
   assert.match(linkClient, /\/api\/v1\/paylinks\/\?books=1/, "new clients list every business's links");

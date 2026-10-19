@@ -73,9 +73,9 @@ function fakeServer({ owner = OWNER_A, plan = "pro" } = {}) {
 }
 
 /** PaymentsWorkspace's side of the engine, in memory (same callbacks, same storage helpers). */
-function host(extra = {}) {
+function host({ withReset = false, ...extra } = {}) {
   let shelf = loadShelf().shelf;
-  const h = { states: [], retired: [], ownerChanged: 0 };
+  const h = { states: [], retired: [], ownerChanged: 0, asides: 0 };
   const engine = createShelfSync({
     getIndex: () => shelf.index,
     applyIndex: (index) => { saveIndex(index); shelf = { index, books: shelf.books }; },
@@ -97,6 +97,10 @@ function host(extra = {}) {
     onState: (s) => h.states.push(s),
     onOwnerChanged: () => { h.ownerChanged++; },
     clerkTimeoutMs: 50,
+    ...(withReset ? {
+      resetBook: (id, ws) => { shelf = { index: shelf.index, books: { ...shelf.books, [id]: ws } }; return saveBook(shelf.index, id, ws); },
+      onAside: () => { h.asides++; },
+    } : {}),
     ...extra,
   });
   h.engine = engine;
@@ -532,7 +536,7 @@ const three = book("Book Three", "three@okaxis", 120000);
   await h.engine.start();
   await new Promise((r) => setTimeout(r, 30));
   assert.deepEqual([h.state().status, store.getItem(OWNER_KEY)], ["synced", OWNER_A]);
-  assert.deepEqual(listAside().map((a) => [a.reason, a.name]), [["stray", "Sharma Tuition (A)"]]);
+  assert.deepEqual(listAside().map((a) => [a.reason, a.name]), [["other_account", "Sharma Tuition (A)"]]);
   assert.equal(sanitizeWorkspace(JSON.parse(store.getItem(STASH_KEY))).business.name, "B Shop");
   h.engine.stop();
 }
@@ -577,7 +581,7 @@ const three = book("Book Three", "three@okaxis", 120000);
   assert.deepEqual(liveBookIds(await srv.index()), [PRIMARY_BOOK_ID], "A's business is never registered in B");
   assert.equal((await srv.doc(B)).rev, 0, "and never uploaded into B");
   assert.equal(srv.count((c) => c.method === "PUT" && c.url === BOOKS_URL), 0);
-  assert.deepEqual(listAside().map((a) => [a.id, a.reason, a.name]), [[B, "stray", "A's second business"]]);
+  assert.deepEqual(listAside().map((a) => [a.id, a.reason, a.name]), [[B, "other_account", "A's second business"]]);
   assert.equal(store.getItem(bookKey(B)), null);
   assert.equal(JSON.parse(store.getItem(BOOK_INDEX_KEY)).owner, OWNER_B);
   assert.deepEqual(Object.keys(h.shelf().books), [PRIMARY_BOOK_ID]);
@@ -644,6 +648,36 @@ const three = book("Book Three", "three@okaxis", 120000);
   assert.equal(h.state().status, "signed_out");
   assert.deepEqual(JSON.parse(globalThis.localStorage.getItem(BOOK_SYNC_KEY)), { owner: OWNER_A, books: {} });
   assert.ok(srv.calls.some((c) => c.method === "DELETE" && c.url === SYNC_URL && c.body.expectedOwner === OWNER_A));
+  h.engine.stop();
+}
+
+/* ---------- 402 plan_read_only with changes the server doesn't have: set aside (verified), then the server copy ---------- */
+{
+  const store = shelfDevice({ [PRIMARY_BOOK_ID]: primary, [B]: two });
+  const srv = fakeServer({ plan: "pro" });
+  let h = host();
+  await h.engine.start();
+  await new Promise((r) => setTimeout(r, 20));
+  h.engine.stop();
+  const serverBefore = canonicalJson((await srv.doc(B)).workspace);
+  srv.plan = "free";
+  h = host({ withReset: true });
+  await h.engine.start();
+  h.edit(B, withInvoice(h.shelf().books[B], "inv_00000007", "INV-0007", 7000));
+  assert.equal(await h.engine.flush(B), false);
+  await new Promise((r) => setTimeout(r, 40));
+  const kept = listAside().find((a) => a.id === B);
+  assert.equal(kept?.reason, "read_only", "the device-only changes are kept to download");
+  assert.ok(kept.workspace.invoices.inv_00000007);
+  assert.ok(!store.getItem(bookKey(B)).includes("inv_00000007"), "the business shows the server's copy again");
+  assert.equal(canonicalJson(sanitizeWorkspace(JSON.parse(store.getItem(bookKey(B))))), canonicalJson(sanitizeWorkspace(JSON.parse(serverBefore))));
+  assert.equal(h.asides, 1);
+  assert.equal(canonicalJson((await srv.doc(B)).workspace), serverBefore, "nothing reached the server");
+  // Unchanged afterwards: no second copy, no loop.
+  h.engine.changed(B);
+  await h.engine.flush(B);
+  await new Promise((r) => setTimeout(r, 30));
+  assert.equal(h.asides, 1);
   h.engine.stop();
 }
 

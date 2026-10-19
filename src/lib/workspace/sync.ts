@@ -4,7 +4,7 @@ import {
 } from "./books.ts";
 import type { PlanId } from "./entitlements.ts";
 import {
-  loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
+  keepAside, loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
 } from "./localStore.ts";
 
 /**
@@ -273,6 +273,10 @@ export interface ShelfSyncOptions {
   replaceShelf: (shelf: Shelf) => void;
   /** §2.4 removal of a book whose index entry is a tombstone (sets unsynced changes aside). */
   retire: (id: string) => void;
+  /** Replaces a book with the server's copy as is (no merge); returns whether it was saved. Used for read-only books. */
+  resetBook?: (id: string, ws: Workspace) => boolean;
+  /** A set-aside copy was written (the Settings list should refresh). */
+  onAside?: () => void;
   onState: (state: ShelfSyncState) => void;
   /** The tab's owner changed under it (409 owner_mismatch): the caller reloads. */
   onOwnerChanged?: () => void;
@@ -332,6 +336,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       onStatus: (s, message) => {
         statuses[id] = s;
         messages[id] = message;
+        if (s === "read_only") void settleReadOnly(id);
         // The account-switch notice survives the uploads of the start itself; the next edit's push clears it.
         if (s === "syncing" && !starting) notice = "";
         emit();
@@ -352,6 +357,40 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     });
     engines.set(id, engine);
     return engine;
+  }
+
+  const settling = new Set<string>();
+  /**
+   * A read-only business (402 plan_read_only) whose copy here holds changes the server doesn't have (made offline,
+   * or before the downgrade was known): those changes are kept as a verified set-aside copy to download, then the
+   * book shows the server's copy again. Nothing is dropped; if the copy can't be kept, the book stays as it is.
+   */
+  async function settleReadOnly(id: string): Promise<void> {
+    if (id === PRIMARY_BOOK_ID || settling.has(id) || !owner || legacy || !opts.resetBook) return;
+    const local = opts.getBook(id);
+    const meta = syncMetaFor(owner, id) ?? session.get(id);
+    if (!local || (meta && bookHash(local) === meta.hash)) return;
+    settling.add(id);
+    try {
+      const response = await authedFetch(bookUrl(id), "GET");
+      if (!response.ok) return;
+      const body = await response.json().catch(() => null) as { workspace?: unknown; rev?: unknown; businessId?: unknown } | null;
+      if (!body || body.businessId !== id) return;
+      const server = sanitizeWorkspace(body.workspace);
+      const now = opts.getBook(id);
+      if (!now || canonicalJson(now) === canonicalJson(server)) return;
+      if (!keepAside(id, "read_only", now)) return;
+      const saved = opts.resetBook(id, server);
+      if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) {
+        session.set(id, { rev: body.rev, hash: bookHash(server) });
+        if (saved) writeSyncMeta(owner, id, body.rev, bookHash(server));
+      }
+      opts.onAside?.();
+    } catch {
+      // Offline: tried again on the next read-only answer.
+    } finally {
+      settling.delete(id);
+    }
   }
 
   function hold(id: string, status: BookSyncStatus) {

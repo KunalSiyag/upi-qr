@@ -145,7 +145,7 @@ export function BusinessSwitcher({ variant, books, active, planLabel, usage, onS
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
           onClick={() => setOpen(!open)}
-          className="flex h-9 items-center gap-1 rounded-[7px] bg-white pl-1.5 pr-1 ring-1 ring-inset ring-hairline transition-colors duration-150 hover:bg-fog"
+          className="flex h-11 items-center gap-1 rounded-[7px] bg-white pl-2 pr-1.5 ring-1 ring-inset ring-hairline transition-colors duration-150 hover:bg-fog"
         >
           <Avatar name={current?.name ?? ""} size="sm" strong />
           <span className="sr-only">{tr("Businesses")}: {name}</span>

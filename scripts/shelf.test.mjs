@@ -9,6 +9,7 @@ import {
   loadIndex, loadShelf, loadStash, loadWorkspace, onShelfChange, OWNER_KEY, ownerChangedElsewhere, setAsideOtherAccountBooks, readSyncMeta, recordReceipt, removeBookStorage, restoreBackup,
   retireBook, saveBook, saveIndex, saveWorkspace, setAside, STASH_KEY, STASH_V2_KEY, sweepStrayBooks, switchAccountStorage, takePendingDocument,
   trackDocument, workspaceReturnUrl, WORKSPACE_KEY, writeSyncMeta, PENDING_DOCUMENT_KEY,
+  cachedPlanLimit, keepAside, PLAN_LIMIT_KEY, readOnlyBookIds, savePlanLimit,
 } from "../src/lib/workspace/localStore.ts";
 import { addBook, bookHash, deleteBook, emptyIndex, liveBookIds, PRIMARY_BOOK_ID } from "../src/lib/workspace/books.ts";
 import {
@@ -277,7 +278,7 @@ st.setItem(STASH_KEY, json(unknownStash));
 assert.deepEqual(switchAccountStorage(OWNER_B, OWNER_C, { ...emptyIndex(), owner: OWNER_B }, book("C", "c@okaxis"), NOW), { ok: true });
 let kept = listAside();
 assert.equal(kept.length, 1);
-assert.deepEqual([kept[0].reason, kept[0].name, canonicalJson(kept[0].workspace)], ["stray", "Unknown account", canonicalJson(sanitizeWorkspace(unknownStash))]);
+assert.deepEqual([kept[0].reason, kept[0].name, canonicalJson(kept[0].workspace)], ["other_account", "Unknown account", canonicalJson(sanitizeWorkspace(unknownStash))]);
 assert.equal(sanitizeWorkspace(JSON.parse(st.getItem(STASH_KEY))).business.name, "Account B Shop", "the slot now holds the previous account (B)");
 assert.equal(JSON.parse(st.getItem(STASH_V2_KEY)).owner, OWNER_B);
 assert.equal(st.getItem(OWNER_KEY), OWNER_C);
@@ -438,7 +439,7 @@ assert.deepEqual(JSON.parse(st.getItem(STASH_V2_KEY)).ids, [B, C], "earlier stas
   assert.deepEqual(switchAccountStorage(OWNER_B, OWNER_C, { ...emptyIndex(), owner: OWNER_B }, cServer, NOW), { ok: true });
   assert.deepEqual(Object.keys(sanitizeWorkspace(JSON.parse(s.getItem(WORKSPACE_KEY))).invoices), [], "C gets only its own copy");
   const aside = listAside();
-  assert.deepEqual(aside.map((a) => [a.reason, a.name, a.fromPrimary, Object.keys(a.workspace.invoices).sort().join(",")]), [["stray", "Kirana Store", true, "inv_00000001,inv_0000000x"]]);
+  assert.deepEqual(aside.map((a) => [a.reason, a.name, a.fromPrimary, Object.keys(a.workspace.invoices).sort().join(",")]), [["other_account", "Kirana Store", true, "inv_00000001,inv_0000000x"]]);
   assert.equal(sanitizeWorkspace(JSON.parse(s.getItem(STASH_KEY))).business.name, "Gupta Traders");
   assert.equal(JSON.parse(s.getItem(STASH_V2_KEY)).owner, OWNER_B);
   // Same for the previous account: a name match alone is no evidence.
@@ -460,7 +461,7 @@ assert.deepEqual(JSON.parse(st.getItem(STASH_V2_KEY)).ids, [B, C], "earlier stas
   saveBook(i, B, two);
   assert.equal(setAsideOtherAccountBooks(i, OWNER_B), true);
   assert.equal(s.getItem(bookKey(B)), null);
-  assert.deepEqual(listAside().map((a) => [a.id, a.reason, a.name]), [[B, "stray", "Book Two"]]);
+  assert.deepEqual(listAside().map((a) => [a.id, a.reason, a.name]), [[B, "other_account", "Book Two"]]);
   assert.deepEqual(JSON.parse(s.getItem(BOOK_INDEX_KEY)), { v: 1, owner: OWNER_B, books: { biz_primary: { id: "biz_primary", createdAt: 0 } } });
   // Quota: nothing is removed when it can't be set aside.
   const s2 = installBrowser({ fail: (key) => key.startsWith("proupiqr-aside-v1:") });
@@ -585,7 +586,8 @@ assert.deepEqual([saved.bookId, saved.appliedPaise], [B, 100000]);
 assert.equal(store.getItem(WORKSPACE_KEY), primaryRaw);
 assert.equal(sanitizeWorkspace(JSON.parse(store.getItem(bookKey(B)))).invoices.inv_00000001.payments[0].amountPaise, 100000);
 assert.equal(workspaceReturnUrl("/app/?tab=invoices", saved), BOOKS_UI ? `/app/?tab=invoices&business=${B}` : "/app/?tab=invoices", "?business= only once the business UI is on");
-assert.equal(workspaceReturnUrl("/app/?tab=invoices", { bookId: PRIMARY_BOOK_ID }), "/app/?tab=invoices", "the primary is never named");
+// With several businesses the URL names the first business too, so /app/ opens (and the toast names) the right one.
+assert.equal(workspaceReturnUrl("/app/?tab=invoices", { bookId: PRIMARY_BOOK_ID }), BOOKS_UI ? `/app/?tab=invoices&business=${PRIMARY_BOOK_ID}` : "/app/?tab=invoices");
 // An unmatched real UPI ID asks while the UI is on (the document waits in session storage); with the UI off it goes to
 // the active book (the primary). Never a new book.
 store = twoBooks();
@@ -624,5 +626,88 @@ globalThis.sessionStorage.setItem(PENDING_DOCUMENT_KEY, JSON.stringify({ kind: "
 assert.equal(takePendingDocument().receipt.receiptNo, "R-1");
 assert.equal(takePendingDocument(), null);
 assert.equal(workspaceReturnUrl("/app/", { pick: true }), "/app/?pick=document");
+
+/* ---------- review fixes (PR 4/5): read-only businesses, plan-limit cache, restores, bridges, aside reasons ---------- */
+{
+  // The last known limit is kept per account and read only for that account.
+  const s = installBrowser();
+  assert.equal(cachedPlanLimit(OWNER_A), null);
+  savePlanLimit(OWNER_A, 1);
+  assert.equal(cachedPlanLimit(OWNER_A), 1);
+  assert.equal(cachedPlanLimit(OWNER_B), null, "another account never inherits the limit");
+  assert.equal(cachedPlanLimit(null), null);
+  s.setItem(PLAN_LIMIT_KEY, JSON.stringify({ owner: OWNER_A, limit: 0 }));
+  assert.equal(cachedPlanLimit(OWNER_A), null, "a nonsense limit is ignored");
+  // Read-only = ranked past the limit, never the first business.
+  const i3 = indexWith(B, C);
+  assert.deepEqual([...readOnlyBookIds(i3, 1)].sort(), [B, C]);
+  assert.deepEqual([...readOnlyBookIds(i3, 2)], [C]);
+  assert.deepEqual([...readOnlyBookIds(i3, 20)], []);
+  assert.deepEqual([...readOnlyBookIds(i3, null)], []);
+}
+{
+  // A backup is never merged into a read-only business; the result names it.
+  const shelf2 = { index: indexWith(B), books: { [PRIMARY_BOOK_ID]: sanitizeWorkspace(primary), [B]: sanitizeWorkspace(two) } };
+  const extra = upsertInvoice(two, { ...two.invoices.inv_00000001, id: "inv_0000ro01", number: "INV-0099", amountPaise: 9900, createdAt: T + 9, updatedAt: T + 9 }, T + 9);
+  const bookFile = JSON.stringify({ app: "proupiqr-business", formatVersion: 2, exportedAt: AT, businesses: [{ id: B, workspace: extra }] });
+  let r = restoreBackup(shelf2, bookFile, B, 20, NOW, true, new Set([B]));
+  assert.deepEqual([r.kind, r.restored, r.blocked, r.into], ["done", 0, [B], []]);
+  assert.equal(r.shelf.books[B], shelf2.books[B], "the read-only business is untouched");
+  r = restoreBackup(shelf2, bookFile, PRIMARY_BOOK_ID, 20, NOW, true, new Set([B]));
+  assert.deepEqual([r.kind, r.blocked], ["done", [B]], "no confirm offered into a read-only business");
+  const all = JSON.stringify({ app: "proupiqr-workspace", formatVersion: 2, exportedAt: AT, workspace: primary, businesses: [{ id: PRIMARY_BOOK_ID, workspace: primary }, { id: B, workspace: extra }] });
+  r = restoreBackup(shelf2, all, PRIMARY_BOOK_ID, 20, NOW, true, new Set([B]));
+  assert.deepEqual([r.restored, r.blocked, r.into], [1, [B], [PRIMARY_BOOK_ID]]);
+  // A single business that isn't one of this account's asks before it is added (never a silent add).
+  const single = { index: emptyIndex(), books: { [PRIMARY_BOOK_ID]: sanitizeWorkspace(primary) } };
+  r = restoreBackup(single, bookFile, PRIMARY_BOOK_ID, 20, NOW, true);
+  assert.equal(r.kind, "confirm");
+  assert.equal(r.newBusiness, true);
+  assert.deepEqual([r.backup.name, r.backup.upiId], ["Book Two", "two@okaxis"]);
+  const added = r.apply();
+  assert.equal(added.restored, 1);
+  assert.equal(liveBookIds(added.shelf.index).length, 2);
+  assert.ok(!liveBookIds(added.shelf.index).includes(B), "added under a fresh id");
+  // At the limit (Free, or a trial): nothing to ask, the business is skipped and counted.
+  r = restoreBackup(single, bookFile, PRIMARY_BOOK_ID, 1, NOW, true);
+  assert.deepEqual([r.kind, r.restored, r.skipped], ["done", 0, 1]);
+  // A deleted id is never offered back.
+  r = restoreBackup({ index: deleteBook(indexWith(B), B, NOW), books: single.books }, bookFile, PRIMARY_BOOK_ID, 20, NOW, true);
+  assert.notEqual(r.newBusiness, true);
+}
+if (BOOKS_UI) {
+  // Bridges never write into a read-only business (the cached limit says which): the user is asked instead.
+  const s = twoBooks();
+  s.setItem(OWNER_KEY, OWNER_A);
+  savePlanLimit(OWNER_A, 1);
+  const before = s.getItem(bookKey(B));
+  const asked = trackDocument({ merchant: "Book Two", upiId: "two@okaxis", customer: "Rohan", invoiceNo: "BT-0777", invoiceDate: "2026-10-05", dueDate: "2026-10-20", totalPaise: 4321, description: "" });
+  assert.deepEqual(asked, { pick: true });
+  assert.equal(s.getItem(bookKey(B)), before, "nothing written into the read-only business");
+  globalThis.sessionStorage.removeItem(PENDING_DOCUMENT_KEY);
+  // The active business read-only + an empty UPI ID (normally "the active one"): asked too.
+  s.setItem(ACTIVE_BOOK_KEY, B);
+  assert.deepEqual(recordReceipt({ ...receipt, merchant: "", upiId: "" }), { pick: true });
+  globalThis.sessionStorage.removeItem(PENDING_DOCUMENT_KEY);
+  // The first business is never read-only: a document for it is saved, and the URL names it.
+  const saved = recordReceipt(receipt);
+  assert.equal(saved.bookId, PRIMARY_BOOK_ID);
+  assert.equal(workspaceReturnUrl("/app/?saved=receipt", saved), `/app/?saved=receipt&business=${PRIMARY_BOOK_ID}`);
+  // One business on this device: the URL stays as before.
+  const one = installBrowser();
+  one.setItem(WORKSPACE_KEY, json(primary));
+  assert.equal(workspaceReturnUrl("/app/?saved=receipt", { bookId: PRIMARY_BOOK_ID }), "/app/?saved=receipt");
+}
+{
+  // keepAside leaves the book in place; the read-only reason survives a round trip.
+  const s = installBrowser();
+  const i = indexWith(B);
+  saveIndex(i);
+  saveBook(i, B, two);
+  assert.equal(keepAside(B, "read_only", two), true);
+  assert.ok(s.getItem(bookKey(B)), "the book itself stays");
+  assert.deepEqual(listAside().map((a) => [a.id, a.reason]), [[B, "read_only"]]);
+  assert.equal(keepAside(PRIMARY_BOOK_ID, "read_only", primary), false, "the first business is never set aside this way");
+}
 
 console.log("[shelf] local storage, removal, account-switch stash, backups and bridges: all checks passed");

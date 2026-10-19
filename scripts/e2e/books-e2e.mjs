@@ -561,6 +561,154 @@ try {
   check("deleted elsewhere: switcher lists the first business only", (await options()).length === 1);
   await b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true");
 
+  // ---- Review fixes (PR 4/5) ----
+  const setFile = async (name, content) => b.eval(`(() => { const input = document.querySelector('input[type=file]'); const dt = new DataTransfer(); dt.items.add(new File([${JSON.stringify(content)}], ${JSON.stringify(name)}, { type: 'application/json' })); input.files = dt.files; input.dispatchEvent(new Event('change', { bubbles: true })); return true; })()`);
+  const cacheLimit = (limit) => b.eval(`localStorage.setItem('proupiqr-plan-limit-v1', JSON.stringify({ owner: '${OWNER}', limit: ${limit} })); true`);
+
+  // R1. A sheet open in Book Two when Book Two is deleted in another tab closes; nothing lands in the first business.
+  await setup({ signedIn: true, plan: { id: "pro", businesses: 20 }, registered: true, books: { [B]: bookTwo } });
+  await b.go(BASE + `/app/?business=${B}`, 3000);
+  await b.waitFor(synced);
+  const firstBefore = await storage("proupiqr-workspace-v1");
+  await t("__t.click(/^\\+ New invoice$/)");
+  await b.waitFor("!!document.getElementById('ws-amount')");
+  await t("__t.set('ws-client', 'Yusuf Two'), __t.set('ws-amount', '1234')");
+  await b.eval(`(async () => { const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; document.body.appendChild(f);
+    await new Promise((r) => { f.onload = r; });
+    const idx = JSON.parse(localStorage.getItem('proupiqr-books-v1')); idx.books['${B}'].deletedAt = Date.now();
+    f.contentWindow.localStorage.setItem('proupiqr-books-v1', JSON.stringify(idx)); f.contentWindow.localStorage.removeItem('proupiqr-book-v1:${B}'); return true; })()`);
+  await sleep(800);
+  check("R1: deleted elsewhere → the sheet closes and the first business is on screen", (await h1()) === "Sharma Tuition" && await b.eval("!document.querySelector('[role=dialog]')"));
+  check("R1: nothing typed in Book Two lands in the first business", !(await storage("proupiqr-workspace-v1")).includes("Yusuf") && (await storage("proupiqr-workspace-v1")) === firstBefore);
+
+  // R2. ?new=1 (PWA shortcut) in a read-only business: no form (limit cached) …
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-active-book', '${C}'); localStorage.setItem('proupiqr-downgrade-notice', '1'); true`);
+  await cacheLimit(1);
+  await b.go(BASE + "/app/?new=1", 3000);
+  check("R2: ?new=1 never opens a form in a read-only business", (await h1()) === "Third Shop" && await b.eval("!document.querySelector('[role=dialog]')"));
+  // … and without a cached limit, the form closes with the read-only message as soon as the plan is known; nothing is "added".
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-active-book', '${C}'); localStorage.setItem('proupiqr-downgrade-notice', '1'); true`);
+  const threeBefore = await storage(`proupiqr-book-v1:${C}`);
+  await b.go(BASE + "/app/?new=1", 3000);
+  await b.waitFor(synced);
+  await sleep(400);
+  check("R2: the form closes once the business is known to be read-only", await b.eval("!document.querySelector('[role=dialog]')") && /read-only on the Free plan/.test(await text()));
+  check("R2: nothing saved, no false success", (await storage(`proupiqr-book-v1:${C}`)) === threeBefore && !/added\./.test(await text()));
+  check("R2: the limit is remembered for this account", JSON.parse(await storage("proupiqr-plan-limit-v1"))?.limit === 1);
+  // A form open when the business turns read-only mid-session closes, and its save is refused.
+  await setup({ signedIn: true, plan: { id: "pro", businesses: 20 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.go(BASE + `/app/?business=${C}`, 3000);
+  await b.waitFor(synced);
+  await t("__t.click(/^\\+ New invoice$/)");
+  await b.waitFor("!!document.getElementById('ws-amount')");
+  await t("__t.set('ws-client', 'Zed Cross'), __t.set('ws-amount', '4500')");
+  await b.eval(`(() => { const s = JSON.parse(localStorage.getItem('__srv')); s.plan = { id: 'free', businesses: 1 }; localStorage.setItem('__srv', JSON.stringify(s)); return true; })()`);
+  await b.eval("document.dispatchEvent(new Event('visibilitychange')); true");
+  await sleep(1500);
+  check("R2: mid-session downgrade closes the open form with the read-only message", await b.eval("!document.querySelector('[role=dialog]')") && /read-only on the Free plan/.test(await text()));
+  check("R2: the typed invoice is stored nowhere and not reported as added", !(await b.eval("Object.keys(localStorage).some(k => !k.startsWith('__') && (localStorage.getItem(k) || '').includes('Zed Cross'))")) && !/TS-0002 added/.test(await text()));
+
+  // R3. Restore into a read-only business: refused and named; the business is untouched.
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-active-book', '${C}'); localStorage.setItem('proupiqr-downgrade-notice', '1'); true`);
+  await cacheLimit(1);
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor(synced);
+  const three3 = JSON.parse(JSON.stringify(bookThree));
+  three3.invoices.inv_99999999 = { ...three3.invoices.inv_00000002, id: "inv_99999999", number: "TS-0999", amountPaise: 999900, createdAt: Date.now(), updatedAt: Date.now() };
+  const threeBefore3 = await storage(`proupiqr-book-v1:${C}`);
+  await setFile("c.json", JSON.stringify({ app: "proupiqr-business", formatVersion: 2, businesses: [{ id: C, workspace: three3 }] }));
+  await sleep(800);
+  check("R3: restore into a read-only business is refused and named", /Not restored into Third Shop: it's read-only on the Free plan\./.test(await text()) && (await storage(`proupiqr-book-v1:${C}`)) === threeBefore3);
+  // A trial account (businesses 1) restores at most one business.
+  await setup({ signedIn: true, plan: { id: "pro", businesses: 1 }, registered: true });
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor(synced);
+  await setFile("all.json", JSON.stringify({ app: "proupiqr-workspace", formatVersion: 2, workspace: primary, businesses: [{ id: "biz_primary", workspace: primary }, { id: B, workspace: bookTwo }, { id: C, workspace: bookThree }] }));
+  await sleep(1500);
+  check("R3: trial restore keeps one business and says why", /2 businesses weren't restored: your plan includes 1\./.test(await text()) && /1 of 1 business/.test(await text()));
+  // A single business that isn't one of this account's asks first.
+  await setup({ signedIn: true, plan: { id: "pro", businesses: 20 }, registered: true });
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor(synced);
+  await setFile("two.json", JSON.stringify({ app: "proupiqr-business", formatVersion: 2, businesses: [{ id: B, workspace: bookTwo }] }));
+  await sleep(600);
+  check("R3: a business that isn't yours asks before it is added", /This backup is for Book Two Traders \(two@okaxis\), which isn't one of your businesses here\. Add it as a new business\?/.test(await text()) && !(await storage("proupiqr-books-v1") || "").includes("Book"));
+  await t("__t.click(/^Add as a new business$/)");
+  await sleep(800);
+  await openSwitcher();
+  check("R3: confirmed → added as a new business", (await options()).length === 2 && JSON.stringify(await options()).includes("Book Two Traders"));
+  await b.eval("document.activeElement.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); true");
+
+  // R4. Generator bridge and read-only: with the limit known, the picker asks (read-only disabled); without it, the
+  //     document is kept as a set-aside copy instead of a device-only edit.
+  const draft4 = (upiId, invoiceNo) => JSON.stringify({ templateId: "in-gst", merchant: "Whoever", upiId, customer: "Lakshmi Nair", invoiceNo, invoiceDate: "2026-10-02", dueDate: "2026-10-12", gstPercent: "0", discount: "0", notes: "", items: [{ id: 1, name: "Work", qty: "1", price: "4321" }] });
+  const track4 = async () => {
+    await b.go(BASE + "/invoice-generator/", 1500);
+    await b.eval("document.getElementById('invoice-tool').scrollIntoView(); true");
+    await b.waitFor("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))", 10000);
+    await t("__t.click(/Track payment/)");
+    await b.waitFor("location.pathname === '/app/'", 8000);
+  };
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-downgrade-notice', '1'); localStorage.setItem('proupiqr-invoice-draft', ${JSON.stringify(draft4("three@okaxis", "TS-0777"))}); true`);
+  await cacheLimit(1);
+  await track4();
+  await b.waitFor(synced);
+  await sleep(600);
+  check("R4: a document for a read-only business asks which business", await b.eval("document.querySelector('[role=dialog]')?.getAttribute('aria-label') === 'Which business is this for?'"));
+  check("R4: read-only businesses are disabled in the picker", await b.eval(`document.querySelector('[data-pick-business="${C}"]').disabled && document.querySelector('[data-pick-business="${B}"]').disabled && !document.querySelector('[data-pick-business="biz_primary"]').disabled`));
+  check("R4: nothing written into the read-only business", !(await storage(`proupiqr-book-v1:${C}`)).includes("TS-0777"));
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  await b.eval(`localStorage.setItem('proupiqr-downgrade-notice', '1'); localStorage.setItem('proupiqr-invoice-draft', ${JSON.stringify(draft4("three@okaxis", "TS-0778"))}); true`);
+  await track4();
+  await b.waitFor(synced);
+  await sleep(2000);
+  check("R4: unknown plan → the device-only document is set aside, the business shows the server copy", !(await storage(`proupiqr-book-v1:${C}`)).includes("TS-0778") && JSON.stringify(JSON.parse((await storage(`proupiqr-aside-v1:${C}`)) || "{}")).includes("TS-0778") && !JSON.stringify((await srvState()).docs[C]).includes("TS-0778"));
+  await b.go(BASE + "/app/?tab=settings", 2500);
+  check("R4: Settings offers it with the read-only wording", /They were made after this business became read-only on the Free plan/.test(await text()));
+
+  // R5. A receipt saved into the first business while Book Two was last active: /app/ opens the first business and names it.
+  await setup({ signedIn: false, books: { [B]: bookTwo } });
+  await b.eval(`localStorage.setItem('proupiqr-active-book', '${B}');
+    localStorage.setItem('proupiqr-receipt-draft', ${JSON.stringify(JSON.stringify({ merchant: "Sharma Tuition", upiId: "sharma@okaxis", customer: "Riya Sharma", customerPhone: "", receiptNo: "RCPT-0007", receiptDate: "2026-10-05", paymentMode: "UPI", referenceNo: "412345678901", receivedBy: "", notes: "", items: [{ id: 1, name: "Tuition fees", qty: "1", price: "3000" }] }))}); true`);
+  await b.go(BASE + "/receipt-generator/", 1500);
+  await b.eval("document.getElementById('receipt-tool').scrollIntoView(); true");
+  await b.waitFor("[...document.querySelectorAll('button')].some(b => /Save to payment book/.test(b.textContent))", 10000);
+  await t("__t.click(/Save to payment book/)");
+  await b.waitFor("location.pathname === '/app/'", 8000);
+  await sleep(1200);
+  check("R5: the first business opens and the toast names it", (await h1()) === "Sharma Tuition" && /Saved to Sharma Tuition\./.test(await text()) && (await storage("proupiqr-workspace-v1")).includes("Riya"));
+
+  // R6. Monthly billing never fills a read-only business with device-only invoices (plan still unknown on load).
+  const three6 = JSON.parse(JSON.stringify(bookThree));
+  three6.recurring = { rec_aaaaaaaa: { id: "rec_aaaaaaaa", clientId: "cli_cccccccc", amountPaise: 50000, description: "Monthly", dayOfMonth: 1, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, createdAt: T, updatedAt: T } };
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: three6 } });
+  await b.eval(`localStorage.setItem('proupiqr-downgrade-notice', '1'); true`);
+  await b.go(BASE + "/app/", 3000);
+  await b.waitFor(synced);
+  await sleep(1000);
+  check("R6: no monthly invoices generated into the read-only business", Object.keys(JSON.parse(await storage(`proupiqr-book-v1:${C}`)).invoices).length === 1);
+
+  // R7. One banner for a read-only business after a downgrade; the phone chip is a 44px target.
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo } });
+  await b.go(BASE + `/app/?business=${B}`, 3000);
+  await b.waitFor(synced);
+  await sleep(400);
+  check("R7: read-only + downgrade explained in one banner", (await b.eval("[...document.querySelectorAll('[role=status]')].filter(e => /You're on Free now/.test(e.textContent)).length")) === 1 && await b.eval("/You're on Free now/.test(document.querySelector('[data-read-only]').textContent)"));
+  await b.mobile(true);
+  await b.go(BASE + "/app/", 2500);
+  check("R7: the phone switcher chip is at least 44px tall", (await b.eval("[...document.querySelectorAll('[data-book-switcher]')].find(e => e.offsetParent).getBoundingClientRect().height")) >= 44);
+  await b.mobile(false);
+
+  // R8. Another account's data set aside here is labelled as such (never "your account").
+  await setup({ signedIn: false });
+  await b.eval(`localStorage.setItem('proupiqr-aside-v1:${C}', JSON.stringify({ at: 1, reason: 'other_account', name: 'Other Shop', workspace: ${JSON.stringify(bookThree)} })); true`);
+  await b.go(BASE + "/app/?tab=settings", 2500);
+  check("R8: other-account data says whose it is", /Other Shop: data from another account that used this device, kept safe here\./.test(await text()) && /it won't be added to this account/.test(await text()) && !/never reached your account/.test(await text()));
+
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load|402|404|503/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));
