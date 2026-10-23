@@ -145,7 +145,7 @@ const toolGroups = [
         </div>
       </div>
     </div>
-    <a href={loginHref} class="hidden min-h-11 shrink-0 items-center px-2 text-[15px] font-semibold text-forest hover:text-leaf md:inline-flex">{hi("Log in", "लॉग इन")}</a>
+    <a href={loginHref} data-login-link class="hidden min-h-11 shrink-0 items-center px-2 text-[15px] font-semibold text-forest hover:text-leaf md:inline-flex">{hi("Log in", "लॉग इन")}</a>
     <a href="/app/" class="hidden h-11 shrink-0 items-center rounded-[10px] border border-forest px-5 text-[15px] font-semibold text-forest transition-colors hover:bg-forest hover:text-white sm:inline-flex">{hi("Track payments", "पेमेंट ट्रैक करें")}</a>
     <button type="button" id="mobile-menu-btn" aria-label={chrome.openMenu} aria-controls="mobile-menu" aria-expanded="false" class="flex h-11 w-11 items-center justify-center rounded-full bg-fog text-forest hover:bg-mint lg:hidden">
       <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.25" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M4 7h16M4 12h16M4 17h16" /></svg>
@@ -175,11 +175,21 @@ const toolGroups = [
       <a href="/pricing/" class="py-2">{hi("Pricing", "प्राइसिंग")}</a>
       <a href={p("blog")} class="py-2">{chrome.guides}</a>
       <a href={p("about")} class="py-2">{chrome.about}</a>
-      <a href={loginHref} class="py-2">{hi("Log in", "लॉग इन")}</a>
+      <a href={loginHref} data-login-link class="py-2">{hi("Log in", "लॉग इन")}</a>
     </div>
   </div>
 </nav>
 
+<script is:inline define:vars={{ accountLabel: hi("My account", "मेरा खाता") }}>
+  // The header is static and Clerk loads only on account pages, so read Clerk's
+  // __client_uat cookie (sign-in time, "0" when signed out) to swap "Log in".
+  if (/(?:^|; )__client_uat=[1-9]/.test(document.cookie)) {
+    for (const link of document.querySelectorAll("[data-login-link]")) {
+      link.textContent = accountLabel;
+      link.href = "/app/?tab=settings";
+    }
+  }
+</script>
 <script>
   const btn = document.getElementById('mobile-menu-btn');
   const menu = document.getElementById('mobile-menu');
