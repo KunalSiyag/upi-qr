@@ -54,6 +54,23 @@ try {
   const invoices = Object.values(data.invoices);
   check("re-tracking updates instead of duplicating", invoices.length === 1 && invoices[0].amountPaise === 2065000 && invoices[0].payments.length === 1, JSON.stringify(invoices.map((i) => [i.number, i.amountPaise, i.payments.length])));
 
+  // Review round 2: the tracker's storage code is prefetched once the page is idle, so the click needs no network
+  // (connection lost, or a deploy replaced the chunk while the page was open).
+  await b.eval("const d = JSON.parse(localStorage.getItem('proupiqr-invoice-draft')); localStorage.clear(); d.invoiceNo = 'KDS-105'; localStorage.setItem('proupiqr-invoice-draft', JSON.stringify(d)); true");
+  await b.go(BASE + "/invoice-generator/", 1500);
+  check("tracker code is prefetched on idle", await b.waitFor("performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))", 12000));
+  await b.send("Network.setBlockedURLs", { urls: ["*/_astro/localStore*"] });
+  try {
+    await b.eval("document.getElementById('invoice-tool').scrollIntoView(); true");
+    await b.waitFor("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))", 10000);
+    await t("__t.click(/Track payment/)");
+    await b.waitFor("location.pathname === '/app/'", 8000);
+    data = await ws();
+    check("Track payment records the invoice with the chunk unreachable", Object.values(data?.invoices ?? {}).some((i) => i.number === "KDS-105"), JSON.stringify(data && Object.keys(data.invoices)));
+  } finally {
+    await b.send("Network.setBlockedURLs", { urls: [] });
+  }
+
   // Non-INR templates hide the button.
   await b.eval("const d = JSON.parse(localStorage.getItem('proupiqr-invoice-draft')); d.templateId = 'us-sales'; localStorage.setItem('proupiqr-invoice-draft', JSON.stringify(d)); true");
   await b.go(BASE + "/invoice-generator/", 1500);

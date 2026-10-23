@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { loadBridge, prefetchBridge, prefetchBridgeWhenIdle } from "../lib/workspace/bridgeLoader";
 import { displayCurrency, formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import type { PaymentMode } from "../lib/workspace/model";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
@@ -110,6 +111,9 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
   const [downloadPngState, setDownloadPngState] = useState<"idle" | "busy" | "error">("idle");
   const [shareState, setShareState] = useState<"idle" | "busy">("idle");
+  const [bridgeBusy, setBridgeBusy] = useState(false);
+  // The tracker's storage code is fetched once the page is idle, so "Save to payment book" needs no network later.
+  useEffect(() => prefetchBridgeWhenIdle(), []);
 
   const updateItem = (id: number, field: keyof ReceiptItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
@@ -184,13 +188,17 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
   /** Records this receipt in the local payment tracker (settling the client's open invoices first) and opens it. */
   async function saveToPaymentBook() {
-    // The payment tracker's storage code loads on click, so it stays off this page's first load.
-    let bridge: typeof import("../lib/workspace/localStore");
+    // The payment tracker's storage code stays off this page's first load; it was prefetched on idle or intent.
+    if (bridgeBusy) return;
+    let bridge: Awaited<ReturnType<typeof loadBridge>>;
+    setBridgeBusy(true);
     try {
-      bridge = await withTimeout(import("../lib/workspace/localStore"), "Payment tracker");
+      bridge = await withTimeout(loadBridge(), "Payment tracker");
     } catch (err) {
       console.error("Payment tracker failed to load:", err); notifyExportError("Couldn't open the payment tracker. Check your connection and try again.");
       return;
+    } finally {
+      setBridgeBusy(false);
     }
     const { recordReceipt, workspaceReturnUrl } = bridge;
     const result = customer.trim() === "Client Name" ? null : recordReceipt({
@@ -344,8 +352,13 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             {displayCurrency(lang).code === "INR" && (
               <button
                 onClick={() => void saveToPaymentBook()}
+                onPointerEnter={prefetchBridge}
+                onFocus={prefetchBridge}
+                onTouchStart={prefetchBridge}
+                disabled={bridgeBusy}
+                aria-busy={bridgeBusy}
                 title={SAVE_LABEL[lang] ?? SAVE_LABEL.en}
-                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog transition"
+                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog disabled:opacity-50 transition"
               >
                 {`${SAVE_LABEL[lang] ?? SAVE_LABEL.en}`}
               </button>

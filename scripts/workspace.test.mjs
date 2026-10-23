@@ -432,6 +432,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(clean.invoices.inv_inr00001.payments[0].inrCreditedPaise, undefined, "inrCreditedPaise on a legacy payment is dropped");
   }
   {
+    // Review round 2 (§1.4, §1.8): a foreign payment keeps inrCreditedPaise only as a positive integer; never a stored 0.
+    const credited = (value) => {
+      const pay = { id: "pay_usd00001", amountPaise: 100, date: "2026-09-02", mode: "bank", reference: "", createdAt: X, inrCreditedPaise: value };
+      const clean = M.sanitizeWorkspace({ intl: { invoices: { inv_usd00001: { ...invoice("inv_usd00001", "U1", "cli_acme0001", 500), currency: "USD", payments: [pay] } } } });
+      return clean.intl.invoices.inv_usd00001.payments[0];
+    };
+    for (const bad of [0, -1, 1.5, NaN, "4150", null]) assert.ok(!("inrCreditedPaise" in credited(bad)), `inrCreditedPaise ${String(bad)} is dropped`);
+    assert.equal(credited(4150).inrCreditedPaise, 4150, "a positive integer is kept");
+  }
+  {
     const s = M.sanitizeWorkspace({ intl: { settings: {
       on: "yes", accountName: `${"A".repeat(100)} `, bankName: "Wise", swift: "deut de ff", account: "gb82 west 1234 5698 7654 32",
       bankDetails: "line1\r\nline2\u0007\n3\n4\n5\n6\n7", payUrl: "javascript:alert(1)", exportUnderLut: false, lutArn: "AD270326000123X", lutFy: "2026-27", updatedAt: 5,
@@ -467,11 +477,28 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.ok(M.pruneTombstones(only, X + 30 * DAY).intl);
     assert.equal(M.canonicalJson(M.pruneTombstones(only, X + 91 * DAY)), M.canonicalJson(M.pruneTombstones(inrBook, X + 91 * DAY)));
   }
+  {
+    // Review round 2: the same for a book whose only foreign content is a client tombstone, or a plan tombstone.
+    const usdPlan = { id: "rec_usdplan09", clientId: "cli_acme0001", amountPaise: 5000, description: "", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X + 1, deletedAt: X + 1 };
+    const cases = {
+      client: { invoices: {}, recurring: {}, clients: { cli_globex01: { currency: "USD", updatedAt: X + 1, deletedAt: X + 1 } } },
+      plan: { invoices: {}, recurring: { [usdPlan.id]: usdPlan }, clients: {} },
+    };
+    for (const [name, intl] of Object.entries(cases)) {
+      const only = M.sanitizeWorkspace(JSON.parse(JSON.stringify({ ...inrBook, intl })));
+      assert.ok(only.intl, `${name}: the tombstone is kept by the sanitizer`);
+      assert.ok(M.pruneTombstones(only, X + 89 * DAY).intl, `${name}: a tombstone younger than 90 days stays`);
+      const pruned = M.pruneTombstones(only, X + 91 * DAY);
+      assert.equal(pruned.intl, undefined, `${name}: pruned, the book has no foreign section`);
+      assert.equal(M.canonicalJson(pruned), M.canonicalJson(M.pruneTombstones(inrBook, X + 91 * DAY)), `${name}: the exact INR-only bytes`);
+    }
+  }
 
   /* ---------- merge (§1.5) ---------- */
   {
     let seed = 42;
-    const rnd = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+    // High bits of the LCG: its low bits repeat with a very short period (review round 2: a and b never both had settings).
+    const rnd = (n) => Math.floor((seed = (seed * 1103515245 + 12345) % 2147483648) / 65536) % n;
     const pick = (list) => list[rnd(list.length)];
     const randomIntl = () => {
       const intl = { invoices: {}, recurring: {}, clients: {} };
@@ -485,9 +512,17 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       if (rnd(2)) intl.settings = { ...settings, accountName: pick(["A", "B"]), updatedAt: X + rnd(2) };
       return rnd(5) === 0 ? undefined : M.sanitizeWorkspace({ intl }).intl;
     };
+    const seen = { both: 0, tie: 0, tieDiffer: 0 };
     for (let i = 0; i < 300; i++) {
       const a = randomIntl();
       const b = randomIntl();
+      if (a?.settings && b?.settings) {
+        seen.both++;
+        if (a.settings.updatedAt === b.settings.updatedAt) {
+          seen.tie++;
+          if (a.settings.accountName !== b.settings.accountName) seen.tieDiffer++;
+        }
+      }
       const ab = M.mergeIntl(a, b);
       const ba = M.mergeIntl(b, a);
       assert.equal(M.canonicalJson({ ...emptyWorkspace(), ...(ab ? { intl: ab } : {}) }), M.canonicalJson({ ...emptyWorkspace(), ...(ba ? { intl: ba } : {}) }), "mergeIntl is commutative");
@@ -495,6 +530,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       for (const id of Object.keys(a?.invoices ?? {})) assert.ok(ab.invoices[id], "an entry missing on one side is kept");
       if (a?.settings || b?.settings) assert.ok(ab.settings);
     }
+    assert.ok(seen.both > 0 && seen.tie > 0 && seen.tieDiffer > 0, `the fuzz merges two settings records, also at equal updatedAt (${JSON.stringify(seen)})`);
+  }
+  {
+    // Settings at equal updatedAt: the greater canonical string wins, whatever the argument order.
+    const s1 = M.sanitizeWorkspace({ intl: { settings: { ...settings, accountName: "Alpha Exports", updatedAt: X } } }).intl;
+    const s2 = M.sanitizeWorkspace({ intl: { settings: { ...settings, accountName: "Beta Exports", bankName: "ICICI Bank", updatedAt: X } } }).intl;
+    const ab = M.mergeIntl(s1, s2);
+    assert.equal(M.canonicalJson({ ...emptyWorkspace(), intl: ab }), M.canonicalJson({ ...emptyWorkspace(), intl: M.mergeIntl(s2, s1) }));
+    assert.equal(ab.settings.accountName, "Beta Exports", "the greater canonical string wins a tie");
+    assert.equal(ab.settings.bankName, "ICICI Bank", "…as a whole record");
   }
   assert.deepEqual(M.mergeWorkspaces(W, M.withoutIntl(W)).intl, W.intl, "an old client's copy (no intl) leaves intl exactly as it was");
   assert.deepEqual(M.mergeWorkspaces(M.withoutIntl(W), W).intl, W.intl);
@@ -571,6 +616,29 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(M.allLiveInvoices(merged).length, 0);
       assert.ok(merged.clients.cli_globex01.deletedAt, "an erased client is never revived");
       assert.equal(M.repairIntl(merged, X + 600), merged);
+    }
+    // Review round 2: not an erase when a legacy record created before T is still live (the erasing tab missed an
+    // INR invoice made elsewhere): the foreign section and bank details from before T stay.
+    {
+      const missed = M.upsertInvoice(W, invoice("inv_inrmiss1", "ST-0050", "cli_acme0001", 7700, { createdAt: X + 300, updatedAt: X + 300 }), X + 300);
+      for (const merged of [M.mergeWorkspaces(missed, erased), M.mergeWorkspaces(erased, missed)]) {
+        assert.ok(!merged.invoices.inv_inrmiss1.deletedAt, "the missed INR invoice is live");
+        const repaired = M.repairIntl(merged, X + 500);
+        assert.ok(Object.values(repaired.intl.invoices).every((i) => !i.deletedAt), "no foreign invoice is tombstoned");
+        assert.equal(repaired.intl.settings.swift, "HDFCINBB", "the bank details stay");
+      }
+    }
+    // Nor when every legacy record shares one tombstone time but the business was last written before it (an old
+    // tab deleting the only client with its invoices): the business is neither emptyBusiness(T) nor rewritten after T.
+    {
+      const TD = X + 450;
+      const tomb = (map) => Object.fromEntries(Object.entries(map).map(([id, r]) => [id, r.deletedAt ? r : { ...r, updatedAt: TD, deletedAt: TD }]));
+      const allGone = M.sanitizeWorkspace(clone({ ...L0, clients: tomb(L0.clients), invoices: tomb(L0.invoices), recurring: tomb(L0.recurring) }));
+      assert.ok(allGone.business.updatedAt < TD);
+      const merged = M.mergeWorkspaces(W, allGone);
+      const repaired = M.repairIntl(merged, TD + 100);
+      assert.ok(Object.values(repaired.intl.invoices).every((i) => i.deletedAt !== TD), "no erase detected");
+      assert.equal(repaired.intl.settings.swift, "HDFCINBB");
     }
     // Erase with an older tombstone: an INR invoice and a client deleted 30 days before keep their deletedAt.
     const TE2 = X + 60 * DAY;
@@ -855,6 +923,13 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.ok(once.intl.settings.bankDetails.length <= 300);
     }
     // The review's case: a 300-character cut right after a line break.
+    {
+      // Review round 2: C1 controls (NEL, CSI) and U+2028/U+2029 go too, so the line cap can't be got around.
+      const c1 = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {}, settings: settings({ bankDetails: "ABA 026009593\u0085Line\u009bX\u0080\u009f\u2028A\u2029B\nSort 12-34-56" }) } });
+      assert.equal(c1.intl.settings.bankDetails, "ABA 026009593LineXAB\nSort 12-34-56");
+      assert.equal(M.canonicalJson(M.sanitizeWorkspace(JSON.parse(M.canonicalJson(c1)))), M.canonicalJson(c1), "still a fixed point");
+      assert.equal(M.sanitizeWorkspace({ intl: { settings: settings({ bankDetails: "café ₹ 日本 ok" }) } }).intl.settings.bankDetails, "café ₹ 日本 ok", "printable non-ASCII is kept");
+    }
     const raw = { ...M.emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {}, settings: settings({ bankDetails: "x".repeat(299) + "\nABA 026009593" }) } };
     const store = memoryCloudStore();
     const revs = [];

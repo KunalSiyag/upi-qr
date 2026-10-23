@@ -5,7 +5,7 @@ import {
 } from "./model.ts";
 import {
   addBook, bookHash, bookRank, canAddBook, emptyIndex, isBookId, isTombstoned, liveBookIds, mergeBookIndex, newBookId, parseBookIndex,
-  pickBookForDocument, PRIMARY_BOOK_ID, routeLegacyBackup, type BookIndex, type Shelf,
+  pickBookForDocument, PRIMARY_BOOK_ID, routeLegacyBackup, fnv1a, type BookIndex, type Shelf,
 } from "./books.ts";
 import { isValidVpa } from "../upi-uri.ts";
 
@@ -200,11 +200,31 @@ function readResets(): Record<string, number> {
   return out;
 }
 
-/** Records that this book was just replaced by the server's copy; call before writing the replacement. */
-export function markBookReset(id: string): void {
+/** Under this (non-book-id) key the reset marker names the hash of each reset's book key bytes; older readers skip it. */
+const RESET_BOOK_HASHES = "~book";
+
+function readResetHashes(): Record<string, string> {
+  const raw = parseJson(get(BOOK_RESET_KEY)) as Record<string, unknown> | null;
+  const hashes = raw && typeof raw === "object" ? (raw[RESET_BOOK_HASHES] as Record<string, unknown> | undefined) : undefined;
+  const out: Record<string, string> = {};
+  if (hashes && typeof hashes === "object") for (const [id, h] of Object.entries(hashes)) if (isBookId(id) && typeof h === "string") out[id] = h;
+  return out;
+}
+
+/**
+ * Records that this book was just replaced by the server's copy; call before writing the replacement.
+ * `bookBytesHash` (fnv1a of the book key bytes about to be written) lets other tabs tell the sidecar write that
+ * comes first from the finished reset: see resetBook.
+ */
+export function markBookReset(id: string, bookBytesHash?: string): void {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return;
   const resets = readResets();
-  put(BOOK_RESET_KEY, JSON.stringify({ ...resets, [id]: (resets[id] ?? 0) + 1 }));
+  const hashes = readResetHashes();
+  if (bookBytesHash === undefined) delete hashes[id];
+  else hashes[id] = bookBytesHash;
+  const next: Record<string, unknown> = { ...resets, [id]: (resets[id] ?? 0) + 1 };
+  if (Object.keys(hashes).length) next[RESET_BOOK_HASHES] = hashes;
+  put(BOOK_RESET_KEY, JSON.stringify(next));
 }
 
 /** Businesses ranked past the limit (never the first): read-only after a downgrade, as the server enforces. */
@@ -476,14 +496,29 @@ export function loadShelf(): { shelf: Shelf; cloudOnly: string[] } {
   return { shelf: { index, books }, cloudOnly };
 }
 
+function saveable(index: BookIndex, id: string): boolean {
+  if (!isBookId(id) || !liveBookIds(index).includes(id)) return false;
+  if (id === PRIMARY_BOOK_ID) return true;
+  const stored = parseBookIndex(get(BOOK_INDEX_KEY));
+  return !(stored && isTombstoned(stored, id));
+}
+
 /** Saves one book. Refuses (false) ids that aren't live in the index, or that another tab has tombstoned. */
 export function saveBook(index: BookIndex, id: string, ws: Workspace): boolean {
-  if (!isBookId(id) || !liveBookIds(index).includes(id)) return false;
-  if (id !== PRIMARY_BOOK_ID) {
-    const stored = parseBookIndex(get(BOOK_INDEX_KEY));
-    if (stored && isTombstoned(stored, id)) return false;
-  }
-  return writeBookKeys(id, ws);
+  return saveable(index, id) && writeBookKeys(id, ws);
+}
+
+/**
+ * Replaces a read-only book with the server's copy (its device-only changes were set aside first): marks the
+ * reset, then saves as saveBook does. Other tabs replace their copy instead of merging the set-aside changes
+ * back. The marker carries the hash of the new book key bytes because the sidecar is written first: a tab that
+ * sees that write while the book key still holds the old copy waits for the book key (review round 2).
+ */
+export function resetBook(index: BookIndex, id: string, ws: Workspace): boolean {
+  if (!isBookId(id) || id === PRIMARY_BOOK_ID) return saveBook(index, id, ws);
+  const now = Date.now();
+  markBookReset(id, fnv1a(canonicalJson(withoutIntl(pruneTombstones(ws, now)))));
+  return saveable(index, id) && writeBookKeys(id, ws, false, now);
 }
 
 /** Never for the primary (it can't be deleted; old code owns its key too). Drops the book key and its sidecar. */
@@ -753,6 +788,11 @@ export function onShelfChange(
       // take the stored copy as is; merging would bring the set-aside changes back.
       const resets = readResets();
       if (id !== PRIMARY_BOOK_ID && resets[id] !== undefined && resets[id] !== seenResets[id]) {
+        // The resetting tab writes the sidecar before the book key: while the book key still holds the copy from
+        // before the reset, this sidecar write is only half of it (joining it would keep the set-aside changes).
+        // Wait for the book key's own event. A book key that the reset left unchanged matches already.
+        const expected = readResetHashes()[id];
+        if (event.key.startsWith(INTL_PREFIX) && expected !== undefined && fnv1a(bookRaw) !== expected) return;
         seenResets = resets;
         h.book(id, incoming, true);
         return;
@@ -1036,9 +1076,22 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     }
     const candidate = addBook(nextIndex, bookId, now);
     if (candidate === nextIndex || get(bookKey(bookId)) !== null) continue;
-    // Undone on failure: the book key, and its sidecar unless that is another account's still waiting to be set aside.
-    const undo = () => { drop(bookKey(bookId)); const side = readSidecar(bookId); if (!side || sidecarJoins(side.owner)) drop(intlKey(bookId)); };
-    if (!writeBookKeys(bookId, ws, true, now)) { undo(); continue; }
+    // A copy from an older code's stash has no foreign section, while that code left the book's sidecar in place:
+    // now that this account is on the device again that sidecar is its own, so it joins the copy instead of being
+    // dropped by the write (review round 2).
+    const sideBefore = get(intlKey(bookId));
+    const here = readSidecar(bookId);
+    const own = here && sidecarJoins(here.owner) ? here : null;
+    const full = own?.intl ? sanitizeWorkspace({ ...ws, intl: mergeIntl(ws.intl, own.intl) }) : ws;
+    // Undone on failure: the book key, and its sidecar back to what it was (this account's) or removed, unless
+    // that is another account's still waiting to be set aside.
+    const undo = () => {
+      drop(bookKey(bookId));
+      const side = readSidecar(bookId);
+      if (side && !sidecarJoins(side.owner)) return;
+      if (own && sideBefore !== null) put(intlKey(bookId), sideBefore); else drop(intlKey(bookId));
+    };
+    if (!writeBookKeys(bookId, full, true, now)) { undo(); continue; }
     if (!saveIndex(candidate, true)) { undo(); continue; }
     nextIndex = candidate;
     discardAside(asideId);

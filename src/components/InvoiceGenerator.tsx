@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
+import { loadBridge, prefetchBridge, prefetchBridgeWhenIdle } from "../lib/workspace/bridgeLoader";
 import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
@@ -194,6 +195,9 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
   const [downloadPngState, setDownloadPngState] = useState<"idle" | "busy" | "error">("idle");
   const [shareState, setShareState] = useState<"idle" | "busy">("idle");
+  const [bridgeBusy, setBridgeBusy] = useState(false);
+  // The tracker's storage code is fetched once the page is idle, so "Track payment" needs no network later.
+  useEffect(() => prefetchBridgeWhenIdle(), []);
 
   const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
@@ -317,13 +321,17 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   }
 
   async function trackPayment() {
-    // The payment tracker's storage code loads on click, so it stays off this page's first load.
-    let bridge: typeof import("../lib/workspace/localStore");
+    // The payment tracker's storage code stays off this page's first load; it was prefetched on idle or intent.
+    if (bridgeBusy) return;
+    let bridge: Awaited<ReturnType<typeof loadBridge>>;
+    setBridgeBusy(true);
     try {
-      bridge = await withTimeout(import("../lib/workspace/localStore"), "Payment tracker");
+      bridge = await withTimeout(loadBridge(), "Payment tracker");
     } catch (err) {
       console.error("Payment tracker failed to load:", err); notifyExportError("Couldn't open the payment tracker. Check your connection and try again.");
       return;
+    } finally {
+      setBridgeBusy(false);
     }
     const { trackDocument, workspaceReturnUrl } = bridge;
     const description = items.map((item) => item.name).filter(Boolean).join(", ");
@@ -424,8 +432,13 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             {template.currency === "INR" && (
               <button
                 onClick={() => void trackPayment()}
+                onPointerEnter={prefetchBridge}
+                onFocus={prefetchBridge}
+                onTouchStart={prefetchBridge}
+                disabled={bridgeBusy}
+                aria-busy={bridgeBusy}
                 title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
-                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog transition"
+                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog disabled:opacity-50 transition"
               >
                 {`${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
               </button>

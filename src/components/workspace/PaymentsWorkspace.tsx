@@ -10,7 +10,7 @@ import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
   backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
-  markBookReset, readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
+  readOnlyBookIds, resetBook as resetStoredBook, restoreBackup, savePlanLimit, storedOwner,
   OTHER_ACCOUNT_INTL, SET_ASIDE_INTL, recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
@@ -365,8 +365,7 @@ function Workspace() {
       resetBook: (id, next) => {
         if (frozenRef.current || !liveBookIds(shelfRef.current.index).includes(id)) return false;
         // Other tabs replace their copy too, instead of merging the set-aside changes back.
-        markBookReset(id);
-        const saved = saveBook(shelfRef.current.index, id, next);
+        const saved = resetStoredBook(shelfRef.current.index, id, next);
         replaceBook(id, next);
         return saved;
       },

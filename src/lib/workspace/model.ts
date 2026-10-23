@@ -936,7 +936,8 @@ const MAX_INTL_CLIENTS = 5_000;
 function sanitizeBankDetails(value: unknown): string {
   // Cut first, then trim: the result is a fixed point (sanitizing it again changes nothing), so the server's
   // re-sanitized copy always equals the client's and an unchanged PUT never writes.
-  const text = str(value, 2000).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").slice(0, 300);
+  // C0 and C1 controls (NEL U+0085 is a line break to some renderers) and the Unicode line/paragraph separators.
+  const text = str(value, 2000).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f-\u009f\u2028\u2029]/g, "").slice(0, 300);
   return text.split("\n").map((line) => line.trim()).slice(0, 6).join("\n").trim();
 }
 

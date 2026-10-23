@@ -1406,6 +1406,106 @@ if (BOOKS_UI) {
     assert.equal(M.repairIntl(res.shelf.books[added], NOW + 1).intl.settings.swift, "HDFCINBB", "the restored bank details survive the repair");
   }
 
+  /*
+   * Review round 2: a stashed foreign section joins the stash only when written for the stash's owner (§2.4).
+   * New code switched A -> B (A's section stashed), then older code switched back and forth, leaving it while the
+   * stash now holds B's data: B's stash never shows A's bank details, and a switch to B never installs them.
+   */
+  {
+    const s = installBrowser();
+    s.setItem(OWNER_KEY, OWNER_A);
+    L.saveWorkspace(M.sanitizeWorkspace(clone(book("Sharma Tuition", "sharma@okaxis"))));
+    s.setItem(STASH_KEY, canonicalJson(book("Account B", "b@okaxis")));
+    s.setItem(STASH_V2_KEY, JSON.stringify({ owner: OWNER_B, at: NOW, ids: [] }));
+    const aIntl = foreign("Sharma Tuition", "sharma@okaxis").intl;
+    s.setItem("proupiqr-stash-intl-v1:" + PRIMARY_BOOK_ID, canonicalJson({ owner: OWNER_A, intl: aIntl }));
+    const stashed = L.loadStash();
+    assert.equal(stashed.owner, OWNER_B);
+    assert.equal(stashed.shelf.books[PRIMARY_BOOK_ID].intl, undefined, "B's stash never joins A's foreign section");
+    assert.deepEqual(L.switchAccountStorage(OWNER_A, OWNER_B, L.loadIndex(), M.sanitizeWorkspace(clone(book("Account B", "b@okaxis"))), NOW + 1), { ok: true });
+    assert.equal(L.loadBook(PRIMARY_BOOK_ID).intl, undefined, "B's first business gets none of A's foreign section");
+    const homes = Object.entries(s.snapshot()).filter(([, v]) => v.includes(aIntl.settings.account)).map(([k, v]) => [k, JSON.parse(v).owner]);
+    assert.deepEqual(homes, [["proupiqr-stash-intl-v1:" + PRIMARY_BOOK_ID, OWNER_A]], "A's section is stashed with A's books");
+  }
+
+  /*
+   * Review round 2: older code switches B -> A (stashing B's extra book, leaving its sidecar), then new code
+   * switches back to B and gives the book back (step 5). The copy from the stash has no foreign section; the
+   * sidecar left in place is B's own again and joins it instead of being dropped. Also when a page load as A
+   * couldn't set that sidecar aside first (storage full).
+   */
+  for (const variant of ["switch back right away", "sweep failed first"]) {
+    let failAside = false;
+    const s = installBrowser({ fail: (key) => failAside && key.startsWith("proupiqr-aside") });
+    s.setItem(OWNER_KEY, OWNER_B);
+    const ix = { ...indexWith(C), owner: OWNER_B };
+    saveIndex(ix, true);
+    L.saveBook(ix, PRIMARY_BOOK_ID, M.sanitizeWorkspace(clone(book("Account B", "b@okaxis"))));
+    L.saveBook(ix, C, foreign("B extra", "bextra@okaxis"));
+    assert.ok(s.getItem(L.intlKey(C)).includes("inv_usd00001"));
+    assert.deepEqual(legacyStore.switchAccountStorage(OWNER_B, OWNER_A, legacyStore.loadShelf().shelf.index, legacyModel.sanitizeWorkspace(clone(book("Sharma Tuition", "sharma@okaxis"))), NOW), { ok: true });
+    if (variant === "sweep failed first") {
+      failAside = true;
+      L.sweepStrayBooks(L.loadShelf().shelf.index);
+      failAside = false;
+      assert.ok(s.getItem(L.intlKey(C)), "the sidecar stayed (its set-aside copy failed)");
+    }
+    assert.deepEqual(L.switchAccountStorage(OWNER_A, OWNER_B, L.loadShelf().shelf.index, M.sanitizeWorkspace(clone(book("Account B", "b@okaxis"))), NOW + 9), { ok: true });
+    const back = L.loadBook(C);
+    assert.ok(back, `${variant}: the book is given back`);
+    assert.equal(back.intl?.invoices.inv_usd00001?.currency, "USD", `${variant}: with its foreign invoice`);
+    assert.equal(back.intl.settings.swift, "HDFCINBB", `${variant}: and its bank details`);
+  }
+
+  /*
+   * Review round 2: another tab replaces a read-only business that has a foreign section with the server's copy.
+   * Its writes (marker, sidecar, book key) reach this tab one at a time; the sidecar event comes while the book
+   * key still holds the copy from before the reset and must not consume the reset. Three shapes: the book key
+   * changes; only the sidecar changes; every write is visible before the first event arrives.
+   */
+  for (const shape of ["book key changes", "sidecar only", "all visible"]) {
+    const s = installBrowser();
+    s.setItem(OWNER_KEY, OWNER_A);
+    const i = { ...indexWith(B), owner: OWNER_A };
+    saveIndex(i);
+    const server = foreign("Book Two", "two@okaxis");
+    const serverNewer = M.upsertInvoice(server, { ...M.getInvoice(server, "inv_usd00001"), description: "edited elsewhere" }, T + 10);
+    const device = shape === "sidecar only"
+      ? M.sanitizeWorkspace(clone({ ...server, intl: { ...server.intl, settings: { ...settings, bankName: "Set aside bank", updatedAt: T + 5 } } }))
+      : M.upsertInvoice(server, inv("inv_0000000x", "INV-0099", "cli_aaaaaaaa", 777700), T + 5);
+    const resetTo = shape === "sidecar only" ? M.sanitizeWorkspace(clone({ ...server, intl: { ...server.intl, settings: { ...settings, updatedAt: T + 9 } } })) : serverNewer;
+    assert.equal(L.saveBook(i, B, device), true);
+    let tab2 = { index: i, books: { [B]: L.loadBook(B) } };
+    const replaced = [];
+    const off = L.onShelfChange(() => OWNER_A, () => tab2, {
+      book(id, ws, replace) {
+        if (replace) { replaced.push(id); tab2 = { ...tab2, books: { ...tab2.books, [id]: ws } }; return; }
+        const value = M.repairIntl(M.mergeWorkspaces(tab2.books[id], ws), Date.now());
+        L.saveBook(tab2.index, id, value);
+        tab2 = { ...tab2, books: { ...tab2.books, [id]: value } };
+      },
+      index() {}, ownerChanged() {},
+    });
+    const before = new Map(s.map);
+    const from = s.writes.length;
+    assert.equal(L.resetBook(i, B, resetTo), true);
+    const writes = s.writes.slice(from);
+    const after = new Map(s.map);
+    assert.deepEqual(writes, shape === "sidecar only" ? [BOOK_RESET_KEY, L.intlKey(B)] : [BOOK_RESET_KEY, L.intlKey(B), bookKey(B)], shape);
+    if (shape !== "all visible") s.map = before;
+    for (const key of writes) {
+      if (shape !== "all visible") s.map.set(key, after.get(key));
+      storageEvent(key, after.get(key));
+    }
+    off();
+    assert.deepEqual(replaced, [B], `${shape}: replaced once`);
+    const want = canonicalJson(M.pruneTombstones(L.loadBook(B), Date.now()));
+    assert.equal(canonicalJson(M.pruneTombstones(tab2.books[B], Date.now())), want, `${shape}: this tab holds the stored copy`);
+    assert.equal(want, canonicalJson(M.pruneTombstones(resetTo, Date.now())), `${shape}: storage holds the server's copy`);
+    assert.equal(L.loadBook(B).invoices.inv_0000000x, undefined, `${shape}: the set-aside invoice doesn't come back`);
+    assert.equal(L.loadBook(B).intl.settings.bankName, "HDFC Bank", `${shape}: the set-aside bank details don't come back`);
+  }
+
   /* A set-aside first business with INR data only is written byte for byte as older code writes it. */
   {
     const realNow = Date.now;
