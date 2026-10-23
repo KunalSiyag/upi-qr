@@ -389,7 +389,7 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(store, /function putVerified\(key: string, value: string\): boolean \{\s*return put\(key, value\) && get\(key\) === value;/, "stash writes are read back");
   const switchSrc = store.split("export function switchAccountStorage")[1].split("\n}\n")[0];
   assert.match(switchSrc, /putVerified\(stashKey, value\)[\s\S]*drop\(bookKey\(id\)\)/, "an extra book leaves the shelf only after its stash copy verified");
-  assert.match(switchSrc, /putVerified\(STASH_KEY, primaryStash\)[\s\S]*writeBookKeys\(PRIMARY_BOOK_ID, newPrimary, true, now\)/, "the primary is stashed before it is replaced");
+  assert.match(switchSrc, /putVerified\(STASH_KEY, primaryStash\)[\s\S]*writeBookKeys\(PRIMARY_BOOK_ID, installed, true, now\)/, "the primary is stashed before it is replaced");
   assert.match(switchSrc, /stashOwner !== previousOwner && stashOwner !== newOwner\) return \{ ok: false, reason: "occupied" \}/, "a third account's stash is never overwritten");
   assert.match(switchSrc, /if \(putVerified\(bookKey\(m\.id\), m\.raw\)\) \{ restoreStash\(\); return true; \}/, "a rolled-back book's stash copy goes only after the book key verified");
   assert.match(syncClient, /if \(saved && owner && !legacy\) writeSyncMeta/, "no revision skip data from a legacy server");

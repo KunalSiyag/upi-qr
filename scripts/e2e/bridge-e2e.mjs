@@ -79,6 +79,15 @@ try {
   await t("__t.click(/USA/)");
   await sleep(300);
   check("Track payment hidden for non-INR templates", !(await b.eval("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))")));
+  // Review round 3: pages where the button can't render never download the tracker code.
+  const trackerFetched = "performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))";
+  for (const [path, label] of [["/de/invoice-generator/", "non-INR invoice template (€)"], ["/es/receipt-generator/", "non-INR receipt page (€)"]]) {
+    await b.go(BASE + path, 1500);
+    await b.eval("document.getElementById('tool').scrollIntoView(); true");
+    const hydrated = await b.waitFor("!!document.querySelector('#tool astro-island') && !document.querySelector('#tool astro-island[ssr]')", 10000);
+    await sleep(6000);
+    check(`${label}: hydrated, tracker code never prefetched`, hydrated && !(await b.eval(trackerFetched)));
+  }
 
   // Bridge from the receipt generator: settles the client's open invoice first, keeps the rest as a paid entry, never twice.
   const T0 = Date.now();

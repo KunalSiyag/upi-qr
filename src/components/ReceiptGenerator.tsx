@@ -113,7 +113,9 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [shareState, setShareState] = useState<"idle" | "busy">("idle");
   const [bridgeBusy, setBridgeBusy] = useState(false);
   // The tracker's storage code is fetched once the page is idle, so "Save to payment book" needs no network later.
-  useEffect(() => prefetchBridgeWhenIdle(), []);
+  // Only where that button renders (rupee receipts): other currencies never download it.
+  const tracksPayments = displayCurrency(lang).code === "INR";
+  useEffect(() => (tracksPayments ? prefetchBridgeWhenIdle() : undefined), [tracksPayments]);
 
   const updateItem = (id: number, field: keyof ReceiptItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
@@ -349,7 +351,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             >
               {downloadPngState === "busy" ? t.generating : `${t.downloadPng}`}
             </button>
-            {displayCurrency(lang).code === "INR" && (
+            {tracksPayments && (
               <button
                 onClick={() => void saveToPaymentBook()}
                 onPointerEnter={prefetchBridge}

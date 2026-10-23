@@ -197,7 +197,8 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [shareState, setShareState] = useState<"idle" | "busy">("idle");
   const [bridgeBusy, setBridgeBusy] = useState(false);
   // The tracker's storage code is fetched once the page is idle, so "Track payment" needs no network later.
-  useEffect(() => prefetchBridgeWhenIdle(), []);
+  // Only while that button renders (rupee templates): other currencies never download it.
+  useEffect(() => (template.currency === "INR" ? prefetchBridgeWhenIdle() : undefined), [template.currency]);
 
   const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
     setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));

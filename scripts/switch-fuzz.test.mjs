@@ -39,6 +39,9 @@ let runs = 0;
 let switched = 0;
 let legacyRuns = 0;
 let roundTrips = 0;
+let leftovers = 0;
+/** A sidecar written for account C (an older switch left it): not a book of whoever is on the device. */
+const isC = (v) => { try { return JSON.parse(v).owner === C; } catch { return false; } };
 const problems = [];
 const started = Date.now();
 for (let trial = 0; trial < TRIALS; trial++) {
@@ -76,10 +79,17 @@ for (let trial = 0; trial < TRIALS; trial++) {
   // Same business name as the account signing in, a real UPI ID it doesn't have: never attributed to it.
   if (scenario === "ownerlessSameNameNoUpi") stash("Z", "B shop", "z@okaxis");
   if (scenario === "thirdV2") { stash("C", "C shop", "c@okaxis"); store.setItem(STASH_V2_KEY, JSON.stringify({ owner: C, at: 1, ids: [] })); }
+  // Every 7th new-code device holds C's foreign section, left on one of A's books by an older switch C→A, which
+  // can't be set aside at low quotas: it stays where it is, never removed and never joined (review round 3).
+  if (!old && trial % 7 === 3 && scenario !== "thirdV2") {
+    const where = nExtras && rand(2) ? extras[0] : PRIMARY_BOOK_ID;
+    store.setItem(`proupiqr-intl-v1:${where}`, canonicalJson({ owner: C, intl: book("C", "C shop", "c@okaxis", 0, pad, 1 + rand(2)).intl }));
+    leftovers++;
+  }
 
   const base = new Map(store.map);
   const before = new Set([...base.values()].flatMap((v) => [...idsIn(v)]));
-  const foreignOfA = new Set([...base].filter(([k]) => k.startsWith("proupiqr-intl-v1:")).flatMap(([, v]) => [...idsIn(v)]));
+  const foreignOfA = new Set([...base].filter(([k, v]) => k.startsWith("proupiqr-intl-v1:") && !isC(v)).flatMap(([, v]) => [...idsIn(v)]));
   let used = 0;
   for (const [k, v] of base) used += k.length + v.length;
   const newIds = idsIn(JSON.stringify(newPrimary));
@@ -98,7 +108,7 @@ for (let trial = 0; trial < TRIALS; trial++) {
     const lost = [...before].filter((id) => !after.has(id));
     if (lost.length) fail(`lost ${lost.length}`);
     // A new-code switch moves sidecars with their books, so they count as books; old code leaves them (checked below).
-    const books = [...store.map].filter(([k]) => k === WORKSPACE_KEY || k.startsWith("proupiqr-book-v1:") || (!old && k.startsWith("proupiqr-intl-v1:"))).map(([, v]) => v).join(" ");
+    const books = [...store.map].filter(([k, v]) => k === WORKSPACE_KEY || k.startsWith("proupiqr-book-v1:") || (!old && k.startsWith("proupiqr-intl-v1:") && !isC(v))).map(([, v]) => v).join(" ");
     const stashed = [...store.map].filter(([k]) => k === STASH_KEY || k.startsWith("proupiqr-stash-v2:")).map(([, v]) => v).join(" ");
     // Stash keys hold what older code would write; each stashed foreign section is tagged with its own account.
     if (!old) for (const [k, v] of store.map) if ((k === STASH_KEY || k.startsWith("proupiqr-stash-v2:")) && v.includes('"intl"')) fail(`stash key ${k} contains intl`);
@@ -155,4 +165,5 @@ assert.ok(runs > 20_000, `expected a wide quota sweep (ran ${runs})`);
 assert.equal(switched, TRIALS - TRIALS / scenarios.length, "every switch except the third-account one succeeds once there is room");
 assert.ok(legacyRuns > 1000, `old-code switches interleaved (${legacyRuns})`);
 assert.ok(roundTrips > 500, `new switch then old switch back (${roundTrips})`);
-console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);
+assert.ok(leftovers > 80, `another account's leftover sidecar on some devices (${leftovers})`);
+console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${leftovers} with a third account's leftover sidecar, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);

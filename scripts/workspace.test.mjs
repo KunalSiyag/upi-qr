@@ -411,6 +411,28 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   /* ---------- sanitizer (§1.4) ---------- */
   assert.deepEqual(M.sanitizeWorkspace(clone(W)), W, "intl round-trips");
   {
+    // Review round 3: a foreign plan keeps its currency through the sanitizer (sanitizePlan builds a new object
+    // without it; only sanitizeIntl puts it back). Without it a US$ plan bills in rupees, then gets dropped.
+    const plan = (id, clientId, extra) => ({ id, clientId, amountPaise: 250000, description: "Retainer", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-09", endMonth: "", paused: false, createdAt: X, updatedAt: X, ...extra });
+    let P = M.upsertPlan(W, plan("rec_usdplan01", "cli_globex01", { currency: "USD" }), X);
+    P = M.upsertPlan(P, plan("rec_eurplan01", "cli_acme0001", { currency: "EUR", paused: true }), X);
+    const clean = M.sanitizeWorkspace(clone(P));
+    assert.deepEqual(clean, P, "a live and a paused foreign plan round-trip");
+    assert.deepEqual([clean.intl.recurring.rec_usdplan01.currency, clean.intl.recurring.rec_eurplan01.currency], ["USD", "EUR"]);
+    assert.deepEqual(M.sanitizeWorkspace(clone(clean)), clean, "and stay through a second pass");
+    const gen = M.generateRecurring(clean, "2026-10-10", X + 10).ws;
+    assert.deepEqual(Object.keys(gen.invoices).sort(), Object.keys(clean.invoices).sort(), "a foreign plan never writes a rupee invoice");
+    const made = Object.values(gen.intl.invoices).filter((i) => !clean.intl.invoices[i.id]);
+    assert.equal(made.length, 2, "the live US$ plan bills September and October; the paused one nothing");
+    assert.ok(made.every((i) => i.currency === "USD" && i.clientId === "cli_globex01"));
+    // The legacy route strips a currency key, as upsertInvoice does (§1.6, §1.8: never written as INR).
+    for (const currency of ["INR", "XYZ"]) {
+      const legacyPlan = M.upsertPlan(emptyWorkspace(), plan("rec_inrplan01", "cli_acme0001", { currency }), X);
+      assert.ok(!("currency" in legacyPlan.recurring.rec_inrplan01), `a legacy plan never carries a currency (${currency})`);
+      assert.equal(legacyPlan.intl, undefined);
+    }
+  }
+  {
     const raw = clone(W);
     raw.intl.invoices.inv_nocur001 = { ...invoice("inv_nocur001", "N", "cli_acme0001", 5) };
     raw.intl.invoices.inv_inrcur01 = { ...invoice("inv_inrcur01", "N", "cli_acme0001", 5), currency: "INR" };
@@ -466,6 +488,28 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     const big = M.sanitizeWorkspace(raw);
     assert.equal(Object.keys(big.invoices).length, 20_000);
     assert.equal(Object.keys(big.intl.invoices).length, 10, "20,000 legacy invoices never truncate foreign ones");
+  }
+  {
+    // Review round 3: plans and client currencies have their own caps too (2,000 and 5,000), never reduced by the legacy count.
+    const pid = (p, i) => `rec_${p}${String(i).padStart(7, "0")}`;
+    const cid = (p, i) => `cli_${p}${String(i).padStart(7, "0")}`;
+    const plan = (id, extra = {}) => ({ id, clientId: "cli_acme0001", amountPaise: 100, description: "", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-09", endMonth: "", paused: true, createdAt: X, updatedAt: X, ...extra });
+    const raw = { recurring: {}, clients: {}, intl: { recurring: {}, clients: {} } };
+    for (let i = 0; i < 2_000; i++) raw.recurring[pid("l", i)] = plan(pid("l", i));
+    for (let i = 0; i < 5_000; i++) raw.clients[cid("l", i)] = cli(cid("l", i), `L${i}`);
+    for (let i = 0; i < 3; i++) raw.intl.recurring[pid("f", i)] = plan(pid("f", i), { currency: "USD" });
+    for (let i = 0; i < 3; i++) raw.intl.clients[cid("f", i)] = { currency: "EUR", updatedAt: X };
+    const big = M.sanitizeWorkspace(raw);
+    assert.equal(Object.keys(big.recurring).length, 2_000);
+    assert.equal(Object.keys(big.clients).length, 5_000);
+    assert.equal(Object.keys(big.intl.recurring).length, 3, "2,000 legacy plans never truncate foreign ones");
+    assert.equal(Object.keys(big.intl.clients).length, 3, "5,000 legacy clients never truncate client currencies");
+    const over = { intl: { recurring: {}, clients: {} } };
+    for (let i = 0; i < 2_001; i++) over.intl.recurring[pid("f", i)] = plan(pid("f", i), { currency: "USD" });
+    for (let i = 0; i < 5_001; i++) over.intl.clients[cid("f", i)] = { currency: "EUR", updatedAt: X };
+    const capped = M.sanitizeWorkspace(over);
+    assert.equal(Object.keys(capped.intl.recurring).length, 2_000, "the 2,001st foreign plan is dropped");
+    assert.equal(Object.keys(capped.intl.clients).length, 5_000, "the 5,001st client currency is dropped");
   }
   assert.equal(M.sanitizeWorkspace({ intl: {} }).intl, undefined, "an empty intl is omitted");
   assert.equal(M.sanitizeWorkspace({ intl: { invoices: {}, recurring: {}, clients: {} } }).intl, undefined);
@@ -568,6 +612,18 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(back.intl.settings.swift, "HDFCINBB");
     assert.equal(back.intl.settings.updatedAt, X + 60);
     assert.equal(back.intl.clients.cli_globex01.deletedAt, undefined);
+    // Review round 3: revived entries are bumped to the restore time, so they win the next merge with a copy that
+    // still holds the tombstone (the server's), in both orders. Plans too.
+    const plan = { id: "rec_usdplan01", clientId: "cli_globex01", amountPaise: 250000, description: "", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-09", endMonth: "", paused: false, createdAt: X, updatedAt: X, currency: "USD" };
+    const withPlan = M.upsertPlan(W, plan, X);
+    const erasedP = M.eraseWorkspace(withPlan, X + 50);
+    const backP = M.restoreFrom(erasedP, withPlan, X + 60);
+    for (const merged of [M.mergeWorkspaces(backP, erasedP), M.mergeWorkspaces(erasedP, backP)]) {
+      for (const record of [...Object.values(merged.intl.invoices), merged.intl.recurring.rec_usdplan01, merged.intl.clients.cli_globex01]) {
+        assert.equal(record.deletedAt, undefined, "a restored foreign entry stays live after merging with the tombstone");
+        assert.equal(record.updatedAt, X + 60);
+      }
+    }
     // Settings with content are never overwritten by a restore.
     const kept = M.restoreFrom({ ...W, intl: { ...W.intl, settings: { ...settings, accountName: "Current", updatedAt: X + 1 } } }, W, X + 60);
     assert.equal(kept.intl.settings.accountName, "Current");
@@ -652,6 +708,30 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.ok(Object.values(repaired.intl.invoices).every((i) => i.deletedAt === TE2), "detected despite the older tombstones");
     assert.equal(repaired.clients.cli_oldcli01.deletedAt, TE2 - 30 * DAY, "not revived: its foreign invoice went with the erase");
     assert.ok(repaired.clients.cli_globex01.deletedAt === TE2 && repaired.clients.cli_acme0001.deletedAt === TE2);
+    // Review round 3: an old tab erases twice (T1 < T2) with no repair in between: the newest erase wins, so a
+    // foreign invoice written between T1 and T2 goes with the second erase too.
+    {
+      const T1 = X + 1000;
+      const T2 = X + 2000;
+      let oldCopy = legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(W)), T1);
+      oldCopy = legacy.upsertClient(oldCopy, { ...cli("cli_after001", "After"), createdAt: T1 + 10, updatedAt: T1 + 10 }, T1 + 10);
+      oldCopy = legacy.upsertInvoice(oldCopy, invoice("inv_after001", "ST-0100", "cli_after001", 500, { createdAt: T1 + 10, updatedAt: T1 + 10 }), T1 + 10);
+      oldCopy = legacy.eraseWorkspace(oldCopy, T2);
+      const newCopy = M.upsertInvoice(W, invoice("inv_usdmid01", "ST-0101", "cli_acme0001", 700, { currency: "USD", createdAt: T1 + 20, updatedAt: T1 + 20 }), T1 + 20);
+      for (const merged of [M.mergeWorkspaces(newCopy, oldCopy), M.mergeWorkspaces(oldCopy, newCopy)]) {
+        const repaired = M.repairIntl(merged, T2 + 100);
+        assert.deepEqual(Object.values(repaired.intl.invoices).map((i) => [i.id, i.deletedAt]).sort(), ["inv_usd00001", "inv_usd00002", "inv_usdmid01"].map((id) => [id, T2]), "every older foreign invoice is tombstoned at T2");
+      }
+    }
+    // A book whose only foreign content is a client's currency: an old tab's erase is still detected.
+    {
+      const TC = X + 3000;
+      const onlyClients = M.sanitizeWorkspace(clone({ ...inrBook, intl: { clients: { cli_globex01: { currency: "USD", updatedAt: X } } } }));
+      const erasedOnly = legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(onlyClients)), TC);
+      for (const merged of [M.mergeWorkspaces(onlyClients, erasedOnly), M.mergeWorkspaces(erasedOnly, onlyClients)]) {
+        assert.equal(M.repairIntl(merged, TC + 100).intl.clients.cli_globex01.deletedAt, TC, "the client currency goes with the erase");
+      }
+    }
     // The same shape written by new code (no older intl content) is no erase to repair.
     const newErase = M.eraseWorkspace(W, TE);
     assert.equal(M.repairIntl(newErase, X + 500), newErase);

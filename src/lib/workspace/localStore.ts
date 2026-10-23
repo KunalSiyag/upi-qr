@@ -323,6 +323,21 @@ function sidecarIntl(id: string): IntlData | undefined {
   return undefined;
 }
 
+/** Whether book `id`'s sidecar is another account's that couldn't be set aside yet (it stays for a later try). */
+function sidecarWaiting(id: string): boolean {
+  const side = readSidecar(id);
+  return Boolean(side?.intl) && !sidecarJoins(side?.owner ?? null);
+}
+
+/**
+ * Removes book `id`'s sidecar when it belongs to the current account (its content went with the book). Another
+ * account's is set aside first (sidecarIntl) and, when that fails, stays in place: never removed unkept (review round 3).
+ */
+function dropOwnSidecar(id: string): void {
+  if (sidecarWaiting(id)) sidecarIntl(id);
+  else drop(intlKey(id));
+}
+
 /** A book key's workspace joined with its sidecar. Merged, never overridden: intl found in a book key is kept. */
 function joinSidecar(id: string, ws: Workspace): Workspace {
   if (get(intlKey(id)) === null) return ws;
@@ -521,11 +536,14 @@ export function resetBook(index: BookIndex, id: string, ws: Workspace): boolean 
   return saveable(index, id) && writeBookKeys(id, ws, false, now);
 }
 
-/** Never for the primary (it can't be deleted; old code owns its key too). Drops the book key and its sidecar. */
+/**
+ * Never for the primary (it can't be deleted; old code owns its key too). Drops the book key and its sidecar;
+ * another account's sidecar that can't be set aside yet stays (sweepStrayIntl retries it).
+ */
 export function removeBookStorage(id: string): void {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return;
   drop(bookKey(id));
-  drop(intlKey(id));
+  dropOwnSidecar(id);
 }
 
 /**
@@ -772,16 +790,19 @@ export function onShelfChange(
       const id = event.key === WORKSPACE_KEY ? PRIMARY_BOOK_ID
         : event.key.startsWith(BOOK_PREFIX) ? event.key.slice(BOOK_PREFIX.length)
         : event.key.startsWith(INTL_PREFIX) ? event.key.slice(INTL_PREFIX.length) : "";
-      if (!id || !event.newValue || !isBookId(id)) return;
+      const sidecarEvent = event.key.startsWith(INTL_PREFIX);
+      // A removed key is ignored, except a removed sidecar while a reset is pending: a reset to a copy without a
+      // foreign section whose INR part didn't change writes nothing else (review round 3).
+      if (!id || !isBookId(id) || (!event.newValue && !sidecarEvent)) return;
       // Another account took over this device in another tab: never merge its data into this tab's books.
       if (otherAccount()) { switched = true; h.ownerChanged(); return; }
       const shelf = current();
       const stored = parseBookIndex(get(BOOK_INDEX_KEY));
       if (!liveBookIds(shelf.index).includes(id) || (stored && isTombstoned(stored, id))) return;
       // The book key as written (event or storage) joined with its sidecar when that belongs to this account.
-      const bookRaw = event.key.startsWith(INTL_PREFIX) ? get(bookKey(id)) : event.newValue;
+      const bookRaw = sidecarEvent ? get(bookKey(id)) : event.newValue;
       if (bookRaw === null) return;
-      const side = readSidecar(id, event.key.startsWith(INTL_PREFIX) ? event.newValue : get(intlKey(id)));
+      const side = readSidecar(id, sidecarEvent ? event.newValue : get(intlKey(id)));
       const legacy = sanitizeWorkspace(JSON.parse(bookRaw));
       const incoming = side?.intl && sidecarJoins(side.owner) ? sanitizeWorkspace({ ...legacy, intl: mergeIntl(legacy.intl, side.intl) }) : legacy;
       // Another tab replaced this book with the server's copy (its device-only changes were set aside):
@@ -792,11 +813,12 @@ export function onShelfChange(
         // before the reset, this sidecar write is only half of it (joining it would keep the set-aside changes).
         // Wait for the book key's own event. A book key that the reset left unchanged matches already.
         const expected = readResetHashes()[id];
-        if (event.key.startsWith(INTL_PREFIX) && expected !== undefined && fnv1a(bookRaw) !== expected) return;
+        if (sidecarEvent && expected !== undefined && fnv1a(bookRaw) !== expected) return;
         seenResets = resets;
         h.book(id, incoming, true);
         return;
       }
+      if (!event.newValue) return;
       const mine = shelf.books[id];
       h.book(id, mine ? mergeWorkspaces(mine, incoming) : incoming);
     } catch {
@@ -979,7 +1001,7 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
   const putBack = (m: (typeof moved)[number]): boolean => {
     const restoreStash = () => { restoreKey(m.stashKey, m.stashBefore); restoreKey(stashIntlKey(m.id), m.stashIntlBefore); };
     if (m.sideRaw !== null && !putVerified(intlKey(m.id), m.sideRaw)) {
-      drop(intlKey(m.id));
+      dropOwnSidecar(m.id);
       if (putVerified(m.stashKey, m.value) && writeStashIntl(m.id, m.full)) return false;
       putAside(m.id, "stray", m.full);
       return false;
@@ -989,7 +1011,7 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     drop(m.stashKey);
     if (putVerified(bookKey(m.id), m.raw)) { restoreStash(); return true; }
     drop(bookKey(m.id));
-    drop(intlKey(m.id));
+    dropOwnSidecar(m.id);
     if (putVerified(m.stashKey, m.value) && writeStashIntl(m.id, m.full)) return false;
     putAside(m.id, "stray", m.full);
     return false;
@@ -1044,9 +1066,10 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
       if (stashBefore !== null && get(stashKey) !== stashBefore) put(stashKey, stashBefore);
       return fail();
     }
-    moved.push({ id, raw, sideRaw: get(intlKey(id)), value, full, stashKey, stashBefore, stashIntlBefore });
+    // Another account's sidecar still waiting to be set aside isn't part of this book: it stays where it is.
+    moved.push({ id, raw, sideRaw: sidecarWaiting(id) ? null : get(intlKey(id)), value, full, stashKey, stashBefore, stashIntlBefore });
     drop(bookKey(id));
-    drop(intlKey(id));
+    dropOwnSidecar(id);
   }
   // 3. The previous primary (merged with the previous account's older stash, which it then contains), verified.
   const primaryBefore = merging ? stashedFull(PRIMARY_BOOK_ID, oldPrimaryStash) : null;
@@ -1057,9 +1080,17 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     || !putVerified(STASH_V2_KEY, JSON.stringify({ owner: previousOwner, at: now, ids }))) return fail();
   // 4. The new owner first, so other tabs stop before they see the new account's primary; then the primary, last
   //    (both its keys: the previous account's sidecar is in the stash now and never stays attached to this account).
+  //    A third account's sidecar that still can't be set aside stays in place (writeBookKeys never writes over it,
+  //    and fails the switch when the new primary has a foreign section); one left for the account signing in
+  //    joins its primary (review round 3).
+  if (sidecarWaiting(PRIMARY_BOOK_ID)) sidecarIntl(PRIMARY_BOOK_ID);
+  const waiting = sidecarWaiting(PRIMARY_BOOK_ID) ? readSidecar(PRIMARY_BOOK_ID) : null;
   if (!putVerified(OWNER_KEY, newOwner)) return fail();
-  drop(intlKey(PRIMARY_BOOK_ID));
-  if (!writeBookKeys(PRIMARY_BOOK_ID, newPrimary, true, now)) return fail();
+  if (!waiting) drop(intlKey(PRIMARY_BOOK_ID));
+  const installed = waiting?.intl && waiting.owner === newOwner
+    ? sanitizeWorkspace({ ...newPrimary, intl: mergeIntl(newPrimary.intl, waiting.intl) })
+    : newPrimary;
+  if (!writeBookKeys(PRIMARY_BOOK_ID, installed, true, now)) return fail();
   let nextIndex: BookIndex = { ...emptyIndex(), owner: newOwner };
   saveIndex(nextIndex, true);
   resetSyncMeta(newOwner);
