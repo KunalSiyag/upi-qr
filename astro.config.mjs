@@ -1,3 +1,4 @@
+import { readFile, writeFile } from "node:fs/promises";
 import { defineConfig } from "astro/config";
 import react from "@astrojs/react";
 import tailwind from "@astrojs/tailwind";
@@ -59,6 +60,31 @@ function clerkOnlyWhereNeeded() {
   };
 }
 
+// The Vercel adapter's first routes answer every slashless path with a 308, and
+// vercel.json rewrites only run after them. So MCP clients that drop the slash got
+// a redirect on POST /mcp, and Claude's directory probe of /mcp/.well-known/* (OAuth
+// discovery; this server has no sign-in) got a 308 instead of a 404. Put both routes
+// ahead of the redirect in the build output. The adapter's hook runs first (Astro
+// moves the adapter to the front of the integrations), so config.json exists here.
+const MCP_ROUTES = [
+  { src: "^/mcp$", dest: "/mcp/", continue: true },
+  { src: "^/mcp/\\.well-known(?:/.*)?$", dest: "/404.html", status: 404 }
+];
+
+function mcpWithoutRedirects() {
+  return {
+    name: "proupiqr:mcp-without-redirects",
+    hooks: {
+      "astro:build:done": async () => {
+        const file = new URL("./.vercel/output/config.json", import.meta.url);
+        const config = JSON.parse(await readFile(file, "utf8"));
+        config.routes = [...MCP_ROUTES, ...config.routes.filter((route) => !MCP_ROUTES.some((mcp) => mcp.src === route.src))];
+        await writeFile(file, JSON.stringify(config, null, "\t"));
+      }
+    }
+  };
+}
+
 export default defineConfig({
   site: "https://www.proupiqr.in",
   trailingSlash: "always",
@@ -70,7 +96,7 @@ export default defineConfig({
     }
   },
   adapter: vercel(),
-  integrations: [react(), tailwind({ applyBaseStyles: false }), clerkOnlyWhereNeeded()],
+  integrations: [react(), tailwind({ applyBaseStyles: false }), clerkOnlyWhereNeeded(), mcpWithoutRedirects()],
   build: {
     inlineStylesheets: "auto"
   },

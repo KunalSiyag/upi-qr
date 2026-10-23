@@ -113,6 +113,14 @@ try {
     const cronOk = digest(vercelJson.crons).length === 1 && digest(vercelJson.crons)[0].schedule === "30 3 * * *" && digest(config.crons).length === 0;
     console.log(`${cronOk ? "✓" : "✗"} vercel.json schedules /api/cron/digest/ once at 09:00 IST, not duplicated in the build output`);
     if (!cronOk) failed += 1;
+    // MCP clients that drop the slash and directory OAuth probes must not hit the adapter's trailing-slash 308.
+    const redirectAt = config.routes.findIndex((route) => route.status === 308);
+    const routeAt = (src) => config.routes.findIndex((route) => route.src === src);
+    const mcpOk = routeAt("^/mcp$") > -1 && routeAt("^/mcp$") < redirectAt
+      && config.routes[routeAt("^/mcp$")].dest === "/mcp/"
+      && routeAt("^/mcp/\\.well-known(?:/.*)?$") > -1 && routeAt("^/mcp/\\.well-known(?:/.*)?$") < redirectAt;
+    console.log(`${mcpOk ? "✓" : "✗"} /mcp and /mcp/.well-known/* are routed before the trailing-slash redirect`);
+    if (!mcpOk) failed += 1;
   }
 
   // On-demand extras (not in the default run): node scripts/e2e/run.mjs load-digest
