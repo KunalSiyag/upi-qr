@@ -4,6 +4,17 @@
  * fails if a tr() string has no Hindi here, or placeholders don't match.
  */
 export const WS_HI: Record<string, string> = {
+  // Several businesses, client storage and sync (docs/spec-multi-business.md §7.6)
+  "This backup is for {backup} ({upi}). Restore it into {target}?": "यह बैकअप {backup} ({upi}) का है। क्या इसे {target} में रीस्टोर करें?",
+  "Restore into {business}": "{business} में रीस्टोर करें",
+  "{n} business wasn't restored: your plan includes {limit}.": "{n} व्यवसाय रीस्टोर नहीं हुआ: आपके प्लान में {limit} शामिल है।",
+  "{n} businesses weren't restored: your plan includes {limit}.": "{n} व्यवसाय रीस्टोर नहीं हुए: आपके प्लान में {limit} शामिल हैं।",
+  "Sign in to restore all {n} businesses.": "सभी {n} व्यवसाय रीस्टोर करने के लिए साइन इन करें।",
+  "{business}: changes that weren't synced were set aside on this device.": "{business}: जो बदलाव सिंक नहीं हुए थे, उन्हें इस डिवाइस पर अलग रखा गया है।",
+  "Data from another account is still set aside on this device. Download or discard it in Settings first.": "दूसरे अकाउंट का डेटा अभी भी इस डिवाइस पर अलग रखा है। पहले सेटिंग्स में उसे डाउनलोड करें या हटाएँ।",
+  "This browser is out of storage, so the previous account's data couldn't be set aside. Download a backup, then try again.": "इस ब्राउज़र में जगह नहीं है, इसलिए पिछले अकाउंट का डेटा अलग नहीं रखा जा सका। बैकअप डाउनलोड करके फिर कोशिश करें।",
+  "This tab is signed in to a different account now. Reload the page.": "यह टैब अब किसी दूसरे अकाउंट में साइन इन है। पेज रीलोड करें।",
+  "This business is read-only on the Free plan. Upgrade to edit it again.": "मुफ़्त प्लान पर यह व्यवसाय सिर्फ़ देखने के लिए है। इसे फिर से बदलने के लिए अपग्रेड करें।",
   "Keep these {n} invoices safe": "इन {n} इनवॉइस को सुरक्षित रखें",
   "Keep this invoice safe": "इस इनवॉइस को सुरक्षित रखें",
   "They're saved only in this browser. Clearing it or switching phones loses them. A free account backs them up and syncs your phone and laptop.": "ये सिर्फ़ इसी ब्राउज़र में सेव हैं। ब्राउज़र साफ़ करने या फ़ोन बदलने पर ये मिट जाएँगे। मुफ़्त अकाउंट इनका बैकअप रखता है और आपके फ़ोन और लैपटॉप को सिंक करता है।",

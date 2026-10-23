@@ -20,7 +20,7 @@ const STATIC_DIR = join(ROOT, ".vercel", "output", "static");
 const SUITES = [
   "waitlist-e2e", "workspace-e2e", "bridge-e2e", "sync-e2e", "paylink-ui-e2e",
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
-  "books-server-e2e",
+  "books-server-e2e", "books-client-e2e",
 ];
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");
