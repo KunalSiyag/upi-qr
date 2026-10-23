@@ -1,6 +1,7 @@
 import React, { useEffect, useId, useMemo, useState } from "react";
 import {
   UPI_ERROR_CODES,
+  errorCodePath,
   type ErrorCategory,
   type UpiErrorCode,
 } from "../data/upiErrorCodes";
@@ -225,13 +226,23 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
                 <p className="text-xs leading-relaxed text-forest/65">
                   <strong>{ui.merchant}:</strong> {localized.merchantNote}
                 </p>
-                <a
-                  href={`#${codeAnchor(item.code)}`}
-                  className="inline-flex text-[11px] font-bold text-leaf underline decoration-leaf/30 underline-offset-2 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 rounded"
-                  onClick={() => setActiveCode(item.code)}
-                >
-                  {ui.permalink} #{codeAnchor(item.code)}
-                </a>
+                <div className="flex flex-wrap gap-x-4 gap-y-1">
+                  {lang === "en" && errorCodePath(item.code) && (
+                    <a
+                      href={errorCodePath(item.code)!}
+                      className="inline-flex text-[11px] font-bold text-leaf underline decoration-leaf/30 underline-offset-2 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 rounded"
+                    >
+                      Full guide to {item.code}
+                    </a>
+                  )}
+                  <a
+                    href={`#${codeAnchor(item.code)}`}
+                    className="inline-flex text-[11px] font-bold text-leaf underline decoration-leaf/30 underline-offset-2 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 rounded"
+                    onClick={() => setActiveCode(item.code)}
+                  >
+                    {ui.permalink} #{codeAnchor(item.code)}
+                  </a>
+                </div>
               </article>
             );
           })}

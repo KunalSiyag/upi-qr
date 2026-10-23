@@ -4,13 +4,13 @@ import { UpiLimitsChecker } from "../components/UpiLimitsChecker";
 import AffiliateProducts from "../components/AffiliateProducts.astro";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
-const title = "Indian Bank & App Daily UPI Limits Directory (2026) | Pro UPI QR";
-const description = "Check daily transaction limits, single transfer caps, and daily transaction counts across SBI, HDFC, ICICI, Axis, GPay, PhonePe, Paytm, and BHIM.";
+const title = "UPI Limit Per Day 2026: SBI, HDFC, Indian Bank, GPay, PhonePe";
+const description = "Daily UPI limits, per-transaction caps and transaction counts for SBI, HDFC, ICICI, Indian Bank, PNB, GPay, PhonePe, Paytm and BHIM, plus the ₹5 lakh categories.";
 
 const schema = {
   "@context": "https://schema.org",
   "@type": "WebApplication",
-  "name": "Indian Bank UPI Daily Limits Checker",
+  "name": "UPI Daily Limits Checker",
   "applicationCategory": "FinanceApplication",
   "operatingSystem": "Any",
   "url": "https://www.proupiqr.in/upi-limits/",
@@ -32,7 +32,7 @@ const schema = {
         <div class="inline-flex items-center gap-2 rounded-[7px] bg-mint px-3.5 py-1 text-xs font-bold text-leaf border border-leaf/10">
           NPCI & Bank Guidelines Reference
         </div>
-        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">Indian Bank & App UPI Daily Transfer Limits</h1>
+        <h1 class="text-3xl font-black tracking-tight text-forest sm:text-5xl">UPI limit per day for every bank and app</h1>
         <p class="max-w-3xl text-sm sm:text-base leading-relaxed text-forest/75">
           Per NPCI guidelines, standard UPI P2P transfer limits are capped at ₹1,00,000 per 24 hours. Specific banks and applications enforce additional hourly, per-transaction, or initial login limits.
         </p>
@@ -42,6 +42,27 @@ const schema = {
       <div class="rounded-[2.5rem] border border-white/75 bg-white/86 p-6 sm:p-8 md:p-10 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
         <UpiLimitsChecker client:visible />
       </div>
+
+      <section class="rounded-[14px] border border-forest/10 bg-white p-6 md:p-8 space-y-3">
+        <h2 id="indian-bank" class="scroll-mt-28 text-2xl font-black text-forest">Indian Bank UPI limit per day</h2>
+        <p class="text-sm sm:text-base leading-relaxed text-forest/80">
+          Indian Bank follows the NPCI standard cap of <strong>₹1,00,000 per day</strong> for UPI transfers from its
+          accounts, whether you pay through Google Pay, PhonePe, Paytm, BHIM or the bank's own app. The bank does not
+          publish a separate per-app limit or a daily transaction count, so if a payment is declined for a limit, check
+          the limit screen in your UPI app or ask the branch.
+        </p>
+        <ul class="list-disc space-y-1 pl-5 text-sm sm:text-base leading-relaxed text-forest/80">
+          <li>UPI over USSD (*99#) from an Indian Bank account is capped at ₹5,000 per day, per the bank's USSD procedure.</li>
+          <li>UPI on an Indian Bank RuPay credit card has its own ₹1,00,000 daily cap.</li>
+          <li>Approved hospital and education merchants can accept up to ₹5,00,000 (below).</li>
+        </ul>
+        <p class="text-xs text-forest/60">
+          Sources:{" "}
+          <a class="font-bold text-leaf underline" href="https://indianbank.bank.in/documents/d/guest/ussd-sop">Indian Bank USSD SOP</a>
+          {" "}·{" "}
+          <a class="font-bold text-leaf underline" href="https://indianbank.bank.in/documents/d/guest/indian-bank-one-credit-card-mitc-august-2026">Indian Bank One credit card terms</a>
+        </p>
+      </section>
 
       <!-- Special Category Limits Info -->
       <div class="rounded-[14px] bg-cream/70 p-6 md:p-8 border border-forest/10 space-y-4">

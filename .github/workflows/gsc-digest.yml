@@ -1,0 +1,46 @@
+name: Weekly Search Console digest
+
+on:
+  schedule:
+    # Mondays 03:30 UTC (09:00 IST)
+    - cron: '30 3 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  digest:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Search Console client
+        run: pip install google-auth requests
+
+      - name: Build the digest
+        env:
+          SERVICE_ACCOUNT_JSON: ${{ secrets.SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -z "$SERVICE_ACCOUNT_JSON" ]; then
+            echo "SERVICE_ACCOUNT_JSON is not set; add the Search Console service account key as a repository secret." >&2
+            exit 1
+          fi
+          printf '%s' "$SERVICE_ACCOUNT_JSON" > "$RUNNER_TEMP/gsc.json"
+          GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/gsc.json" python3 scripts/gsc_weekly_digest.py > digest.md
+          rm -f "$RUNNER_TEMP/gsc.json"
+
+      - name: Post it as an issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh label create seo-digest --color 1D76DB --description "Weekly Search Console digest" --force
+          gh issue create --title "$(head -n 1 digest.md | sed 's/^# //')" --body-file digest.md --label seo-digest
+          cat digest.md >> "$GITHUB_STEP_SUMMARY"

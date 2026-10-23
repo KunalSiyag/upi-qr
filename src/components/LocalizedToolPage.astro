@@ -46,7 +46,8 @@ import ClerkClient from "./ClerkClient.astro";
 import { WaitlistCard } from "./WaitlistCard";
 import { WAITLIST_COMPONENTS, isWaitlistLang } from "../data/waitlist";
 import type { LocalizedTool, SupportedToolLanguage } from "../data/localizedTools";
-import { getLocalizedToolCopy } from "../data/localizedTools";
+import { LOCALIZED_TOOLS, getLocalizedToolCopy } from "../data/localizedTools";
+import { FOREIGN_LANGS, UNIVERSAL_TOOL_SLUGS, isIndexedRoute } from "../data/validRoutes";
 
 interface Props { lang: SupportedToolLanguage; tool: LocalizedTool; }
 const { lang, tool } = Astro.props;
@@ -86,6 +87,17 @@ const badges = tool.component === "dynamicQr"
   : [chrome.privacy, chrome.instant, chrome.local];
 const path = `/${lang}/${tool.slug}/`;
 const waitlistTool = isWaitlistLang(lang) ? WAITLIST_COMPONENTS[tool.component] : undefined;
+// Indexed foreign pages link only to the other universal tools in their language, not to India-only guides.
+const universalPeers = (FOREIGN_LANGS as readonly string[]).includes(lang) && isIndexedRoute(tool.slug, lang)
+  ? LOCALIZED_TOOLS.filter((other) => other.slug !== tool.slug && UNIVERSAL_TOOL_SLUGS.has(other.slug))
+  : [];
+const moreToolsLabel: Partial<Record<SupportedToolLanguage, string>> = {
+  es: "Más herramientas gratuitas",
+  pt: "Mais ferramentas gratuitas",
+  fr: "Autres outils gratuits",
+  de: "Weitere kostenlose Tools",
+  id: "Alat gratis lainnya",
+};
 ---
 
 <main class="px-3 py-8 sm:px-4 md:px-6 lg:px-8">
@@ -164,6 +176,21 @@ const waitlistTool = isWaitlistLang(lang) ? WAITLIST_COMPONENTS[tool.component] 
           </div>
         </section>
       )}
-      <InternalLinkHub currentPath={path} lang={lang} />
+      {universalPeers.length > 0 ? (
+        <nav aria-label={moreToolsLabel[lang]} class="rounded-[14px] border border-white/75 bg-white/86 p-5 sm:p-8">
+          <h2 class="text-xl font-black text-forest">{moreToolsLabel[lang]}</h2>
+          <ul class="mt-4 grid gap-x-8 sm:grid-cols-2">
+            {universalPeers.map((other) => (
+              <li class="border-t border-forest/10">
+                <a href={`/${lang}/${other.slug}/`} class="block py-3 text-sm font-semibold text-forest transition-colors hover:text-leaf">
+                  {getLocalizedToolCopy(other, lang).name}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      ) : (
+        <InternalLinkHub currentPath={path} lang={lang} />
+      )}
     </div>
   </main>

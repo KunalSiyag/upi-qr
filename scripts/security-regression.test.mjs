@@ -111,12 +111,11 @@ assert.match(vercelConfig, /Content-Security-Policy/);
 assert.match(vercelConfig, /frame-ancestors 'self'/);
 assert.doesNotMatch(vercelConfig, /medium\.com/i);
 
-const syndicate = readFileSync(join(projectRoot, "scripts/syndicate-satellites.mjs"), "utf8");
-assert.match(syndicate, /NEVER_SYNDICATE_SLUGS/);
-assert.match(syndicate, /a4-bulk-upi-qr-sticker-sheet/);
-assert.match(syndicate, /zero-mdr-merchant-upi-qr-2026/);
-assert.match(syndicate, /Medium banned/);
-assert.doesNotMatch(syndicate, /publishToMedium|MEDIUM_CONFIG/);
+// Link schemes and Indexing API misuse risk a manual action: satellite syndication (Medium banned it),
+// bulk Indexing API submits (Google allows only job/livestream pages) and fake-Googlebot fetches stay deleted.
+for (const removed of ["scripts/syndicate-satellites.mjs", "index_pages.py", "scripts/warmup-crawlers.mjs"]) {
+  assert.equal(existsSync(join(projectRoot, removed)), false, `${removed} must stay deleted`);
+}
 
 assert.equal(normalizeEmail("  Owner@Example.COM "), "owner@example.com");
 assert.equal(normalizeEmail("owner+tag@shop.co.in"), "owner+tag@shop.co.in");

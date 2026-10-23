@@ -690,6 +690,33 @@ export const UPI_ERROR_CODES: UpiErrorCode[] = [
 
 const CODE_INDEX = new Map(UPI_ERROR_CODES.map((item) => [item.code.toUpperCase(), item]));
 
+/** URL segment for a code's own page: /upi-error-codes/<slug>/ */
+export function errorCodeSlug(code: string): string {
+  return code.trim().toLowerCase();
+}
+
+/**
+ * Codes with enough of their own guidance to stand as a page. The rest
+ * ("treat like Z9") stay on the hub only, so no page is a thin duplicate.
+ */
+export const ERROR_CODE_PAGES: UpiErrorCode[] = UPI_ERROR_CODES.filter(
+  (item) => (item.cause + item.actionStep + item.merchantNote).length >= 200,
+);
+
+const PAGE_CODES = new Set(ERROR_CODE_PAGES.map((item) => item.code));
+
+export function errorCodePath(code: string): string | null {
+  return PAGE_CODES.has(code) ? `/upi-error-codes/${errorCodeSlug(code)}/` : null;
+}
+
+/** Other codes a reader of `item` is likely to hit: same category first, then same origin. */
+export function relatedErrorCodes(item: UpiErrorCode, limit = 6): UpiErrorCode[] {
+  const others = ERROR_CODE_PAGES.filter((other) => other.code !== item.code);
+  const sameCategory = others.filter((other) => other.category === item.category);
+  const sameOrigin = others.filter((other) => other.category !== item.category && other.origin === item.origin);
+  return [...sameCategory, ...sameOrigin].slice(0, limit);
+}
+
 export function getErrorByCode(code: string): UpiErrorCode | undefined {
   return CODE_INDEX.get(code.trim().toUpperCase());
 }
