@@ -204,3 +204,28 @@ export function routeExistsInLang(slug: string, lang: string): boolean {
   if (lang === "es" || lang === "pt" || lang === "fr" || lang === "de" || lang === "id" || lang === "ar" || lang === "it" || lang === "ja" || lang === "zh") return INTERNATIONAL_SLUGS.has(cleanSlug);
   return false;
 }
+
+/** Non-Indian locales. UPI, GST and most tools only work in India, so these pages are noindex by default. */
+export const FOREIGN_LANGS = ["es", "pt", "fr", "de", "id", "ar", "it", "ja", "zh"] as const;
+
+/**
+ * Tools whose maths and output work outside India (local currency, no UPI, GST or Indian law).
+ * Their es/pt/fr/de/id pages stay indexed; ar/it/ja/zh only have template copy, so they never are.
+ */
+export const UNIVERSAL_TOOL_SLUGS = new Set([
+  "invoice-generator",
+  "paid-stamp-generator",
+  "emi-calculator",
+  "sip-calculator",
+  "break-even-calculator",
+  "survey-qr-generator",
+  "dynamic-qr-generator",
+]);
+export const UNIVERSAL_TOOL_LANGS = ["es", "pt", "fr", "de", "id"] as const;
+
+/** Whether the page for `slug` in `lang` should be in search: robots, sitemap and hreflang all follow this. */
+export function isIndexedRoute(slug: string, lang: string): boolean {
+  if (!(FOREIGN_LANGS as readonly string[]).includes(lang)) return true;
+  const cleanSlug = slug.replace(/^\/|\/$/g, "");
+  return (UNIVERSAL_TOOL_LANGS as readonly string[]).includes(lang) && UNIVERSAL_TOOL_SLUGS.has(cleanSlug);
+}

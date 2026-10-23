@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS } from "../data/validRoutes";
+import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS, INTERNATIONAL_SLUGS, UNIVERSAL_TOOL_LANGS, isIndexedRoute } from "../data/validRoutes";
 import { GLOSSARY_TERMS } from "../data/glossary";
 import { imagesForPath, resolveSiteImage, type SiteImage } from "../data/siteImages";
 
@@ -11,6 +11,9 @@ const allStaticPaths: string[] = [
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/ta/${slug}/` : "/ta/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/te/${slug}/` : "/te/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/mr/${slug}/` : "/mr/")),
+  ...UNIVERSAL_TOOL_LANGS.flatMap((lang) =>
+    Array.from(INTERNATIONAL_SLUGS).filter((slug) => isIndexedRoute(slug, lang)).map((slug) => `/${lang}/${slug}/`),
+  ),
 ];
 
 // Deduplicate paths
