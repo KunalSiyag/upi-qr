@@ -5,7 +5,7 @@ import HeaderNav from "../components/HeaderNav.astro";
 import Analytics from "@vercel/analytics/astro";
 import SpeedInsights from "@vercel/speed-insights/astro";
 import { routeExistsInLang } from "../data/validRoutes";
-import { NON_EN_LANG_PATH, NON_EN_LANG_STRIP, isRtlLang, isSiteLang, type SiteLang } from "../lib/locale";
+import { NON_EN_LANG_PATH, NON_EN_LANG_STRIP, isIndexedLang, isRtlLang, isSiteLang, type SiteLang } from "../lib/locale";
 import { DEFAULT_OG_IMAGE, ogMimeFromSrc, resolveSiteImage } from "../data/siteImages";
 
 interface Props {
@@ -65,7 +65,7 @@ const hreflangLangs: { lang: string; href: string }[] = [
   { lang: "it", href: localeUrl("it") },
   { lang: "ja", href: localeUrl("ja") },
   { lang: "zh", href: localeUrl("zh") },
-].filter((item) => routeExistsInLang(currentSlug, item.lang === "en" ? "en" : item.lang));
+].filter((item) => isIndexedLang(item.lang as SiteLang) && routeExistsInLang(currentSlug, item.lang));
 
 const ogLocaleMap: Record<SiteLang, string> = {
   en: "en_IN",
@@ -124,7 +124,7 @@ if (cleanPath !== "/") {
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>{title}</title>
     <meta name="description" content={description} />
-    <meta name="robots" content={noindex ? "noindex, nofollow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
+    <meta name="robots" content={noindex ? "noindex, nofollow" : !isIndexedLang(currentLang) ? "noindex, follow" : "index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1"} />
     <link rel="canonical" href={canonicalUrl} />
     <link rel="dns-prefetch" href="https://api.indexnow.org" />
     {preloadImage && (

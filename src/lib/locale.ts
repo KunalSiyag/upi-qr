@@ -50,6 +50,16 @@ export function detectLangFromPath(pathname: string): SiteLang {
   return match ? (match[1] as SiteLang) : "en";
 }
 
+/**
+ * Locales kept out of search (noindex, follow; no sitemap or hreflang entry). UPI only
+ * works in India: their 414 pages earned 37 clicks in 90 days (Search Console, Oct 2026).
+ */
+export const UNINDEXED_LANGS: readonly SiteLang[] = ["es", "pt", "fr", "de", "id", "ar", "it", "ja", "zh"];
+
+export function isIndexedLang(lang: SiteLang): boolean {
+  return !UNINDEXED_LANGS.includes(lang);
+}
+
 export function isRtlLang(lang: SiteLang): boolean {
   return lang === "ar";
 }

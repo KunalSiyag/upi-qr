@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { getCollection } from "astro:content";
-import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS, INTERNATIONAL_SLUGS } from "../data/validRoutes";
+import { ENGLISH_SLUGS, HINDI_SLUGS, REGIONAL_SLUGS } from "../data/validRoutes";
 import { GLOSSARY_TERMS } from "../data/glossary";
 import { imagesForPath, resolveSiteImage, type SiteImage } from "../data/siteImages";
 
@@ -11,15 +11,6 @@ const allStaticPaths: string[] = [
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/ta/${slug}/` : "/ta/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/te/${slug}/` : "/te/")),
   ...Array.from(REGIONAL_SLUGS).map((slug) => (slug ? `/mr/${slug}/` : "/mr/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/es/${slug}/` : "/es/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/pt/${slug}/` : "/pt/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/fr/${slug}/` : "/fr/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/de/${slug}/` : "/de/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/id/${slug}/` : "/id/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/ar/${slug}/` : "/ar/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/it/${slug}/` : "/it/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/ja/${slug}/` : "/ja/")),
-  ...Array.from(INTERNATIONAL_SLUGS).map((slug) => (slug ? `/zh/${slug}/` : "/zh/")),
 ];
 
 // Deduplicate paths
