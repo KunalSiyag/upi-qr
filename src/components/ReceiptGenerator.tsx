@@ -3,7 +3,7 @@ import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import { displayCurrency, formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
-import { recordReceipt } from "../lib/workspace/localStore";
+import { recordReceipt, workspaceReturnUrl } from "../lib/workspace/localStore";
 import type { PaymentMode } from "../lib/workspace/model";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
@@ -194,8 +194,10 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       notifyExportError("Add who paid, a receipt number, the date, and an amount before saving.");
       return;
     }
+    // Several businesses: the receipt waits for "Which business is this for?" when its UPI ID matches none.
+    if ("pick" in result) { window.location.href = workspaceReturnUrl("/app/", result); return; }
     if (!result.duplicate) trackProductEvent("payment_recorded", "receipt");
-    window.location.href = `/app/?tab=invoices&filter=all&saved=receipt${lang === "hi" ? "&lang=hi" : ""}`;
+    window.location.href = workspaceReturnUrl(`/app/?tab=invoices&filter=all&saved=receipt${lang === "hi" ? "&lang=hi" : ""}`, result);
   }
 
   async function downloadReceiptPdf() {

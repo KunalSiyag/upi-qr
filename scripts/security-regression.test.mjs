@@ -372,4 +372,41 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(sw, /new URL\(sameOriginPath\(event\.notification\.data\?\.url\) \|\| "\/app\/", self\.location\.origin\)/, "notificationclick re-checks the origin");
 }
 
+// Client side of several businesses (spec §4.4, §3.6): one lookup helper for pay-link keys, owner-checked
+// writes, a verified stash on account switches, and no book route on a legacy server.
+{
+  const { readdirSync, statSync } = await import("node:fs");
+  const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(ts|tsx|astro|mjs)$/.test(f) && !f.endsWith(join("workspace", "books.ts")))) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /byInvoice\[/, `${file} must read pay links through linkFor() (byInvoice[ indexes another business's link for the same id)`);
+  }
+  assert.match(syncClient, /expectedOwner: o\.owner\(\)/, "book writes carry expectedOwner");
+  assert.match(syncClient, /\{ index, expectedOwner: owner \}/, "index writes carry expectedOwner");
+  assert.match(syncClient, /status === 404 \|\| response\.status === 405\) return startLegacy/, "a server without the books routes runs the primary only");
+  assert.doesNotMatch(syncClient.split("async function startLegacy")[1].split("let starting")[0], /BOOKS_URL|bookUrl\(/, "the legacy start never calls a book route");
+  assert.match(syncClient, /if \(!isBookId\(bookId\)\) throw/, "book URLs are built only from valid ids");
+  const store = readFileSync(join(projectRoot, "src/lib/workspace/localStore.ts"), "utf8");
+  assert.match(store, /function putVerified\(key: string, value: string\): boolean \{\s*return put\(key, value\) && get\(key\) === value;/, "stash writes are read back");
+  const switchSrc = store.split("export function switchAccountStorage")[1].split("\n}\n")[0];
+  assert.match(switchSrc, /putVerified\(stashKey, value\)[\s\S]*drop\(bookKey\(id\)\)/, "an extra book leaves the shelf only after its stash copy verified");
+  assert.match(switchSrc, /putVerified\(STASH_KEY, primaryStash\)[\s\S]*putVerified\(WORKSPACE_KEY/, "the primary is stashed before it is replaced");
+  assert.match(switchSrc, /stashOwner !== previousOwner && stashOwner !== newOwner\) return \{ ok: false, reason: "occupied" \}/, "a third account's stash is never overwritten");
+  assert.match(switchSrc, /if \(putVerified\(bookKey\(m\.id\), m\.raw\)\) \{ restoreStash\(\); return true; \}/, "a rolled-back book's stash copy goes only after the book key verified");
+  assert.match(syncClient, /if \(saved && owner && !legacy\) writeSyncMeta/, "no revision skip data from a legacy server");
+  assert.match(syncClient, /if \(!starting\) starting = run\(\)/, "start is single flight");
+  assert.match(syncClient, /if \(!started\) \{ coord = null; void start\(\); return; \}/, "a failed start is retried when the tab comes back");
+  assert.match(syncClient, /if \(!index\.owner \|\| index\.owner === serverOwner\) return true;/, "another account's index is never merged into this account");
+  const belongs = store.split("function stashBelongsTo")[1].split("\n}\n")[0];
+  assert.doesNotMatch(belongs, /name/, "a stash without an owner is never attributed by business name");
+  assert.match(syncClient, /async function run\(\): Promise<void> \{\s*if \(stopped\(\)\) return;\s*if \(ownerMovedUnderUs\(\)\) return ownerMismatch\(\);/, "a (re)start never runs after another tab moved the device to another account");
+  assert.match(readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8"), /if \(ownerChangedElsewhere\(tabOwner\(\)\)\) \{ ownerChanged\(\); return/, "saves after another tab's account switch reload instead of vanishing");
+  assert.match(store, /export const BOOKS_UI = false;/, "PR 3 ships with the business UI off");
+  const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
+  assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
+  assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");
+  const linkClient = readFileSync(join(projectRoot, "src/lib/workspace/paylinkClient.ts"), "utf8");
+  assert.match(linkClient, /\/api\/v1\/paylinks\/\?books=1/, "new clients list every business's links");
+  assert.match(linkClient, /if \(!isBookId\(bookId\) \|\| ctx\.legacy\) return null;/, "no book link route on a legacy server");
+}
+
 console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");
