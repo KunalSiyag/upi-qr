@@ -132,6 +132,59 @@ try {
   await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'This device only')");
   check("delete cloud copy calls DELETE and signs out", (await b.eval("window.__calls.some(c => c.method === 'DELETE') && window.__signedOut === true")) && (await server()) === null);
   check("local data kept after cloud delete", (await b.eval("JSON.parse(localStorage.getItem('proupiqr-workspace-v1')).business.name")) === "Account B Shop");
+
+  // Several businesses (docs/spec-multi-business.md §9.3). This mock server has no books routes, so the
+  // client runs the legacy (first-business-only) sync: no book route is ever called.
+  const B = "biz_bbbbbbbb";
+  const bookTwo = { ...guest, business: { ...guest.business, name: "Book Two Traders", upiId: "two@okaxis" }, invoices: { inv_00000009: { ...guest.invoices.inv_00000001, id: "inv_00000009", number: "BT-0001", amountPaise: 777700 } } };
+  const plantBookTwo = (owner) => b.eval(`localStorage.setItem('proupiqr-book-v1:${B}', ${JSON.stringify(JSON.stringify(bookTwo))});
+    localStorage.setItem('proupiqr-books-v1', JSON.stringify({ v: 1, owner: '${owner}', books: { biz_primary: { id: 'biz_primary', createdAt: 0 }, '${B}': { id: '${B}', createdAt: ${T} } } })); true`);
+
+  // 8. Account switch with two businesses: both are moved aside (verified), nothing reaches the new account.
+  await setup({ signedIn: true, owner: "owner-b" }, guest, otherServer, "owner-a");
+  await plantBookTwo("owner-a");
+  await b.go(BASE + "/app/?tab=settings", 3000);
+  await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'Synced ✓')");
+  const meta8 = JSON.parse((await b.eval("localStorage.getItem('proupiqr-stash-v2')")) || "null");
+  check("switch with two businesses: both set aside for the previous account", meta8?.owner === "owner-a" && meta8.ids.includes(B) && !!(await b.eval("localStorage.getItem('proupiqr-workspace-v1-other-account')")));
+  check("switch: Book Two's stash copy verified, its book key gone", JSON.parse((await b.eval(`localStorage.getItem('proupiqr-stash-v2:${B}')`)) || "null")?.business?.name === "Book Two Traders" && (await b.eval(`localStorage.getItem('proupiqr-book-v1:${B}')`)) === null);
+  const s8 = await server();
+  check("switch: nothing of the previous account uploaded", Object.keys(s8.invoices).length === 0 && !JSON.stringify(s8).includes("Book Two") && !JSON.stringify(s8).includes("Sharma"));
+  check("legacy server: no book route called", !(await b.eval("window.__calls.some(c => /\\/books\\/biz_/.test(c.url))")));
+  check("switch: the set-aside data is offered for download", /set aside, not uploaded to this account/.test(await text()));
+
+  // 9. The same switch when the stash can't be written (storage full): the previous account stays, nothing is lost.
+  await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {
+    const set = Storage.prototype.setItem;
+    Storage.prototype.setItem = function (key, value) {
+      if (localStorage.getItem('__failStash') === '1' && String(key).startsWith('proupiqr-stash-v2:')) throw new DOMException('full', 'QuotaExceededError');
+      return set.call(this, key, value);
+    };
+  })();` });
+  await setup({ signedIn: true, owner: "owner-b" }, guest, otherServer, "owner-a");
+  await plantBookTwo("owner-a");
+  await b.eval("localStorage.setItem('__failStash', '1'); true");
+  const book9 = await b.eval(`localStorage.getItem('proupiqr-book-v1:${B}')`);
+  await b.go(BASE + "/app/?tab=settings", 3500);
+  check("stash write fails: previous owner kept", (await b.eval("localStorage.getItem('proupiqr-workspace-owner')")) === "owner-a");
+  check("stash write fails: Book Two and the first business stay", (await b.eval(`localStorage.getItem('proupiqr-book-v1:${B}')`)) === book9 && JSON.parse(await b.eval("localStorage.getItem('proupiqr-workspace-v1')")).business.name === "Sharma Tuition");
+  check("stash write fails: the storage message is shown", /This browser is out of storage, so the previous account's data couldn't be set aside\./.test(await text()));
+  check("stash write fails: nothing uploaded to the new account", Object.keys((await server()).invoices).length === 0 && !(await b.eval("window.__calls.some(c => c.method === 'PUT')")));
+  await b.eval("localStorage.removeItem('__failStash'); true");
+
+  // 10. Two tabs: another tab signs this device in to another account → this tab stops and reloads.
+  await setup({ signedIn: true, owner: "owner-a" }, guest, null, "owner-a");
+  await b.go(BASE + "/app/", 3000);
+  await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'Synced ✓')");
+  await b.eval(`(async () => {
+    window.__thisTab = true;
+    const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; document.body.appendChild(f);
+    await new Promise((r) => { f.onload = r; });
+    f.contentWindow.localStorage.setItem('proupiqr-workspace-owner', 'owner-b');
+    return true;
+  })()`);
+  await sleep(2500);
+  check("another tab's account switch reloads this tab", (await b.eval("window.__thisTab === undefined")));
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));

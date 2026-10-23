@@ -3,7 +3,7 @@ import {
   recordReceiptPayment, restoreFrom, sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice, type ReceiptPayment, type Workspace,
 } from "./model.ts";
 import {
-  addBook, bookHash, canAddBook, emptyIndex, isBookId, isTombstoned, liveBookIds, mergeBookIndex, newBookId, parseBookIndex,
+  addBook, bookHash, bookRank, canAddBook, emptyIndex, isBookId, isTombstoned, liveBookIds, mergeBookIndex, newBookId, parseBookIndex,
   pickBookForDocument, PRIMARY_BOOK_ID, routeLegacyBackup, type BookIndex, type Shelf,
 } from "./books.ts";
 import { isValidVpa } from "../upi-uri.ts";
@@ -36,10 +36,17 @@ const BOOK_PREFIX = "proupiqr-book-v1:";
 const ASIDE_PREFIX = "proupiqr-aside-v1:";
 const STASH_BOOK_PREFIX = "proupiqr-stash-v2:";
 const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
+/** The last business limit the server reported for an account: { owner, limit }. Read before the first request and offline. */
+export const PLAN_LIMIT_KEY = "proupiqr-plan-limit-v1";
+/**
+ * { [bookId]: generation }: bumped when a book is replaced by the server's copy (a read-only business whose
+ * device-only changes were set aside). Other tabs then replace their copy instead of merging it back.
+ */
+export const BOOK_RESET_KEY = "proupiqr-book-reset-v1";
 const PLACEHOLDER_VPA = "merchant@upi";
 
 /** PR 3: false. Flipped by the UI release (spec §10); until then only the first business is ever shown. */
-export const BOOKS_UI = false;
+export const BOOKS_UI = true;
 
 export const bookKey = (id: string): string => (id === PRIMARY_BOOK_ID ? WORKSPACE_KEY : `${BOOK_PREFIX}${id}`);
 
@@ -136,6 +143,42 @@ export function dropSyncMeta(id: string): void {
 export function resetSyncMeta(owner: string | null): void {
   if (owner) put(BOOK_SYNC_KEY, JSON.stringify({ owner, books: {} }));
   else drop(BOOK_SYNC_KEY);
+}
+
+// ---------------------------------------------------------------------------
+// Last known business limit (so read-only businesses are known before the first request, and offline)
+
+export function savePlanLimit(owner: string, limit: number): void {
+  if (!Number.isSafeInteger(limit) || limit < 1) return;
+  const value = JSON.stringify({ owner, limit });
+  if (get(PLAN_LIMIT_KEY) !== value) put(PLAN_LIMIT_KEY, value);
+}
+
+/** The cached limit, only for the account it was recorded for. */
+export function cachedPlanLimit(owner: string | null): number | null {
+  if (!owner) return null;
+  const raw = parseJson(get(PLAN_LIMIT_KEY)) as { owner?: unknown; limit?: unknown } | null;
+  return raw && raw.owner === owner && Number.isSafeInteger(raw.limit) && (raw.limit as number) >= 1 ? (raw.limit as number) : null;
+}
+
+function readResets(): Record<string, number> {
+  const raw = parseJson(get(BOOK_RESET_KEY)) as Record<string, unknown> | null;
+  const out: Record<string, number> = {};
+  if (raw && typeof raw === "object") for (const [id, n] of Object.entries(raw)) if (isBookId(id) && Number.isSafeInteger(n)) out[id] = n as number;
+  return out;
+}
+
+/** Records that this book was just replaced by the server's copy; call before writing the replacement. */
+export function markBookReset(id: string): void {
+  if (!isBookId(id) || id === PRIMARY_BOOK_ID) return;
+  const resets = readResets();
+  put(BOOK_RESET_KEY, JSON.stringify({ ...resets, [id]: (resets[id] ?? 0) + 1 }));
+}
+
+/** Businesses ranked past the limit (never the first): read-only after a downgrade, as the server enforces. */
+export function readOnlyBookIds(index: BookIndex, limit: number | null): Set<string> {
+  if (limit === null) return new Set();
+  return new Set(liveBookIds(index).filter((id) => id !== PRIMARY_BOOK_ID && bookRank(index, id) >= limit));
 }
 
 // ---------------------------------------------------------------------------
@@ -236,7 +279,13 @@ export function removeBookStorage(id: string): void {
   drop(bookKey(id));
 }
 
-export type AsideReason = "deleted_elsewhere" | "stray";
+/**
+ * deleted_elsewhere: this account's unsynced changes to a business deleted on another device;
+ * read_only: changes made here after the business became read-only (the server copy replaced them);
+ * other_account: another account's data (or data no account can be proven to own) that used this device;
+ * stray: a book key on this device that no index lists.
+ */
+export type AsideReason = "deleted_elsewhere" | "stray" | "read_only" | "other_account";
 export interface AsideBook {
   id: string;
   at: number;
@@ -259,6 +308,11 @@ function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = 
   return putVerified(key, JSON.stringify({ at: Date.now(), reason, name: workspace.business.name, workspace, ...(fromPrimary ? { primary: true } : {}) }));
 }
 
+/** A verified set-aside copy of a book that stays on the shelf (its key is left alone). */
+export function keepAside(id: string, reason: AsideReason, ws: Workspace): boolean {
+  return putAside(id, reason, ws);
+}
+
 /** Keeps a book that is leaving the shelf with unsynced changes: write, read back, then remove the book key. */
 export function setAside(id: string, reason: AsideReason, ws: Workspace): boolean {
   if (!putAside(id, reason, ws)) return false;
@@ -276,7 +330,7 @@ export function listAside(): AsideBook[] {
     out.push({
       id,
       at: typeof raw.at === "number" ? raw.at : 0,
-      reason: raw.reason === "stray" ? "stray" : "deleted_elsewhere",
+      reason: raw.reason === "stray" || raw.reason === "read_only" || raw.reason === "other_account" ? raw.reason : "deleted_elsewhere",
       name: typeof raw.name === "string" ? raw.name.slice(0, 80) : "",
       workspace: sanitizeWorkspace(raw.workspace),
       fromPrimary: raw.primary === true,
@@ -356,9 +410,10 @@ export function saveActiveBook(id: string): void {
 export function onShelfChange(
   owner: () => string | null,
   current: () => Shelf,
-  h: { book(id: string, ws: Workspace): void; index(index: BookIndex): void; ownerChanged(): void },
+  h: { book(id: string, ws: Workspace, replace?: boolean): void; index(index: BookIndex): void; ownerChanged(): void },
 ): () => void {
   let switched = false;
+  let seenResets = readResets();
   const otherAccount = () => {
     const mine = owner();
     const stored = get(OWNER_KEY);
@@ -387,6 +442,14 @@ export function onShelfChange(
       const stored = parseBookIndex(get(BOOK_INDEX_KEY));
       if (!liveBookIds(shelf.index).includes(id) || (stored && isTombstoned(stored, id))) return;
       const incoming = sanitizeWorkspace(JSON.parse(event.newValue));
+      // Another tab replaced this book with the server's copy (its device-only changes were set aside):
+      // take the stored copy as is; merging would bring the set-aside changes back.
+      const resets = readResets();
+      if (id !== PRIMARY_BOOK_ID && resets[id] !== undefined && resets[id] !== seenResets[id]) {
+        seenResets = resets;
+        h.book(id, incoming, true);
+        return;
+      }
       const mine = shelf.books[id];
       h.book(id, mine ? mergeWorkspaces(mine, incoming) : incoming);
     } catch {
@@ -504,7 +567,7 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
       const ws = existing.shelf.books[id];
       if (!ws) continue;
       const asideId = id === PRIMARY_BOOK_ID || get(`${ASIDE_PREFIX}${id}`) !== null ? newBookId() : id;
-      if (!putAside(asideId, "stray", ws, id === PRIMARY_BOOK_ID)) {
+      if (!putAside(asideId, giveBack ? "stray" : "other_account", ws, id === PRIMARY_BOOK_ID)) {
         for (const done of written) drop(`${ASIDE_PREFIX}${done}`);
         return { ok: false, reason: "storage" };
       }
@@ -607,7 +670,7 @@ export function setAsideOtherAccountBooks(index: BookIndex, owner: string): bool
   for (const id of liveBookIds(index)) {
     if (id === PRIMARY_BOOK_ID) continue;
     const ws = loadBook(id);
-    if (ws && !setAside(id, "stray", ws)) return false;
+    if (ws && !setAside(id, "other_account", ws)) return false;
   }
   saveIndex({ ...emptyIndex(), owner }, true);
   resetSyncMeta(owner);
@@ -629,10 +692,12 @@ export function ownerChangedElsewhere(mine: string | null): boolean {
 // Backups (§2.3)
 
 type Entry = { id: string; workspace: Workspace };
-export type RestoreDone = { kind: "done"; shelf: Shelf; restored: number; skipped: number; into: string[] };
+/** blocked: read-only businesses the backup was meant for; nothing was merged into them. */
+export type RestoreDone = { kind: "done"; shelf: Shelf; restored: number; skipped: number; into: string[]; blocked: string[] };
 export type RestoreResult =
   | RestoreDone
-  | { kind: "confirm"; target: string; active: string; backup: { name: string; upiId: string }; apply: () => RestoreDone };
+  /** newBusiness: the backup's business isn't one of this account's; confirming adds it as a new business. */
+  | { kind: "confirm"; target: string; active: string; backup: { name: string; upiId: string }; newBusiness?: boolean; apply: () => RestoreDone };
 
 /**
  * { book: primary } → V1 tagged businessId "biz_primary" (old clients restore it into the primary);
@@ -679,7 +744,9 @@ const normUpi = (v: string) => v.trim().toLowerCase();
  * restore into a book other than the active one, or across two different UPI
  * IDs, returns "confirm" instead of merging.
  */
-export function restoreBackup(shelf: Shelf, text: string, activeId: string, limit: number, now: number, allowNew: boolean = BOOKS_UI): RestoreResult {
+export function restoreBackup(
+  shelf: Shelf, text: string, activeId: string, limit: number, now: number, allowNew: boolean = BOOKS_UI, readOnly: ReadonlySet<string> = new Set(),
+): RestoreResult {
   const parsed = JSON.parse(text) as { app?: unknown; formatVersion?: unknown; businessId?: unknown; workspace?: unknown; businesses?: unknown };
   let entries: Entry[];
   let tagged = true;
@@ -705,10 +772,12 @@ export function restoreBackup(shelf: Shelf, text: string, activeId: string, limi
     let index = input.index;
     const books = { ...input.books };
     const into: string[] = [];
+    const blocked: string[] = [];
     let skipped = 0;
     for (const entry of entries) {
       let target = entry.id;
       if (!tagged) target = routeLegacyBackup(input, entry.workspace.business, activeId).bookId;
+      if (readOnly.has(target)) { blocked.push(target); continue; }
       else if (!live.has(target)) {
         // Unknown or deleted here: a new book with a fresh id (a deleted id is never revived), within the limit.
         if (!allowNew || !canAddBook(index, limit)) { skipped++; continue; }
@@ -718,7 +787,7 @@ export function restoreBackup(shelf: Shelf, text: string, activeId: string, limi
       books[target] = restoreFrom(books[target] ?? emptyWorkspace(now), entry.workspace, now);
       into.push(target);
     }
-    return { kind: "done", shelf: { index, books }, restored: into.length, skipped, into };
+    return { kind: "done", shelf: { index, books }, restored: into.length, skipped, into, blocked };
   };
 
   const differs = (entry: Entry, target: string) => {
@@ -726,12 +795,17 @@ export function restoreBackup(shelf: Shelf, text: string, activeId: string, limi
     const ours = normUpi(shelf.books[target]?.business.upiId ?? "");
     return theirs !== "" && ours !== "" && theirs !== ours;
   };
-  const ask = (entry: Entry, target: string): RestoreResult =>
+  const ask = (entry: Entry, target: string): Extract<RestoreResult, { kind: "confirm" }> =>
     ({ kind: "confirm", target, active: activeId, backup: { name: entry.workspace.business.name, upiId: entry.workspace.business.upiId }, apply: () => plan(shelf) });
   if (!all && entries.length === 1) {
     const entry = entries[0];
     const target = tagged ? (live.has(entry.id) ? entry.id : null) : routeLegacyBackup(shelf, entry.workspace.business, activeId).bookId;
+    if (target && readOnly.has(target)) return plan(shelf);
     if (target && (target !== activeId || differs(entry, target))) return ask(entry, target);
+    // A single business that isn't one of this account's: adding it is a choice, never silent.
+    if (!target && tagged && allowNew && !isTombstoned(shelf.index, entry.id) && canAddBook(shelf.index, limit)) {
+      return { ...ask(entry, activeId), newBusiness: true };
+    }
   } else if (all) {
     // Every account's first business is biz_primary: a V2 file from another account must not merge into this one silently.
     const foreign = entries.find((entry) => live.has(entry.id) && differs(entry, entry.id));
@@ -769,6 +843,8 @@ function documentTarget(doc: { upiId: string; merchant: string }): { shelf: Shel
   const active = loadActiveBook(shelf.index);
   const picked = pickBookForDocument(shelf, doc, active, isValidVpa);
   if ("ask" in picked) return BOOKS_UI ? { ask: true } : { shelf, bookId: active };
+  // A read-only business (after a downgrade) takes no new documents: the user picks a writable one.
+  if (BOOKS_UI && readOnlyBookIds(shelf.index, cachedPlanLimit(get(OWNER_KEY))).has(picked.bookId)) return { ask: true };
   return { shelf, bookId: picked.bookId };
 }
 
@@ -877,9 +953,15 @@ export function trackDocument(doc: DocumentToTrack): TrackResult | { pick: true 
   return trackDocumentInto(target.bookId, doc, target.shelf);
 }
 
-/** Where the generator sends the user after saving: the business is named only while the business UI is on. */
+/**
+ * Where the generator sends the user after saving. With several businesses on this device (and the business UI
+ * on) the URL names the business the document went into, the first one included, so /app/ opens that one and
+ * not the last-used one. One business: the base URL, as before.
+ */
 export function workspaceReturnUrl(base: string, result: { bookId: string } | { pick: true }): string {
   if ("pick" in result) return "/app/?pick=document";
-  if (!BOOKS_UI || result.bookId === PRIMARY_BOOK_ID) return base;
+  if (!BOOKS_UI || !isBookId(result.bookId)) return base;
+  const stored = liveBookIds(loadIndex()).filter((id) => id === PRIMARY_BOOK_ID || get(bookKey(id)) !== null);
+  if (stored.length <= 1) return base;
   return `${base}${base.includes("?") ? "&" : "?"}business=${encodeURIComponent(result.bookId)}`;
 }

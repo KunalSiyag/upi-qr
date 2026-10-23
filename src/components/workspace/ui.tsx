@@ -57,6 +57,7 @@ const ICONS = {
   download: "M12 4v11m0 0l-4-4m4 4l4-4M5 20h14",
   cloud: "M7 18a4 4 0 01-.9-7.9 5.5 5.5 0 0110.7-1.4A4.5 4.5 0 0117 18H7z",
   lock: "M7 11V8a5 5 0 0110 0v3M6 11h12v9H6v-9z",
+  chevrons: "M8 9.5l4-4 4 4m-8 5l4 4 4-4",
 } as const;
 
 export type IconName = keyof typeof ICONS;

@@ -4,7 +4,7 @@ import {
 } from "./books.ts";
 import type { PlanId } from "./entitlements.ts";
 import {
-  loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
+  keepAside, loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
 } from "./localStore.ts";
 
 /**
@@ -273,6 +273,10 @@ export interface ShelfSyncOptions {
   replaceShelf: (shelf: Shelf) => void;
   /** §2.4 removal of a book whose index entry is a tombstone (sets unsynced changes aside). */
   retire: (id: string) => void;
+  /** Replaces a book with the server's copy as is (no merge); returns whether it was saved. Used for read-only books. */
+  resetBook?: (id: string, ws: Workspace) => boolean;
+  /** A set-aside copy was written (the Settings list should refresh). */
+  onAside?: () => void;
   onState: (state: ShelfSyncState) => void;
   /** The tab's owner changed under it (409 owner_mismatch): the caller reloads. */
   onOwnerChanged?: () => void;
@@ -293,7 +297,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
   let startTimer: ReturnType<typeof setTimeout> | undefined;
   let indexTimer: ReturnType<typeof setTimeout> | undefined;
   let indexAttempt = 0;
-  let refreshing: Promise<void> | null = null;
+  let refreshing: Promise<boolean> | null = null;
   const engines = new Map<string, BookEngine>();
   const statuses: Record<string, BookSyncStatus> = {};
   const messages: Record<string, string> = {};
@@ -332,6 +336,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       onStatus: (s, message) => {
         statuses[id] = s;
         messages[id] = message;
+        if (s === "read_only") void settleReadOnly(id);
         // The account-switch notice survives the uploads of the start itself; the next edit's push clears it.
         if (s === "syncing" && !starting) notice = "";
         emit();
@@ -352,6 +357,40 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     });
     engines.set(id, engine);
     return engine;
+  }
+
+  const settling = new Set<string>();
+  /**
+   * A read-only business (402 plan_read_only) whose copy here holds changes the server doesn't have (made offline,
+   * or before the downgrade was known): those changes are kept as a verified set-aside copy to download, then the
+   * book shows the server's copy again. Nothing is dropped; if the copy can't be kept, the book stays as it is.
+   */
+  async function settleReadOnly(id: string): Promise<void> {
+    if (id === PRIMARY_BOOK_ID || settling.has(id) || !owner || legacy || !opts.resetBook) return;
+    const local = opts.getBook(id);
+    const meta = syncMetaFor(owner, id) ?? session.get(id);
+    if (!local || (meta && bookHash(local) === meta.hash)) return;
+    settling.add(id);
+    try {
+      const response = await authedFetch(bookUrl(id), "GET");
+      if (!response.ok) return;
+      const body = await response.json().catch(() => null) as { workspace?: unknown; rev?: unknown; businessId?: unknown } | null;
+      if (!body || body.businessId !== id) return;
+      const server = sanitizeWorkspace(body.workspace);
+      const now = opts.getBook(id);
+      if (!now || canonicalJson(now) === canonicalJson(server)) return;
+      if (!keepAside(id, "read_only", now)) return;
+      const saved = opts.resetBook(id, server);
+      if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) {
+        session.set(id, { rev: body.rev, hash: bookHash(server) });
+        if (saved) writeSyncMeta(owner, id, body.rev, bookHash(server));
+      }
+      opts.onAside?.();
+    } catch {
+      // Offline: tried again on the next read-only answer.
+    } finally {
+      settling.delete(id);
+    }
   }
 
   function hold(id: string, status: BookSyncStatus) {
@@ -574,9 +613,11 @@ export function createShelfSync(opts: ShelfSyncOptions) {
    * Index sync and the per-book decisions (§3.6 steps 4–6): register local books
    * the server doesn't list, adopt the server's tombstones (removal goes through
    * retire()), then push or pull only the books whose hash or revision changed.
+   * Resolves true when the server's index already matched this device's, or took its changes.
    */
-  async function syncIndex(serverIndex: BookIndex, revs: Record<string, number>): Promise<void> {
-    if (!owner) return;
+  async function syncIndex(serverIndex: BookIndex, revs: Record<string, number>): Promise<boolean> {
+    if (!owner) return false;
+    let confirmed = true;
     let server = serverIndex;
     let serverRevs = revs;
     const withOwner = (index: BookIndex): BookIndex => ({ ...index, owner: owner as string });
@@ -589,7 +630,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       try {
         const response = await authedFetch(BOOKS_URL, "PUT", { index, expectedOwner: owner });
         const reply = await response.json().catch(() => ({})) as { index?: unknown; revs?: Record<string, number>; rejected?: unknown; plan?: ShelfSyncState["plan"]; code?: string };
-        if (response.status === 409 && reply.code === "owner_mismatch") return ownerMismatch();
+        if (response.status === 409 && reply.code === "owner_mismatch") { ownerMismatch(); return false; }
         const replyIndex = response.ok ? parseBookIndex(reply.index) : null;
         if (replyIndex) {
           server = replyIndex;
@@ -598,8 +639,9 @@ export function createShelfSync(opts: ShelfSyncOptions) {
           if (reply.plan !== undefined) plan = reply.plan ?? null;
           merged = withOwner(mergeBookIndex(merged, replyIndex));
           indexAttempt = 0;
-        } else scheduleIndexRetry();
+        } else { confirmed = false; scheduleIndexRetry(); }
       } catch {
+        confirmed = false;
         scheduleIndexRetry();
       }
     }
@@ -617,7 +659,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     const order = liveBookIds(merged);
     const ordered = [...order.filter((id) => id === PRIMARY_BOOK_ID), ...order.filter((id) => id === active && id !== PRIMARY_BOOK_ID), ...order.filter((id) => id !== PRIMARY_BOOK_ID && id !== active)];
     for (const id of ordered) {
-      if (phase !== "running") return;
+      if (phase !== "running") return confirmed;
       if (rejected.has(id) && !registered.has(id)) { hold(id, "limit"); continue; }
       if (!registered.has(id)) { hold(id, "unregistered"); scheduleIndexRetry(); continue; }
       const engine = engineFor(id);
@@ -625,6 +667,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       await decide(engine, serverRevs[id] ?? 0);
     }
     emit();
+    return confirmed;
   }
 
   async function decide(engine: BookEngine, rev: number): Promise<void> {
@@ -643,33 +686,35 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     lastSyncedAt = Date.now();
   }
 
-  /** GET the index again and act on it (also the non-legacy "Sync now"). */
-  function refreshIndex(): Promise<void> {
-    if (phase !== "running" || legacy || !started) return Promise.resolve();
+  /** GET the index again and act on it (also the non-legacy "Sync now"). True once the server holds this device's index. */
+  function refreshIndex(): Promise<boolean> {
+    if (phase !== "running" || legacy || !started) return Promise.resolve(false);
     if (refreshing) return refreshing;
     refreshing = (async () => {
       try {
         const response = await authedFetch(BOOKS_URL, "GET");
-        if (response.status === 401) return signedOut();
+        if (response.status === 401) { signedOut(); return false; }
         if (response.status === 404 || response.status === 405) {
           // Rolled back mid-session: the primary keeps syncing, other books pause, revisions are forgotten.
           resetSyncMeta(owner);
           legacy = true;
           for (const id of [...engines.keys()]) if (id !== PRIMARY_BOOK_ID) hold(id, "paused");
-          return emit();
+          emit();
+          return false;
         }
-        if (!response.ok) return;
+        if (!response.ok) return false;
         const body = await response.json().catch(() => null) as { index?: unknown; revs?: Record<string, number>; owner?: unknown; plan?: ShelfSyncState["plan"] } | null;
         const serverIndex = body ? parseBookIndex(body.index) : null;
-        if (!body || !serverIndex) return;
-        if (body.owner !== owner) return ownerMismatch();
+        if (!body || !serverIndex) return false;
+        if (body.owner !== owner) { ownerMismatch(); return false; }
         if (body.plan !== undefined) {
-          if (body.plan?.id !== plan?.id) rejected.clear();
+          if (body.plan?.id !== plan?.id || body.plan?.businesses !== plan?.businesses) rejected.clear();
           plan = body.plan ?? null;
         }
-        await syncIndex(serverIndex, body.revs ?? {});
+        return await syncIndex(serverIndex, body.revs ?? {});
       } catch {
         // Offline: the next "online" event or visibility change retries.
+        return false;
       } finally {
         refreshing = null;
       }
@@ -717,16 +762,26 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     /** The account this tab belongs to: the synced owner, else the one recorded when the page loaded. */
     ownerKey: () => owner ?? ownerKeySeen,
     legacy: () => legacy,
+    /** One book's sync status right now (undefined until the coordinator has decided about it). */
+    bookStatus: (id: string): BookSyncStatus | undefined => statuses[id],
     /** Call after every local change to a book; cheap when nothing new needs uploading. */
     changed(id: string) {
       if (phase !== "running") return;
       engines.get(id)?.changed();
     },
-    /** A book was added or deleted locally: register it now, then sync it. */
-    indexChanged(): Promise<void> {
+    /** A book was added or deleted locally: register it now, then sync it. True once the server took the change. */
+    indexChanged(): Promise<boolean> {
       return refreshIndex();
     },
     refreshIndex,
+    /** A cloud-only book (§2.5) the user opened: pull it from the account now. */
+    open(id: string): Promise<void> {
+      if (phase !== "running" || legacy || !isBookId(id)) return Promise.resolve();
+      const engine = engines.get(id);
+      if (!engine || engine.status() !== "cloud_only") return Promise.resolve();
+      engine.release();
+      return engine.pull();
+    },
     /** Pushes now and resolves once the server has this device's latest copy of the book. */
     async flush(id: string = PRIMARY_BOOK_ID): Promise<boolean> {
       if (phase !== "running") return false;
