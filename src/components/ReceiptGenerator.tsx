@@ -3,7 +3,6 @@ import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import { displayCurrency, formatMoney, type DocLang, withCurrencyDeep } from "../data/documentLang";
-import { recordReceipt, workspaceReturnUrl } from "../lib/workspace/localStore";
 import type { PaymentMode } from "../lib/workspace/model";
 import { RECEIPT_COPY, receiptModeLabel } from "../data/receiptI18n";
 
@@ -184,7 +183,16 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   }
 
   /** Records this receipt in the local payment tracker (settling the client's open invoices first) and opens it. */
-  function saveToPaymentBook() {
+  async function saveToPaymentBook() {
+    // The payment tracker's storage code loads on click, so it stays off this page's first load.
+    let bridge: typeof import("../lib/workspace/localStore");
+    try {
+      bridge = await withTimeout(import("../lib/workspace/localStore"), "Payment tracker");
+    } catch (err) {
+      console.error("Payment tracker failed to load:", err); notifyExportError("Couldn't open the payment tracker. Check your connection and try again.");
+      return;
+    }
+    const { recordReceipt, workspaceReturnUrl } = bridge;
     const result = customer.trim() === "Client Name" ? null : recordReceipt({
       merchant, upiId, receiptNo, date: receiptDate, customer, customerPhone,
       amountPaise: Math.round(totals.subtotal * 100), mode: RECEIPT_MODE[paymentMode], reference: referenceNo,
@@ -335,7 +343,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             </button>
             {displayCurrency(lang).code === "INR" && (
               <button
-                onClick={saveToPaymentBook}
+                onClick={() => void saveToPaymentBook()}
                 title={SAVE_LABEL[lang] ?? SAVE_LABEL.en}
                 className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog transition"
               >

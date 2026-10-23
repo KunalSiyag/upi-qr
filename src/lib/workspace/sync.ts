@@ -694,19 +694,25 @@ export function createShelfSync(opts: ShelfSyncOptions) {
   async function decide(engine: BookEngine, rev: number): Promise<void> {
     const id = engine.id;
     const mine = opts.getBook(id);
-    const meta = syncMetaFor(owner, id) ?? session.get(id);
+    const stored = syncMetaFor(owner, id);
+    const inSession = session.get(id);
+    const meta = stored ?? inSession;
     if (!mine) {
       // Cloud-only (§2.5): kept in the account, loaded when opened; never replaced by an empty copy.
       if (meta && id !== PRIMARY_BOOK_ID) return engine.hold("cloud_only");
       return engine.pull();
     }
-    // Stored meta without the fx marker may describe a copy older code stripped of ws.intl: pull once
-    // (foreign-clients spec §2.5). Meta this session wrote counts as confirmed.
-    if (!meta || (!("fx" in meta && meta.fx === 1) && !session.has(id))) return engine.pull();
+    // Stored meta without the fx marker may describe a copy older code stripped of ws.intl (an old tab on this
+    // device synced it): pull once (foreign-clients spec §2.5). It counts as confirmed only when it is the meta
+    // this session wrote (same rev and hash): an old tab that rewrote the map without fx, or a server that strips
+    // intl, then costs no request. Meta that only this session holds is confirmed by definition.
+    if (!meta) return engine.pull();
+    const sessionWrote = inSession !== undefined && inSession.rev === meta.rev && inSession.hash === meta.hash;
+    if (!sessionWrote && stored?.fx !== 1) return engine.pull();
     // This session last heard from a server that strips ws.intl (a rollback, §2.6): its hash is of the stripped
     // copy, so the foreign section is left out of the comparison too. Otherwise every visibility or online refresh
     // would PUT a book that holds intl (review round 3); a push can't give that server the section anyway.
-    const keepsIntl = session.get(id)?.keepsIntl !== false;
+    const keepsIntl = !sessionWrote || inSession?.keepsIntl !== false;
     if (bookHash(keepsIntl ? mine : withoutIntl(mine)) !== meta.hash) return engine.push();
     if (meta.rev !== rev) return engine.pull();
     engine.markClean(keepsIntl);

@@ -408,6 +408,14 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   // records it can't show instead of asking the user to delete invoices that aren't on screen (workspace.test simulates it).
   assert.match(ui, /const hasInvoices = !!clientId && liveInvoices\(ws\)\.some\(\(i\) => i\.clientId === clientId\);\s*const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords\(ws, clientId\);/);
   assert.match(ui, /\{existing && !hasInvoices && !hasHidden && \(/, "\"Remove client\" only when deleteClient would remove");
+  // The INR-only build (spec §0, second invariant): no sheet opens for a foreign invoice, the monthly-billing flash
+  // counts INR invoices only, and every book applied from storage or the server is repaired (§1.7).
+  assert.match(ui, /\{sheet\?\.kind === "invoice" && \(!sheet\.id \|\| inrInvoice\(ws, sheet\.id\)\) && \(/, "the invoice sheet never opens for a foreign id");
+  assert.match(ui, /\{sheet\?\.kind === "payment" && inrInvoice\(ws, sheet\.id\) && \(/);
+  assert.match(ui, /\{sheet\?\.kind === "remind" && inrInvoice\(ws, sheet\.id\) && \(/);
+  assert.match(ui, /createdHere = created\.filter\(\(cid\) => \{ const inv = getInvoice\(next, cid\); return inv !== undefined && currencyOf\(inv\) === "INR"; \}\)\.length;/, "foreign plan months are not counted in the flash");
+  assert.match(ui, /book\.name === OTHER_ACCOUNT_INTL \? tr\("Clients abroad \(another account\)"\) : book\.name === SET_ASIDE_INTL \? tr\("Clients abroad \(set aside\)"\)/, "set-aside foreign sections are named in the UI language");
+  assert.match(ui, /const value = repairIntl\(before \? mergeWorkspaces\(before, next\) : next, Date\.now\(\)\);\s*const saved = saveBook\(current\.index, id, value\);/, "applyBook repairs before saving");
   // The business switcher (PR 4): a listbox that never looks like a dialog, a section tab or an invoice row to the e2e selectors.
   const switcherSrc = readFileSync(join(projectRoot, "src/components/workspace/BusinessSwitcher.tsx"), "utf8");
   assert.match(switcherSrc, /role="listbox"/);
@@ -479,7 +487,7 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(store, /canonicalJson\(withoutIntl\(pruned\)\)/, "a book key never holds intl");
   assert.match(store, /\{ owner: get\(OWNER_KEY\), intl: pruned\.intl \}/, "sidecars record the account that wrote them");
   assert.match(store, /if \(sidecarJoins\(side\.owner\)\) return side\.intl;/, "another account's sidecar is never joined");
-  assert.match(store, /JSON\.stringify\(\{ \.\.\.meta, workspace: withoutIntl\(workspace\) \}\)/, "the set-aside key older code lists never holds intl");
+  assert.match(store, /JSON\.stringify\(\{ at: meta\.at, reason, name: meta\.name, workspace: withoutIntl\(workspace\), \.\.\.\(fromPrimary \? \{ primary: true \} : \{\}\) \}\)/, "the set-aside key older code lists never holds intl, in older code's field order");
   assert.doesNotMatch(store, /put(?:Verified)?\(\s*`\$\{ASIDE_PREFIX\}/, "set-aside copies are written only through putAside");
   // Sync: every comparison with the server's copy goes through sameAsServer.
   assert.doesNotMatch(syncClient.replace(/const sameAsServer = [^\n]*\n/, ""), /[!=]==\s*lastJson|lastJson\s*[!=]==\s*canonicalJson/, "compare with the server's copy only through sameAsServer");
@@ -489,8 +497,12 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(paylinksSrc, /if \(!invoice \|\| invoice\.deletedAt \|\| currencyOf\(invoice\) !== "INR"\) return null;/, "payPageView refuses foreign invoices");
   assert.match(paylinksSrc, /if \(!client \|\| client\.deletedAt \|\| hasOpenForeign\(ws, clientId\)\) return null;/, "statementView refuses clients with open foreign invoices");
   assert.match(read("src/lib/workspace/digest.ts"), /const open = liveInvoices\(ws\)[\s\S]*const plans = liveRecurring\(ws\)/, "the projection reads INR records only");
-  assert.match(handlerOf(workspaceApi, "GET"), /intl: 1/);
-  assert.match(handlerOf(workspaceApi, "PUT"), /intl: 1/);
+  // The reply objects themselves (a comment in the GET handler also says "intl: 1").
+  assert.match(handlerOf(workspaceApi, "GET"), /return jsonResponse\(\{ workspace, rev, owner, intl: 1 \}\);/);
+  assert.match(handlerOf(workspaceApi, "PUT"), /return jsonResponse\(\{ workspace: result\.workspace, rev: result\.rev, owner, intl: 1 \}\);/);
+  // A foreign subject's link is refused as 404 not_found (until PR 3) on the primary route as on the book route.
+  assert.match(handlerOf(read("src/pages/api/v1/paylinks/index.ts"), "POST"), /if \(result\.status !== "ok"\) return jsonResponse\(\{ error: result\.message, code: result\.status \}, createStatusCode\(result\.status\)\);/);
+  assert.match(read("src/lib/workspace/booksApi.ts"), /return res\(createStatusCode\(result\.status\), \{ error: result\.message, code: result\.status \}\)/);
   assert.equal((read("src/lib/workspace/booksApi.ts").match(/businessId: id, intl: 1/g) ?? []).length, 2, "book GET and PUT replies carry intl: 1");
   assert.match(read("src/lib/workspace/cloud.ts"), /pruneTombstones\(repairIntl\(mergeWorkspaces\(serverCopy, clientCopy\), now\), now\)/, "the server repairs old clients' erases and deletes");
 }

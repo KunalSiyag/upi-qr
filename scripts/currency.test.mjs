@@ -130,6 +130,13 @@ map = addMoney(map, "INR", 100);
 map = addMoney(map, "USD", 250);
 map = addMoney(map, "EUR", 0);
 assert.deepEqual(map, { USD: 750, INR: 100, EUR: 0 });
+{
+  // addMoney returns a new map and never changes its input (aggregates fold over shared maps).
+  const input = { USD: 1 };
+  const out = addMoney(input, "USD", 2);
+  assert.notEqual(out, input);
+  assert.deepEqual([input, out], [{ USD: 1 }, { USD: 3 }]);
+}
 assert.deepEqual(moneyList(map), [{ currency: "INR", minor: 100 }, { currency: "USD", minor: 750 }], "CURRENCIES order, non-zero only");
 
 /* ---------- validators ---------- */
@@ -159,6 +166,14 @@ for (const bad of [
   "https://evil.com/?paypal.me", "https://paypal.me:8443/name", "https://evil.paypal.me/x", "https://paypal.me./name", "//paypal.me/name",
   "paypal.me/name", "https://paypal.me/a b", "https://paypal.me/a\nb", `https://paypal.me/${"a".repeat(300)}`, "data:text/html,x", "", null, 42,
 ]) assert.equal(safePayUrl(bad), "", String(bad));
+{
+  // The 300-character cap applies to what the user typed, even when the normalized href would be shorter.
+  const dotted = `https://paypal.me/${"./".repeat(150)}name`;
+  assert.ok(dotted.length > 300 && new URL(dotted).href.length < 300);
+  assert.equal(safePayUrl(dotted), "");
+  const atCap = `https://paypal.me/${"a".repeat(300 - "https://paypal.me/".length)}`;
+  assert.equal(safePayUrl(atCap), atCap, "300 characters is still accepted");
+}
 assert.equal(normalizeLutArn(" ad270326000123x "), "AD270326000123X");
 assert.equal(normalizeLutArn("AD27032600012"), "");
 assert.equal(normalizeLutArn("AD270326000123X9"), "");

@@ -11,7 +11,7 @@ import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
   backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
   markBookReset, readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
-  recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
+  OTHER_ACCOUNT_INTL, SET_ASIDE_INTL, recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
 import { createShelfSync, READ_ONLY, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
@@ -1952,16 +1952,19 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
           </div>
         </div>
       )}
-      {aside.map((book) => (
+      {aside.map((book) => {
+        // A copy that is only a foreign section is stored under a fixed English name: shown in the UI language.
+        const name = book.name === OTHER_ACCOUNT_INTL ? tr("Clients abroad (another account)") : book.name === SET_ASIDE_INTL ? tr("Clients abroad (set aside)") : book.name || tr("Your business");
+        return (
         <div key={book.id} className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
           {book.reason === "other_account" ? (
             <>
-              <p className="font-medium text-ink">{tr("{business}: data from another account that used this device, kept safe here.", { business: book.name || tr("Your business") })}</p>
+              <p className="font-medium text-ink">{tr("{business}: data from another account that used this device, kept safe here.", { business: name })}</p>
               <p className="mt-0.5">{tr("Download it if it's yours; it won't be added to this account.")}</p>
             </>
           ) : (
             <>
-              <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: book.name || tr("Your business") })}</p>
+              <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: name })}</p>
               <p className="mt-0.5">{book.reason === "deleted_elsewhere"
                 ? tr("These are this account's changes, made before the business was deleted on another device. Download them to keep them; Discard removes them for good.")
                 : book.reason === "read_only"
@@ -1977,7 +1980,8 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardAside(book.id); setAside(listAside()); }}>{tr("Discard")}</button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </section>
   );
 }

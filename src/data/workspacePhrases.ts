@@ -520,4 +520,6 @@ export const WS_HI: Record<string, string> = {
   "{n} clients": "{n} ग्राहक",
   "Balance": "बकाया",
   "{n} open": "{n} खुले",
+  "Clients abroad (another account)": "विदेशी ग्राहक (दूसरा अकाउंट)",
+  "Clients abroad (set aside)": "विदेशी ग्राहक (अलग रखा गया)",
 };

@@ -727,9 +727,27 @@ const three = book("Book Three", "three@okaxis", 120000);
     document.dispatchEvent(new Event("visibilitychange"));
     await new Promise((r) => setTimeout(r, 30));
     assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`]);
+    // But an old tab that synced a newer server copy (another device added a US$ invoice, rev 2) writes meta
+    // { rev 2, hash of its stripped copy } without fx: this tab pulls once and gets the server's foreign section
+    // (§2.5; in-session meta only counts while it is the meta stored).
+    const other = M.upsertInvoice(W, { ...inv("inv_usd00009", "INV-0009", 777, T + 3000), currency: "USD" }, T + 3000);
+    const written = await srv.write(PRIMARY_BOOK_ID, other);
+    assert.equal(written.rev, 2);
+    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 2, bookHash(legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(written.workspace)))));
+    srv.calls.length = 0;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((r) => setTimeout(r, 30));
+    assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`, `GET ${SYNC_URL}`], "one pull after an old tab's stripped meta");
+    assert.equal(h.shelf().books[PRIMARY_BOOK_ID].intl.invoices.inv_usd00009.currency, "USD", "the other device's US$ invoice arrives");
+    assert.equal(readSyncMeta().books[PRIMARY_BOOK_ID].fx, 1);
+    srv.calls.length = 0;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((r) => setTimeout(r, 30));
+    assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`], "and only once");
+    const current = bookHash(h.shelf().books[PRIMARY_BOOK_ID]);
     h.engine.stop();
     // An unchanged reload is still exactly one request (once the marker is there).
-    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 1, bookHash(W), true);
+    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 2, current, true);
     srv.calls.length = 0;
     h = host();
     await h.engine.start();
@@ -815,6 +833,35 @@ const three = book("Book Three", "three@okaxis", 120000);
     globalThis.document.dispatchEvent(new Event("visibilitychange"));
     await new Promise((r) => setTimeout(r, 250));
     assert.equal(srv.count((c) => c.method === "PUT"), quiet + 1, "still no PUT after the next refresh");
+    // That refresh marked the books clean without intl (markClean(false)): a change() with no edit stays quiet.
+    h.engine.changed(PRIMARY_BOOK_ID);
+    h.engine.changed(B);
+    await new Promise((r) => setTimeout(r, 1700));
+    assert.equal(srv.count((c) => c.method === "PUT"), quiet + 1, "no PUT for an unchanged book after markClean against a stripping server");
+    h.engine.stop();
+  }
+
+  // A read-only business against a server that strips intl: the device-only INR change is set aside and the
+  // server's copy comes back, but the local foreign section stays (never replaced by its absence, §2.6).
+  {
+    shelfDevice({ [PRIMARY_BOOK_ID]: primary, [B]: withUsd(two) });
+    const srv = fakeServer({ plan: "pro" });
+    let h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 20));
+    h.engine.stop();
+    srv.plan = "free";
+    srv.noIntl = true;
+    h = host({ withReset: true });
+    await h.engine.start();
+    h.edit(B, withInvoice(h.shelf().books[B], "inv_00000007", "INV-0007", 7000));
+    assert.equal(await h.engine.flush(B), false);
+    await new Promise((r) => setTimeout(r, 40));
+    assert.equal(h.asides, 1, "the INR change is set aside");
+    assert.equal(h.shelf().books[B].invoices.inv_00000007, undefined, "the business shows the server's INR part again");
+    assert.equal(h.shelf().books[B].intl?.invoices.inv_usd00001.currency, "USD", "the foreign section is kept");
+    assert.equal(loadBook(B).intl?.invoices.inv_usd00001.currency, "USD");
+    assert.equal(readSyncMeta().books[B].fx, undefined, "no marker from a reply without intl: 1");
     h.engine.stop();
   }
   console.log("[shelf-sync] clients abroad: one pull after the upgrade, fx marker, cloud-only hold, no loop against a stripping server");

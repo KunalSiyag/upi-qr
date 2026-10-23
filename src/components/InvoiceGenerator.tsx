@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
-import { trackDocument, workspaceReturnUrl } from "../lib/workspace/localStore";
 import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
 import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
 
@@ -317,7 +316,16 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
     }
   }
 
-  function trackPayment() {
+  async function trackPayment() {
+    // The payment tracker's storage code loads on click, so it stays off this page's first load.
+    let bridge: typeof import("../lib/workspace/localStore");
+    try {
+      bridge = await withTimeout(import("../lib/workspace/localStore"), "Payment tracker");
+    } catch (err) {
+      console.error("Payment tracker failed to load:", err); notifyExportError("Couldn't open the payment tracker. Check your connection and try again.");
+      return;
+    }
+    const { trackDocument, workspaceReturnUrl } = bridge;
     const description = items.map((item) => item.name).filter(Boolean).join(", ");
     const result = trackDocument({
       merchant, upiId, customer, invoiceNo, invoiceDate, dueDate,
@@ -415,7 +423,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             </button>
             {template.currency === "INR" && (
               <button
-                onClick={trackPayment}
+                onClick={() => void trackPayment()}
                 title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
                 className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog transition"
               >

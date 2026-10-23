@@ -351,6 +351,9 @@ function writeBookKeys(id: string, ws: Workspace, verified = false, now = Date.n
   if (occupied) sideOk = !pruned.intl;
   else if (pruned.intl) sideOk = write(intlKey(id), canonicalJson({ owner: get(OWNER_KEY), intl: pruned.intl } as unknown as Workspace));
   else drop(intlKey(id));
+  // A verified write (an account switch, a give-back) never leaves the book key without its foreign section:
+  // the caller undoes a failed write, and a book key written anyway would outlive that undo.
+  if (verified && !sideOk) return false;
   const bookOk = write(bookKey(id), canonicalJson(withoutIntl(pruned)));
   return sideOk && bookOk;
 }
@@ -560,7 +563,8 @@ function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = 
     return false;
   }
   if (intlOnly(workspace)) { drop(key); return true; }
-  if (putVerified(key, JSON.stringify({ ...meta, workspace: withoutIntl(workspace) }))) return true;
+  // The INR key keeps the field order older code writes (primary after workspace): byte-identical for INR-only data.
+  if (putVerified(key, JSON.stringify({ at: meta.at, reason, name: meta.name, workspace: withoutIntl(workspace), ...(fromPrimary ? { primary: true } : {}) }))) return true;
   if (sideBefore === null) drop(asideIntlKey(id)); else put(asideIntlKey(id), sideBefore);
   return false;
 }
@@ -608,7 +612,17 @@ export function discardAside(id: string): void {
  */
 export function retireBook(id: string, ws: Workspace | null, owner: string | null, deletedHere: boolean): "removed" | "aside" | "kept" {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return "kept";
-  const local = ws ?? loadBook(id);
+  let local = ws ?? loadBook(id);
+  // A sidecar left without its book key was removed by older code (which drops only the book key, e.g. an old
+  // tab that retired this book first): nobody who could see the foreign section deleted it. It is handled like
+  // a book deleted elsewhere: set aside unless the server has it. Another account's is set aside (sidecarIntl).
+  if (deletedHere && get(bookKey(id)) === null && get(intlKey(id)) !== null) {
+    const side = sidecarIntl(id);
+    if (side) {
+      deletedHere = false;
+      local = sanitizeWorkspace({ ...(local ?? emptyWorkspace()), intl: mergeIntl(local?.intl, side) });
+    }
+  }
   const meta = syncMetaFor(owner, id);
   if (deletedHere || !local || (meta && meta.hash === bookHash(local))) {
     removeBookStorage(id);
@@ -941,8 +955,11 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     return false;
   };
   const fail = (): SwitchResult => {
-    // The previous primary is still in WORKSPACE_KEY (it is replaced last, and a failed write leaves it as it was).
-    if (get(WORKSPACE_KEY) !== primaryRaw && primaryRaw !== null) putVerified(WORKSPACE_KEY, primaryRaw);
+    // WORKSPACE_KEY back to the previous primary: rewritten when it changed, removed when there was none (a device
+    // that never stored one), so the next account's primary never stays here under the previous owner.
+    if (get(WORKSPACE_KEY) !== primaryRaw) {
+      if (primaryRaw === null) drop(WORKSPACE_KEY); else putVerified(WORKSPACE_KEY, primaryRaw);
+    }
     if (get(intlKey(PRIMARY_BOOK_ID)) !== primarySideRaw) {
       if (primarySideRaw === null) drop(intlKey(PRIMARY_BOOK_ID)); else putVerified(intlKey(PRIMARY_BOOK_ID), primarySideRaw);
     }
@@ -1019,8 +1036,10 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     }
     const candidate = addBook(nextIndex, bookId, now);
     if (candidate === nextIndex || get(bookKey(bookId)) !== null) continue;
-    if (!writeBookKeys(bookId, ws, true, now)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
-    if (!saveIndex(candidate, true)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
+    // Undone on failure: the book key, and its sidecar unless that is another account's still waiting to be set aside.
+    const undo = () => { drop(bookKey(bookId)); const side = readSidecar(bookId); if (!side || sidecarJoins(side.owner)) drop(intlKey(bookId)); };
+    if (!writeBookKeys(bookId, ws, true, now)) { undo(); continue; }
+    if (!saveIndex(candidate, true)) { undo(); continue; }
     nextIndex = candidate;
     discardAside(asideId);
   }

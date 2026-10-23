@@ -1249,7 +1249,8 @@ function detectLegacyErase(ws: Workspace): number | null {
 /**
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
- * (which that tab couldn't see) is revived, unless it was erased with everything else. Returns `ws` itself
+ * (which that tab couldn't see) is revived. An erased client's foreign records older than the erase are tombstoned
+ * first, so only a record written after the erase revives it. Returns `ws` itself
  * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
@@ -1265,7 +1266,10 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
   for (const record of foreign) {
     if (record.deletedAt) continue;
     const client: Client | undefined = own(clients ?? next.clients, record.clientId);
-    if (!client || !client.deletedAt || client.deletedAt === erasedAt) continue;
+    // A client erased at T with everything else is revived too when a foreign record that still references it is
+    // newer than T (eraseIntl tombstoned the older ones above): a single pass then reaches the fixed point, so a
+    // second repair, on this device or the server, changes nothing.
+    if (!client || !client.deletedAt) continue;
     const { deletedAt: _gone, ...revived } = client;
     // Deterministic (never the clock): every device and the server revive to the same bytes, so a book that is
     // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.

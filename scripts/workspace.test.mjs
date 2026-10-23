@@ -703,6 +703,109 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(legacy.generateRecurring(legacy.sanitizeWorkspace(clone(P)), "2026-10-10", X).created.length, 0);
   }
 
+  /* ---------- the intl merge: last writer wins per entry, in both argument orders ---------- */
+  {
+    const usd = (t, extra = {}) => ({ ...invoice("inv_usd00001", "ST-0003", "cli_acme0001", 1000), currency: "USD", updatedAt: t, ...extra });
+    const plan = (t, extra = {}) => ({ id: "rec_usdplan001", clientId: "cli_acme0001", amountPaise: 500, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: t, ...extra });
+    const cur = (t, extra = {}) => ({ currency: "USD", updatedAt: t, ...extra });
+    const maps = [
+      ["invoices", "inv_usd00001", (t, x) => usd(t, { description: x })],
+      ["recurring", "rec_usdplan001", (t, x) => plan(t, { description: x })],
+      ["clients", "cli_acme0001", (t, x) => cur(t, { currency: x === "new" ? "USD" : "EUR" })],
+    ];
+    for (const [map, id, entry] of maps) {
+      const one = (value) => {
+        const intl = M.sanitizeWorkspace({ intl: { invoices: {}, recurring: {}, clients: {}, [map]: { [id]: value } } }).intl;
+        assert.ok(intl?.[map][id], `${map}: the fixture survives the sanitizer`);
+        return intl;
+      };
+      const pairs = [
+        ["a newer edit beats an older one", entry(X + 1, "old"), entry(X + 2, "new")],
+        ["a newer tombstone beats an older live entry", entry(X + 1, "old"), { ...entry(X + 2, "old"), deletedAt: X + 2 }],
+        ["a newer live entry beats an older tombstone", { ...entry(X + 1, "old"), deletedAt: X + 1 }, entry(X + 2, "new")],
+      ];
+      for (const [what, older, newer] of pairs) {
+        const a = one(older);
+        const b = one(newer);
+        const expected = b[map][id];
+        assert.deepEqual(M.mergeIntl(a, b)[map][id], expected, `${map}: ${what}`);
+        assert.deepEqual(M.mergeIntl(b, a)[map][id], expected, `${map}: ${what} (other order)`);
+        const wa = { ...emptyWorkspace(), intl: a };
+        const wb = { ...emptyWorkspace(), intl: b };
+        assert.deepEqual(M.mergeWorkspaces(wa, wb).intl[map][id], expected, `${map}: ${what} (mergeWorkspaces)`);
+        assert.deepEqual(M.mergeWorkspaces(wb, wa).intl[map][id], expected);
+      }
+    }
+    // Settings too.
+    const s1 = { ...emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {}, settings: { ...settings, accountName: "Old", updatedAt: X + 1 } } };
+    const s2 = { ...emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {}, settings: { ...settings, accountName: "New", updatedAt: X + 2 } } };
+    assert.equal(M.mergeWorkspaces(s1, s2).intl.settings.accountName, "New");
+    assert.equal(M.mergeWorkspaces(s2, s1).intl.settings.accountName, "New");
+  }
+
+  /* ---------- repairs of an old tab's erase: newer foreign content, settings-only books, a single pass ---------- */
+  {
+    const TE = X + 400;
+    // An old tab erases at TE. Another device recorded a payment on Globex's US$ invoice after TE and created a
+    // new US$ invoice for Acme after TE. Older foreign content goes with the erase; the newer records stay live,
+    // and the clients they reference (erased at TE) are revived in the same pass, so a second repair (on this
+    // device or the server) changes nothing.
+    let later = M.addPayment(W, "inv_usd00002", { amountPaise: 100, date: "2026-10-01", mode: "bank", reference: "W2" }, TE + 50);
+    later = M.upsertInvoice(later, { ...invoice("inv_usd00005", "ST-0009", "cli_acme0001", 700), currency: "USD", createdAt: TE + 60, updatedAt: TE + 60 }, TE + 60);
+    const erased = legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(W)), TE);
+    for (const merged of [M.mergeWorkspaces(later, erased), M.mergeWorkspaces(erased, later)]) {
+      const once = M.repairIntl(merged, TE + 100);
+      assert.equal(once.intl.invoices.inv_usd00001.deletedAt, TE, "foreign content older than the erase is erased at its time");
+      assert.deepEqual(once.intl.settings, M.emptyIntlSettings(TE));
+      assert.equal(once.intl.invoices.inv_usd00002.deletedAt, undefined, "an invoice paid after the erase stays live");
+      assert.equal(once.intl.invoices.inv_usd00005.deletedAt, undefined, "an invoice created after the erase stays live");
+      assert.equal(once.clients.cli_globex01.deletedAt, undefined, "its client, erased at T, is revived (never a live invoice on a tombstone)");
+      assert.equal(once.clients.cli_globex01.updatedAt, TE + 1);
+      assert.equal(once.clients.cli_acme0001.deletedAt, undefined);
+      assert.equal(M.repairIntl(once, TE + 9 * DAY), once, "one pass reaches the fixed point");
+    }
+    // Same shape where nothing is newer than the erase: no client comes back.
+    for (const merged of [M.mergeWorkspaces(W, erased), M.mergeWorkspaces(erased, W)]) {
+      const once = M.repairIntl(merged, TE + 100);
+      assert.ok(once.clients.cli_globex01.deletedAt === TE && once.clients.cli_acme0001.deletedAt === TE);
+      assert.equal(M.repairIntl(once, TE + 200), once);
+    }
+    // A book whose only foreign content is bank details (set up first): the erase empties them too.
+    const bankOnly = M.sanitizeWorkspace(clone({ ...inrBook, intl: { invoices: {}, recurring: {}, clients: {}, settings } }));
+    const erasedBank = legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(bankOnly)), TE);
+    for (const merged of [M.mergeWorkspaces(bankOnly, erasedBank), M.mergeWorkspaces(erasedBank, bankOnly)]) {
+      assert.equal(merged.intl.settings.swift, "HDFCINBB", "(the old tab couldn't see them)");
+      const repaired = M.repairIntl(merged, TE + 100);
+      assert.deepEqual(repaired.intl.settings, M.emptyIntlSettings(TE), "settings-only foreign content is erased");
+      assert.equal(M.repairIntl(repaired, TE + 200), repaired);
+    }
+    // This device's own erase of a book with foreign invoices but no settings writes an empty settings record,
+    // so another device's older bank details don't survive the merge.
+    const noSettings = M.sanitizeWorkspace(clone({ ...W, intl: { ...W.intl, settings: undefined } }));
+    assert.equal(noSettings.intl.settings, undefined);
+    const wiped = M.eraseWorkspace(noSettings, X + 70);
+    assert.deepEqual(wiped.intl.settings, M.emptyIntlSettings(X + 70));
+    assert.deepEqual(M.mergeWorkspaces(wiped, W).intl.settings, M.emptyIntlSettings(X + 70));
+    assert.deepEqual(M.mergeWorkspaces(W, wiped).intl.settings, M.emptyIntlSettings(X + 70));
+  }
+
+  /* ---------- foreign plans: routing, sanitizer, deleted plans ---------- */
+  {
+    const usdPlan = { id: "rec_usdplan002", clientId: "cli_globex01", amountPaise: 50000, description: "Retainer", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X, currency: "USD" };
+    const withInr = M.upsertPlan(W, { ...usdPlan, id: "rec_inrplan002", currency: undefined }, X);
+    assert.ok(withInr.recurring.rec_inrplan002);
+    assert.equal(M.upsertPlan(withInr, { ...usdPlan, id: "rec_inrplan002" }, X + 1), withInr, "an INR plan id can't move into intl under its id");
+    const withUsd = M.upsertPlan(W, usdPlan, X);
+    assert.equal(M.upsertPlan(withUsd, { ...usdPlan, currency: undefined }, X + 1), withUsd, "a foreign plan id can't move into the legacy map");
+    // An intl plan id that is also in ws.recurring is dropped by the sanitizer (the legacy one stays).
+    const dup = M.sanitizeWorkspace(clone({ ...withInr, intl: { ...withInr.intl, recurring: { rec_inrplan002: { ...usdPlan, id: "rec_inrplan002" } } } }));
+    assert.ok(dup.recurring.rec_inrplan002 && !dup.intl?.recurring.rec_inrplan002);
+    // A deleted foreign plan whose client is live generates nothing.
+    assert.equal(M.generateRecurring(withUsd, "2026-10-10", X + 2).created.length, 3);
+    const ended = M.upsertPlan(withUsd, { ...usdPlan, deletedAt: X + 2 }, X + 2);
+    assert.deepEqual(M.generateRecurring(ended, "2026-10-10", X + 3).created, []);
+  }
+
   /* ---------- allocation is per currency (§3.4) ---------- */
   {
     const R = X + 1000;

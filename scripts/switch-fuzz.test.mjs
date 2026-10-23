@@ -54,10 +54,14 @@ for (let trial = 0; trial < TRIALS; trial++) {
   const extras = [];
   for (let i = 0; i < nExtras; i++) { const id = `biz_x${trial}e${i}aaaa`; extras.push(id); index = addBook(index, id, T + i); }
   saveIndex(index);
-  saveBook(index, PRIMARY_BOOK_ID, book("A", "A shop", "a@okaxis", 1 + rand(4), pad, foreign));
+  // Every 4th device never stored A's primary (A signed in to an empty account and changed nothing), and B's
+  // primary is mostly foreign, so its sidecar is the write that runs out of room: a failed switch must not leave
+  // B's book key behind under A (review: fail() restored WORKSPACE_KEY only when it had held something).
+  const neverStored = trial % 4 === 1;
+  if (!neverStored) saveBook(index, PRIMARY_BOOK_ID, book("A", "A shop", "a@okaxis", 1 + rand(4), pad, foreign));
   for (const id of extras) saveBook(index, id, book("A", `A extra ${id}`, `${id}@ok`, 1 + rand(3), pad, foreign));
-  const newPrimary = book("B", "B shop", scenario === "ownerlessSameNameNoUpi" ? "" : "b@okaxis", 1 + rand(4), pad + rand(300), old ? 0 : rand(2));
-  if (foreign && ![...store.map.keys()].some((k) => k.startsWith("proupiqr-intl-v1:"))) problems.push({ scenario, what: "no sidecar written" });
+  const newPrimary = book("B", "B shop", scenario === "ownerlessSameNameNoUpi" ? "" : "b@okaxis", neverStored ? 1 : 1 + rand(4), pad + rand(300), old ? 0 : neverStored ? 3 + rand(3) : rand(2));
+  if (foreign && (!neverStored || nExtras) && ![...store.map.keys()].some((k) => k.startsWith("proupiqr-intl-v1:"))) problems.push({ scenario, what: "no sidecar written" });
   const stash = (account, name, upi) => store.setItem(STASH_KEY, canonicalJson(book(account, name, upi, 2, pad)));
   if (scenario === "prevV2") { stash("A", "A shop", "a@okaxis"); store.setItem(STASH_V2_KEY, JSON.stringify({ owner: A, at: 1, ids: [] })); }
   if (scenario === "nextV2" || scenario === "nextV2extras") {
@@ -140,6 +144,7 @@ for (let trial = 0; trial < TRIALS; trial++) {
       break;
     }
     if (store.getItem(OWNER_KEY) !== A) fail("owner changed on failure");
+    if (neverStored && store.getItem(WORKSPACE_KEY) !== null) fail("a failed switch left a primary book key on a device that had none");
     if ([...accountsIn(books)].some((letter) => letter !== "A")) fail(`A's books hold ${[...accountsIn(books)]} after a failed switch`);
     if (scenario === "thirdV2") break;
   }

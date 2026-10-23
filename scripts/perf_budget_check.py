@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Fail the build if homepage JS still ships jsPDF or duplicate Tailwind CSS,
-or if any public page loads the Clerk browser SDK (see ClerkClient.astro)."""
+if any public page loads the Clerk browser SDK (see ClerkClient.astro), or if a
+page other than /app/ loads the workspace storage module on first load (the
+generators' "Track payment" / "Save to payment book" import it on click)."""
 
 from __future__ import annotations
 
@@ -24,6 +26,40 @@ JS_REF = re.compile(r"""(?:from|import)\s*\(?\s*["'`](\.{1,2}/[^"'`]+?\.js)["'`]
 HTML_JS_REF = re.compile(
     r"""(?:<script[^>]+src|<link[^>]+href|component-url|renderer-url|before-hydration-url)=["']([^"']+\.js)["']"""
 )
+
+
+# The workspace storage module (src/lib/workspace/localStore.ts): only /app/ loads it up front.
+WORKSPACE_ALLOWED = re.compile(r"(^|/)app/index\.html$")
+WORKSPACE_MARKER = re.compile(r"proupiqr-intl-v1:")
+STATIC_JS_REF = re.compile(r"""(?:from|import)\s*["'`](\.{1,2}/[^"'`]+?\.js)["'`]""")
+
+
+def _js_statically_loads(path: Path, marker: re.Pattern[str], cache: dict[Path, bool], stack: set[Path]) -> bool:
+    if path in cache:
+        return cache[path]
+    if path in stack or not path.exists():
+        return False
+    stack.add(path)
+    text = path.read_text(encoding="utf-8", errors="ignore")
+    found = bool(marker.search(text)) or any(
+        _js_statically_loads((path.parent / ref).resolve(), marker, cache, stack) for ref in STATIC_JS_REF.findall(text)
+    )
+    stack.discard(path)
+    cache[path] = found
+    return found
+
+
+def pages_loading_workspace_storage(static_root: Path) -> list[str]:
+    cache: dict[Path, bool] = {}
+    offenders: list[str] = []
+    for html_path in sorted(static_root.rglob("*.html")):
+        rel = html_path.relative_to(static_root).as_posix()
+        if WORKSPACE_ALLOWED.search(rel):
+            continue
+        html = html_path.read_text(encoding="utf-8", errors="ignore")
+        if any(ref.startswith("/") and _js_statically_loads((static_root / ref.lstrip("/")).resolve(), WORKSPACE_MARKER, cache, set()) for ref in HTML_JS_REF.findall(html)):
+            offenders.append(rel)
+    return offenders
 
 
 def _js_loads_clerk(path: Path, cache: dict[Path, bool], stack: set[Path]) -> bool:
@@ -92,6 +128,12 @@ def main() -> int:
     if clerk_pages:
         sample = ", ".join(clerk_pages[:5])
         errors.append(f"{len(clerk_pages)} public pages load the Clerk SDK (e.g. {sample}); render <ClerkClient /> only where an account session is needed")
+
+    workspace_pages = pages_loading_workspace_storage(static_root)
+    print(f"[perf] pages other than /app/ loading workspace storage up front: {len(workspace_pages)}")
+    if workspace_pages:
+        sample = ", ".join(workspace_pages[:5])
+        errors.append(f"{len(workspace_pages)} pages load src/lib/workspace/localStore on first load (e.g. {sample}); import it on click instead")
 
     for error in errors:
         print(f"[perf] ERROR: {error}")
