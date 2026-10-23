@@ -269,6 +269,12 @@ export const OTHER_ACCOUNT_INTL = "Clients abroad (another account)";
 /** Name of the set-aside copy of this account's foreign section whose book is no longer on the shelf. */
 export const SET_ASIDE_INTL = "Clients abroad (set aside)";
 
+/** The account a set-aside foreign section was written for (its sidecar's owner) and the book it belonged to. */
+type IntlOrigin = { owner: string | null; book: string };
+
+/** A set-aside copy that is only a foreign section. */
+const intlCopy = (name: string, intl: IntlData): Workspace => ({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name }, intl });
+
 function readSidecar(id: string, text: string | null = get(intlKey(id))): { owner: string | null; intl: IntlData | undefined } | null {
   const raw = parseJson(text) as { owner?: unknown; intl?: unknown } | null;
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
@@ -293,7 +299,7 @@ function sidecarIntl(id: string): IntlData | undefined {
   if (!side) return undefined;
   if (sidecarJoins(side.owner)) return side.intl;
   if (!side.intl) drop(intlKey(id));
-  else if (putAside(newBookId(), "other_account", { ...emptyWorkspace(), business: { ...emptyBusiness(0), name: OTHER_ACCOUNT_INTL }, intl: side.intl })) drop(intlKey(id));
+  else if (putAside(newBookId(), "other_account", intlCopy(OTHER_ACCOUNT_INTL, side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id })) drop(intlKey(id));
   return undefined;
 }
 
@@ -386,7 +392,42 @@ export function reconcileStashIntl(index: BookIndex = loadIndex()): void {
       continue;
     }
     const name = mine ? SET_ASIDE_INTL : OTHER_ACCOUNT_INTL;
-    if (putAside(newBookId(), mine ? "stray" : "other_account", { ...emptyWorkspace(), business: { ...emptyBusiness(0), name }, intl: side.intl })) drop(key);
+    if (putAside(newBookId(), mine ? "stray" : "other_account", intlCopy(name, side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id })) drop(key);
+  }
+}
+
+/**
+ * Foreign sections set aside from a sidecar (another account was on this device when it was found: an older
+ * switch leaves sidecars behind; or its book wasn't on the shelf) go back into their book once the account they
+ * were written for is on this device again and the book is on the shelf and writable: merged into the book's
+ * sidecar (verified), then the copy goes. Only copies that are a foreign section alone, with a recorded owner equal
+ * to the current account; anything else stays listed to download. (Review round 3: such a copy was otherwise
+ * unrecoverable on a Free account, and on Pro it restored as a separate business without its clients.)
+ */
+function reclaimIntlAsides(index: BookIndex): void {
+  const current = get(OWNER_KEY);
+  if (current === null) return;
+  const live = new Set(liveBookIds(index));
+  const readOnly = readOnlyBookIds(index, cachedPlanLimit(current));
+  for (const key of keys()) {
+    if (!key.startsWith(ASIDE_INTL_PREFIX)) continue;
+    const asideId = key.slice(ASIDE_INTL_PREFIX.length);
+    // A copy with an INR part is a whole business's changes: the user decides (download or discard).
+    if (!isBookId(asideId) || get(`${ASIDE_PREFIX}${asideId}`) !== null) continue;
+    const raw = parseJson(get(key)) as { owner?: unknown; book?: unknown; intl?: unknown } | null;
+    if (!raw || typeof raw !== "object" || raw.owner !== current || !isBookId(raw.book)) continue;
+    const id = raw.book;
+    if (id !== PRIMARY_BOOK_ID && (!live.has(id) || readOnly.has(id) || get(bookKey(id)) === null)) continue;
+    const intl = sanitizeWorkspace({ intl: raw.intl }).intl;
+    if (!intl) { discardAside(asideId); continue; }
+    // Another account's sidecar in the way is set aside first (sidecarIntl), never merged.
+    const here = readSidecar(id);
+    if (here && !sidecarJoins(here.owner)) {
+      sidecarIntl(id);
+      if (get(intlKey(id)) !== null) continue;
+    }
+    const merged = mergeIntl(here && sidecarJoins(here.owner) ? here.intl : undefined, intl);
+    if (merged && putVerified(intlKey(id), canonicalJson({ owner: current, intl: merged } as unknown as Workspace))) discardAside(asideId);
   }
 }
 
@@ -420,6 +461,7 @@ export function loadBook(id: string): Workspace | null {
 export function loadShelf(): { shelf: Shelf; cloudOnly: string[] } {
   const index = loadIndex();
   reconcileStashIntl(index);
+  reclaimIntlAsides(index);
   const books: Record<string, Workspace> = {};
   const cloudOnly: string[] = [];
   const meta = readSyncMeta();
@@ -504,14 +546,16 @@ const asideExists = (id: string): boolean => get(`${ASIDE_PREFIX}${id}`) !== nul
  * The foreign section goes to its own key first; proupiqr-aside-v1:<id> gets the
  * INR part only, and isn't written for a copy that is only a foreign section.
  */
-function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = false): boolean {
+function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = false, origin?: IntlOrigin): boolean {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return false;
   const key = `${ASIDE_PREFIX}${id}`;
   const before = readAside(id);
   const workspace = before ? mergeWorkspaces(before.workspace, ws) : ws;
   const meta = { at: Date.now(), reason, name: workspace.business.name, ...(fromPrimary ? { primary: true } : {}) };
+  // Where a foreign section came from (only on the foreign-section key, which older code never reads).
+  const from = origin ? { ...(origin.owner !== null ? { owner: origin.owner } : {}), book: origin.book } : {};
   const sideBefore = get(asideIntlKey(id));
-  if (workspace.intl && !putVerified(asideIntlKey(id), JSON.stringify({ ...meta, intl: workspace.intl }))) {
+  if (workspace.intl && !putVerified(asideIntlKey(id), JSON.stringify({ ...meta, ...from, intl: workspace.intl }))) {
     if (sideBefore === null) drop(asideIntlKey(id)); else put(asideIntlKey(id), sideBefore);
     return false;
   }
@@ -621,7 +665,7 @@ export function sweepStrayIntl(index: BookIndex, owner: string | null = get(OWNE
       continue;
     }
     const asideId = asideExists(id) ? newBookId() : id;
-    if (putAside(asideId, sidecarJoins(side?.owner ?? null) ? "stray" : "other_account", joined)) {
+    if (putAside(asideId, sidecarJoins(side?.owner ?? null) ? "stray" : "other_account", joined, false, { owner: side?.owner ?? null, book: id })) {
       drop(key);
       handled.push(id);
     }
@@ -980,6 +1024,9 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     nextIndex = candidate;
     discardAside(asideId);
   }
+  // 6. Foreign sections set aside while another account used this device (an older switch left this account's
+  //    sidecars behind) go back into this account's books.
+  reclaimIntlAsides(nextIndex);
   return { ok: true };
 }
 

@@ -288,6 +288,18 @@ export function allLiveInvoices(ws: Workspace): Invoice[] {
   return foreign.length ? [...liveInvoices(ws), ...foreign] : liveInvoices(ws);
 }
 
+/**
+ * Whether a live foreign record (an invoice in ws.intl.invoices or a plan in ws.intl.recurring) references the client.
+ * Older code (and the INR-only UI before the foreign UI ships) can't see these, so the client mustn't go while any is
+ * live: deleteClient refuses, and repairIntl revives a client an older tab deleted anyway. Paused and ended plans
+ * count too (a paused plan can be resumed; the answer never depends on the clock).
+ */
+export function clientHasForeignRecords(ws: Workspace, clientId: string): boolean {
+  if (!ws.intl) return false;
+  const refers = (r: { clientId: string; deletedAt?: number }) => !r.deletedAt && r.clientId === clientId;
+  return Object.values(ws.intl.invoices).some(refers) || Object.values(ws.intl.recurring).some(refers);
+}
+
 export function liveClients(ws: Workspace): Client[] {
   return Object.values(ws.clients).filter((client) => !client.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
@@ -607,7 +619,9 @@ export function deleteInvoice(ws: Workspace, invoiceId: string, now: number): Wo
 export function deleteClient(ws: Workspace, clientId: string, now: number): Workspace {
   const client = own(ws.clients, clientId);
   if (!client) return ws;
-  if (allLiveInvoices(ws).some((invoice) => invoice.clientId === clientId)) return ws;
+  // INR plans keep today's behaviour (the client may go; the plan then stops). A foreign plan blocks it: repairIntl
+  // would revive the client anyway, so deleting it here would only be undone.
+  if (liveInvoices(ws).some((invoice) => invoice.clientId === clientId) || clientHasForeignRecords(ws, clientId)) return ws;
   const next = upsertClient(ws, { ...client, deletedAt: now }, now);
   const entry = own(next.intl?.clients, clientId);
   if (!next.intl || !entry || entry.deletedAt) return next;
@@ -1149,7 +1163,10 @@ export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: Curr
   if (!invoice || invoice.deletedAt || invoice.payments.length || invoice.recurringId) return null;
   if (currencyOf(invoice) === currency) return { ws, id };
   const { currency: _from, exportLut: _export, ...rest } = invoice;
-  const copy: Invoice = { ...rest, id: newId("inv"), ...(isForeignCurrency(currency) ? { currency } : {}) };
+  // The export mark moves with a foreign copy (US$ → €: still an export under the LUT); an INR copy never has one.
+  const copy: Invoice = {
+    ...rest, id: newId("inv"), ...(isForeignCurrency(currency) ? { currency, ...(invoice.exportLut === true ? { exportLut: true } : {}) } : {}),
+  };
   return { ws: upsertInvoice(deleteInvoice(ws, id, now), copy, now), id: copy.id };
 }
 
@@ -1231,7 +1248,7 @@ function detectLegacyErase(ws: Workspace): number | null {
 
 /**
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
- * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices
+ * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
  * (which that tab couldn't see) is revived, unless it was erased with everything else. Returns `ws` itself
  * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
@@ -1242,9 +1259,12 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
   const erasedAt = detectLegacyErase(ws);
   if (erasedAt !== null) next = withIntl(next, eraseIntl(ws.intl, erasedAt));
   let clients: Record<string, Client> | null = null;
-  for (const invoice of Object.values(next.intl?.invoices ?? {})) {
-    if (invoice.deletedAt) continue;
-    const client: Client | undefined = own(clients ?? next.clients, invoice.clientId);
+  // Live foreign invoices and live foreign plans (paused or not): a plan whose client is gone stops billing with no
+  // message, and its client would be pruned after 90 days while the plan still points at it.
+  const foreign: { clientId: string; deletedAt?: number }[] = [...Object.values(next.intl?.invoices ?? {}), ...Object.values(next.intl?.recurring ?? {})];
+  for (const record of foreign) {
+    if (record.deletedAt) continue;
+    const client: Client | undefined = own(clients ?? next.clients, record.clientId);
     if (!client || !client.deletedAt || client.deletedAt === erasedAt) continue;
     const { deletedAt: _gone, ...revived } = client;
     // Deterministic (never the clock): every device and the server revive to the same bytes, so a book that is

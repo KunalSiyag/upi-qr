@@ -987,6 +987,58 @@ if (BOOKS_UI) {
   assert.ok(asides.some((a) => a.reason === "other_account" && canonicalJson({ intl: a.workspace.intl }) === canonicalJson({ intl: fp.intl })), "A's primary foreign section is kept intact");
   assert.ok(asides.some((a) => a.reason === "other_account" && a.workspace.intl?.invoices.inv_usd00002), "A's Book Two foreign section is kept intact");
 
+  /* Review round 3: those set-aside sections record where they came from (owner, book; the primary's is marked
+     primary), so A gets them back: automatically when A is on this device again through new code, and by hand
+     from the downloaded file, which restores into the first business (on Free too), never as a new business. */
+  {
+    const primaryAside = asides.find((a) => a.workspace.intl?.invoices.inv_usd00001);
+    const twoAside = asides.find((a) => a.workspace.intl?.invoices.inv_usd00002);
+    assert.equal(primaryAside.fromPrimary, true, "the primary's section downloads as a plain workspace backup");
+    assert.equal(twoAside.fromPrimary, false);
+    assert.deepEqual([JSON.parse(st.getItem(`proupiqr-aside-intl-v1:${primaryAside.id}`)).owner, JSON.parse(st.getItem(`proupiqr-aside-intl-v1:${primaryAside.id}`)).book], [OWNER_A, PRIMARY_BOOK_ID]);
+    assert.equal(JSON.parse(st.getItem(`proupiqr-aside-intl-v1:${twoAside.id}`)).book, B);
+    // While B is signed in nothing moves: B's books never gain A's sections.
+    const asB = loadShelf();
+    assert.equal(asB.shelf.books[PRIMARY_BOOK_ID].intl, undefined);
+    assert.equal(listAside().length, 2);
+    // The download (PaymentsWorkspace's "Download it" for a fromPrimary copy) restores into A's first business on Free.
+    const file = JSON.stringify({ app: "proupiqr-workspace", exportedAt: AT, workspace: primaryAside.workspace });
+    const free = restoreBackup({ index: { ...emptyIndex(), owner: OWNER_A }, books: { [PRIMARY_BOOK_ID]: fp } }, file, PRIMARY_BOOK_ID, 1, NOW);
+    assert.equal(free.kind, "done");
+    assert.deepEqual([free.restored, free.skipped, free.into], [1, 0, [PRIMARY_BOOK_ID]], "restored into the first business, not skipped");
+    assert.equal(canonicalJson({ intl: free.shelf.books[PRIMARY_BOOK_ID].intl }), canonicalJson({ intl: fp.intl }));
+    // A signs in again through new code: the server holds A's primary without the section (never synced).
+    const aServer = M.sanitizeWorkspace(JSON.parse(st.getItem(STASH_KEY)));
+    assert.equal(aServer.intl, undefined);
+    assert.deepEqual(switchAccountStorage(OWNER_B, OWNER_A, loadIndex(), aServer, NOW + 10), { ok: true });
+    const back = loadShelf().shelf;
+    assert.equal(canonicalJson({ intl: back.books[PRIMARY_BOOK_ID].intl }), canonicalJson({ intl: fp.intl }), "A's primary has its foreign section again, settings included");
+    assert.equal(back.books[PRIMARY_BOOK_ID].business.name, fp.business.name);
+    assert.equal(back.books[B]?.intl?.invoices.inv_usd00002.currency, "USD", "Book Two came back from the stash with its section");
+    assert.equal(JSON.parse(st.getItem(L.intlKey(PRIMARY_BOOK_ID))).owner, OWNER_A);
+    assert.deepEqual(listAside().filter((a) => a.workspace.intl), [], "nothing left to download");
+    assert.doesNotMatch(st.getItem(WORKSPACE_KEY), /"intl"|USD/, "the book key still holds only what old code writes");
+  }
+  {
+    // The same when an old tab switches back to A (no new-code switch): the next new-code load as A reclaims it.
+    const s6 = installBrowser();
+    s6.setItem(OWNER_KEY, OWNER_A);
+    saveWorkspace(fp);
+    legacyStore.switchAccountStorage(OWNER_A, OWNER_B, emptyIndex(), legacyModel.sanitizeWorkspace(clone(book("Account B", "b@okaxis"))), NOW);
+    loadShelf();
+    assert.equal(listAside().filter((a) => a.reason === "other_account").length, 1);
+    assert.deepEqual(legacyStore.switchAccountStorage(OWNER_B, OWNER_A, legacyStore.loadIndex(), legacyModel.sanitizeWorkspace(clone(book("Sharma Tuition", "sharma@okaxis"))), NOW + 5), { ok: true });
+    const a = loadShelf().shelf.books[PRIMARY_BOOK_ID];
+    assert.equal(a.intl?.invoices.inv_usd00001.currency, "USD", "reclaimed on the next load as A");
+    assert.deepEqual(listAside().filter((x) => x.workspace.intl), []);
+    // A third account's section, or one without a recorded owner, is never reclaimed.
+    s6.setItem("proupiqr-aside-intl-v1:biz_cccccccc", JSON.stringify({ at: 1, reason: "other_account", name: L.OTHER_ACCOUNT_INTL, primary: true, owner: "c".repeat(32), book: PRIMARY_BOOK_ID, intl: { invoices: { inv_eur00001: { ...fp.intl.invoices.inv_usd00001, id: "inv_eur00001", currency: "EUR" } }, recurring: {}, clients: {} } }));
+    s6.setItem("proupiqr-aside-intl-v1:biz_dddddddd", JSON.stringify({ at: 1, reason: "other_account", name: L.OTHER_ACCOUNT_INTL, primary: true, book: PRIMARY_BOOK_ID, intl: { invoices: { inv_gbp00001: { ...fp.intl.invoices.inv_usd00001, id: "inv_gbp00001", currency: "GBP" } }, recurring: {}, clients: {} } }));
+    const again = loadShelf().shelf.books[PRIMARY_BOOK_ID];
+    assert.deepEqual(Object.keys(again.intl.invoices), ["inv_usd00001"], "another account's or an ownerless section stays aside");
+    assert.equal(listAside().length, 2);
+  }
+
   /* Review round 2: a guest's sidecar is tagged with the account that adopts the device before any save, so an
      old tab's later switch to another account (and its "Discard" of the stash) can't hand it to that account. */
   {

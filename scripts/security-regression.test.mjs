@@ -404,6 +404,10 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
   assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
   assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");
+  // ClientSheet (foreign-clients review round 3): the INR-only build counts the invoices it shows, and names foreign
+  // records it can't show instead of asking the user to delete invoices that aren't on screen (workspace.test simulates it).
+  assert.match(ui, /const hasInvoices = !!clientId && liveInvoices\(ws\)\.some\(\(i\) => i\.clientId === clientId\);\s*const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords\(ws, clientId\);/);
+  assert.match(ui, /\{existing && !hasInvoices && !hasHidden && \(/, "\"Remove client\" only when deleteClient would remove");
   // The business switcher (PR 4): a listbox that never looks like a dialog, a section tab or an invoice row to the e2e selectors.
   const switcherSrc = readFileSync(join(projectRoot, "src/components/workspace/BusinessSwitcher.tsx"), "utf8");
   assert.match(switcherSrc, /role="listbox"/);

@@ -231,12 +231,14 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
       const after = local();
       if (after && !sameAsServer(after)) void push();
     },
-    /** Revision and hash say this copy equals the server's: synced without a request. */
-    markClean() {
+    /**
+     * Revision and hash say this copy equals the server's: synced without a request. `keepsIntl` false: the hash
+     * matched with the foreign section left out, because this session's last answer came from a server that strips it.
+     */
+    markClean(keepsIntl = true) {
       const mine = local();
-      lastJson = mine ? canonicalJson(mine) : null;
-      // The hash matched the server's copy, intl included.
-      serverKeepsIntl = true;
+      lastJson = mine ? canonicalJson(keepsIntl ? mine : withoutIntl(mine)) : null;
+      serverKeepsIntl = keepsIntl;
       set("synced");
     },
     hold(next: BookSyncStatus, message = "") {
@@ -314,7 +316,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
   const statuses: Record<string, BookSyncStatus> = {};
   const messages: Record<string, string> = {};
   /** In-session revision and hash per book (also when the local save failed). */
-  const session = new Map<string, { rev: number; hash: string }>();
+  const session = new Map<string, { rev: number; hash: string; keepsIntl: boolean }>();
   /** Ids the server refused for the plan in this session: local-only, never PUT again until the plan changes. */
   const rejected = new Set<string>();
 
@@ -354,7 +356,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
         emit();
       },
       onSynced: (rev, hash, saved, keepsIntl) => {
-        session.set(id, { rev, hash });
+        session.set(id, { rev, hash, keepsIntl });
         // §2.5: the revision is recorded only once the book is safely in this browser's storage.
         // Never in legacy mode: a rolled-back server's revisions can't be trusted for the skip check.
         // fx: this reply came from a server that keeps ws.intl (foreign-clients spec §2.5).
@@ -397,7 +399,7 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       if (!keepAside(id, "read_only", now)) return;
       const saved = opts.resetBook(id, replacement);
       if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) {
-        session.set(id, { rev: body.rev, hash: bookHash(server) });
+        session.set(id, { rev: body.rev, hash: bookHash(server), keepsIntl: body.intl === 1 });
         if (saved) writeSyncMeta(owner, id, body.rev, bookHash(server), body.intl === 1);
       }
       opts.onAside?.();
@@ -701,9 +703,13 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     // Stored meta without the fx marker may describe a copy older code stripped of ws.intl: pull once
     // (foreign-clients spec §2.5). Meta this session wrote counts as confirmed.
     if (!meta || (!("fx" in meta && meta.fx === 1) && !session.has(id))) return engine.pull();
-    if (bookHash(mine) !== meta.hash) return engine.push();
+    // This session last heard from a server that strips ws.intl (a rollback, §2.6): its hash is of the stripped
+    // copy, so the foreign section is left out of the comparison too. Otherwise every visibility or online refresh
+    // would PUT a book that holds intl (review round 3); a push can't give that server the section anyway.
+    const keepsIntl = session.get(id)?.keepsIntl !== false;
+    if (bookHash(keepsIntl ? mine : withoutIntl(mine)) !== meta.hash) return engine.push();
     if (meta.rev !== rev) return engine.pull();
-    engine.markClean();
+    engine.markClean(keepsIntl);
     lastSyncedAt = Date.now();
   }
 

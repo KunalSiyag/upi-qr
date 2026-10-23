@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
-  liveRecurring, upsertPlan, allocatePayment, allLiveInvoices, currencyOf, getInvoice, repairIntl,
+  liveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, currencyOf, getInvoice, repairIntl,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
@@ -1658,8 +1658,11 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   const [gstin, setGstin] = useState(existing?.gstin ?? "");
   const [error, setError] = useState("");
   const { tr } = useWs();
-  // Both maps: deleteClient refuses while any live invoice, INR or foreign, references the client.
-  const hasInvoices = !!clientId && allLiveInvoices(ws).some((i) => i.clientId === clientId);
+  // deleteClient refuses while a live INR invoice, or any live foreign invoice or plan, references the client.
+  // This build shows INR records only (foreign-clients spec §0, second invariant), so a client held only by foreign
+  // records gets a message naming that cause, never "delete their invoices" for invoices it can't show.
+  const hasInvoices = !!clientId && liveInvoices(ws).some((i) => i.clientId === clientId);
+  const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords(ws, clientId);
 
   return (
     <Sheet title={existing ? tr("Edit {name}", { name: existing.name }) : tr("Add client")} onClose={onClose}>
@@ -1681,11 +1684,12 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="submit" className={`${primaryButton} flex-1`}>{tr("Save")}</button>
-          {existing && !hasInvoices && (
+          {existing && !hasInvoices && !hasHidden && (
             <button type="button" onClick={() => onSave(deleteClient(ws, existing.id, Date.now()), tr("{name} removed.", { name: existing.name }))} className={`${ghostButton} ${dangerText}`}>{tr("Remove client")}</button>
           )}
         </div>
         {existing && hasInvoices && <p className="text-xs text-muted">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
+        {existing && hasHidden && <p className="text-xs text-muted">{tr("This client has foreign-currency invoices this version can't show yet, so it can't be removed. Reload the page to update.")}</p>}
       </form>
     </Sheet>
   );

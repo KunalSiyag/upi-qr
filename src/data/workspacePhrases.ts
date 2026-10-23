@@ -161,6 +161,7 @@ export const WS_HI: Record<string, string> = {
   "Clients are added automatically when you create an invoice.": "इनवॉइस बनाते ही ग्राहक अपने-आप जुड़ जाते हैं।",
   "Clients sent these from your pay links. Check your bank or UPI app before confirming.": "ग्राहकों ने ये आपके पेमेंट लिंक से भेजे हैं। पुष्टि से पहले अपना बैंक या UPI ऐप देखें।",
   "Clients with invoices can't be removed — delete their invoices first.": "जिन ग्राहकों के इनवॉइस हैं, उन्हें हटाया नहीं जा सकता — पहले उनके इनवॉइस डिलीट करें।",
+  "This client has foreign-currency invoices this version can't show yet, so it can't be removed. Reload the page to update.": "इस ग्राहक के विदेशी मुद्रा वाले इनवॉइस हैं, जिन्हें यह वर्शन अभी नहीं दिखा सकता, इसलिए इसे हटाया नहीं जा सकता। अपडेट के लिए पेज रीलोड करें।",
   "Close": "बंद करें",
   "Cloud copy deleted and signed out. This device keeps its data.": "क्लाउड कॉपी डिलीट हो गई और आप साइन आउट हो गए। इस डिवाइस का डेटा बना रहेगा।",
   "Collected this month": "इस महीने मिले",

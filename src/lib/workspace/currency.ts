@@ -78,7 +78,9 @@ const MARKS: Record<ForeignCurrency, readonly string[]> = {
   SGD: ["SGD", "S$", "$"],
 };
 
-const FOREIGN_AMOUNT_RE = /^(?:\d{1,3}(?:,\d{3})+|\d{1,10})(?:\.\d{1,2})?$/;
+// The grouped form starts with 1-9: Western grouping never leads with a zero group, so "0,050" or "0,500" can only
+// be a decimal comma (EUR "five cents"), which is rejected, never read as 50.00 or 500.00.
+const FOREIGN_AMOUNT_RE = /^(?:[1-9]\d{0,2}(?:,\d{3})+|\d{1,10})(?:\.\d{1,2})?$/;
 
 /**
  * User text → integer minor units; null when invalid or above MAX_MINOR.

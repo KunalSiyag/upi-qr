@@ -66,6 +66,14 @@ assert.equal(parseMoneyToMinor("1.200,50", "EUR"), null, "a decimal comma is nev
 assert.equal(parseMoneyToMinor("12,50", "EUR"), null);
 assert.equal(parseMoneyToMinor("1,5", "USD"), null);
 assert.equal(parseMoneyToMinor("12,3456", "USD"), null);
+// A zero first group is never Western grouping, only a decimal comma (review round 3): "0,050" is not €50.00.
+for (const c of FOREIGN_CURRENCIES) {
+  for (const v of ["0,050", "0,500", "0,999", "00,100", "000,100", "0,000", "0,500.00"]) assert.equal(parseMoneyToMinor(v, c), null, `${c} ${v}`);
+}
+assert.equal(parseMoneyToMinor("0.50", "EUR"), 50, "a plain leading zero is still fine");
+assert.equal(parseMoneyToMinor("0", "USD"), 0);
+assert.equal(parseMoneyToMinor("1,000", "EUR"), 100000);
+assert.equal(parseMoneyToMinor("10,000,000.00", "GBP"), 1000000000);
 assert.equal(parseMoneyToMinor("1,200", "USD"), 120000);
 assert.equal(parseMoneyToMinor("1,234,567.5", "USD"), 123456750);
 assert.equal(parseMoneyToMinor("-5", "USD"), null);

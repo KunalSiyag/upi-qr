@@ -797,6 +797,24 @@ const three = book("Book Three", "three@okaxis", 120000);
     assert.ok(store.getItem(intlKey(PRIMARY_BOOK_ID)) && store.getItem(intlKey(B)));
     assert.equal((await srv.doc(PRIMARY_BOOK_ID)).workspace.invoices.inv_00000005.amountPaise, 5000, "the INR part keeps syncing");
     assert.equal(readSyncMeta().books[PRIMARY_BOOK_ID].fx, undefined, "no marker from a server without intl: 1");
+    // Review round 3: visibility and online refreshes compare like with like (the stripped hash against the
+    // stripped copy), so they GET the index and push nothing, for the primary and for an extra book.
+    const quiet = srv.count((c) => c.method === "PUT");
+    for (let i = 0; i < 4; i++) {
+      globalThis.document.dispatchEvent(new Event("visibilitychange"));
+      if (i === 2) globalThis.window.dispatchEvent(new Event("online"));
+      await new Promise((r) => setTimeout(r, 250));
+    }
+    assert.ok(srv.count((c) => c.method === "GET" && c.url === BOOKS_URL) > 0, "the refreshes did run");
+    assert.equal(srv.count((c) => c.method === "PUT"), quiet, "no PUT on visibility or online events against a stripping server");
+    assert.equal(h.state().status, "synced");
+    // A real INR change still syncs, once; a foreign-only change makes no request (that server can't keep it).
+    h.edit(PRIMARY_BOOK_ID, withInvoice(h.shelf().books[PRIMARY_BOOK_ID], "inv_00000007", "INV-0007", 7000));
+    assert.equal(await h.engine.flush(PRIMARY_BOOK_ID), true);
+    assert.equal(srv.count((c) => c.method === "PUT"), quiet + 1);
+    globalThis.document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((r) => setTimeout(r, 250));
+    assert.equal(srv.count((c) => c.method === "PUT"), quiet + 1, "still no PUT after the next refresh");
     h.engine.stop();
   }
   console.log("[shelf-sync] clients abroad: one pull after the upgrade, fx marker, cloud-only hold, no loop against a stripping server");
