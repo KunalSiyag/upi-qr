@@ -95,6 +95,14 @@ const LIMITS_DATA: BankLimit[] = [
     slug: "union-qr-generator"
   },
   {
+    name: "Indian Bank",
+    type: "bank",
+    dailyLimit: "₹1,00,000",
+    perTxnLimit: "₹1,00,000",
+    maxTxnsPerDay: "Not published",
+    notes: "NPCI standard cap; Indian Bank publishes no lower app limit. UPI over *99# (USSD) is capped at ₹5,000/day."
+  },
+  {
     name: "IndusInd Bank",
     type: "bank",
     dailyLimit: "₹1,00,000",

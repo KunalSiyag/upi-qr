@@ -1,5 +1,6 @@
 import { GLOSSARY_SLUGS } from "./glossary";
 import { PRODUCT_ROUTE_SLUGS } from "./products";
+import { ERROR_CODE_PAGES, errorCodeSlug } from "./upiErrorCodes";
 
 export const ENGLISH_SLUGS = new Set(["glossary",
   "",
@@ -119,6 +120,7 @@ export const ENGLISH_SLUGS = new Set(["glossary",
   "blog",
   ...GLOSSARY_SLUGS,
   ...PRODUCT_ROUTE_SLUGS,
+  ...ERROR_CODE_PAGES.map((item) => `upi-error-codes/${errorCodeSlug(item.code)}`),
 ]);
 
 import { localizedToolSlugs } from "./localizedTools";
