@@ -50,6 +50,14 @@ try {
   const mismatch = await rpc({ jsonrpc: "2.0", id: "x", method: "tools/list", params: { _meta: meta } }, modern("tools/call"));
   check("header mismatch → 400 HeaderMismatch", mismatch.status === 400 && (await mismatch.json()).error?.code === -32020);
 
+  if (PROD) {
+    // The build output routes these ahead of Vercel's trailing-slash 308 (astro.config.mjs).
+    const slashless = await fetch(`${DEV}/mcp`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/json", Accept: "application/json, text/event-stream", ...LEGACY }, body: JSON.stringify({ jsonrpc: "2.0", id: 5, method: "tools/list" }) });
+    check("POST /mcp (no slash) answers without a redirect", slashless.status === 200 && (await slashless.json()).result?.tools?.length === 9, String(slashless.status));
+    const oauth = await fetch(`${DEV}/mcp/.well-known/oauth-protected-resource`, { redirect: "manual" });
+    check("OAuth discovery under /mcp/ → 404, not a redirect (the server has no sign-in)", oauth.status === 404, String(oauth.status));
+  }
+
   // People and browsers.
   const page = await fetch(`${DEV}/mcp/`, { headers: { Accept: "text/html" } });
   check("a browser gets a short explainer", page.status === 200 && (await page.text()).includes("This is the Pro UPI QR MCP server"));

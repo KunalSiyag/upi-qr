@@ -1,7 +1,7 @@
 // Serves the *production* build locally: static files from .vercel/output/static
 // and everything else through the real Vercel function bundle
-// (.vercel/output/functions/_render.func/…/entry.mjs), with Vercel's trailing-slash
-// redirect. Lets the e2e suites run against exactly what will be deployed.
+// (the handler named in .vercel/output/functions/_render.func/.vc-config.json), with
+// the build output's routes up to and including Vercel's trailing-slash redirect. Lets the e2e suites run against exactly what will be deployed.
 //
 //   PORT=4500 node scripts/e2e/prod-server.mjs   (env: KV_REST_API_URL, RAZORPAY_*, VAPID_*, …)
 import { createServer } from "node:http";
@@ -11,7 +11,11 @@ import { pathToFileURL } from "node:url";
 
 const ROOT = new URL("../../", import.meta.url).pathname;
 const STATIC = join(ROOT, ".vercel/output/static");
-const ENTRY = join(ROOT, ".vercel/output/functions/_render.func/.vercel/output/server/entry.mjs");
+const FUNC = join(ROOT, ".vercel/output/functions/_render.func");
+const ENTRY = join(FUNC, JSON.parse(readFileSync(join(FUNC, ".vc-config.json"), "utf8")).handler);
+const config = JSON.parse(readFileSync(join(ROOT, ".vercel/output/config.json"), "utf8"));
+// Routes ahead of the 308 (the adapter's /.well-known pass-through, astro.config.mjs's MCP routes).
+const EARLY = config.routes.slice(0, config.routes.findIndex((route) => route.status === 308)).map((route) => ({ ...route, re: new RegExp(route.src) }));
 const PORT = Number(process.env.PORT || 4500);
 
 // Clerk keys come from .env.local like on a developer machine; values are never printed.
@@ -37,8 +41,13 @@ function staticFile(pathname) {
 createServer(async (req, res) => {
   try {
     const url = new URL(req.url, `http://localhost:${PORT}`);
+    const early = EARLY.find((route) => route.re.test(url.pathname));
+    if (early?.status && early.dest) {
+      res.writeHead(early.status, { "Content-Type": TYPES[extname(early.dest)] ?? "text/plain" });
+      return res.end(readFileSync(join(STATIC, early.dest)));
+    }
     // Vercel route: /path (no extension) → 308 /path/
-    if (!url.pathname.endsWith("/") && !/\.\w+$/.test(url.pathname)) {
+    if (!early && !url.pathname.endsWith("/") && !/\.\w+$/.test(url.pathname)) {
       res.writeHead(308, { Location: `${url.pathname}/${url.search}` });
       return res.end();
     }
