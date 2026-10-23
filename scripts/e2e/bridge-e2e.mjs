@@ -54,11 +54,25 @@ try {
   const invoices = Object.values(data.invoices);
   check("re-tracking updates instead of duplicating", invoices.length === 1 && invoices[0].amountPaise === 2065000 && invoices[0].payments.length === 1, JSON.stringify(invoices.map((i) => [i.number, i.amountPaise, i.payments.length])));
 
-  // Review round 2: the tracker's storage code is prefetched once the page is idle, so the click needs no network
-  // (connection lost, or a deploy replaced the chunk while the page was open).
-  await b.eval("const d = JSON.parse(localStorage.getItem('proupiqr-invoice-draft')); localStorage.clear(); d.invoiceNo = 'KDS-105'; localStorage.setItem('proupiqr-invoice-draft', JSON.stringify(d)); true");
+  // A device with a payment book prefetches the tracker's storage code on idle, without an edit.
   await b.go(BASE + "/invoice-generator/", 1500);
-  check("tracker code is prefetched on idle", await b.waitFor("performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))", 12000));
+  check("with a payment book: tracker code is prefetched on idle", await b.waitFor("performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))", 12000));
+
+  // Review round 2: the tracker's storage code is prefetched once the page is idle, so the click needs no network
+  // (connection lost, or a deploy replaced the chunk while the page was open). Review round 4: on a device without a
+  // payment book, only after the visitor edits the document; a visitor who only reads the page never downloads it.
+  const fetchedTracker = "performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))";
+  for (const [path, tool] of [["/receipt-generator/", "receipt"], ["/invoice-generator/", "invoice"]]) {
+    await b.eval("const d = JSON.parse(localStorage.getItem('proupiqr-invoice-draft')); localStorage.clear(); d.invoiceNo = 'KDS-105'; localStorage.setItem('proupiqr-invoice-draft', JSON.stringify(d)); true");
+    await b.go(BASE + path, 1500);
+    await b.eval("document.querySelector('#invoice-tool, #receipt-tool, #tool')?.scrollIntoView(); true");
+    await b.waitFor("[...document.querySelectorAll('button')].some(b => /Track payment|Save to payment book/.test(b.textContent))", 10000);
+    await sleep(6000);
+    check(`${tool} generator, no payment book, no edit: tracker code never downloaded`, !(await b.eval(fetchedTracker)));
+  }
+  // An edit (the notes field), then idle: prefetched.
+  await b.eval("const el = [...document.querySelectorAll('textarea')].pop(); Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value').set.call(el, 'Thanks for your business'); el.dispatchEvent(new Event('input', { bubbles: true })); true");
+  check("after an edit: tracker code is prefetched on idle", await b.waitFor(fetchedTracker, 12000));
   await b.send("Network.setBlockedURLs", { urls: ["*/_astro/localStore*"] });
   try {
     await b.eval("document.getElementById('invoice-tool').scrollIntoView(); true");

@@ -292,8 +292,12 @@ export const SET_ASIDE_INTL = "Clients abroad (set aside)";
 /** The account a set-aside foreign section was written for (its sidecar's owner) and the book it belonged to. */
 type IntlOrigin = { owner: string | null; book: string };
 
-/** A set-aside copy that is only a foreign section. */
-const intlCopy = (name: string, intl: IntlData): Workspace => ({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name }, intl });
+/**
+ * A set-aside copy that is only a foreign section. Its business stays empty (time 0): the list label
+ * (OTHER_ACCOUNT_INTL / SET_ASIDE_INTL) is aside metadata only, so a download restored into a nameless business
+ * can never make it the business name (review round 4).
+ */
+const intlCopy = (intl: IntlData): Workspace => ({ ...emptyWorkspace(), intl });
 
 function readSidecar(id: string, text: string | null = get(intlKey(id))): { owner: string | null; intl: IntlData | undefined } | null {
   const raw = parseJson(text) as { owner?: unknown; intl?: unknown } | null;
@@ -319,7 +323,7 @@ function sidecarIntl(id: string): IntlData | undefined {
   if (!side) return undefined;
   if (sidecarJoins(side.owner)) return side.intl;
   if (!side.intl) drop(intlKey(id));
-  else if (putAside(newBookId(), "other_account", intlCopy(OTHER_ACCOUNT_INTL, side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id })) drop(intlKey(id));
+  else if (putAside(newBookId(), "other_account", intlCopy(side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id }, OTHER_ACCOUNT_INTL)) drop(intlKey(id));
   return undefined;
 }
 
@@ -430,7 +434,7 @@ export function reconcileStashIntl(index: BookIndex = loadIndex()): void {
       continue;
     }
     const name = mine ? SET_ASIDE_INTL : OTHER_ACCOUNT_INTL;
-    if (putAside(newBookId(), mine ? "stray" : "other_account", intlCopy(name, side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id })) drop(key);
+    if (putAside(newBookId(), mine ? "stray" : "other_account", intlCopy(side.intl), id === PRIMARY_BOOK_ID, { owner: side.owner, book: id }, name)) drop(key);
   }
 }
 
@@ -561,12 +565,14 @@ export interface AsideBook {
   workspace: Workspace;
   /** A first business (primary) of some account: downloaded as a plain workspace backup, so any device can restore it. */
   fromPrimary: boolean;
+  /** The book a set-aside foreign section came from (recorded with it), when known. */
+  origin?: string;
 }
 
-type AsideRaw = { at?: unknown; reason?: unknown; name?: unknown; workspace?: unknown; primary?: unknown; intl?: unknown };
+type AsideRaw = { at?: unknown; reason?: unknown; name?: unknown; workspace?: unknown; primary?: unknown; intl?: unknown; book?: unknown };
 
 /** The INR part of a copy that is only a foreign section: no legacy record, and a business that holds a name at most. */
-function intlOnly(ws: Workspace): boolean {
+export function intlOnly(ws: Workspace): boolean {
   if (!ws.intl) return false;
   // Equal to an empty workspace that has only a business name: no client, invoice or plan, tombstones included.
   return canonicalJson({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name: ws.business.name } }) === canonicalJson(withoutIntl(ws));
@@ -579,11 +585,11 @@ function readAside(id: string): AsideBook | null {
   const meta = raw && typeof raw === "object" ? raw : side && typeof side === "object" ? side : null;
   if (!meta) return null;
   const name = typeof meta.name === "string" ? meta.name.slice(0, 80) : "";
-  let workspace = raw && typeof raw === "object"
-    ? sanitizeWorkspace(raw.workspace)
-    : sanitizeWorkspace({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name } });
+  // A copy that is only a foreign section has an empty business: its name is the list label, never data.
+  let workspace = raw && typeof raw === "object" ? sanitizeWorkspace(raw.workspace) : emptyWorkspace();
   const intl = side && typeof side === "object" ? sanitizeWorkspace({ intl: side.intl }).intl : undefined;
   if (intl) workspace = sanitizeWorkspace({ ...workspace, intl: mergeIntl(workspace.intl, intl) });
+  const origin = side && typeof side === "object" && isBookId(side.book) ? side.book : undefined;
   return {
     id,
     at: typeof meta.at === "number" ? meta.at : 0,
@@ -591,7 +597,24 @@ function readAside(id: string): AsideBook | null {
     name,
     workspace,
     fromPrimary: meta.primary === true,
+    ...(origin ? { origin } : {}),
   };
+}
+
+/**
+ * The "Download it" file of a set-aside copy. A copy that is only a foreign section is tagged with the book it came
+ * from (review round 4): a first business's restores into the first business (V1 tagged biz_primary, which asks
+ * before merging into it while another business is active), never into whichever business is active. Any other
+ * first-business copy stays a plain workspace backup, routed by its UPI ID and name; any other copy is a
+ * single-business file under its own id.
+ */
+export function asideBackupJson(aside: AsideBook, exportedAt = new Date().toISOString()): string {
+  const onlyIntl = intlOnly(aside.workspace);
+  if (aside.fromPrimary && !onlyIntl) return JSON.stringify({ app: "proupiqr-workspace", exportedAt, workspace: aside.workspace }, null, 2);
+  const id = !onlyIntl ? aside.id : aside.fromPrimary ? PRIMARY_BOOK_ID : aside.origin ?? aside.id;
+  // An empty business, never a label: restoreFrom takes a backup's business into a nameless one.
+  const workspace = onlyIntl ? { ...aside.workspace, business: emptyBusiness(0) } : aside.workspace;
+  return backupJson({ index: emptyIndex(), books: { [id]: workspace } }, { book: id }, exportedAt);
 }
 
 const asideExists = (id: string): boolean => get(`${ASIDE_PREFIX}${id}`) !== null || get(asideIntlKey(id)) !== null;
@@ -602,12 +625,14 @@ const asideExists = (id: string): boolean => get(`${ASIDE_PREFIX}${id}`) !== nul
  * The foreign section goes to its own key first; proupiqr-aside-v1:<id> gets the
  * INR part only, and isn't written for a copy that is only a foreign section.
  */
-function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = false, origin?: IntlOrigin): boolean {
+function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = false, origin?: IntlOrigin, label?: string): boolean {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return false;
   const key = `${ASIDE_PREFIX}${id}`;
   const before = readAside(id);
   const workspace = before ? mergeWorkspaces(before.workspace, ws) : ws;
-  const meta = { at: Date.now(), reason, name: workspace.business.name, ...(fromPrimary ? { primary: true } : {}) };
+  // The list label: the business name, else the label of a copy that is only a foreign section (metadata only).
+  const name = workspace.business.name || label || before?.name || "";
+  const meta = { at: Date.now(), reason, name, ...(fromPrimary ? { primary: true } : {}) };
   // Where a foreign section came from (only on the foreign-section key, which older code never reads).
   const from = origin ? { ...(origin.owner !== null ? { owner: origin.owner } : {}), book: origin.book } : {};
   const sideBefore = get(asideIntlKey(id));
@@ -731,8 +756,14 @@ export function sweepStrayIntl(index: BookIndex, owner: string | null = get(OWNE
       handled.push(id);
       continue;
     }
-    const asideId = asideExists(id) ? newBookId() : id;
-    if (putAside(asideId, sidecarJoins(side?.owner ?? null) ? "stray" : "other_account", joined, false, { owner: side?.owner ?? null, book: id })) {
+    // This account's sidecar joins a copy already set aside under the same id (an older tab retired the book first
+    // and set aside only its INR part, spec §2.4); another account's, or one next to another account's copy, gets
+    // a copy of its own (review round 4).
+    const joins = sidecarJoins(side?.owner ?? null);
+    const existing = readAside(id);
+    const same = joins && existing !== null && existing.reason !== "other_account";
+    const asideId = asideExists(id) && !same ? newBookId() : id;
+    if (putAside(asideId, same && existing ? existing.reason : joins ? "stray" : "other_account", joined, false, { owner: side?.owner ?? null, book: id })) {
       drop(key);
       handled.push(id);
     }
@@ -839,25 +870,6 @@ export function loadWorkspace(): Workspace {
 /** Returns false when storage is full or blocked so the UI can warn. */
 export function saveWorkspace(ws: Workspace): boolean {
   return saveBook(emptyIndex(), PRIMARY_BOOK_ID, ws);
-}
-
-/** The primary book only (old behaviour), for callers that haven't moved to onShelfChange. */
-export function onExternalChange(current: () => Workspace, apply: (ws: Workspace) => void): () => void {
-  const handler = (event: StorageEvent) => {
-    if ((event.key !== WORKSPACE_KEY && event.key !== intlKey(PRIMARY_BOOK_ID)) || !event.newValue) return;
-    try {
-      // The book key joined with its sidecar, as loadBook reads them.
-      const raw = event.key === WORKSPACE_KEY ? event.newValue : get(WORKSPACE_KEY);
-      if (raw === null) return;
-      const side = readSidecar(PRIMARY_BOOK_ID, event.key === WORKSPACE_KEY ? get(intlKey(PRIMARY_BOOK_ID)) : event.newValue);
-      const legacy = sanitizeWorkspace(JSON.parse(raw));
-      apply(mergeWorkspaces(current(), side?.intl && sidecarJoins(side.owner) ? sanitizeWorkspace({ ...legacy, intl: mergeIntl(legacy.intl, side.intl) }) : legacy));
-    } catch {
-      // Ignore malformed writes from other tabs.
-    }
-  };
-  window.addEventListener("storage", handler);
-  return () => window.removeEventListener("storage", handler);
 }
 
 // ---------------------------------------------------------------------------

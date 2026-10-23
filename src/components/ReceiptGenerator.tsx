@@ -112,7 +112,8 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [downloadPngState, setDownloadPngState] = useState<"idle" | "busy" | "error">("idle");
   const [shareState, setShareState] = useState<"idle" | "busy">("idle");
   const [bridgeBusy, setBridgeBusy] = useState(false);
-  // The tracker's storage code is fetched once the page is idle, so "Save to payment book" needs no network later.
+  // The tracker's storage code is fetched when the page is idle (after the first edit unless this device has a
+  // payment book), so "Save to payment book" needs no network later.
   // Only where that button renders (rupee receipts): other currencies never download it.
   const tracksPayments = displayCurrency(lang).code === "INR";
   useEffect(() => (tracksPayments ? prefetchBridgeWhenIdle() : undefined), [tracksPayments]);

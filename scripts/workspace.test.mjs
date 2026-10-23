@@ -479,6 +479,11 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.deepEqual(Object.keys(s.byCurrency), ["USD"], "a non-foreign key, an all-empty entry and an unknown key are dropped");
     assert.equal(M.sanitizeWorkspace({ intl: { settings: { ...settings, lutFy: "2026-28" } } }).intl.settings.lutFy, "");
     assert.equal(M.sanitizeWorkspace({ intl: { settings: { ...settings, byCurrency: { USD: { payUrl: "http://x" } } } } }).intl.settings.byCurrency, undefined);
+    // Review round 4: exportUnderLut is `=== true` like `on`; a truthy non-boolean drops the ARN and FY too.
+    for (const truthy of [1, "true", "yes", {}]) {
+      const t = M.sanitizeWorkspace({ intl: { settings: { ...settings, exportUnderLut: truthy } } }).intl.settings;
+      assert.deepEqual([t.exportUnderLut, t.lutArn, t.lutFy], [false, "", ""], `exportUnderLut ${JSON.stringify(truthy)}`);
+    }
   }
   {
     // Separate caps: old clients grow ws.invoices without knowing about intl.
@@ -627,6 +632,14 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // Settings with content are never overwritten by a restore.
     const kept = M.restoreFrom({ ...W, intl: { ...W.intl, settings: { ...settings, accountName: "Current", updatedAt: X + 1 } } }, W, X + 60);
     assert.equal(kept.intl.settings.accountName, "Current");
+    // Review round 4: so are settings holding only a per-currency override, or only the switch (§1.5).
+    const onlyOverride = { ...M.emptyIntlSettings(X + 1), byCurrency: { EUR: { accountName: "Sharma EU", bankName: "Wise EU", swift: "", account: "BE71096123456769", bankDetails: "", payUrl: "" } } };
+    const onlyOn = { ...M.emptyIntlSettings(X + 1), on: true };
+    for (const [label, current] of [["a byCurrency override", onlyOverride], ["on: true", onlyOn]]) {
+      const base = M.sanitizeWorkspace(clone({ ...W, intl: { ...W.intl, settings: current } }));
+      const after = M.restoreFrom(base, W, X + 60);
+      assert.deepEqual(after.intl.settings, base.intl.settings, `settings with only ${label} are kept`);
+    }
   }
 
   /* ---------- old-client simulation (legacy-model.ts = model.ts at 3ce60ef) ---------- */
@@ -776,6 +789,17 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     }
     assert.deepEqual(M.liveInvoices(mixed), M.liveInvoices(inrOnly));
     assert.deepEqual(M.liveRecurring(mixed), M.liveRecurring(inrOnly));
+    // Review round 4: allInvoiceViews orders both maps like invoiceViews (issueDate desc, then createdAt desc).
+    {
+      let o = upsertInvoice(inrBook, { ...inrBook.invoices.inv_inr00002, issueDate: "2026-09-10" }, X);
+      o = M.upsertInvoice(o, invoice("inv_usd00001", "ST-0003", "cli_acme0001", 450000, { currency: "USD", issueDate: "2026-09-05" }), X);
+      o = M.upsertInvoice(o, invoice("inv_usd00002", "ST-0004", "cli_globex01", 120050, { currency: "USD", issueDate: "2026-09-10", createdAt: X + 5 }), X);
+      o = M.sanitizeWorkspace(clone(o));
+      const day = "2026-10-11";
+      const order = M.allInvoiceViews(o, day).map((v) => v.invoice.id);
+      assert.deepEqual(order, ["inv_usd00002", "inv_inr00002", "inv_usd00001", "inv_inr00001"], "a foreign invoice sits between two INR ones by date");
+      assert.deepEqual(order.filter((id) => !id.startsWith("inv_usd")), M.invoiceViews(o, day).map((v) => v.invoice.id));
+    }
     assert.ok(M.invoiceViews(mixed, today).every((v) => v.currency === "INR"));
     assert.equal(snapshotFor(mixed, "inv_usd00001"), null, "a PR 1 server answers 404 for a foreign invoice link");
     assert.equal(payPageView(mixed, "inv_usd00001", today), null);

@@ -9,7 +9,7 @@ import {
 import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
-  backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
+  asideBackupJson, backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
   readOnlyBookIds, resetBook as resetStoredBook, restoreBackup, savePlanLimit, storedOwner,
   OTHER_ACCOUNT_INTL, SET_ASIDE_INTL, recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
@@ -1972,10 +1972,7 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
             </>
           )}
           <div className="mt-2 flex gap-3">
-            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, book.fromPrimary
-              // A first business of some account: a plain workspace backup, restorable anywhere (it asks before merging into another business).
-              ? JSON.stringify({ app: "proupiqr-workspace", exportedAt: new Date().toISOString(), workspace: book.workspace }, null, 2)
-              : backupJson({ index: { v: 1, books: { [PRIMARY_BOOK_ID]: { id: PRIMARY_BOOK_ID, createdAt: 0 }, [book.id]: { id: book.id, createdAt: 1 } } }, books: { [book.id]: book.workspace } }, { book: book.id }), "application/json")}>{tr("Download it")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, asideBackupJson(book), "application/json")}>{tr("Download it")}</button>
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardAside(book.id); setAside(listAside()); }}>{tr("Discard")}</button>
           </div>
         </div>
