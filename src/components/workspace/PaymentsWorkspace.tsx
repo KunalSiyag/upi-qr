@@ -6,7 +6,7 @@ import {
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
-import { PLANS } from "../../lib/workspace/entitlements";
+import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
   backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
@@ -823,7 +823,7 @@ function Workspace() {
                   : !isPro
                     ? tr("Pro gives up to {limit} businesses in one account for {price}/month, from your first payment.", { limit: PLANS.pro.businesses, price: PRO_PRICES.monthly.label })
                     : planLimit !== null && planLimit < PLANS.pro.businesses
-                      ? tr("During the free trial your account keeps {free} business. Pro gives up to {limit} from your first payment.", { free: PLANS.free.businesses, limit: PLANS.pro.businesses })
+                      ? tr("During the free trial you can keep up to {trial} businesses, and all of them are in use. Pro gives up to {limit} from your first payment.", { trial: TRIAL_BUSINESSES, limit: PLANS.pro.businesses })
                       : tr("Your plan includes {limit} businesses, and all of them are in use.", { limit: planLimit ?? PLANS.pro.businesses })}
             </p>
             <div className="flex flex-wrap gap-2">

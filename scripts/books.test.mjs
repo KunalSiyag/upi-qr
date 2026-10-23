@@ -185,13 +185,13 @@ assert.equal(fnv1a(""), "811c9dc5");
 assert.equal(fnv1a("a"), "e40c292c");
 assert.equal(bookHash(emptyWorkspace()), bookHash(JSON.parse(JSON.stringify(emptyWorkspace()))));
 
-/* ---------- plans: Free 1, Pro 20, trial 1 ---------- */
+/* ---------- plans: Free 1, Pro 20, trial 3 ---------- */
 assert.equal(PLANS.free.businesses, 1);
 assert.equal(PLANS.pro.businesses, 20);
 const sub = (over) => ({ subscriptionId: "sub_1", status: "active", interval: "monthly", currentEnd: NOW + 20 * DAY, updatedAt: NOW, ...over });
 assert.equal(businessesFor(null, NOW), 1, "free");
 assert.equal(businessesFor(sub(), NOW), 20, "paid Pro");
-assert.equal(businessesFor(sub({ trialEndsAt: NOW + 5 * DAY }), NOW), 1, "in trial: one business until the first payment");
+assert.equal(businessesFor(sub({ trialEndsAt: NOW + 5 * DAY }), NOW), 3, "in trial: three businesses until the first payment");
 assert.equal(businessesFor(sub({ trialEndsAt: NOW - DAY }), NOW), 20, "trial over and paying");
 assert.equal(businessesFor(sub({ status: "cancelled", currentEnd: NOW - DAY }), NOW), 1, "expired");
 // A trial whose first charge failed (Dodo on_hold/past_due → pending, grace period) has paid nothing: still 1.
@@ -203,7 +203,7 @@ assert.equal(businessesFor(sub({ status: "pending", currentEnd: NOW - DAY }), NO
 const trialPlan = planFromSubscription(sub({ trialEndsAt: NOW + 5 * DAY }), NOW);
 assert.equal(trialPlan.id, "pro", "every other Pro benefit applies during the trial");
 assert.equal(trialPlan.statementLinks, true);
-assert.equal(trialPlan.businesses, 1);
+assert.equal(trialPlan.businesses, 3);
 assert.equal(planFromSubscription(sub(), NOW), PLANS.pro);
 assert.equal(planFromSubscription(null, NOW), PLANS.free);
 // planForStrict rethrows store errors (callers answer 503); planFor still falls back to Free.
@@ -251,4 +251,4 @@ assert.equal(claimNotification({ ...claim, businessId: "javascript:alert(1)" }, 
 assert.ok(METRICS.includes("business_added") && METRICS.includes("business_limit"));
 assert.ok(METRIC_LABELS.business_added && METRIC_LABELS.business_limit);
 
-console.log("[books] index add-once/delete-final, server merge, plan caps (Free 1 / Pro 20 / trial 1), pay-link keys, routing, projections and claim alerts passed");
+console.log("[books] index add-once/delete-final, server merge, plan caps (Free 1 / Pro 20 / trial 3), pay-link keys, routing, projections and claim alerts passed");

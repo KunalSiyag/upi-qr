@@ -23,6 +23,8 @@ export interface Plan {
 /** Businesses per account. The only place these numbers live: read them through PLANS or businessesFor(). */
 export const FREE_BUSINESSES = 1;
 export const PRO_BUSINESSES = 20;
+/** During the free trial (owner decision 2026-10-23: enough to try several businesses before paying). */
+export const TRIAL_BUSINESSES = 3;
 
 export const PLANS: Record<PlanId, Plan> = {
   free: { id: "free", activePaylinks: FREE_ACTIVE_PAYLINKS, brandedPayPage: true, statementLinks: false, msmeTools: false, businesses: FREE_BUSINESSES },
@@ -30,12 +32,14 @@ export const PLANS: Record<PlanId, Plan> = {
 };
 
 /**
- * The business limit for a subscription. Only paid Pro unlocks more than one
- * business: an account in its free trial (no payment taken yet) keeps
- * PLANS.free.businesses, while every other Pro benefit applies during the trial.
+ * The business limit for a subscription. Paid Pro unlocks PLANS.pro.businesses; an
+ * account in its free trial (no payment taken yet) gets TRIAL_BUSINESSES, and a trial
+ * whose first charge hasn't gone through falls back to PLANS.free.businesses. Books
+ * past the limit after a trial ends become read-only, never deleted.
  */
 export function businessesFor(record: SubscriptionRecord | null, now: number = Date.now()): number {
-  if (!hasProAccess(record, now) || inTrial(record, now) || firstChargeMissing(record)) return PLANS.free.businesses;
+  if (!hasProAccess(record, now) || firstChargeMissing(record)) return PLANS.free.businesses;
+  if (inTrial(record, now)) return TRIAL_BUSINESSES;
   return PLANS.pro.businesses;
 }
 

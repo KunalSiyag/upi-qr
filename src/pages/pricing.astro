@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductShot from "../components/ProductShot.astro";
 import { PRO_PRICES, PRO_TRIAL_DAYS, REFUND_WINDOW_DAYS, YEARLY_SAVING_RUPEES } from "../data/pricing";
 import { FREE_ACTIVE_PAYLINKS } from "../lib/workspace/paylinks";
-import { PLANS } from "../lib/workspace/entitlements";
+import { PLANS, TRIAL_BUSINESSES } from "../lib/workspace/entitlements";
 import { billingProviders } from "../lib/billing/config";
 import { checkoutProvider } from "../lib/billing/provider";
 
@@ -92,7 +92,7 @@ const faqs = [
   },
   ...(PRO_TRIAL_DAYS > 0 ? [{
     question: "Is there a free trial?",
-    answer: `Yes. Your first Pro subscription starts with ${PRO_TRIAL_DAYS} days free. You add a payment method at checkout and pay ₹0 that day; the first payment is taken when the trial ends. Cancel from Settings before then and you pay nothing. One trial per account. During the trial your account keeps ${PLANS.free.businesses} business; up to ${PLANS.pro.businesses} unlock with the first payment.${checkout ? "" : " Pro checkout opens soon; join early access in Settings to hear when."}`,
+    answer: `Yes. Your first Pro subscription starts with ${PRO_TRIAL_DAYS} days free. You add a payment method at checkout and pay ₹0 that day; the first payment is taken when the trial ends. Cancel from Settings before then and you pay nothing. One trial per account. During the trial your account can keep up to ${TRIAL_BUSINESSES} businesses; up to ${PLANS.pro.businesses} unlock with the first payment.${checkout ? "" : " Pro checkout opens soon; join early access in Settings to hear when."}`,
   }] : []),
   {
     question: "Can I cancel anytime?",
