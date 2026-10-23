@@ -85,11 +85,11 @@ try {
   check("Free: PUT for the rejected id → 404 unknown_business", r.status === 404 && r.json.code === "unknown_business", r.text.slice(0, 200));
   check("Free: nothing stored for the rejected business", !(await keys()).some((k) => k.includes(ownerOf(FREE))), (await keys()).filter((k) => k.includes(ownerOf(FREE))).join(","));
 
-  // --- Trial: still 1 business ---
+  // --- Trial: up to 3 businesses ---
   const TRIAL = "user_e2eBooksTrial";
   await billing(TRIAL, trial);
-  r = await api("PUT", "/api/v1/workspace/books/", { user: TRIAL, body: { index: index(live("biz_trialsecond")), expectedOwner: ownerOf(TRIAL) } });
-  check("trial: a second business is rejected (paid Pro only)", r.status === 200 && r.json.rejected?.[0] === "biz_trialsecond" && r.json.plan?.id === "pro" && r.json.plan.businesses === 1, r.text.slice(0, 300));
+  r = await api("PUT", "/api/v1/workspace/books/", { user: TRIAL, body: { index: index(live("biz_trial00002"), live("biz_trial00003"), live("biz_trial00004")), expectedOwner: ownerOf(TRIAL) } });
+  check("trial: three businesses register, the fourth is rejected (more after the first payment)", r.status === 200 && r.json.rejected?.length === 1 && r.json.rejected[0] === "biz_trial00004" && r.json.plan?.id === "pro" && r.json.plan.businesses === 3, r.text.slice(0, 300));
 
   // --- Paid Pro: up to 20 ---
   const PRO20 = "user_e2eBooksPro20";
@@ -115,7 +115,7 @@ try {
   const r429 = await api("PUT", "/api/v1/workspace/books/", { user: BUDGET, body: { index: index(...batch(9, 3).map((id) => live(id)), live("biz_onemoreadd1")) } });
   check("add budget: 3 more fit exactly, then a single add → 429", r.status === 200 && r.json.rejected.length === 0 && r429.status === 429, `${r.status} ${r429.status}`);
   const istDay = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
-  check("metrics: business_added and business_limit counted", Number(await value(`metrics:business_added:${istDay}`)) === 19 + 60 && Number(await value(`metrics:business_limit:${istDay}`)) >= 3);
+  check("metrics: business_added and business_limit counted", Number(await value(`metrics:business_added:${istDay}`)) === 2 + 19 + 60 && Number(await value(`metrics:business_limit:${istDay}`)) >= 3);
 
   // --- Pro account with three businesses ---
   const PRO = "user_e2eBooksPro";

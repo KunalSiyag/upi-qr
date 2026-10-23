@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type FormEvent } from "react"
 import { authedFetch } from "../../lib/workspace/sync";
 import { trackProductEvent } from "../../lib/productEvents";
 import { PRO_PRICES, PRO_TRIAL_DAYS, YEARLY_SAVING_RUPEES } from "../../data/pricing";
-import { PLANS } from "../../lib/workspace/entitlements";
+import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { inputClass, primaryButton, secondaryButton } from "./ui";
 import { useWs } from "./i18n";
 
@@ -237,7 +237,7 @@ export function PlanPanel({ signedIn, onFlash, businesses, onPlanChange }: {
             : sub.status === "pending"
               ? <p>{tr("Your last renewal payment failed. Update your payment method to keep Pro.")}</p>
               : sub.trialEndsAt
-                ? <p>{tr("Free trial · first payment of {price} on {date}.", { price: PRO_PRICES[sub.interval].label, date: longDate(sub.trialEndsAt, dateLocale) })} {tr("Cancel before then and you won't be charged.")}{businesses ? <> {tr("Up to {limit} businesses after your first payment.", { limit: PLANS.pro.businesses })}</> : null}</p>
+                ? <p>{tr("Free trial · first payment of {price} on {date}.", { price: PRO_PRICES[sub.interval].label, date: longDate(sub.trialEndsAt, dateLocale) })} {tr("Cancel before then and you won't be charged.")}{businesses ? <> {tr("Up to {trial} businesses during the trial, {limit} after your first payment.", { trial: TRIAL_BUSINESSES, limit: PLANS.pro.businesses })}</> : null}</p>
                 : <p>{tr(sub.interval === "yearly" ? "Pro yearly" : "Pro monthly")}{sub.currentEnd ? tr(" · renews on {date}", { date: longDate(sub.currentEnd, dateLocale) }) : null}.</p>}
           {businesses && businesses.count > 1 && (sub.cancelAtCycleEnd || sub.status === "cancelled") && (
             <p className="mt-2 text-[13px] text-charcoal">{tr("You have {n} businesses. On Free they all stay and their pay links keep working, but only {primary} can be edited and you can't add more.", { n: businesses.count, primary: businesses.primary })}</p>

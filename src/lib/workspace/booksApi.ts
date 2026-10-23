@@ -67,7 +67,7 @@ async function liveIndex(d: BooksDeps, owner: string, id: string): Promise<{ ind
 /**
  * Downgrade = read-only (owner decision 2026-10-18): books ranked past
  * PLANS.free.businesses take no writes and no new links unless the strict plan
- * allows them (paid Pro; a trial counts as Free). The first business never reads billing here.
+ * allows them (paid Pro, or a trial up to TRIAL_BUSINESSES). The first business never reads billing here.
  */
 async function readOnly(d: BooksDeps, owner: string, index: BookIndex, id: string): Promise<{ plan: Plan | null } | ApiResult> {
   const rank = bookRank(index, id);

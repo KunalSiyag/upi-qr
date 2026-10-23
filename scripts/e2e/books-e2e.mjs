@@ -622,7 +622,7 @@ try {
   await setFile("c.json", JSON.stringify({ app: "proupiqr-business", formatVersion: 2, businesses: [{ id: C, workspace: three3 }] }));
   await sleep(800);
   check("R3: restore into a read-only business is refused and named", /Not restored into Third Shop: it's read-only on the Free plan\./.test(await text()) && (await storage(`proupiqr-book-v1:${C}`)) === threeBefore3);
-  // A trial account (businesses 1) restores at most one business.
+  // An account limited to one business (Free signed in, or a trial whose first charge failed) restores at most one.
   await setup({ signedIn: true, plan: { id: "pro", businesses: 1 }, registered: true });
   await b.go(BASE + "/app/?tab=settings", 3000);
   await b.waitFor(synced);

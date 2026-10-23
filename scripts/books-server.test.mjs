@@ -26,7 +26,7 @@ const PLAN = {
   pro: planFromSubscription(sub(), T),
   trial: planFromSubscription(sub({ trialEndsAt: T + 7 * 86_400_000 }), T),
 };
-assert.deepEqual([PLAN.free.businesses, PLAN.pro.businesses, PLAN.trial.businesses, PLAN.trial.id], [1, 20, 1, "pro"]);
+assert.deepEqual([PLAN.free.businesses, PLAN.pro.businesses, PLAN.trial.businesses, PLAN.trial.id], [1, 20, 3, "pro"]);
 
 function deps(planId = "free") {
   const metrics = [];
@@ -77,11 +77,12 @@ assert.equal(ownerMismatch({ expectedOwner: null }, OWNER).status, 409);
   assert.deepEqual([g.status, g.body.index, g.body.owner], [200, index(), OWNER]);
 }
 
-// Trial counts as 1 business; a billing error is 503, never "limit reached".
+// A trial keeps up to 3 businesses (the 4th is rejected); a billing error is 503, never "limit reached".
 {
   const { d, setPlan } = deps("trial");
-  const r = await putIndex(d, index(meta("biz_second01")));
-  assert.deepEqual([r.body.rejected, r.body.plan], [["biz_second01"], { id: "pro", businesses: 1 }]);
+  // Additions in one request share the server's timestamp, so they rank by id.
+  const r = await putIndex(d, index(meta("biz_trial00002"), meta("biz_trial00003"), meta("biz_trial00004")));
+  assert.deepEqual([r.body.rejected, r.body.plan], [["biz_trial00004"], { id: "pro", businesses: 3 }]);
   setPlan("down");
   const down = await putIndex(d, index(meta("biz_second01")));
   assert.equal(down.status, 503);
@@ -159,7 +160,7 @@ assert.equal(ownerMismatch({ expectedOwner: null }, OWNER).status, 409);
   assert.deepEqual(Object.keys((await getBookIndex(d, OWNER)).body.revs), ["biz_primary", "biz_bbbbbb01", "biz_cccccc01"]);
   // Deletes still work on Free.
   setPlan("trial");
-  assert.equal((await putBook(d, OWNER, "biz_cccccc01", { workspace: book("Three", "three@okaxis"), expectedOwner: OWNER })).status, 402, "a trial is not paid Pro");
+  assert.equal((await putBook(d, OWNER, "biz_cccccc01", { workspace: book("Three", "three@okaxis"), expectedOwner: OWNER })).status, 200, "a trial can edit its third business");
   setPlan("down");
   assert.equal((await putBook(d, OWNER, "biz_cccccc01", { workspace: book("Three", "three@okaxis"), expectedOwner: OWNER })).status, 503);
   assert.equal((await createBookLink(d, OWNER, "biz_cccccc01", { invoiceId: "inv_00000001" }, token, vpa)).status, 503);
@@ -363,4 +364,4 @@ assert.equal(ownerMismatch({ expectedOwner: null }, OWNER).status, 409);
   assert.equal((await putBookIndex(d, OWNER, { index: index(meta("biz_onemore01")) }, consumeAdd)).status, 429);
 }
 
-console.log("[books-server] Free/trial limit 1, paid Pro 20, read-only downgrade (402) and 503 on billing errors, owner checks, per-book slots and links, delete + cleanup retry, race undo, delete cloud copy");
+console.log("[books-server] Free limit 1, trial 3, paid Pro 20, read-only downgrade (402) and 503 on billing errors, owner checks, per-book slots and links, delete + cleanup retry, race undo, delete cloud copy");
