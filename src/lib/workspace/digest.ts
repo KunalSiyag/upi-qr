@@ -36,12 +36,17 @@ export function morningDigest(ws: Workspace, today: string): Digest | null {
 // workspace (open invoices + monthly plans) in a few KB instead of the full
 // document (up to 900 KB), so the 09:00 run reads little and scales with accounts.
 
+/** The version written today. v2 adds the book's business name (multi-business digest); readers accept both. */
 export const PROJECTION_VERSION = 1;
+export const PROJECTION_VERSIONS_READ: readonly number[] = [1, 2];
+const MAX_PROJECTED_NAME = 200;
 const MAX_PROJECTED_INVOICES = 500;
 const RECURRING_LOOKBACK_MONTHS = 13;
 
 export interface DigestProjection {
   v: number;
+  /** v2: the book's business name. Parsed v1 projections carry "". Not written while PROJECTION_VERSION is 1. */
+  name?: string;
   /** Open (unpaid, not void) invoices: id, number, client name, issue date, due date, balance paise. */
   open: [string, string, string, string, string, number][];
   /** Live, unpaused plans: id, client name, amount paise, day of month, due-after days, start month, end month, months already created. */
@@ -99,5 +104,8 @@ export function parseProjection(raw: unknown): DigestProjection | null {
   const value = typeof raw === "string" ? (() => { try { return JSON.parse(raw); } catch { return null; } })() : raw;
   if (!value || typeof value !== "object") return null;
   const r = value as Record<string, unknown>;
-  return r.v === PROJECTION_VERSION && Array.isArray(r.open) && Array.isArray(r.plans) ? (r as unknown as DigestProjection) : null;
+  if (typeof r.v !== "number" || !PROJECTION_VERSIONS_READ.includes(r.v) || !Array.isArray(r.open) || !Array.isArray(r.plans)) return null;
+  if (r.v >= 2 && typeof r.name !== "string") return null;
+  const name = r.v >= 2 ? (r.name as string).slice(0, MAX_PROJECTED_NAME) : "";
+  return { v: r.v, name, open: r.open as DigestProjection["open"], plans: r.plans as DigestProjection["plans"] };
 }

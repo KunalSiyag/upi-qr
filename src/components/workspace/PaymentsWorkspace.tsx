@@ -19,6 +19,7 @@ import { StatementSheet } from "./StatementSheet";
 import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
+import { parseLinkKey, PRIMARY_BOOK_ID } from "../../lib/workspace/books";
 import { PRO_PRICES } from "../../data/pricing";
 import { gatewayFeePaise, UPI_MDR } from "../../lib/upiMdr";
 import { card, cardNote, cardTitle, dangerText, downloadText, Field, ghostButton, Icon, inputClass, primaryButton, rowButton, rowPrimary, secondaryButton, Sheet, StatusBadge } from "./ui";
@@ -199,26 +200,32 @@ function Workspace() {
   const chase = useMemo(() => chaseList(views).slice(0, 6), [views]);
   const balances = useMemo(() => clientBalances(views), [views]);
   const clients = useMemo(() => liveClients(ws), [ws]);
+  // Rollback guard: this screen shows one business, so it only ever reads that business's links. Keys of other
+  // businesses ("<bookId>/<subject>", from a later server) are skipped: never offered to turn off, clear or confirm here.
+  const primaryLinks = useMemo(
+    () => (paylinks ? Object.entries(paylinks.byInvoice).filter(([key]) => parseLinkKey(key).bookId === PRIMARY_BOOK_ID) : []),
+    [paylinks],
+  );
   const claimedUtrs = useMemo(() => {
     const map = new Map<string, string>();
-    if (paylinks) for (const [invoiceId, link] of Object.entries(paylinks.byInvoice)) for (const c of link.claims) map.set(c.utr, invoiceId);
+    for (const [invoiceId, link] of primaryLinks) for (const c of link.claims) map.set(c.utr, invoiceId);
     return map;
-  }, [paylinks]);
+  }, [primaryLinks]);
 
   const pendingClaims = useMemo(() => {
     if (!paylinks) return [];
-    return Object.entries(paylinks.byInvoice).flatMap(([invoiceId, link]) => {
+    return primaryLinks.flatMap(([invoiceId, link]) => {
       const view = views.find((v) => v.invoice.id === invoiceId);
       return view ? link.claims.map((claim) => ({ invoiceId, token: link.token, claim, view })) : [];
     });
-  }, [paylinks, views]);
+  }, [paylinks, primaryLinks, views]);
 
   // Statement links are keyed "stmt:<clientId>"; their claims are applied oldest invoice first.
   const statementLinks = useMemo(() => {
     const map = new Map<string, { token: string; claims: { utr: string; amountPaise: number | null; at: number }[] }>();
-    if (paylinks) for (const [key, link] of Object.entries(paylinks.byInvoice)) if (key.startsWith("stmt:")) map.set(key.slice(5), link);
+    for (const [key, link] of primaryLinks) if (key.startsWith("stmt:")) map.set(key.slice(5), link);
     return map;
-  }, [paylinks]);
+  }, [primaryLinks]);
   const statementClaims = useMemo(
     () => [...statementLinks.entries()].flatMap(([clientId, link]) => link.claims.map((claim) => ({ clientId, token: link.token, claim }))),
     [statementLinks],
@@ -656,7 +663,7 @@ function Workspace() {
               <SyncPanel
                 state={sync}
                 paylinks={paylinks}
-                paidLinkTokens={paylinks ? Object.entries(paylinks.byInvoice).filter(([id]) => { if (id.startsWith("stmt:")) return false; const v = views.find((x) => x.invoice.id === id); return !v || v.balancePaise === 0; }).map(([, l]) => l.token) : []}
+                paidLinkTokens={paylinks ? primaryLinks.filter(([id]) => { if (id.startsWith("stmt:")) return false; const v = views.find((x) => x.invoice.id === id); return !v || v.balancePaise === 0; }).map(([, l]) => l.token) : []}
                 onRevokePaid={async (tokens) => { await Promise.all(tokens.map((t) => deletePaylink(t, "link"))); await refreshLinks(); setFlash(tr(tokens.length === 1 ? "Turned off {n} pay link for paid invoices." : "Turned off {n} pay links for paid invoices.", { n: tokens.length })); }}
                 invoiceCount={views.length}
                 onSyncNow={() => syncRef.current?.syncNow()}
