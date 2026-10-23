@@ -4,7 +4,7 @@ import { jsonResponse } from "../../../lib/apiSecurity";
 import { allowLocalPushEndpoints, cronSecret, vapidConfig } from "../../../lib/push/config";
 import { runMorningDigest } from "../../../lib/push/digestRunner";
 import { pushStore } from "../../../lib/push/kvPushStore";
-import { cloudStore, projectionStore } from "../../../lib/workspace/kvCloudStore";
+import { bookIndexStore, cloudStore, projectionStore } from "../../../lib/workspace/kvCloudStore";
 import { recordMetric } from "../../../lib/metrics";
 import { billingProviders } from "../../../lib/billing/config";
 import { billingStore } from "../../../lib/billing/kvBillingStore";
@@ -46,7 +46,7 @@ export const GET: APIRoute = async ({ request }) => {
   try {
     // 50 s budget keeps us inside a 60 s function limit; leftovers are reported in `remaining`.
     const result = await runMorningDigest({
-      push: pushStore(), cloud: cloudStore(), projections: projectionStore(), vapid, today, now,
+      push: pushStore(), cloud: cloudStore(), projections: projectionStore(), books: bookIndexStore(), vapid, today, now,
       allowLocalEndpoints: allowLocalPushEndpoints(), deadline: now + 50_000,
       // Push services answer in ~100–300 ms; 40 in flight ≈ 250 accounts/s, ~12k accounts per run.
       concurrency: 40,

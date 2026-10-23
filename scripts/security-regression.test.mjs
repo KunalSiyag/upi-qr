@@ -280,4 +280,96 @@ assert.match(mcpRoute, /isCatalogEligible\(tool\.href\)/, "the tool catalog skip
 assert.match(middleware, /PRIVATE_ROUTE_PREFIXES = \[[^\]]*"\/mcp"\]/, "the endpoint is noindex");
 assert.doesNotMatch(middleware.match(/CLERK_ROUTE_PREFIXES = \[[^\]]*\]/)[0], /\/mcp/, "Clerk stays off /mcp/");
 
-console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, and MCP guards passed");
+// Several businesses per account (docs/spec-multi-business.md §9.2): new routes are signed-in, owner-scoped,
+// CSRF-guarded, body-capped and no-store; the plan limit is enforced on the server; non-primary data never
+// reaches the primary slot, and a pay link never resolves to another business.
+const handlerOf = (src, method) => src.split(`export const ${method}: APIRoute`)[1]?.split("export const")[0] ?? "";
+const booksIndexRoute = readFileSync(join(projectRoot, "src/pages/api/v1/workspace/books/index.ts"), "utf8");
+const bookRoute = readFileSync(join(projectRoot, "src/pages/api/v1/workspace/books/[id].ts"), "utf8");
+const bookLinkRoute = readFileSync(join(projectRoot, "src/pages/api/v1/paylinks/books/[id].ts"), "utf8");
+const booksApi = readFileSync(join(projectRoot, "src/lib/workspace/booksApi.ts"), "utf8");
+for (const [name, src, methods] of [["books/", booksIndexRoute, ["GET", "PUT"]], ["books/[id]", bookRoute, ["GET", "PUT"]], ["paylinks/books/[id]", bookLinkRoute, ["POST"]]]) {
+  for (const method of methods) {
+    const handler = handlerOf(src, method);
+    assert.match(handler, /const userId = authenticatedUserId\(locals\);\n\s*if \(!userId\) return jsonResponse\(\{[^}]*\}, 401\);/, `${method} ${name} must require sign-in first`);
+    assert.match(handler, /workspaceOwner\(userId\)/, `${method} ${name} must scope to the signed-in user's owner key`);
+    if (method !== "GET") {
+      assert.match(handler, /if \(!isTrustedMutation\(request\)\) return jsonResponse/, `${method} ${name} must reject cross-site requests`);
+      assert.match(handler, /readJsonObject\(request, (MAX_INDEX_BYTES|MAX_WORKSPACE_BYTES \+ 100_000|1024)\)/, `${method} ${name} must cap the body`);
+    }
+  }
+  assert.doesNotMatch(src, /new Response\(/, `${name} answers through jsonResponse (Cache-Control: no-store)`);
+  assert.doesNotMatch(src, /params\.owner|body\.owner|searchParams\.get\("owner"\)/, `${name} never takes the owner from the request`);
+}
+assert.match(booksIndexRoute, /const MAX_INDEX_BYTES = 16_000;/, "the index body is capped at 16 KB");
+assert.match(booksIndexRoute, /consumeRateLimitUnits\("workspace-book-add", userId, 60, 86_400, units\)/, "60 business adds per account per day, charged per business");
+assert.match(booksApi, /const adding = liveBookIds\(incoming\)\.filter\(\(id\) => !known\.has\(id\)\)\.length;\n\s*if \(adding > 0 && !\(await consumeAdd\(adding\)\)\)/, "the add budget is charged one unit per new business");
+const rateLimitLib = readFileSync(join(projectRoot, "src/lib/rateLimit.ts"), "utf8");
+assert.match(rateLimitLib, /if count \+ units > tonumber\(ARGV\[3\]\) then/, "a request the remaining budget can't cover is refused without being charged");
+assert.match(kvStore_src(), /pipe\.del\(\.\.\.slots\.map\(docKey\)\);\n\s*for \(const slot of slots\) pipe\.incr\(revKey\(slot\)\);/, "removing a document advances its revision (a device holding rev N re-uploads)");
+assert.match(booksApi, /if \(viewed\.length\) await d\.paylinks\.patchViews\(owner, \{\}, viewed\);/, "undo drops snapshots written during a delete race");
+for (const fn of ["putBookIndex", "putBook", "createBookLink"]) {
+  const body = booksApi.split(`export async function ${fn}(`)[1]?.split("\nexport ")[0] ?? "";
+  assert.match(body, /ownerMismatch\(body, owner\)/, `${fn} must compare expectedOwner (409 on mismatch)`);
+}
+assert.match(booksApi, /code: "owner_mismatch"/);
+assert.match(booksApi, /return res\(409, \{ error: "This tab belongs to another account/, "owner mismatch answers 409");
+assert.match(booksApi, /syncBookIndex\(d\.books, owner, incoming, d\.now\(\), async \(\) => \(plan = await d\.plan\(owner\)\)\.businesses\)/, "the index PUT passes the strict plan's business limit");
+assert.match(readFileSync(join(projectRoot, "src/lib/workspace/serverBooks.ts"), "utf8"), /plan: \(owner\) => planForStrict\(owner\)/, "business limits use planForStrict (a KV blip is 503, never Free)");
+assert.match(booksApi, /id === PRIMARY_BOOK_ID\) return res\(400/, "the /books/<id>/ routes refuse biz_primary");
+assert.match(booksApi, /!BOOK_ID_RE\.test\(id\)/, "book ids are validated before building a slot");
+for (const [route, src] of [["books/[id]", bookRoute], ["paylinks/books/[id]", bookLinkRoute]]) {
+  assert.ok(src.indexOf("badBookId(params.id)") > 0 && src.indexOf("badBookId(params.id)") < src.indexOf("serverBooks()"), `${route} validates the id before touching storage`);
+}
+const putBookBody = booksApi.split("export async function putBook(")[1].split("\nexport ")[0];
+assert.ok(putBookBody.indexOf("readOnly(d, owner, live.index, id)") < putBookBody.indexOf("syncWorkspace("), "read-only (downgraded) books are refused before any write");
+assert.ok(putBookBody.indexOf("syncWorkspace(") < putBookBody.indexOf("const after = await readBookIndex"), "book PUTs re-read the index after their writes");
+assert.match(putBookBody, /removeDocs\(\[slot\]\)[\s\S]*projections\.drop\(owner, id\)[\s\S]*paylinks\.removeBook\(owner, id\)/, "a write that raced a delete is undone");
+const linkBody = booksApi.split("export async function createBookLink(")[1].split("\nexport ")[0];
+assert.ok(linkBody.indexOf("readOnly(d, owner, live.index, id)") < linkBody.indexOf("createPaylink("), "read-only books get no new links");
+assert.ok(linkBody.indexOf("createPaylink(") < linkBody.indexOf("const after = await readBookIndex"), "link POSTs re-read the index after writing");
+assert.match(linkBody, /if \(result\.created\) await d\.paylinks\.remove\(owner, result\.token, key\)/, "a link created during a delete is revoked");
+assert.match(booksApi, /code: "plan_read_only"/);
+assert.match(booksApi, /if \(rank < PLANS\.free\.businesses\) return \{ plan: null \};/, "the first business is never read-only and never reads billing");
+assert.doesNotMatch(handlerOf(workspaceApi, "PUT"), /businessId/, "the primary route never reads a businessId");
+assert.match(handlerOf(workspaceApi, "PUT"), /ownerMismatch\(body, owner\)/);
+assert.match(handlerOf(workspaceApi, "DELETE"), /deleteCloudCopy\(serverBooks\(\), workspaceOwner\(userId\)\)/, "Delete cloud copy covers every business");
+assert.match(handlerOf(workspaceApi, "DELETE"), /ownerMismatch\(body, workspaceOwner\(userId\)\)/, "Delete cloud copy checks expectedOwner");
+assert.match(paylinkApi, /ownerMismatch\(body, record\.owner\)/, "revoking a link checks expectedOwner");
+assert.match(readFileSync(join(projectRoot, "src/lib/workspace/booksApi.ts"), "utf8"), /await deleteAllCloud\(d, owner, d\.now\(\)\);/);
+const paylinksApi = readFileSync(join(projectRoot, "src/pages/api/v1/paylinks/index.ts"), "utf8");
+assert.match(handlerOf(paylinksApi, "GET"), /filter\(\(\[key\]\) => allBooks \|\| !key\.includes\("\/"\)\)/, "old clients only list the primary book's links");
+assert.match(handlerOf(paylinksApi, "POST"), /ownerMismatch\(body, owner\)/);
+assert.match(payPage, /readWorkspace\(cloudStore\(\), slotFor\(record\.owner, bookId\)\)/, "the pay-page fallback reads only the owning book");
+assert.match(payPage, /const \{ bookId, subject \} = parseLinkKey\(record\.invoiceId\);/);
+assert.match(payPage, /if \(!liveBookIds\(books\.index\)\.includes\(bookId\)\) return gone\(404/, "a deleted or unknown book's link is 404, never the primary");
+assert.doesNotMatch(payPage, /putViews\(/, "the pay page never replaces every snapshot (that would drop other books' views)");
+assert.match(kvStore_src(), /!hasKv && import\.meta\.env\.DEV \? devBookIndex : kvBookIndexStore/, "in-memory book index must be dev-only");
+// The business limit lives only in PLANS (entitlements.ts).
+{
+  const { readdirSync, statSync } = await import("node:fs");
+  const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(ts|tsx|astro|mjs)$/.test(f) && !f.endsWith("entitlements.ts"))) {
+    const src = readFileSync(file, "utf8");
+    assert.doesNotMatch(src, /businesses:\s*(1|20)\b|\b(PRO|FREE)_BUSINESSES\b/, `${file} must read business limits from PLANS`);
+  }
+}
+// Clerk networkless verification: the key comes only from the environment.
+assert.match(middleware, /jwtKey: process\.env\.CLERK_JWT_KEY \|\| undefined/);
+assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
+// Notification URLs stay on this site, in both service-worker handlers.
+{
+  const sw = readFileSync(join(projectRoot, "public/sw.js"), "utf8");
+  const fnSrc = sw.match(/function sameOriginPath\(value\) \{[\s\S]*?\n\}/)?.[0];
+  assert.ok(fnSrc, "sw.js defines sameOriginPath");
+  const sameOriginPath = new Function("self", `${fnSrc}; return sameOriginPath;`)({ location: { origin: "https://www.proupiqr.in" } });
+  assert.equal(sameOriginPath("/app/?business=biz_abcdef01"), "/app/?business=biz_abcdef01");
+  assert.equal(sameOriginPath("https://www.proupiqr.in/app/"), "/app/");
+  for (const evil of ["//evil.example/app/", "/\\evil.example/app/", "https://evil.example/", "javascript:alert(1)", 42]) {
+    assert.equal(sameOriginPath(evil), null, `notification URL ${String(evil)} must be refused`);
+  }
+  assert.match(sw, /data: \{ url: sameOriginPath\(data\.url\) \|\| "\/app\/" \}/, "push keeps only same-origin URLs");
+  assert.match(sw, /new URL\(sameOriginPath\(event\.notification\.data\?\.url\) \|\| "\/app\/", self\.location\.origin\)/, "notificationclick re-checks the origin");
+}
+
+console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");

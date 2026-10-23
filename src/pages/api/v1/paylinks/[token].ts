@@ -4,6 +4,7 @@ import { consumeRateLimit, rateLimitHeaders } from "../../../../lib/rateLimit";
 import { rateLimitsAvailable, workspaceOwner } from "../../../../lib/workspace/kvCloudStore";
 import { paylinkStore } from "../../../../lib/workspace/kvPaylinkStore";
 import { validPaylinkToken } from "../../../../lib/workspace/paylinks";
+import { ownerMismatch } from "../../../../lib/workspace/booksApi";
 
 export const prerender = false;
 
@@ -31,6 +32,8 @@ export const DELETE: APIRoute = async ({ request, locals, params }) => {
     const record = await store.get(params.token);
     // Same response for "not yours" and "missing" so tokens cannot be probed.
     if (!record || record.owner !== workspaceOwner(userId)) return jsonResponse({ error: "Not found." }, 404);
+    const mismatch = ownerMismatch(body, record.owner);
+    if (mismatch) return jsonResponse(mismatch.body, mismatch.status);
     if (body.scope === "claims") await store.clearClaims(params.token);
     else await store.remove(record.owner, params.token, record.invoiceId);
     return jsonResponse({ ok: true });
