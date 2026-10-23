@@ -2,6 +2,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ProductShot from "../components/ProductShot.astro";
 import { MSMED_INTEREST_PCT } from "../data/rbiRates";
+import { PLANS } from "../lib/workspace/entitlements";
 import InternalLinkHub from "../components/InternalLinkHub.astro";
 
 const title = "Free Invoice Payment Tracker with WhatsApp Reminders | Pro UPI QR";
@@ -27,6 +28,7 @@ const features = [
   ["MSME mode", "Registered on Udyam? Overdue invoices show when the 45-day MSMED deadline passed. Pro adds the Section 16 interest due and your payment rights to reminders."],
   ["Morning reminders", "With a free account, a 9 am notification lists who to chase that day — overdue first, with the top client and amount."],
   ["Pay links", "With a free account, share a link that shows the live amount due, a UPI button, and a QR. Clients can send their UTR back."],
+  ["Several businesses", `A Pro account keeps up to ${PLANS.pro.businesses} businesses after the first payment, each with its own UPI ID, invoice numbers and pay links. Free keeps ${PLANS.free.businesses}.`],
   ["Sync & backup", "Optional free account syncs phone and laptop. Or stay offline and download a backup or CSV for your accountant."],
 ];
 

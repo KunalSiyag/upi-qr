@@ -4,6 +4,7 @@ import { DEFAULT_AUTHOR } from "../data/authors";
 import { BUSINESS } from "../data/business";
 import { LOCALIZED_TOOLS } from "../data/localizedTools";
 import { PRO_PRICES } from "../data/pricing";
+import { PLANS } from "../lib/workspace/entitlements";
 
 const title = "About Pro UPI QR — Helping Indian Businesses Get Paid";
 const description =
@@ -36,7 +37,7 @@ const products = [
     name: "Pro",
     href: "/pricing/",
     cta: "See pricing",
-    body: `For businesses that send a lot of invoices: unlimited pay links, client statement links, and MSME mode with 45-day deadlines and Section 16 interest. ${PRO_PRICES.monthly.label}/month or ${PRO_PRICES.yearly.label}/year.`,
+    body: `For businesses that send a lot of invoices: unlimited pay links, up to ${PLANS.pro.businesses} businesses in one account after your first payment, client statement links, and MSME mode with 45-day deadlines and Section 16 interest. ${PRO_PRICES.monthly.label}/month or ${PRO_PRICES.yearly.label}/year.`,
   },
 ];
 

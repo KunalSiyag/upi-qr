@@ -4,7 +4,7 @@ import { WS_HI } from "../src/data/workspacePhrases.ts";
 
 // Every English string the workspace shows through tr() must have Hindi, with the same placeholders.
 const dir = new URL("../src/components/workspace/", import.meta.url);
-const files = ["PaymentsWorkspace", "Sheets", "StatementSheet", "PlanPanel", "NotificationsPanel", "InstallApp", "ui"];
+const files = ["PaymentsWorkspace", "Sheets", "StatementSheet", "PlanPanel", "NotificationsPanel", "InstallApp", "ui", "BusinessSwitcher"];
 const keys = new Set();
 for (const f of files) {
   const s = readFileSync(new URL(`${f}.tsx`, dir), "utf8");

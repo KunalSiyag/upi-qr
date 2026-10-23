@@ -12,8 +12,10 @@ function keyBytes(base64url: string): Uint8Array {
 type Status = "loading" | "unsupported" | "ios-install" | "unavailable" | "denied" | "off" | "on";
 
 /** Morning "who to chase today" notifications (Web Push, needs a signed-in, synced workspace). */
-export function NotificationsPanel({ signedIn, standalone, ios, onFlash }: {
+export function NotificationsPanel({ signedIn, standalone, ios, onFlash, severalBusinesses = false }: {
   signedIn: boolean;
+  /** The account has more than one business: the morning summary covers them all. */
+  severalBusinesses?: boolean;
   standalone: boolean;
   ios: boolean;
   onFlash: (message: string) => void;
@@ -103,7 +105,7 @@ export function NotificationsPanel({ signedIn, standalone, ios, onFlash }: {
   return (
     <section className="rounded-[14px] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
       <h2 className="text-lg font-semibold text-ink">{tr("Morning reminders")}</h2>
-      <p className="mt-1 text-sm text-charcoal">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}</p>
+      <p className="mt-1 text-sm text-charcoal">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}{severalBusinesses && <> {tr("Covers all your businesses.")}</>}</p>
       <div className="mt-4 flex flex-wrap items-center gap-2" role="status">
         {status === "loading" && <span className="text-sm text-muted">{tr("Checking…")}</span>}
         {status === "unsupported" && <span className="text-sm text-charcoal">{tr("This browser doesn't support notifications.")}</span>}
