@@ -43,6 +43,13 @@ const BOOK_PREFIX = "proupiqr-book-v1:";
 const ASIDE_PREFIX = "proupiqr-aside-v1:";
 const STASH_BOOK_PREFIX = "proupiqr-stash-v2:";
 const INTL_PREFIX = "proupiqr-intl-v1:";
+/**
+ * The foreign section of a stashed book ({ owner, intl }, owner = the account whose stash it is). Older code
+ * reads STASH_KEY / proupiqr-stash-v2:<id> and writes back only what its sanitizer keeps, so those hold exactly
+ * what it would write (no intl), and the foreign section waits here, under a key older code never reads.
+ */
+const STASH_INTL_PREFIX = "proupiqr-stash-intl-v1:";
+const stashIntlKey = (id: string): string => `${STASH_INTL_PREFIX}${id}`;
 const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
 /** The last business limit the server reported for an account: { owner, limit }. Read before the first request and offline. */
 export const PLAN_LIMIT_KEY = "proupiqr-plan-limit-v1";
@@ -252,6 +259,8 @@ function seedFromInvoiceDraft(ws: Workspace): Workspace {
 
 /** Name of the set-aside copy that keeps another account's foreign section found on this device. */
 export const OTHER_ACCOUNT_INTL = "Clients abroad (another account)";
+/** Name of the set-aside copy of this account's foreign section whose book is no longer on the shelf. */
+export const SET_ASIDE_INTL = "Clients abroad (set aside)";
 
 function readSidecar(id: string, text: string | null = get(intlKey(id))): { owner: string | null; intl: IntlData | undefined } | null {
   const raw = parseJson(text) as { owner?: unknown; intl?: unknown } | null;
@@ -309,6 +318,47 @@ function writeBookKeys(id: string, ws: Workspace, verified = false, now = Date.n
   return sideOk && bookOk;
 }
 
+function stashOwnerNow(): string | null {
+  const meta = parseJson(get(STASH_V2_KEY)) as { owner?: unknown } | null;
+  return meta && typeof meta.owner === "string" ? meta.owner : null;
+}
+
+/** Whether the stash slot still holds book `id` of `owner` (its foreign section then waits for the give-back). */
+function stashHolds(owner: string | null, id: string): boolean {
+  return owner !== null && owner === stashOwnerNow() && get(id === PRIMARY_BOOK_ID ? STASH_KEY : `${STASH_BOOK_PREFIX}${id}`) !== null;
+}
+
+/**
+ * Stashed foreign sections the stash no longer holds: older code switched back to that account (it gives the
+ * stash back without them) or replaced the stash. This account's own goes back into its book's sidecar when
+ * the book is on the shelf; anything else becomes a set-aside copy. Never deleted unread.
+ */
+export function reconcileStashIntl(index: BookIndex = loadIndex()): void {
+  const current = get(OWNER_KEY);
+  const live = new Set(liveBookIds(index));
+  for (const key of keys()) {
+    if (!key.startsWith(STASH_INTL_PREFIX)) continue;
+    const id = key.slice(STASH_INTL_PREFIX.length);
+    const side = readSidecar(id, get(key));
+    if (!isBookId(id) || !side?.intl) { drop(key); continue; }
+    if (stashHolds(side.owner, id)) continue;
+    const mine = side.owner !== null && side.owner === current;
+    if (mine && (id === PRIMARY_BOOK_ID || (live.has(id) && get(bookKey(id)) !== null))) {
+      // Another account's sidecar in the way is set aside first (sidecarIntl), never merged.
+      const here = readSidecar(id);
+      if (here && !sidecarJoins(here.owner)) {
+        sidecarIntl(id);
+        if (get(intlKey(id)) !== null) continue;
+      }
+      const merged = mergeIntl(here && sidecarJoins(here.owner) ? here.intl : undefined, side.intl);
+      if (merged && putVerified(intlKey(id), canonicalJson({ owner: current, intl: merged } as unknown as Workspace))) drop(key);
+      continue;
+    }
+    const name = mine ? SET_ASIDE_INTL : OTHER_ACCOUNT_INTL;
+    if (putAside(newBookId(), mine ? "stray" : "other_account", { ...emptyWorkspace(), business: { ...emptyBusiness(0), name }, intl: side.intl })) drop(key);
+  }
+}
+
 /**
  * One book. The primary keeps today's behaviour (seeded from the invoice draft
  * on first run, empty when unreadable); other books never seed and give null
@@ -338,6 +388,7 @@ export function loadBook(id: string): Workspace | null {
  */
 export function loadShelf(): { shelf: Shelf; cloudOnly: string[] } {
   const index = loadIndex();
+  reconcileStashIntl(index);
   const books: Record<string, Workspace> = {};
   const cloudOnly: string[] = [];
   const meta = readSyncMeta();
@@ -634,11 +685,28 @@ export function loadStash(): StashedAccount | null {
     index = addBook(index, id, 1);
     books[id] = sanitizeWorkspace(parseJson(raw));
   }
+  // Each stashed book joined with its foreign section (kept under its own key, written for the stash's owner).
+  const owner = meta && typeof meta.owner === "string" ? meta.owner : null;
+  for (const id of Object.keys(books)) books[id] = withStashIntl(id, owner, books[id]);
   return { owner: meta && typeof meta.owner === "string" ? meta.owner : null, at: meta && typeof meta.at === "number" ? meta.at : 0, shelf: { index, books } };
 }
 
+/** A stashed book joined with its stashed foreign section, when that was written for `owner`. */
+function withStashIntl(id: string, owner: string | null, ws: Workspace): Workspace {
+  const side = readSidecar(id, get(stashIntlKey(id)));
+  if (!side?.intl || owner === null || side.owner !== owner) return ws;
+  return sanitizeWorkspace({ ...ws, intl: mergeIntl(ws.intl, side.intl) });
+}
+
 export function discardStash(): void {
-  const meta = parseJson(get(STASH_V2_KEY)) as { ids?: unknown } | null;
+  const meta = parseJson(get(STASH_V2_KEY)) as { ids?: unknown; owner?: unknown } | null;
+  // The stash's own foreign sections go with it; one written for another account is left for reconcileStashIntl.
+  const owner = meta && typeof meta.owner === "string" ? meta.owner : null;
+  for (const key of keys()) {
+    if (!key.startsWith(STASH_INTL_PREFIX)) continue;
+    const side = readSidecar(key.slice(STASH_INTL_PREFIX.length), get(key));
+    if (!side?.intl || side.owner === owner) drop(key);
+  }
   for (const key of keys()) if (key.startsWith(STASH_BOOK_PREFIX)) drop(key);
   if (meta) drop(STASH_V2_KEY);
   drop(STASH_KEY);
@@ -677,8 +745,11 @@ function stashBelongsTo(stashed: Workspace, previous: Workspace, next: Workspace
  * be restored keeps its verified stash copy, listed in the stash meta.
  */
 export function switchAccountStorage(previousOwner: string, newOwner: string, index: BookIndex, newPrimary: Workspace, now = Date.now()): SwitchResult {
+  // Stashed foreign sections an older switch left behind go home (or aside) before this switch reuses the slot.
+  reconcileStashIntl(index);
   const primaryRaw = get(WORKSPACE_KEY);
-  // Books move joined with their sidecars (the foreign section rides inside the stashed JSON).
+  // Books move joined with their sidecars. The stash keys get what older code would write (no intl); the
+  // foreign section goes to its own stash key (stashIntlKey), which older code never reads or rewrites.
   const primary = joinSidecar(PRIMARY_BOOK_ID, primaryRaw === null ? emptyWorkspace() : sanitizeWorkspace(parseJson(primaryRaw)));
   const primarySideRaw = get(intlKey(PRIMARY_BOOK_ID));
   let existing = loadStash();
@@ -712,15 +783,33 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
   const oldPrimaryStash = get(STASH_KEY);
   const oldMeta = get(STASH_V2_KEY);
   const ownerBefore = get(OWNER_KEY);
-  const moved: { id: string; raw: string; sideRaw: string | null; value: string; stashKey: string; stashBefore: string | null }[] = [];
+  const primaryStashIntlBefore = get(stashIntlKey(PRIMARY_BOOK_ID));
+  const moved: {
+    id: string; raw: string; sideRaw: string | null; value: string; full: Workspace; stashKey: string; stashBefore: string | null; stashIntlBefore: string | null;
+  }[] = [];
+  /** The stashed foreign section of book `id`: written (verified) for the previous account, or removed when there is none. */
+  const writeStashIntl = (id: string, ws: Workspace): boolean => {
+    // One the slot still holds for this account is merged in; another account's (left when setting it aside
+    // failed) is never written over: the switch fails instead.
+    const there = readSidecar(id, get(stashIntlKey(id)));
+    const theirs = Boolean(there?.intl) && there?.owner !== previousOwner;
+    const intl = mergeIntl(theirs ? undefined : there?.intl, ws.intl);
+    if (!intl) { if (!theirs) drop(stashIntlKey(id)); return true; }
+    if (theirs) return false;
+    return putVerified(stashIntlKey(id), canonicalJson({ owner: previousOwner, intl } as unknown as Workspace));
+  };
+  const restoreKey = (key: string, before: string | null) => { if (before === null) drop(key); else put(key, before); };
+  /** A stash key's book joined with its stashed foreign section, when both are the previous account's (merging). */
+  const stashedFull = (id: string, raw: string | null): Workspace | null =>
+    raw === null ? null : withStashIntl(id, merging ? previousOwner : null, sanitizeWorkspace(parseJson(raw)));
 
   /** Puts one moved book back; its stash copy goes only after the book key verified. False: it stays stashed. */
   const putBack = (m: (typeof moved)[number]): boolean => {
-    const restoreStash = () => { if (m.stashBefore === null) drop(m.stashKey); else put(m.stashKey, m.stashBefore); };
+    const restoreStash = () => { restoreKey(m.stashKey, m.stashBefore); restoreKey(stashIntlKey(m.id), m.stashIntlBefore); };
     if (m.sideRaw !== null && !putVerified(intlKey(m.id), m.sideRaw)) {
       drop(intlKey(m.id));
-      if (putVerified(m.stashKey, m.value)) return false;
-      putAside(m.id, "stray", sanitizeWorkspace(parseJson(m.value)));
+      if (putVerified(m.stashKey, m.value) && writeStashIntl(m.id, m.full)) return false;
+      putAside(m.id, "stray", m.full);
       return false;
     }
     if (putVerified(bookKey(m.id), m.raw)) { restoreStash(); return true; }
@@ -729,8 +818,8 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     if (putVerified(bookKey(m.id), m.raw)) { restoreStash(); return true; }
     drop(bookKey(m.id));
     drop(intlKey(m.id));
-    if (putVerified(m.stashKey, m.value)) return false;
-    putAside(m.id, "stray", sanitizeWorkspace(parseJson(m.value)));
+    if (putVerified(m.stashKey, m.value) && writeStashIntl(m.id, m.full)) return false;
+    putAside(m.id, "stray", m.full);
     return false;
   };
   const fail = (): SwitchResult => {
@@ -747,7 +836,10 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
       if (oldPrimaryStash === null) drop(STASH_KEY);
       else if (!putVerified(STASH_KEY, oldPrimaryStash)) keptNewStash = true;
     }
-    if (!keptNewStash) { if (oldMeta === null) drop(STASH_V2_KEY); else put(STASH_V2_KEY, oldMeta); }
+    if (!keptNewStash) {
+      if (oldMeta === null) drop(STASH_V2_KEY); else put(STASH_V2_KEY, oldMeta);
+      restoreKey(stashIntlKey(PRIMARY_BOOK_ID), primaryStashIntlBefore);
+    }
     const stuck = [...moved].reverse().filter((m) => !putBack(m)).map((m) => m.id);
     const metaNow = parseJson(get(STASH_V2_KEY)) as { ids?: unknown } | null;
     const listed = Array.isArray(metaNow?.ids) ? (metaNow.ids as string[]).filter((id) => get(`${STASH_BOOK_PREFIX}${id}`) !== null) : [];
@@ -766,21 +858,28 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     const joined = sideRaw === null ? null : joinSidecar(id, sanitizeWorkspace(parseJson(raw)));
     const stashKey = `${STASH_BOOK_PREFIX}${id}`;
     const stashBefore = get(stashKey);
-    const value = stashBefore !== null
-      ? canonicalJson(mergeWorkspaces(sanitizeWorkspace(parseJson(stashBefore)), joined ?? sanitizeWorkspace(parseJson(raw))))
-      : joined ? canonicalJson(joined) : raw;
-    if (!putVerified(stashKey, value)) {
+    const stashIntlBefore = get(stashIntlKey(id));
+    const before = stashedFull(id, stashBefore);
+    const own = joined ?? sanitizeWorkspace(parseJson(raw));
+    const full = before ? mergeWorkspaces(before, own) : own;
+    const value = before || full.intl ? canonicalJson(withoutIntl(full)) : raw;
+    // Its foreign section first (a reader that sees the stash copy also sees it), then the stash copy.
+    if (!writeStashIntl(id, full) || !putVerified(stashKey, value)) {
+      restoreKey(stashIntlKey(id), stashIntlBefore);
       if (stashBefore !== null && get(stashKey) !== stashBefore) put(stashKey, stashBefore);
       return fail();
     }
-    moved.push({ id, raw, sideRaw: get(intlKey(id)), value, stashKey, stashBefore });
+    moved.push({ id, raw, sideRaw: get(intlKey(id)), value, full, stashKey, stashBefore, stashIntlBefore });
     drop(bookKey(id));
     drop(intlKey(id));
   }
   // 3. The previous primary (merged with the previous account's older stash, which it then contains), verified.
-  const primaryStash = merging && oldPrimaryStash !== null ? canonicalJson(mergeWorkspaces(sanitizeWorkspace(parseJson(oldPrimaryStash)), primary)) : canonicalJson(primary);
+  const primaryBefore = merging ? stashedFull(PRIMARY_BOOK_ID, oldPrimaryStash) : null;
+  const primaryFull = primaryBefore ? mergeWorkspaces(primaryBefore, primary) : primary;
+  const primaryStash = canonicalJson(withoutIntl(primaryFull));
   const ids = [...new Set([...(merging ? liveBookIds(merging.shelf.index).filter((id) => id !== PRIMARY_BOOK_ID) : []), ...moved.map((m) => m.id)])];
-  if (!putVerified(STASH_KEY, primaryStash) || !putVerified(STASH_V2_KEY, JSON.stringify({ owner: previousOwner, at: now, ids }))) return fail();
+  if (!writeStashIntl(PRIMARY_BOOK_ID, primaryFull) || !putVerified(STASH_KEY, primaryStash)
+    || !putVerified(STASH_V2_KEY, JSON.stringify({ owner: previousOwner, at: now, ids }))) return fail();
   // 4. The new owner first, so other tabs stop before they see the new account's primary; then the primary, last
   //    (both its keys: the previous account's sidecar is in the stash now and never stays attached to this account).
   if (!putVerified(OWNER_KEY, newOwner)) return fail();

@@ -259,10 +259,32 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
 
   assert.equal(P.payPageView(mixed, "inv_usd00001", "2026-10-10"), null, "a foreign id has no ₹ view");
   assert.equal(P.snapshotFor(mixed, "inv_usd00001"), null);
-  // The INR snapshot is byte-identical to today's (deployed code's view of the stripped copy) and carries no bank details.
+  // The INR snapshot is byte-identical to what the deployed code (legacy-paylinks.ts = paylinks.ts at 3ce60ef)
+  // builds from its stripped copy, and carries no bank details.
+  const legacyPaylinks = await import("./fixtures/legacy-paylinks.ts");
+  const stripped = legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(mixed)));
   const inrSnap = JSON.stringify(P.snapshotFor(mixed, "inv_00000001"));
+  assert.equal(inrSnap, JSON.stringify(legacyPaylinks.snapshotFor(stripped, "inv_00000001")), "INR invoice snapshot = deployed bytes");
   assert.equal(inrSnap, JSON.stringify(P.snapshotFor(base, "inv_00000001")));
-  assert.equal(inrSnap, JSON.stringify(P.snapshotFor(legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(mixed))), "inv_00000001")));
+  // Every INR subject of an INR-only book (paid, part-paid, void, statements) matches the deployed builders byte for byte.
+  {
+    let inrOnly = upsertClient(base, { ...client, id: "cli_second01", name: "Second" }, T);
+    inrOnly = upsertInvoice(inrOnly, inv("inv_00000002", 125050), T);
+    inrOnly = upsertInvoice(inrOnly, { ...inv("inv_00000003", 99), clientId: "cli_second01" }, T);
+    inrOnly = upsertInvoice(inrOnly, { ...inv("inv_00000004", 5000), voided: true }, T);
+    inrOnly = addPayment(inrOnly, "inv_00000002", { amountPaise: 50, date: "2026-10-02", mode: "upi", reference: "123456789012" }, T + 1);
+    inrOnly = addPayment(inrOnly, "inv_00000003", { amountPaise: 99, date: "2026-10-02", mode: "cash", reference: "" }, T + 1);
+    const subjects = ["inv_00000001", "inv_00000002", "inv_00000003", "inv_00000004", "inv_missing01", "stmt:" + client.id, "stmt:cli_second01", "stmt:cli_missing1"];
+    for (const ws of [inrOnly, M.sanitizeWorkspace(JSON.parse(JSON.stringify(inrOnly)))]) {
+      for (const subject of subjects) {
+        assert.equal(JSON.stringify(P.snapshotFor(ws, subject)), JSON.stringify(legacyPaylinks.snapshotFor(legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(ws))), subject)), subject);
+      }
+      for (const day of ["2026-09-01", "2026-10-10", "2027-01-01"]) {
+        assert.equal(JSON.stringify(P.payPageView(ws, "inv_00000002", day)), JSON.stringify(legacyPaylinks.payPageView(ws, "inv_00000002", day)), day);
+        assert.equal(JSON.stringify(P.statementView(ws, client.id, day)), JSON.stringify(legacyPaylinks.statementView(ws, client.id, day)), day);
+      }
+    }
+  }
   assert.doesNotMatch(inrSnap, /"pay"|IBAN|SWIFT|HDFCINBB|GB82WEST|paypal/);
   // Statements: null for any client with an open foreign invoice (a mixed one, and one who owes only US$).
   assert.equal(P.statementView(mixed, client.id, "2026-10-10"), null);

@@ -333,7 +333,8 @@ function Workspace() {
       const { ws: next, created } = generateRecurring(book, today, now);
       if (!created.length) continue;
       updates[id] = next;
-      if (id === active) createdHere = created.length;
+      // Foreign plan months are generated too, but this build shows only INR rows, so only those are announced.
+      if (id === active) createdHere = created.filter((cid) => { const inv = getInvoice(next, cid); return inv !== undefined && currencyOf(inv) === "INR"; }).length;
     }
     if (!Object.keys(updates).length) return;
     setShelf((s) => {

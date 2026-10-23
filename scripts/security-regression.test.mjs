@@ -453,7 +453,6 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   // Integer money: no "* 100" on amounts and no "/ 100" except Math.floor/trunc(… / 100) in workspace code.
   const allowedHundred = new Map([
     ["src/components/workspace/PaymentsWorkspace.tsx", [/style=\{\{ width: `\$\{\(b\.balancePaise \/ maxBucket\) \* 100\}%` \}\}/, /const breakEven = Math\.ceil\(\(PRO_PRICES\.monthly\.paise \* 10_000\) \/ UPI_MDR\.gatewayRateBps \/ 100\) \* 100;/]],
-    ["src/lib/workspace/statement.ts", [/return Number\(match\[1\]\) \* 100 \+ Number\(\(match\[2\] \|\| ""\)\.padEnd\(2, "0"\)\);/]],
   ]);
   for (const file of [...walk(join(projectRoot, "src/lib/workspace")), ...walk(join(projectRoot, "src/components/workspace"))].filter((f) => /\.(ts|tsx)$/.test(f))) {
     const name = rel(file);

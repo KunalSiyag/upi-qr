@@ -907,6 +907,68 @@ if (BOOKS_UI) {
   assert.deepEqual([st.getItem(OWNER_KEY), st.getItem(L.intlKey(PRIMARY_BOOK_ID))], [OWNER_A, sideA]);
   assert.equal(loadWorkspace().intl.invoices.inv_usd00001.currency, "USD");
 
+  /* The stash keys hold only what older code writes; each foreign section waits under its own stash key. */
+  {
+    const stashIntlKeys = (s3) => Object.keys(s3.snapshot()).filter((k) => k.startsWith("proupiqr-stash-intl-v1:")).sort();
+    const shelfOfA = () => {
+      const s3 = installBrowser();
+      s3.setItem(OWNER_KEY, OWNER_A);
+      const i3 = { ...indexWith(B), owner: OWNER_A };
+      saveIndex(i3);
+      saveBook(i3, PRIMARY_BOOK_ID, fp);
+      saveBook(i3, B, foreign("Book Two", "two@okaxis", "inv_usd00002"));
+      return { s3, i3 };
+    };
+    const holding = (s3, needle) => Object.keys(s3.snapshot()).filter((k) => s3.getItem(k).includes(needle)).sort();
+    let { s3, i3 } = shelfOfA();
+    assert.deepEqual(switchAccountStorage(OWNER_A, OWNER_B, i3, book("Account B", "b@okaxis"), NOW), { ok: true });
+    assert.doesNotMatch(s3.getItem(STASH_KEY), /"intl"|USD|HDFCINBB/, "STASH_KEY holds what older code would write");
+    assert.doesNotMatch(s3.getItem("proupiqr-stash-v2:" + B), /"intl"|USD/);
+    assert.deepEqual(stashIntlKeys(s3), ["proupiqr-stash-intl-v1:" + B, "proupiqr-stash-intl-v1:biz_primary"]);
+    assert.equal(JSON.parse(s3.getItem("proupiqr-stash-intl-v1:biz_primary")).owner, OWNER_A);
+    // Old code (a tab or offline PWA) switches back to A: it gives the stash back without the foreign sections,
+    // which wait under keys it never reads. New code then puts them back into A's books.
+    assert.deepEqual(legacyStore.switchAccountStorage(OWNER_B, OWNER_A, legacyStore.loadShelf().shelf.index, legacyModel.sanitizeWorkspace(clone(book("Sharma Tuition", "sharma@okaxis"))), NOW + 1), { ok: true });
+    assert.deepEqual(holding(s3, "inv_usd00001"), ["proupiqr-stash-intl-v1:biz_primary"], "(old code left the primary's foreign section where it was)");
+    assert.deepEqual(holding(s3, "inv_usd00002"), ["proupiqr-stash-intl-v1:" + B]);
+    const home = loadShelf();
+    assert.equal(home.shelf.books[PRIMARY_BOOK_ID].intl.invoices.inv_usd00001.currency, "USD", "A's primary has its US$ invoice again");
+    assert.equal(home.shelf.books[PRIMARY_BOOK_ID].intl.settings.account, "GB82WEST12345698765432");
+    assert.equal(home.shelf.books[B].intl.invoices.inv_usd00002.currency, "USD", "A's second business too");
+    assert.deepEqual(stashIntlKeys(s3), [], "the stashed sections went home");
+    assert.equal(JSON.parse(s3.getItem(L.intlKey(B))).owner, OWNER_A);
+    // B's stash (written by old code) is untouched, and B's data never reaches A's books.
+    assert.match(s3.getItem(STASH_KEY), /Account B/);
+    assert.doesNotMatch(JSON.stringify(home.shelf.books), /Account B/);
+
+    // New code switching back gives everything back in one step (stash and its foreign sections).
+    ({ s3, i3 } = shelfOfA());
+    switchAccountStorage(OWNER_A, OWNER_B, i3, book("Account B", "b@okaxis"), NOW);
+    assert.deepEqual(switchAccountStorage(OWNER_B, OWNER_A, { ...emptyIndex(), owner: OWNER_B }, book("Sharma Tuition", "sharma@okaxis"), NOW + 1), { ok: true });
+    assert.equal(loadBook(B).intl.invoices.inv_usd00002.currency, "USD");
+    assert.equal(loadWorkspace().intl.invoices.inv_usd00001.currency, "USD");
+    assert.deepEqual(stashIntlKeys(s3).filter((k) => JSON.parse(s3.getItem(k)).owner === OWNER_A), [], "A's stashed sections went back");
+
+    // Merging into an existing stash of the same account keeps both foreign sections.
+    ({ s3, i3 } = shelfOfA());
+    switchAccountStorage(OWNER_A, OWNER_B, i3, book("Account B", "b@okaxis"), NOW);
+    s3.setItem(OWNER_KEY, OWNER_A);
+    const again = M.upsertInvoice(book("Sharma Tuition", "sharma@okaxis"), { ...inv("inv_eur00009", "INV-0009", "cli_aaaaaaaa", 900), currency: "EUR" }, T + 2);
+    s3.setItem(STASH_V2_KEY, JSON.stringify({ owner: OWNER_A, at: 1, ids: [B] }));
+    saveIndex({ ...emptyIndex(), owner: OWNER_A }, true);
+    saveWorkspace(again);
+    assert.deepEqual(switchAccountStorage(OWNER_A, OWNER_B, { ...emptyIndex(), owner: OWNER_A }, book("Account B", "b@okaxis"), NOW + 2), { ok: true });
+    assert.deepEqual(Object.keys(loadStash().shelf.books[PRIMARY_BOOK_ID].intl.invoices).sort(), ["inv_eur00009", "inv_usd00001"]);
+
+    // Discarding the stash removes its foreign sections; another account's waiting one is set aside, never dropped.
+    s3.setItem("proupiqr-stash-intl-v1:biz_orphan01", canonicalJson({ owner: "c".repeat(32), intl: fp.intl }));
+    discardStash();
+    assert.deepEqual(stashIntlKeys(s3), ["proupiqr-stash-intl-v1:biz_orphan01"]);
+    loadShelf();
+    assert.deepEqual(stashIntlKeys(s3), []);
+    assert.ok(listAside().some((a) => a.reason === "other_account" && a.name === L.OTHER_ACCOUNT_INTL && a.workspace.intl?.invoices.inv_usd00001));
+  }
+
   /* Old-code switch (legacy-localStore.ts = localStore.ts at 3ce60ef): A's sidecars stay behind, never join B. */
   st = installBrowser();
   st.setItem(OWNER_KEY, OWNER_A);

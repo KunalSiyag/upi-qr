@@ -7,8 +7,8 @@ import assert from "node:assert/strict";
 import { installBrowser } from "./fake-storage.mjs";
 import { addBook, emptyIndex, PRIMARY_BOOK_ID } from "../src/lib/workspace/books.ts";
 import { canonicalJson, emptyWorkspace, updateBusiness, upsertClient, upsertInvoice } from "../src/lib/workspace/model.ts";
-import { loadBook, loadShelf, OWNER_KEY, saveBook, saveIndex, STASH_KEY, STASH_V2_KEY, sweepStrayBooks, switchAccountStorage, WORKSPACE_KEY } from "../src/lib/workspace/localStore.ts";
-import { switchAccountStorage as legacySwitch } from "./fixtures/legacy-localStore.ts";
+import { listAside, loadBook, loadShelf, OWNER_KEY, saveBook, saveIndex, STASH_KEY, STASH_V2_KEY, sweepStrayBooks, switchAccountStorage, WORKSPACE_KEY } from "../src/lib/workspace/localStore.ts";
+import { loadShelf as legacyLoadShelf, switchAccountStorage as legacySwitch } from "./fixtures/legacy-localStore.ts";
 import { sanitizeWorkspace as legacySanitize } from "./fixtures/legacy-model.ts";
 
 const T = Date.UTC(2026, 9, 1);
@@ -38,6 +38,7 @@ const TRIALS = 900;
 let runs = 0;
 let switched = 0;
 let legacyRuns = 0;
+let roundTrips = 0;
 const problems = [];
 const started = Date.now();
 for (let trial = 0; trial < TRIALS; trial++) {
@@ -74,6 +75,7 @@ for (let trial = 0; trial < TRIALS; trial++) {
 
   const base = new Map(store.map);
   const before = new Set([...base.values()].flatMap((v) => [...idsIn(v)]));
+  const foreignOfA = new Set([...base].filter(([k]) => k.startsWith("proupiqr-intl-v1:")).flatMap(([, v]) => [...idsIn(v)]));
   let used = 0;
   for (const [k, v] of base) used += k.length + v.length;
   const newIds = idsIn(JSON.stringify(newPrimary));
@@ -92,6 +94,13 @@ for (let trial = 0; trial < TRIALS; trial++) {
     // A new-code switch moves sidecars with their books, so they count as books; old code leaves them (checked below).
     const books = [...store.map].filter(([k]) => k === WORKSPACE_KEY || k.startsWith("proupiqr-book-v1:") || (!old && k.startsWith("proupiqr-intl-v1:"))).map(([, v]) => v).join(" ");
     const stashed = [...store.map].filter(([k]) => k === STASH_KEY || k.startsWith("proupiqr-stash-v2:")).map(([, v]) => v).join(" ");
+    // Stash keys hold what older code would write; each stashed foreign section is tagged with its own account.
+    if (!old) for (const [k, v] of store.map) if ((k === STASH_KEY || k.startsWith("proupiqr-stash-v2:")) && v.includes('"intl"')) fail(`stash key ${k} contains intl`);
+    for (const [k, v] of store.map) {
+      if (!k.startsWith("proupiqr-stash-intl-v1:")) continue;
+      const owner = JSON.parse(v).owner;
+      if ([...accountsIn(v)].some((letter) => letter !== OWNER_LETTER[owner])) fail(`${k} of ${OWNER_LETTER[owner]} holds ${[...accountsIn(v)]}`);
+    }
     const meta = JSON.parse(store.getItem(STASH_V2_KEY) ?? "null");
     const stashAccounts = accountsIn(stashed);
     if (meta && [...stashAccounts].some((letter) => letter !== OWNER_LETTER[meta.owner])) fail(`stash meta ${OWNER_LETTER[meta.owner]} holds ${[...stashAccounts]}`);
@@ -108,6 +117,24 @@ for (let trial = 0; trial < TRIALS; trial++) {
       if ([...accountsIn(JSON.stringify(loadBook(PRIMARY_BOOK_ID)))].some((letter) => letter !== "B")) fail(`B's joined primary holds ${[...accountsIn(JSON.stringify(loadBook(PRIMARY_BOOK_ID)))]}`);
       const kept = new Set([...store.map.values()].flatMap((v) => [...idsIn(v)]));
       if ([...before].some((id) => !kept.has(id))) fail("lost after the joined load");
+      // Then an old tab or PWA switches back to A, and new code loads A: every foreign invoice of A is back in
+      // A's books (or a set-aside copy), none lost, and A's books never gain B's.
+      if (!old) {
+        store.quota = Infinity;
+        const back = legacySwitch(B, A, legacyLoadShelf().shelf.index, legacySanitize(JSON.parse(JSON.stringify(book("A", "A shop", "a@okaxis", 0, pad)))), T + 9);
+        if (!back.ok) { fail(`legacy switch back failed: ${back.reason}`); break; }
+        roundTrips++;
+        const home = loadShelf();
+        sweepStrayBooks(home.shelf.index);
+        const onDevice = new Set([...store.map.values()].flatMap((v) => [...idsIn(v)]));
+        const lostBack = [...before].filter((id) => !onDevice.has(id));
+        if (lostBack.length) fail(`lost ${lostBack.length} after old code switched back`);
+        const reachable = idsIn(JSON.stringify(loadShelf().shelf.books) + JSON.stringify(listAside()));
+        const unreachable = [...foreignOfA].filter((id) => !reachable.has(id));
+        if (unreachable.length) fail(`${unreachable.length} foreign invoices of A neither in A's books nor set aside`);
+        const aBooks = JSON.stringify(loadShelf().shelf.books);
+        if ([...accountsIn(aBooks)].some((letter) => letter !== "A")) fail(`A's books hold ${[...accountsIn(aBooks)]} after switching back`);
+      }
       break;
     }
     if (store.getItem(OWNER_KEY) !== A) fail("owner changed on failure");
@@ -120,4 +147,5 @@ assert.deepEqual(problems.slice(0, 10), [], `${problems.length} problems`);
 assert.ok(runs > 20_000, `expected a wide quota sweep (ran ${runs})`);
 assert.equal(switched, TRIALS - TRIALS / scenarios.length, "every switch except the third-account one succeeds once there is room");
 assert.ok(legacyRuns > 1000, `old-code switches interleaved (${legacyRuns})`);
-console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);
+assert.ok(roundTrips > 500, `new switch then old switch back (${roundTrips})`);
+console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);

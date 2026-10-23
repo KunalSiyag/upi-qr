@@ -444,7 +444,10 @@ export function addPayment(ws: Workspace, invoiceId: string, payment: Omit<Payme
   const invoice = getInvoice(ws, invoiceId);
   if (!invoice || invoice.deletedAt) return ws;
   if (!Number.isSafeInteger(payment.amountPaise) || payment.amountPaise <= 0) return ws;
-  const record: Payment = { ...payment, id: newId("pay"), createdAt: now };
+  // INR credited is kept only on a foreign invoice's payment and only as positive integer paise (the sanitizer's rule).
+  const { inrCreditedPaise, ...rest } = payment;
+  const credited = isForeignCurrency(invoice.currency) ? paise(inrCreditedPaise) : null;
+  const record: Payment = { ...rest, ...(credited ? { inrCreditedPaise: credited } : {}), id: newId("pay"), createdAt: now };
   return upsertInvoice(ws, { ...invoice, payments: [...invoice.payments, record] }, now);
 }
 
@@ -469,12 +472,14 @@ export function allocatePayment(
     .map((inv) => viewInvoice(inv, ws.clients, today))
     .filter((v) => v.balancePaise > 0 && v.state !== "void")
     .sort((a, b) => a.invoice.dueDate.localeCompare(b.invoice.dueDate) || a.invoice.issueDate.localeCompare(b.invoice.issueDate));
+  // The rupees credited belong to the whole payment, so a split never copies them onto each invoice.
+  const { inrCreditedPaise: _credited, ...base } = payment;
   let left = amountPaise;
   let next = ws;
   for (const view of open) {
     if (left <= 0) break;
     const part = Math.min(left, view.balancePaise);
-    next = addPayment(next, view.invoice.id, { ...payment, amountPaise: part }, now);
+    next = addPayment(next, view.invoice.id, { ...base, amountPaise: part }, now);
     allocations.push({ invoiceId: view.invoice.id, amountPaise: part });
     left -= part;
   }
@@ -614,14 +619,16 @@ export function emptyIntlSettings(now: number): IntlSettings {
 }
 
 /**
- * The intl part of an erase at `at`: every live entry last written before `at` gets a tombstone, and
- * settings written before `at` become an empty record. Entries written after `at` are newer and stay.
+ * The intl part of an erase at `at`. This device's own erase (`everything`) tombstones every live entry and
+ * empties settings, as the legacy maps are. An erase found in another device's copy (repairIntl) leaves
+ * entries and settings written after `at` alone: they are newer than that erase.
  */
-function eraseIntl(intl: IntlData, at: number): IntlData {
+function eraseIntl(intl: IntlData, at: number, everything = false): IntlData {
+  const erase = (r: { updatedAt: number; deletedAt?: number }) => !r.deletedAt && (everything || r.updatedAt <= at);
   const tomb = <T extends { updatedAt: number; deletedAt?: number }>(map: Record<string, T>): Record<string, T> =>
-    Object.fromEntries(Object.entries(map).map(([id, r]) => [id, r.deletedAt || r.updatedAt > at ? r : { ...r, deletedAt: at, updatedAt: at }]));
+    Object.fromEntries(Object.entries(map).map(([id, r]) => [id, erase(r) ? { ...r, deletedAt: at, updatedAt: at } : r]));
   const out: IntlData = { invoices: tomb(intl.invoices), recurring: tomb(intl.recurring), clients: tomb(intl.clients) };
-  if (intl.settings) out.settings = intl.settings.updatedAt > at ? intl.settings : emptyIntlSettings(at);
+  if (intl.settings) out.settings = everything || intl.settings.updatedAt <= at ? emptyIntlSettings(at) : intl.settings;
   return out;
 }
 
@@ -635,7 +642,7 @@ export function eraseWorkspace(ws: Workspace, now: number): Workspace {
     recurring: Object.fromEntries(Object.entries(ws.recurring).map(([id, r]) => [id, r.deletedAt ? r : { ...r, deletedAt: now, updatedAt: now }])),
   };
   // An empty settings record is written only when intl already exists (INR-only bytes stay as they are).
-  if (ws.intl) erased.intl = eraseIntl({ ...ws.intl, settings: ws.intl.settings ?? emptyIntlSettings(now) }, now);
+  if (ws.intl) erased.intl = eraseIntl({ ...ws.intl, settings: ws.intl.settings ?? emptyIntlSettings(now) }, now, true);
   return erased;
 }
 
@@ -913,8 +920,10 @@ const MAX_INTL_PLANS = 2_000;
 const MAX_INTL_CLIENTS = 5_000;
 
 function sanitizeBankDetails(value: unknown): string {
-  const text = str(value, 2000).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "");
-  return text.split("\n").map((line) => line.trim()).slice(0, 6).join("\n").trim().slice(0, 300);
+  // Cut first, then trim: the result is a fixed point (sanitizing it again changes nothing), so the server's
+  // re-sanitized copy always equals the client's and an unchanged PUT never writes.
+  const text = str(value, 2000).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "").slice(0, 300);
+  return text.split("\n").map((line) => line.trim()).slice(0, 6).join("\n").trim();
 }
 
 function sanitizePayDetails(raw: unknown): PayDetailsFields {
@@ -1155,6 +1164,8 @@ export function replacePlanCurrency(ws: Workspace, planId: string, currency: Cur
   if (currencyOf(plan) === currency) return { ws, id: planId };
   const months = planMonths(ws, plan);
   const last = months[months.length - 1];
+  // An ended plan whose months are all billed has no month left to bill in another currency.
+  if (last && plan.endMonth && monthAfter(last) > plan.endMonth) return null;
   const { currency: _from, ...rest } = plan;
   const replacement: RecurringPlan = {
     ...rest, id: newId("rec"), startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
@@ -1167,24 +1178,49 @@ export function replacePlanCurrency(ws: Workspace, planId: string, currency: Cur
 // ---------------------------------------------------------------------------
 // Repairs for what code from before ws.intl can still do to a book (spec §1.7)
 
+/** Sample records (ids contain "sample", see sample.ts) are removed together at one time; that is not an erase. */
+const isSampleRecordId = (id: string) => id.includes("sample");
+
 /**
- * The erase time T when this book shows exactly what a pre-intl "Erase workspace" writes: the business is
- * emptyBusiness(T), at least one legacy record was tombstoned at T and none is live or newer, and some intl
- * content was written before T (so the erase couldn't see it). Otherwise null.
+ * The time T of a pre-intl "Erase workspace" this book went through, found by what that erase wrote, even
+ * after the user started over in the old tab. At T the erase tombstoned every live legacy record (deletedAt =
+ * updatedAt = T; records deleted earlier keep their own deletedAt) and replaced the business with
+ * emptyBusiness(T). So T is a candidate when the business is still emptyBusiness(T), or when at least two
+ * non-sample legacy records were tombstoned at exactly T (no other single action does that). It is the erase when:
+ * - the business was erased at T (still emptyBusiness(T)) or rewritten after it (updatedAt > T);
+ * - every legacy record created up to T was tombstoned by T; records created after T are the fresh start;
+ * - some intl content was last written before T (the erase couldn't see it).
+ * The newest such T wins. Otherwise null. An erase of a book with one legacy record, followed by a business
+ * rename, leaves no trace to tell it from a single deletion, and is not detected.
  */
 function detectLegacyErase(ws: Workspace): number | null {
-  const b = ws.business;
-  const T = b.updatedAt;
-  if (!ws.intl || !(T > 0)) return null;
-  const empty = emptyBusiness(T);
-  if (b.name !== empty.name || b.upiId !== empty.upiId || b.phone !== empty.phone || b.gstin !== empty.gstin
-    || b.invoicePrefix !== empty.invoicePrefix || b.udyam !== empty.udyam) return null;
-  const legacy = [...Object.values(ws.clients), ...Object.values(ws.invoices), ...Object.values(ws.recurring)];
-  if (!legacy.some((r) => r.deletedAt === T) || !legacy.every((r) => r.deletedAt !== undefined && r.deletedAt <= T)) return null;
   const intl = ws.intl;
-  const older = <T2 extends { updatedAt: number; deletedAt?: number }>(map: Record<string, T2>) => Object.values(map).some((r) => !r.deletedAt && r.updatedAt < T);
-  const settingsOlder = Boolean(intl.settings && !settingsEmpty(intl.settings) && intl.settings.updatedAt < T);
-  return older(intl.invoices) || older(intl.recurring) || older(intl.clients) || settingsOlder ? T : null;
+  if (!intl) return null;
+  const b = ws.business;
+  const legacy: { id: string; createdAt: number; updatedAt: number; deletedAt?: number }[] =
+    [...Object.values(ws.clients), ...Object.values(ws.invoices), ...Object.values(ws.recurring)];
+  const shared = new Map<number, number>();
+  for (const r of legacy) {
+    if (r.deletedAt && r.deletedAt === r.updatedAt && !isSampleRecordId(r.id)) shared.set(r.deletedAt, (shared.get(r.deletedAt) ?? 0) + 1);
+  }
+  const emptyAt = (t: number) => {
+    const empty = emptyBusiness(t);
+    return b.updatedAt === t && b.name === empty.name && b.upiId === empty.upiId && b.phone === empty.phone && b.gstin === empty.gstin
+      && b.invoicePrefix === empty.invoicePrefix && b.udyam === empty.udyam;
+  };
+  const candidates = new Set<number>([...shared].filter(([, n]) => n >= 2).map(([t]) => t));
+  if (emptyAt(b.updatedAt)) candidates.add(b.updatedAt);
+  const older = (map: Record<string, { updatedAt: number; deletedAt?: number }>, T: number) =>
+    Object.values(map).some((r) => !r.deletedAt && r.updatedAt < T);
+  for (const T of [...candidates].sort((x, y) => y - x)) {
+    if (!(T > 0)) continue;
+    if (!(emptyAt(T) || b.updatedAt > T)) continue;
+    if (!legacy.some((r) => r.deletedAt === T)) continue;
+    if (!legacy.every((r) => r.createdAt > T || (r.deletedAt !== undefined && r.deletedAt <= T))) continue;
+    const settingsOlder = Boolean(intl.settings && !settingsEmpty(intl.settings) && intl.settings.updatedAt < T);
+    if (older(intl.invoices, T) || older(intl.recurring, T) || older(intl.clients, T) || settingsOlder) return T;
+  }
+  return null;
 }
 
 /**

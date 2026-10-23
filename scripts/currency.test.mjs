@@ -8,6 +8,8 @@ import {
   normalizeSwift, parseMoneyToMinor, PAY_URL_HOSTS, safePayUrl, validIban,
 } from "../src/lib/workspace/currency.ts";
 import { emptyWorkspace, formatPaise, paiseToDecimal, parseRupeesToPaise, sanitizeWorkspace } from "../src/lib/workspace/model.ts";
+// model.ts at 3ce60ef, before currency.ts existed: the INR algorithm must have moved unchanged.
+import * as legacy from "./fixtures/legacy-model.ts";
 
 const NBSP = " ";
 
@@ -31,14 +33,17 @@ assert.equal(formatMoney(99, "CAD"), "CA$0.99");
 assert.equal(formatMoney(100, "SGD"), `SGD${NBSP}1.00`);
 assert.equal(formatMoney(-120050, "USD"), "−US$1,200.50");
 assert.equal(formatMoney(0, "USD"), "US$0.00");
-// INR is exactly today's formatPaise (the algorithm moved, unchanged).
+// INR is exactly the deployed formatPaise (legacy-model.ts): the algorithm moved, unchanged, negatives included.
 {
   let seed = 7;
   const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648);
-  for (let i = 0; i < 1000; i++) {
-    const x = (rand() % 2_000_000_000) - (i % 7 === 0 ? 1_000_000_000 : 0);
-    assert.equal(formatMoney(x, "INR"), formatPaise(x), String(x));
+  const xs = [0, 1, -1, 5, -500, 99, 100, 101, 12345678, -12345678, MAX_MINOR, -MAX_MINOR];
+  for (let i = 0; i < 1000; i++) xs.push((rand() % 2_000_000_000) - (i % 3 === 0 ? 1_000_000_000 : 0), rand() % 1000 - 500);
+  for (const x of xs) {
+    assert.equal(formatMoney(x, "INR"), legacy.formatPaise(x), String(x));
+    assert.equal(formatPaise(x), legacy.formatPaise(x), String(x));
   }
+  assert.equal(formatMoney(-500, "INR"), "\u2212₹5", "U+2212 minus, as deployed");
 }
 // Drift detector: the fixed prefix table equals what this ICU prints for en-GB currency formatting.
 for (const c of FOREIGN_CURRENCIES) {
@@ -70,9 +75,29 @@ assert.equal(parseMoneyToMinor("", "USD"), null);
 assert.equal(parseMoneyToMinor("$", "USD"), null);
 assert.equal(parseMoneyToMinor("1e3", "USD"), null);
 assert.equal(parseMoneyToMinor("0x10", "USD"), null);
-// INR is parseRupeesToPaise exactly, "$5" still refused and "12,50" still 125000 (lakh grouping is typed freely).
-for (const text of ["0.1", "1,250.5", "₹ 99.99", "1.005", "-5", "abc", "$5", "12,50", "1,25,000", "5.", "₹1,00,00,000", "  42  ", "1000000000", "1000000000.01", "99999999999"]) {
-  assert.equal(parseMoneyToMinor(text, "INR"), parseRupeesToPaise(text), text);
+// INR is the deployed parseRupeesToPaise (legacy-model.ts) exactly, "$5" still refused and "12,50" still 125000
+// (lakh grouping is typed freely). The one intended change is the MAX_MINOR ceiling, asserted case by case.
+{
+  const aboveCeiling = new Set(["1000000000.01", "9999999999.99", "₹1,00,00,00,000.50"]);
+  const corpus = [
+    "0.1", "1,250.5", "₹ 99.99", "1.005", "-5", "abc", "$5", "12,50", "1,25,000", "5.", "₹1,00,00,000", "  42  ", "1000000000",
+    "7", "0", "00", "0.00", ".5", "1.", "1.5", "1.50", "₹", "Rs 500", "INR 500", "500 INR", "1 000", "1e3", "0x10", "+5", "5-", "₹-5",
+    "１２", "1,2,3", ",5", "5,", "₹ 1,23,456.78", "₹1,23,456.789", "\t9\n", "", " ", "999999999.99", "99999999999", ...aboveCeiling,
+  ];
+  let seed = 3;
+  const rand = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+  for (let i = 0; i < 1000; i++) corpus.push(`${rand(10 ** 7)}${rand(2) ? "." + String(rand(100)).padStart(rand(2) + 1, "0") : ""}`);
+  for (const text of corpus) {
+    const old = legacy.parseRupeesToPaise(text);
+    if (aboveCeiling.has(text)) {
+      assert.ok(old !== null && old > MAX_MINOR, `${text}: the deployed parser accepted it`);
+      assert.equal(parseMoneyToMinor(text, "INR"), null, `${text}: above MAX_MINOR is refused now`);
+      assert.equal(parseRupeesToPaise(text), null, text);
+      continue;
+    }
+    assert.equal(parseMoneyToMinor(text, "INR"), old, text);
+    assert.equal(parseRupeesToPaise(text), old, text);
+  }
 }
 assert.equal(parseMoneyToMinor("$5", "INR"), null);
 assert.equal(parseMoneyToMinor("12,50", "INR"), 125000);

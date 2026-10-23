@@ -645,4 +645,149 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   }
 }
 
+// Clients abroad, review round 1 (docs/spec-foreign-clients.md §1.4-§1.7, §3.4-§3.5).
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const legacy = await import("./fixtures/legacy-model.ts");
+  const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
+  const X = Date.UTC(2026, 9, 1);
+  const DAY = 86_400_000;
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const cl = (id, name, at = X) => ({ id, name, phone: "", email: "", gstin: "", createdAt: at, updatedAt: at });
+  const inv = (id, clientId, extra = {}) => ({ id, number: id, clientId, issueDate: "2026-10-01", dueDate: "2026-10-15", amountPaise: 50000, description: "", payments: [], reminders: [], voided: false, createdAt: X, updatedAt: X, ...extra });
+  const settings = (extra = {}) => ({ ...M.emptyIntlSettings(X), on: true, accountName: "Shop Pvt Ltd", account: "GB82WEST12345698765432", swift: "WESTGB2L", ...extra });
+
+  /* ---------- the sanitizer is a fixed point (no PUT ever writes twice for the same content) ---------- */
+  {
+    let seed = 5;
+    const rand = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+    const pieces = ["x", " ", "\n", "\r\n", "\t", "ABA 026009593", "  ", "Sort code 12-34-56", "\u0007", "é", "\n\n"];
+    const text = (max) => Array.from({ length: rand(max) }, () => pieces[rand(pieces.length)]).join("");
+    for (let i = 0; i < 400; i++) {
+      const long = "x".repeat(250 + rand(60));
+      const raw = {
+        ...M.emptyWorkspace(),
+        intl: { invoices: {}, recurring: {}, clients: {}, settings: {
+          ...settings(), accountName: text(30) + "A" + text(30), bankName: " " + text(20),
+          bankDetails: [text(40), long + text(8) + "\n" + text(20), text(400)][rand(3)],
+          byCurrency: { USD: { accountName: text(10) + "B", bankName: "", swift: "", account: "", bankDetails: long + "\n  \n" + text(30), payUrl: "" } },
+        } },
+      };
+      const once = M.sanitizeWorkspace(raw);
+      const twice = M.sanitizeWorkspace(clone(once));
+      assert.equal(M.canonicalJson(twice), M.canonicalJson(once), "sanitize(sanitize(x)) === sanitize(x)");
+      assert.ok(once.intl.settings.bankDetails.length <= 300);
+    }
+    // The review's case: a 300-character cut right after a line break.
+    const raw = { ...M.emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {}, settings: settings({ bankDetails: "x".repeat(299) + "\nABA 026009593" }) } };
+    const store = memoryCloudStore();
+    const revs = [];
+    for (let i = 0; i < 4; i++) revs.push((await syncWorkspace(store, "ws:doc:o", raw, X + 1000 + i)).rev);
+    assert.deepEqual(revs, [1, 1, 1, 1], "the same content never writes a new revision");
+    const reply = M.sanitizeWorkspace(JSON.parse(store.docs.get("ws:doc:o").json));
+    const mine = M.sanitizeWorkspace(clone(raw));
+    assert.equal(M.canonicalJson(M.mergeWorkspaces(mine, reply)), M.canonicalJson(reply), "the client's copy equals the server's, so push stops");
+  }
+
+  /* ---------- INR credited: never copied across a split, kept only as positive paise on a foreign payment ---------- */
+  {
+    let w = M.upsertClient(M.emptyWorkspace(), cl("cli_abroad01", "Acme GmbH"), X);
+    w = M.upsertInvoice(w, inv("inv_usd00001", "cli_abroad01", { currency: "USD", dueDate: "2026-10-10" }), X);
+    w = M.upsertInvoice(w, inv("inv_usd00002", "cli_abroad01", { currency: "USD" }), X);
+    w = M.upsertInvoice(w, inv("inv_inr00001", "cli_abroad01"), X);
+    const split = M.allocatePayment(w, "cli_abroad01", 100000, { date: "2026-10-12", mode: "bank", reference: "FIRA1", inrCreditedPaise: 8_300_000 }, "2026-10-20", X + 1, "USD");
+    assert.deepEqual(split.allocations, [{ invoiceId: "inv_usd00001", amountPaise: 50000 }, { invoiceId: "inv_usd00002", amountPaise: 50000 }]);
+    const credited = M.allLiveInvoices(M.sanitizeWorkspace(clone(split.ws))).flatMap((i) => i.payments.map((p) => p.inrCreditedPaise ?? 0));
+    assert.equal(credited.reduce((a, b) => a + b, 0), 0, "a split payment never counts the rupees credited once per invoice");
+    const pay = (ws, id, inrCreditedPaise) => M.getInvoice(M.addPayment(ws, id, { amountPaise: 100, date: "2026-10-12", mode: "bank", reference: "", inrCreditedPaise }, X + 2), id).payments.at(-1);
+    assert.equal(pay(w, "inv_usd00001", 8_300_000).inrCreditedPaise, 8_300_000);
+    for (const bad of [-12.5, 12.5, -100, 0, Number.NaN, "100", M.MAX_MINOR + 1]) assert.ok(!("inrCreditedPaise" in pay(w, "inv_usd00001", bad)), `INR credited ${bad} is dropped`);
+    assert.ok(!("inrCreditedPaise" in pay(w, "inv_inr00001", 500)), "an INR invoice's payment never carries INR credited");
+    const kept = M.addPayment(w, "inv_usd00001", { amountPaise: 100, date: "2026-10-12", mode: "bank", reference: "", inrCreditedPaise: 700 }, X + 2);
+    assert.equal(M.canonicalJson(M.sanitizeWorkspace(clone(kept))), M.canonicalJson(kept), "what addPayment stores is already sanitized");
+  }
+
+  /* ---------- this device's erase tombstones every intl entry, a future-skewed one too ---------- */
+  {
+    const skew = X + 5000;
+    let w = M.upsertClient(M.emptyWorkspace(), cl("cli_abroad01", "Acme GmbH"), X);
+    w = M.upsertInvoice(w, inv("inv_inr00001", "cli_abroad01"), skew);
+    w = M.upsertInvoice(w, inv("inv_usd00001", "cli_abroad01", { currency: "USD" }), skew);
+    w = M.upsertPlan(w, { id: "rec_usd00001", clientId: "cli_abroad01", amountPaise: 100, description: "", dayOfMonth: 1, dueAfterDays: 7, startMonth: "2026-10", endMonth: "", paused: false, currency: "USD", createdAt: skew, updatedAt: skew }, skew);
+    w = { ...w, intl: { ...w.intl, settings: settings({ updatedAt: skew }), clients: { cli_abroad01: { currency: "USD", updatedAt: skew } } } };
+    const erased = M.eraseWorkspace(M.sanitizeWorkspace(clone(w)), X + 1);
+    assert.equal(erased.invoices.inv_inr00001.deletedAt, X + 1);
+    assert.equal(erased.intl.invoices.inv_usd00001.deletedAt, X + 1, "a foreign record written 'later' is erased like its INR neighbour");
+    assert.equal(erased.intl.recurring.rec_usd00001.deletedAt, X + 1);
+    assert.equal(erased.intl.clients.cli_abroad01.deletedAt, X + 1);
+    assert.deepEqual(erased.intl.settings, M.emptyIntlSettings(X + 1), "settings are emptied whatever their updatedAt");
+  }
+
+  /* ---------- a plan currency change needs a month left to bill ---------- */
+  {
+    let w = M.upsertClient(M.emptyWorkspace(), cl("cli_abroad01", "Acme GmbH"), X);
+    w = M.upsertPlan(w, { id: "rec_usd00002", clientId: "cli_abroad01", amountPaise: 100, description: "", dayOfMonth: 1, dueAfterDays: 7, startMonth: "2026-08", endMonth: "2026-09", paused: false, currency: "USD", createdAt: X, updatedAt: X }, X);
+    const generated = M.generateRecurring(w, "2026-10-10", X).ws;
+    assert.deepEqual(M.planMonths(generated, M.getPlan(generated, "rec_usd00002")), ["2026-08", "2026-09"]);
+    assert.equal(M.replacePlanCurrency(generated, "rec_usd00002", "EUR", X + 3), null, "an ended, fully billed plan is never replaced by one that starts after its end");
+    const open = M.upsertPlan(w, { ...M.getPlan(w, "rec_usd00002"), endMonth: "2026-12" }, X + 1);
+    const g2 = M.generateRecurring(open, "2026-10-10", X + 1).ws;
+    const r = M.replacePlanCurrency(g2, "rec_usd00002", "EUR", X + 3);
+    assert.ok(r);
+    const replacement = M.getPlan(r.ws, r.id);
+    assert.deepEqual([replacement.startMonth, replacement.endMonth, replacement.currency], ["2026-11", "2026-12", "EUR"]);
+    assert.equal(M.getPlan(r.ws, "rec_usd00002").endMonth, "2026-10");
+  }
+
+  /* ---------- an old tab's erase is honoured even after the user started over there ---------- */
+  {
+    let W = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), cl("cli_abroad01", "Acme GmbH"), X);
+    W = M.upsertInvoice(W, inv("inv_inr00001", "cli_abroad01"), X);
+    W = M.upsertInvoice(W, inv("inv_usd00001", "cli_abroad01", { currency: "USD" }), X);
+    W = M.sanitizeWorkspace({ ...W, intl: { ...W.intl, settings: settings(), clients: { cli_abroad01: { currency: "USD", updatedAt: X } } } });
+    const E = X + DAY;
+    const erasedOld = () => legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(W)), E);
+    const startOvers = {
+      "a new client": (o) => legacy.upsertClient(o, cl("cli_newstart", "First new client", E + 60_000), E + 60_000),
+      "a new invoice": (o) => legacy.upsertInvoice(legacy.upsertClient(o, cl("cli_newstart", "New", E + 60_000), E + 60_000), { ...inv("inv_newstart", "cli_newstart"), createdAt: E + 70_000, updatedAt: E + 70_000 }, E + 70_000),
+      "a business rename": (o) => legacy.updateBusiness(o, { name: "New Shop", upiId: "new@okaxis" }, E + 30_000),
+      "all three": (o) => legacy.updateBusiness(legacy.upsertInvoice(legacy.upsertClient(o, cl("cli_newstart", "New", E + 1), E + 1), { ...inv("inv_newstart", "cli_newstart"), createdAt: E + 2, updatedAt: E + 2 }, E + 2), { name: "New Shop" }, E + 3),
+      "nothing": (o) => o,
+    };
+    const honoured = (ws, what) => {
+      assert.equal(ws.intl.invoices.inv_usd00001.deletedAt, E, `${what}: the foreign invoice is erased at the erase time`);
+      assert.equal(ws.intl.settings.account, "", `${what}: the IBAN is erased`);
+      assert.equal(ws.intl.settings.swift, "", `${what}: the SWIFT is erased`);
+      assert.equal(ws.clients.cli_abroad01.deletedAt, E, `${what}: the erased client is never revived`);
+      assert.equal(ws.intl.clients.cli_abroad01.deletedAt, E);
+    };
+    for (const [what, startOver] of Object.entries(startOvers)) {
+      const L = startOver(erasedOld());
+      for (const merged of [M.mergeWorkspaces(W, M.sanitizeWorkspace(clone(L))), M.mergeWorkspaces(M.sanitizeWorkspace(clone(L)), W)]) {
+        const repaired = M.repairIntl(merged, E + 120_000);
+        honoured(repaired, what);
+        assert.equal(M.repairIntl(repaired, E + 200_000), repaired, `${what}: a second repair changes nothing`);
+        for (const id of Object.keys(L.clients)) if (!L.clients[id].deletedAt) assert.equal(repaired.clients[id].deletedAt, undefined, `${what}: the fresh start stays`);
+      }
+      // Through the server: the new device's copy is stored, then the old tab pushes erase and fresh start together.
+      const store = memoryCloudStore();
+      await syncWorkspace(store, "ws:doc:o", W, X + 10);
+      const reply = await syncWorkspace(store, "ws:doc:o", legacy.sanitizeWorkspace(clone(L)), E + 120_000);
+      honoured(M.sanitizeWorkspace(clone(reply.workspace)), `${what} (server)`);
+    }
+    // Not an erase: a single deletion of a client whose only invoices are foreign, then a rename, revives it.
+    let D = legacy.sanitizeWorkspace(clone(M.deleteInvoice(W, "inv_inr00001", X + 1)));
+    D = legacy.updateBusiness(legacy.deleteClient(D, "cli_abroad01", E), { name: "Renamed" }, E + 10);
+    const kept = M.repairIntl(M.mergeWorkspaces(W, M.sanitizeWorkspace(clone(D))), E + 20);
+    assert.equal(kept.intl.invoices.inv_usd00001.deletedAt, undefined, "a single deletion is never taken for an erase");
+    assert.equal(kept.intl.settings.account, "GB82WEST12345698765432");
+    assert.equal(kept.clients.cli_abroad01.deletedAt, undefined, "the client is revived");
+    // Not an erase: clearing sample data tombstones several records at one time.
+    let S = addSampleData(M.updateBusiness(M.emptyWorkspace(), { name: "Shop" }, X), "2026-10-01", X);
+    S = M.sanitizeWorkspace({ ...S, intl: { invoices: {}, recurring: {}, clients: {}, settings: settings() } });
+    const cleared = M.updateBusiness(removeSampleData(S, E), { name: "Shop 2" }, E + 5);
+    assert.equal(M.repairIntl(cleared, E + 10).intl.settings.account, "GB82WEST12345698765432", "clearing sample data never erases bank details");
+  }
+}
+
 console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");
