@@ -12,7 +12,7 @@ import { addBook, bookHash, deleteBook, emptyIndex, liveBookIds, PRIMARY_BOOK_ID
 import { canonicalJson, emptyWorkspace, mergeWorkspaces, sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice } from "../src/lib/workspace/model.ts";
 import {
   BOOK_INDEX_KEY, BOOK_SYNC_KEY, bookKey, listAside, loadBook, loadShelf, OWNER_KEY, readSyncMeta, retireBook, saveBook, saveIndex, STASH_KEY,
-  STASH_V2_KEY, switchAccountStorage, WORKSPACE_KEY, writeSyncMeta,
+  STASH_V2_KEY, saveWorkspace, switchAccountStorage, WORKSPACE_KEY, writeSyncMeta,
 } from "../src/lib/workspace/localStore.ts";
 import { BOOKS_URL, createBookSync, createShelfSync, OWNER_MISMATCH, READ_ONLY, STASH_NO_ROOM, STASH_OCCUPIED, SYNC_URL } from "../src/lib/workspace/sync.ts";
 
@@ -735,6 +735,24 @@ const three = book("Book Three", "three@okaxis", 120000);
     await h.engine.start();
     await new Promise((r) => setTimeout(r, 20));
     assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`]);
+    h.engine.stop();
+  }
+
+  // Review round 2: a first sign-in tags a guest's sidecar with the account at once, even when nothing is saved
+  // (the server's copy equals this one), so an older tab's later switch can't leave it looking like a guest's.
+  {
+    const store = installBrowser();
+    saveWorkspace(W);
+    assert.equal(JSON.parse(store.getItem(intlKey(PRIMARY_BOOK_ID))).owner, null);
+    const srv = fakeServer();
+    await srv.write(PRIMARY_BOOK_ID, W);
+    const before = store.getItem(WORKSPACE_KEY);
+    const h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 30));
+    assert.equal(store.getItem(OWNER_KEY), OWNER_A);
+    assert.equal(store.getItem(WORKSPACE_KEY), before, "(nothing was saved)");
+    assert.equal(JSON.parse(store.getItem(intlKey(PRIMARY_BOOK_ID))).owner, OWNER_A, "the guest's foreign section now belongs to A");
     h.engine.stop();
   }
 

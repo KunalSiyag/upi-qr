@@ -166,7 +166,7 @@ export function formatIban(v: string): string {
  *   https://razorpay.com/docs/api/payments/payment-links/create-standard/).
  * Payoneer and Skydo payment links are not listed: neither provider documents the hostname its links use
  * (checked https://www.payoneer.com/payment-links/, Payoneer's payment-link FAQ and https://www.skydo.com/faqs/instalinks),
- * so they can't be verified yet.
+ * so they can't be verified yet. Pending the owner's decision (spec owner question 14, §10 follow-ups).
  */
 export const PAY_URL_HOSTS: readonly string[] = [
   "paypal.me", "www.paypal.me", "paypal.com", "www.paypal.com", "wise.com", "buy.stripe.com", "rzp.io",
@@ -206,8 +206,12 @@ export function normalizeFy(v: string): string {
 
 /** "2027-03-31" → "2026-27"; "2027-04-01" → "2027-28"; "" for anything that isn't a date. */
 export function fyOf(isoDate: string): string {
-  const match = /^(\d{4})-(\d{2})-\d{2}$/.exec(String(isoDate ?? ""));
+  const text = String(isoDate ?? "");
+  const match = /^(\d{4})-(\d{2})-\d{2}$/.exec(text);
   if (!match) return "";
+  // A real calendar date only (model.ts isIsoDate's rule, inlined: this module has no imports).
+  const date = new Date(`${text}T00:00:00Z`);
+  if (Number.isNaN(date.valueOf()) || date.toISOString().slice(0, 10) !== text) return "";
   const year = Number(match[1]);
   const start = Number(match[2]) >= 4 ? year : year - 1;
   return `${start}-${two(start + 1)}`;

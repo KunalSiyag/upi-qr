@@ -4,7 +4,7 @@ import {
 } from "./books.ts";
 import type { PlanId } from "./entitlements.ts";
 import {
-  keepAside, loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
+  claimGuestSidecars, keepAside, loadShelf, OWNER_KEY, STASH_KEY, resetSyncMeta, setAsideOtherAccountBooks, switchAccountStorage, syncMetaFor, writeSyncMeta,
 } from "./localStore.ts";
 
 /**
@@ -482,8 +482,12 @@ export function createShelfSync(opts: ShelfSyncOptions) {
   let ownerKeySeen = storageGet(OWNER_KEY);
   const ownerMovedUnderUs = () => storageGet(OWNER_KEY) !== ownerKeySeen;
   function adoptOwnerKey(value: string) {
+    const first = storageGet(OWNER_KEY) === null;
     storageSet(OWNER_KEY, value);
     ownerKeySeen = storageGet(OWNER_KEY);
+    // A first sign-in adopts the guest's foreign sections now (owner-tagged at once, not at their next save),
+    // so an older tab's later account switch can't leave them looking like the next account's.
+    if (first && ownerKeySeen === value) claimGuestSidecars();
   }
 
   /**

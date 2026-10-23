@@ -1188,10 +1188,14 @@ const isSampleRecordId = (id: string) => id.includes("sample");
  * emptyBusiness(T). So T is a candidate when the business is still emptyBusiness(T), or when at least two
  * non-sample legacy records were tombstoned at exactly T (no other single action does that). It is the erase when:
  * - the business was erased at T (still emptyBusiness(T)) or rewritten after it (updatedAt > T);
+ * - some legacy record was tombstoned at exactly T, or the business is still emptyBusiness(T) (a book whose
+ *   legacy records were all deleted earlier, or that never had one, leaves no other trace). No user edit writes
+ *   emptyBusiness(T) with T > 0: both business forms require a name, and a restore never starts a new book
+ *   from emptyWorkspace(now);
  * - every legacy record created up to T was tombstoned by T; records created after T are the fresh start;
  * - some intl content was last written before T (the erase couldn't see it).
- * The newest such T wins. Otherwise null. An erase of a book with one legacy record, followed by a business
- * rename, leaves no trace to tell it from a single deletion, and is not detected.
+ * The newest such T wins. Otherwise null. An erase of a book with at most one live legacy record, followed by
+ * a business rename in the old tab, leaves no trace to tell it from a single deletion, and is not detected.
  */
 function detectLegacyErase(ws: Workspace): number | null {
   const intl = ws.intl;
@@ -1215,7 +1219,9 @@ function detectLegacyErase(ws: Workspace): number | null {
   for (const T of [...candidates].sort((x, y) => y - x)) {
     if (!(T > 0)) continue;
     if (!(emptyAt(T) || b.updatedAt > T)) continue;
-    if (!legacy.some((r) => r.deletedAt === T)) continue;
+    // A record tombstoned at T, or (business still emptyBusiness(T)) a book with no live legacy record at T:
+    // every record was deleted earlier, or there never was one (bank details set up first).
+    if (!legacy.some((r) => r.deletedAt === T) && !emptyAt(T)) continue;
     if (!legacy.every((r) => r.createdAt > T || (r.deletedAt !== undefined && r.deletedAt <= T))) continue;
     const settingsOlder = Boolean(intl.settings && !settingsEmpty(intl.settings) && intl.settings.updatedAt < T);
     if (older(intl.invoices, T) || older(intl.recurring, T) || older(intl.clients, T) || settingsOlder) return T;
@@ -1227,9 +1233,10 @@ function detectLegacyErase(ws: Workspace): number | null {
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices
  * (which that tab couldn't see) is revived, unless it was erased with everything else. Returns `ws` itself
- * when nothing needs repair, so it never causes a write by itself.
+ * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
+ * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
-export function repairIntl(ws: Workspace, now: number): Workspace {
+export function repairIntl(ws: Workspace, _now: number): Workspace {
   if (!ws.intl) return ws;
   let next = ws;
   const erasedAt = detectLegacyErase(ws);
@@ -1240,7 +1247,9 @@ export function repairIntl(ws: Workspace, now: number): Workspace {
     const client: Client | undefined = own(clients ?? next.clients, invoice.clientId);
     if (!client || !client.deletedAt || client.deletedAt === erasedAt) continue;
     const { deletedAt: _gone, ...revived } = client;
-    clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt + 1, now) } };
+    // Deterministic (never the clock): every device and the server revive to the same bytes, so a book that is
+    // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.
+    clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt, client.deletedAt) + 1 } };
   }
   return clients ? { ...next, clients } : next;
 }

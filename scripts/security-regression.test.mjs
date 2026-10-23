@@ -451,8 +451,9 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(generate, /if \(getInvoice\(next, id\)\) continue;/);
 
   // Integer money: no "* 100" on amounts and no "/ 100" except Math.floor/trunc(… / 100) in workspace code.
+  // The one exception (spec §9.2) is a CSS percentage, which is no amount: the aging bar's width.
   const allowedHundred = new Map([
-    ["src/components/workspace/PaymentsWorkspace.tsx", [/style=\{\{ width: `\$\{\(b\.balancePaise \/ maxBucket\) \* 100\}%` \}\}/, /const breakEven = Math\.ceil\(\(PRO_PRICES\.monthly\.paise \* 10_000\) \/ UPI_MDR\.gatewayRateBps \/ 100\) \* 100;/]],
+    ["src/components/workspace/PaymentsWorkspace.tsx", [/style=\{\{ width: `\$\{\(b\.balancePaise \/ maxBucket\) \* 100\}%` \}\}/]],
   ]);
   for (const file of [...walk(join(projectRoot, "src/lib/workspace")), ...walk(join(projectRoot, "src/components/workspace"))].filter((f) => /\.(ts|tsx)$/.test(f))) {
     const name = rel(file);
@@ -474,6 +475,8 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(store, /canonicalJson\(withoutIntl\(pruned\)\)/, "a book key never holds intl");
   assert.match(store, /\{ owner: get\(OWNER_KEY\), intl: pruned\.intl \}/, "sidecars record the account that wrote them");
   assert.match(store, /if \(sidecarJoins\(side\.owner\)\) return side\.intl;/, "another account's sidecar is never joined");
+  assert.match(store, /JSON\.stringify\(\{ \.\.\.meta, workspace: withoutIntl\(workspace\) \}\)/, "the set-aside key older code lists never holds intl");
+  assert.doesNotMatch(store, /put(?:Verified)?\(\s*`\$\{ASIDE_PREFIX\}/, "set-aside copies are written only through putAside");
   // Sync: every comparison with the server's copy goes through sameAsServer.
   assert.doesNotMatch(syncClient.replace(/const sameAsServer = [^\n]*\n/, ""), /[!=]==\s*lastJson|lastJson\s*[!=]==\s*canonicalJson/, "compare with the server's copy only through sameAsServer");
   assert.match(syncClient, /const sameAsServer = \(ws: Workspace\) => canonicalJson\(serverKeepsIntl \? ws : withoutIntl\(ws\)\) === lastJson;/);

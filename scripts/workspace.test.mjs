@@ -510,11 +510,20 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(merged.business.name, "Sharma Tuition Classes");
       assert.equal(merged.invoices.inv_inr00001.payments.length, 1);
       assert.equal(merged.clients.cli_globex01.deletedAt, undefined, "a client with live foreign invoices is revived");
-      assert.equal(merged.clients.cli_globex01.updatedAt, X + 200);
+      assert.equal(merged.clients.cli_globex01.updatedAt, X + 104, "revived one millisecond after the delete (X + 103), never at the clock's time");
       assert.ok(Object.keys(merged.invoices).every((id) => !merged.intl.invoices[id]));
       assert.equal(M.repairIntl(merged, X + 300), merged, "repairIntl is idempotent (same object, no extra writes)");
     }
     assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(W, L), X + 200)), M.canonicalJson(M.repairIntl(M.mergeWorkspaces(L, W), X + 200)));
+    // Review round 2: the revive doesn't depend on the clock, so repairing the same stored copy on later loads (or
+    // on the server) gives the same bytes, and an unsaved non-primary book never looks changed against its sync meta.
+    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(W, L), X + 200)), M.canonicalJson(M.repairIntl(M.mergeWorkspaces(W, L), X + 90 * DAY)));
+    {
+      const revived = M.repairIntl(M.mergeWorkspaces(W, L), X + 200);
+      const stillDeleted = M.mergeWorkspaces(W, L);
+      assert.equal(M.mergeWorkspaces(stillDeleted, revived).clients.cli_globex01.deletedAt, undefined, "the revive wins over the tombstone");
+      assert.equal(M.mergeWorkspaces(revived, stillDeleted).clients.cli_globex01.deletedAt, undefined, "in both merge orders");
+    }
     // An old tab's erase is honoured at its own time.
     const TE = X + 400;
     const erased = legacy.eraseWorkspace(L0, TE);
@@ -787,6 +796,33 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     S = M.sanitizeWorkspace({ ...S, intl: { invoices: {}, recurring: {}, clients: {}, settings: settings() } });
     const cleared = M.updateBusiness(removeSampleData(S, E), { name: "Shop 2" }, E + 5);
     assert.equal(M.repairIntl(cleared, E + 10).intl.settings.account, "GB82WEST12345698765432", "clearing sample data never erases bank details");
+
+    // Review round 2: an erase of a book with no live legacy record at the erase time leaves no record tombstoned
+    // at T, only the business as emptyBusiness(T). Its only client was deleted earlier, or it never had one.
+    let gone = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Asha Design", upiId: "asha@okaxis" }, X), cl("cli_onlyone1", "Old"), X);
+    gone = M.deleteClient(gone, "cli_onlyone1", X + 5);
+    gone = M.sanitizeWorkspace({ ...gone, intl: { invoices: {}, recurring: {}, clients: { cli_abroad01: { currency: "USD", updatedAt: X } }, settings: settings() } });
+    const none = M.sanitizeWorkspace({ ...M.updateBusiness(M.emptyWorkspace(), { name: "Asha Design" }, X), intl: gone.intl });
+    for (const [what, book] of [["only client deleted earlier", gone], ["no client yet", none]]) {
+      const oldErase = legacy.eraseWorkspace(legacy.sanitizeWorkspace(clone(book)), E);
+      for (const merged of [M.mergeWorkspaces(book, M.sanitizeWorkspace(clone(oldErase))), M.mergeWorkspaces(M.sanitizeWorkspace(clone(oldErase)), book)]) {
+        const repaired = M.repairIntl(merged, E + 1000);
+        assert.equal(repaired.intl.settings.account, "", `${what}: the IBAN goes with the erase`);
+        assert.equal(repaired.intl.settings.accountName, "", `${what}: the account name goes with the erase`);
+        assert.equal(repaired.intl.clients.cli_abroad01.deletedAt, E, `${what}: client currencies go with the erase`);
+        assert.equal(M.repairIntl(repaired, E + 2000), repaired, `${what}: idempotent`);
+      }
+      const store = memoryCloudStore();
+      await syncWorkspace(store, "ws:doc:o", book, X + 10);
+      const reply = await syncWorkspace(store, "ws:doc:o", legacy.sanitizeWorkspace(clone(oldErase)), E + 1000);
+      assert.equal(M.sanitizeWorkspace(clone(reply.workspace)).intl.settings.account, "", `${what} (server): the IBAN goes with the erase`);
+    }
+    // Not an erase: every INR record deleted one by one while the business keeps its name.
+    const allDeleted = M.repairIntl(M.updateBusiness(gone, { phone: "" }, E), E + 10);
+    assert.equal(allDeleted.intl.settings.account, "GB82WEST12345698765432", "deleting every INR record is never an erase");
+    // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first.
+    const unnamed = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: gone.intl });
+    assert.equal(M.repairIntl(unnamed, E), unnamed);
   }
 }
 

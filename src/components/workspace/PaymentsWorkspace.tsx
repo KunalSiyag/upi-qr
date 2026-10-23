@@ -1473,8 +1473,10 @@ function GatewaySavings({ ws, today, isPro }: { ws: Workspace; today: string; is
   const { tr } = useWs();
   const collected = upiCollectedInMonth(ws, today);
   if (collected < SAVINGS_FROM_PAISE) return null;
-  // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee.
-  const breakEven = Math.ceil((PRO_PRICES.monthly.paise * 10_000) / UPI_MDR.gatewayRateBps / 100) * 100;
+  // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee, in integer paise only.
+  const bps = UPI_MDR.gatewayRateBps;
+  const salesPaise = Math.floor((PRO_PRICES.monthly.paise * 10_000 + bps - 1) / bps);
+  const breakEven = salesPaise + ((100 - (salesPaise % 100)) % 100);
   return (
     <section className={`${card} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
       <div className="min-w-0 text-sm leading-6">

@@ -160,6 +160,11 @@ assert.equal(fyOf("2027-03-31"), "2026-27");
 assert.equal(fyOf("2027-04-01"), "2027-28");
 assert.equal(fyOf("2099-12-31"), "2099-00");
 assert.equal(fyOf("nope"), "");
+// Impossible dates have no financial year (review round 2): month 00 and 13, 30 February, 2026-99-99.
+for (const bad of ["2027-00-01", "2027-13-05", "2027-02-30", "2026-99-99", "2026-02-29", "2026-04-31"]) {
+  assert.equal(fyOf(bad), "", `${bad} is not a date`);
+}
+assert.equal(fyOf("2028-02-29"), "2027-28", "a leap day is a date");
 assert.equal(normalizeFy("2026-27"), "2026-27");
 assert.equal(normalizeFy("2099-00"), "2099-00");
 assert.equal(normalizeFy("2026-28"), "");
@@ -174,5 +179,9 @@ assert.equal(exportNote(ARN, "2026-27", "2027-03-31"), `${LUT_ENDORSEMENT} (LUT 
 assert.equal(exportNote(ARN, "2026-27", "2027-04-01"), "", "an expired LUT prints nothing");
 assert.equal(exportNote("", "2026-27", "2026-10-01"), "");
 assert.equal(exportNote(ARN, "", "2026-10-01"), "");
+for (const bad of ["2027-00-01", "2027-13-05", "2027-02-30", "2026-99-99"]) {
+  assert.equal(exportNote(ARN, "2026-27", bad), "", `no endorsement for the impossible date ${bad}`);
+  assert.equal(exportNote(ARN, "2027-28", bad), "", `no endorsement for the impossible date ${bad}`);
+}
 
 console.log("[currency] formatting (with ICU drift check), parsing with the grouping check, MAX_MINOR, validators, FY and the export note passed");

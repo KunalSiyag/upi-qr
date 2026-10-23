@@ -50,6 +50,13 @@ const INTL_PREFIX = "proupiqr-intl-v1:";
  */
 const STASH_INTL_PREFIX = "proupiqr-stash-intl-v1:";
 const stashIntlKey = (id: string): string => `${STASH_INTL_PREFIX}${id}`;
+/**
+ * The foreign section of a set-aside copy ({ at, reason, name, primary?, intl }). Older code lists, downloads and
+ * discards proupiqr-aside-v1:<id> with its own sanitizer, so that key holds only the INR part (none at all for a
+ * copy that is only a foreign section), and the foreign section waits here, under a key older code never lists.
+ */
+const ASIDE_INTL_PREFIX = "proupiqr-aside-intl-v1:";
+const asideIntlKey = (id: string): string => `${ASIDE_INTL_PREFIX}${id}`;
 const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
 /** The last business limit the server reported for an account: { owner, limit }. Read before the first request and offline. */
 export const PLAN_LIMIT_KEY = "proupiqr-plan-limit-v1";
@@ -293,8 +300,28 @@ function sidecarIntl(id: string): IntlData | undefined {
 /** A book key's workspace joined with its sidecar. Merged, never overridden: intl found in a book key is kept. */
 function joinSidecar(id: string, ws: Workspace): Workspace {
   if (get(intlKey(id)) === null) return ws;
+  claimGuestSidecar(id);
   const side = sidecarIntl(id);
   return side ? sanitizeWorkspace({ ...ws, intl: mergeIntl(ws.intl, side) }) : ws;
+}
+
+/**
+ * A signed-out device's sidecar ({ owner: null }) that the account now on this device adopted is tagged with
+ * that account right away (verified), not at its next save: until then an account switch by older code (which
+ * leaves sidecars behind) followed by its "Discard" of the stash would let the next account join it.
+ */
+function claimGuestSidecar(id: string): void {
+  const current = get(OWNER_KEY);
+  if (current === null) return;
+  const side = readSidecar(id);
+  if (!side || side.owner !== null || !sidecarJoins(null)) return;
+  if (!side.intl) { drop(intlKey(id)); return; }
+  putVerified(intlKey(id), canonicalJson({ owner: current, intl: side.intl } as unknown as Workspace));
+}
+
+/** Every guest sidecar on this device, tagged for the account that just adopted the device (sync's first sign-in). */
+export function claimGuestSidecars(): void {
+  for (const key of keys()) if (key.startsWith(INTL_PREFIX) && isBookId(key.slice(INTL_PREFIX.length))) claimGuestSidecar(key.slice(INTL_PREFIX.length));
 }
 
 /**
@@ -305,14 +332,18 @@ function joinSidecar(id: string, ws: Workspace): Workspace {
 function writeBookKeys(id: string, ws: Workspace, verified = false, now = Date.now()): boolean {
   const write = verified ? putVerified : put;
   const pruned = pruneTombstones(ws, now);
-  // Another account's sidecar (left by an older switch) is set aside first and never written over.
+  // Another account's sidecar (left by an older switch) is set aside first and never written over or removed
+  // here. When it can't be set aside yet (storage full), it stays for a later try: this account's own sidecar
+  // isn't written (false only when there is one to write), but the book key is, since it never holds intl.
   const existing = readSidecar(id);
+  let occupied = false;
   if (existing && !sidecarJoins(existing.owner)) {
     sidecarIntl(id);
-    if (get(intlKey(id)) !== null) return false;
+    occupied = get(intlKey(id)) !== null;
   }
   let sideOk = true;
-  if (pruned.intl) sideOk = write(intlKey(id), canonicalJson({ owner: get(OWNER_KEY), intl: pruned.intl } as unknown as Workspace));
+  if (occupied) sideOk = !pruned.intl;
+  else if (pruned.intl) sideOk = write(intlKey(id), canonicalJson({ owner: get(OWNER_KEY), intl: pruned.intl } as unknown as Workspace));
   else drop(intlKey(id));
   const bookOk = write(bookKey(id), canonicalJson(withoutIntl(pruned)));
   return sideOk && bookOk;
@@ -434,16 +465,60 @@ export interface AsideBook {
   fromPrimary: boolean;
 }
 
+type AsideRaw = { at?: unknown; reason?: unknown; name?: unknown; workspace?: unknown; primary?: unknown; intl?: unknown };
+
+/** The INR part of a copy that is only a foreign section: no legacy record, and a business that holds a name at most. */
+function intlOnly(ws: Workspace): boolean {
+  if (!ws.intl) return false;
+  // Equal to an empty workspace that has only a business name: no client, invoice or plan, tombstones included.
+  return canonicalJson({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name: ws.business.name } }) === canonicalJson(withoutIntl(ws));
+}
+
+/** A set-aside copy: its INR part (proupiqr-aside-v1:<id>, what older code lists) joined with its foreign section. */
+function readAside(id: string): AsideBook | null {
+  const raw = parseJson(get(`${ASIDE_PREFIX}${id}`)) as AsideRaw | null;
+  const side = parseJson(get(asideIntlKey(id))) as AsideRaw | null;
+  const meta = raw && typeof raw === "object" ? raw : side && typeof side === "object" ? side : null;
+  if (!meta) return null;
+  const name = typeof meta.name === "string" ? meta.name.slice(0, 80) : "";
+  let workspace = raw && typeof raw === "object"
+    ? sanitizeWorkspace(raw.workspace)
+    : sanitizeWorkspace({ ...emptyWorkspace(), business: { ...emptyBusiness(0), name } });
+  const intl = side && typeof side === "object" ? sanitizeWorkspace({ intl: side.intl }).intl : undefined;
+  if (intl) workspace = sanitizeWorkspace({ ...workspace, intl: mergeIntl(workspace.intl, intl) });
+  return {
+    id,
+    at: typeof meta.at === "number" ? meta.at : 0,
+    reason: meta.reason === "stray" || meta.reason === "read_only" || meta.reason === "other_account" ? meta.reason : "deleted_elsewhere",
+    name,
+    workspace,
+    fromPrimary: meta.primary === true,
+  };
+}
+
+const asideExists = (id: string): boolean => get(`${ASIDE_PREFIX}${id}`) !== null || get(asideIntlKey(id)) !== null;
+
 /**
  * Writes a set-aside copy and reads it back. An existing copy under the same
  * key is merged, never replaced. A copy only: nothing else is removed here.
+ * The foreign section goes to its own key first; proupiqr-aside-v1:<id> gets the
+ * INR part only, and isn't written for a copy that is only a foreign section.
  */
 function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = false): boolean {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return false;
   const key = `${ASIDE_PREFIX}${id}`;
-  const before = parseJson(get(key)) as { workspace?: unknown } | null;
-  const workspace = before?.workspace ? mergeWorkspaces(sanitizeWorkspace(before.workspace), ws) : ws;
-  return putVerified(key, JSON.stringify({ at: Date.now(), reason, name: workspace.business.name, workspace, ...(fromPrimary ? { primary: true } : {}) }));
+  const before = readAside(id);
+  const workspace = before ? mergeWorkspaces(before.workspace, ws) : ws;
+  const meta = { at: Date.now(), reason, name: workspace.business.name, ...(fromPrimary ? { primary: true } : {}) };
+  const sideBefore = get(asideIntlKey(id));
+  if (workspace.intl && !putVerified(asideIntlKey(id), JSON.stringify({ ...meta, intl: workspace.intl }))) {
+    if (sideBefore === null) drop(asideIntlKey(id)); else put(asideIntlKey(id), sideBefore);
+    return false;
+  }
+  if (intlOnly(workspace)) { drop(key); return true; }
+  if (putVerified(key, JSON.stringify({ ...meta, workspace: withoutIntl(workspace) }))) return true;
+  if (sideBefore === null) drop(asideIntlKey(id)); else put(asideIntlKey(id), sideBefore);
+  return false;
 }
 
 /** A verified set-aside copy of a book that stays on the shelf (its key is left alone). */
@@ -458,27 +533,26 @@ export function setAside(id: string, reason: AsideReason, ws: Workspace): boolea
   return true;
 }
 
+/** Every set-aside copy, each joined with its foreign section (older code's "Discard" leaves that one listed here). */
 export function listAside(): AsideBook[] {
-  const out: AsideBook[] = [];
+  const ids = new Set<string>();
   for (const key of keys()) {
-    if (!key.startsWith(ASIDE_PREFIX)) continue;
-    const id = key.slice(ASIDE_PREFIX.length);
-    const raw = parseJson(get(key)) as { at?: unknown; reason?: unknown; name?: unknown; workspace?: unknown; primary?: unknown } | null;
-    if (!isBookId(id) || !raw) continue;
-    out.push({
-      id,
-      at: typeof raw.at === "number" ? raw.at : 0,
-      reason: raw.reason === "stray" || raw.reason === "read_only" || raw.reason === "other_account" ? raw.reason : "deleted_elsewhere",
-      name: typeof raw.name === "string" ? raw.name.slice(0, 80) : "",
-      workspace: sanitizeWorkspace(raw.workspace),
-      fromPrimary: raw.primary === true,
-    });
+    const id = key.startsWith(ASIDE_PREFIX) ? key.slice(ASIDE_PREFIX.length) : key.startsWith(ASIDE_INTL_PREFIX) ? key.slice(ASIDE_INTL_PREFIX.length) : null;
+    if (id !== null && isBookId(id)) ids.add(id);
+  }
+  const out: AsideBook[] = [];
+  for (const id of ids) {
+    const aside = readAside(id);
+    if (aside) out.push(aside);
   }
   return out.sort((a, b) => a.at - b.at);
 }
 
+/** Removes a set-aside copy, its foreign section included. */
 export function discardAside(id: string): void {
-  if (isBookId(id)) drop(`${ASIDE_PREFIX}${id}`);
+  if (!isBookId(id)) return;
+  drop(`${ASIDE_PREFIX}${id}`);
+  drop(asideIntlKey(id));
 }
 
 /**
@@ -546,7 +620,7 @@ export function sweepStrayIntl(index: BookIndex, owner: string | null = get(OWNE
       handled.push(id);
       continue;
     }
-    const asideId = get(`${ASIDE_PREFIX}${id}`) === null ? id : newBookId();
+    const asideId = asideExists(id) ? newBookId() : id;
     if (putAside(asideId, sidecarJoins(side?.owner ?? null) ? "stray" : "other_account", joined)) {
       drop(key);
       handled.push(id);
@@ -768,9 +842,9 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     for (const id of liveBookIds(existing.shelf.index)) {
       const ws = existing.shelf.books[id];
       if (!ws) continue;
-      const asideId = id === PRIMARY_BOOK_ID || get(`${ASIDE_PREFIX}${id}`) !== null ? newBookId() : id;
+      const asideId = id === PRIMARY_BOOK_ID || asideExists(id) ? newBookId() : id;
       if (!putAside(asideId, giveBack ? "stray" : "other_account", ws, id === PRIMARY_BOOK_ID)) {
-        for (const done of written) drop(`${ASIDE_PREFIX}${done}`);
+        for (const done of written) discardAside(done);
         return { ok: false, reason: "storage" };
       }
       written.push(asideId);
@@ -891,12 +965,12 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
 
   // 5. The signing-in account's own set-aside copies go back into its books (each verified before its copy goes).
   for (const { asideId, bookId } of returned) {
-    const copy = parseJson(get(`${ASIDE_PREFIX}${asideId}`)) as { workspace?: unknown } | null;
-    if (!copy?.workspace) continue;
-    const ws = sanitizeWorkspace(copy.workspace);
+    const copy = readAside(asideId);
+    if (!copy) continue;
+    const ws = copy.workspace;
     if (bookId === PRIMARY_BOOK_ID) {
       const current = loadBook(PRIMARY_BOOK_ID) ?? emptyWorkspace();
-      if (writeBookKeys(PRIMARY_BOOK_ID, mergeWorkspaces(current, ws), true, now)) drop(`${ASIDE_PREFIX}${asideId}`);
+      if (writeBookKeys(PRIMARY_BOOK_ID, mergeWorkspaces(current, ws), true, now)) discardAside(asideId);
       continue;
     }
     const candidate = addBook(nextIndex, bookId, now);
@@ -904,7 +978,7 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     if (!writeBookKeys(bookId, ws, true, now)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
     if (!saveIndex(candidate, true)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
     nextIndex = candidate;
-    drop(`${ASIDE_PREFIX}${asideId}`);
+    discardAside(asideId);
   }
   return { ok: true };
 }
@@ -1032,7 +1106,9 @@ export function restoreBackup(
         target = newBookId();
         index = addBook(index, target, now);
       }
-      books[target] = restoreFrom(books[target] ?? emptyWorkspace(now), entry.workspace, now);
+      // A new book starts from emptyWorkspace() (business time 0), never emptyBusiness(now): a nameless backup
+      // restored into it would otherwise look like an old tab's erase at `now` (detectLegacyErase, spec §1.7).
+      books[target] = restoreFrom(books[target] ?? emptyWorkspace(), entry.workspace, now);
       into.push(target);
     }
     return { kind: "done", shelf: { index, books }, restored: into.length, skipped, into, blocked };

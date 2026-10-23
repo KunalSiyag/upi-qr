@@ -88,6 +88,8 @@ for (let trial = 0; trial < TRIALS; trial++) {
     runs++;
     if (old) legacyRuns++;
     for (const [k, v] of store.map) if ((k === WORKSPACE_KEY || k.startsWith("proupiqr-book-v1:")) && v.includes('"intl"')) fail(`book key ${k} contains intl`);
+    // Set-aside copies older code lists hold the INR part only; foreign sections wait under proupiqr-aside-intl-v1:.
+    for (const [k, v] of store.map) if (k.startsWith("proupiqr-aside-v1:") && v.includes('"intl"')) fail(`set-aside key ${k} contains intl`);
     const after = new Set([...store.map.values()].flatMap((v) => [...idsIn(v)]));
     const lost = [...before].filter((id) => !after.has(id));
     if (lost.length) fail(`lost ${lost.length}`);
