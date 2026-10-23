@@ -4,7 +4,9 @@ import { consumeRateLimit, rateLimitHeaders } from "../../../../lib/rateLimit";
 import { readWorkspace } from "../../../../lib/workspace/cloud";
 import { cloudStore, rateLimitsAvailable, workspaceOwner } from "../../../../lib/workspace/kvCloudStore";
 import { newPaylinkToken, paylinkStore } from "../../../../lib/workspace/kvPaylinkStore";
-import { createPaylink, createStatementLink, snapshotsForLinks } from "../../../../lib/workspace/paylinks";
+import { createPaylink, createStatementLink, refreshViews } from "../../../../lib/workspace/paylinks";
+import { parseLinkKey, PRIMARY_BOOK_ID } from "../../../../lib/workspace/books";
+import { ownerMismatch } from "../../../../lib/workspace/booksApi";
 import { planFor } from "../../../../lib/billing/plans";
 import { recordMetric } from "../../../../lib/metrics";
 
@@ -19,8 +21,12 @@ async function limited(scope: string, userId: string, limit: number) {
   return result.allowed ? null : jsonResponse({ error: "Too many requests. Try again shortly." }, 429, rateLimitHeaders(result));
 }
 
-/** Active links with any pending "I've paid" claims, plus plan usage. */
-export const GET: APIRoute = async ({ locals }) => {
+/**
+ * Active links with any pending "I've paid" claims, plus plan usage. Without
+ * ?books=1 (old clients) only the primary book's links (bare keys) are listed,
+ * exactly as before; with it, every link carries its businessId and the plan its business limit.
+ */
+export const GET: APIRoute = async ({ locals, url }) => {
   const userId = authenticatedUserId(locals);
   if (!userId) return jsonResponse({ error: "Sign in to use pay links." }, 401);
   try {
@@ -28,14 +34,19 @@ export const GET: APIRoute = async ({ locals }) => {
     if (blocked) return blocked;
     const owner = workspaceOwner(userId);
     const store = paylinkStore();
+    const allBooks = url.searchParams.get("books") === "1";
     const byInvoice = await store.list(owner);
-    const links = await Promise.all(Object.entries(byInvoice).map(async ([invoiceId, token]) => ({
+    const used = Object.keys(byInvoice).length;
+    const entries = Object.entries(byInvoice).filter(([key]) => allBooks || !key.includes("/"));
+    const links = await Promise.all(entries.map(async ([invoiceId, token]) => ({
       invoiceId,
       token,
       claims: await store.claims(token),
+      ...(allBooks ? { businessId: parseLinkKey(invoiceId).bookId } : {}),
     })));
     const plan = await planFor(owner);
-    return jsonResponse({ links, plan: { id: plan.id, activePaylinks: plan.activePaylinks, used: links.length, statementLinks: plan.statementLinks } });
+    // `used` is account-wide (the active-link limit is per account), even when only primary links are listed.
+    return jsonResponse({ links, plan: { id: plan.id, activePaylinks: plan.activePaylinks, used, statementLinks: plan.statementLinks, ...(allBooks ? { businesses: plan.businesses } : {}) } });
   } catch {
     return jsonResponse({ error: "Pay links are unavailable right now." }, 503);
   }
@@ -61,6 +72,8 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const blocked = await limited("paylinks-create", userId, 120);
     if (blocked) return blocked;
     const owner = workspaceOwner(userId);
+    const mismatch = ownerMismatch(body, owner);
+    if (mismatch) return jsonResponse(mismatch.body, mismatch.status);
     const { workspace } = await readWorkspace(cloudStore(), owner);
     const plan = await planFor(owner);
     const result = isStatement
@@ -69,8 +82,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     if (result.status !== "ok") return jsonResponse({ error: result.message, code: result.status }, result.status === "limit" || result.status === "not_pro" ? 402 : 409);
     if (result.created) {
       await recordMetric("paylink_created");
-      const store = paylinkStore();
-      await store.putViews(owner, snapshotsForLinks(workspace, await store.list(owner))).catch(() => undefined);
+      await refreshViews(paylinkStore(), owner, PRIMARY_BOOK_ID, workspace).catch(() => undefined);
     }
     return jsonResponse({ token: result.token, created: result.created }, result.created ? 201 : 200);
   } catch {

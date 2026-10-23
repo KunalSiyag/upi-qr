@@ -40,6 +40,11 @@ const clerk = clerkMiddleware((auth, context) => {
   if (!auth().userId && isProtectedRoute) {
     return auth().redirectToSignIn();
   }
+}, {
+  // Clerk's networkless verification key (Dashboard → API keys → JWT public key), read only
+  // from the environment. Unset in production today (JWKS is fetched as before); the e2e
+  // server sets a throwaway key so the server suites can sign in without Clerk's network.
+  jwtKey: process.env.CLERK_JWT_KEY || undefined,
 });
 
 const clerkOnAuthRoutes = defineMiddleware(async (context, next) => {

@@ -78,6 +78,18 @@ self.addEventListener("message", (event) => {
   );
 });
 
+// Notification URLs must stay on this site: resolve against our origin and keep
+// only same-origin results ("//evil.example" and "/\evil.example" resolve elsewhere).
+function sameOriginPath(value) {
+  if (typeof value !== "string") return null;
+  try {
+    const url = new URL(value, self.location.origin);
+    return url.origin === self.location.origin ? url.pathname + url.search + url.hash : null;
+  } catch {
+    return null;
+  }
+}
+
 // Morning digest and test notifications (payload is encrypted end to end; see src/lib/push/).
 self.addEventListener("push", (event) => {
   let data = {};
@@ -88,13 +100,13 @@ self.addEventListener("push", (event) => {
     icon: "/icons/icon-192.png",
     badge: "/icons/icon-192.png",
     tag: typeof data.tag === "string" ? data.tag : "proupiqr",
-    data: { url: typeof data.url === "string" && data.url.startsWith("/") ? data.url : "/app/" },
+    data: { url: sameOriginPath(data.url) || "/app/" },
   }));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const target = new URL(event.notification.data?.url || "/app/", self.location.origin).href;
+  const target = new URL(sameOriginPath(event.notification.data?.url) || "/app/", self.location.origin).href;
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((windows) => {
       const open = windows.find((w) => new URL(w.url).pathname.startsWith("/app"));

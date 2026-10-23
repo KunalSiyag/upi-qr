@@ -127,7 +127,8 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
 
 // Runner reads projections when present, backfills them when missing, and honours a deadline.
 {
-  const projStore = (() => { const m = new Map(); return { get: async (o) => m.get(o) ?? null, put: async (o, p) => { m.set(o, p); }, m }; })();
+  const { memoryProjectionStore } = await import("../src/lib/workspace/digest.ts");
+  const projStore = memoryProjectionStore();
   const cloud2 = memoryCloudStore();
   const push2 = memoryPushStore();
   const devices = [];
@@ -140,7 +141,8 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   const ok = async () => new Response(null, { status: 201 });
   const first = await runMorningDigest({ push: push2, cloud: cloud2, projections: projStore, vapid, today, now: T, fetchImpl: ok });
   assert.deepEqual([first.notified, first.sent, first.fromProjection, first.remaining], [30, 30, 0, 0], "first run backfills projections");
-  assert.equal(projStore.m.size, 30);
+  assert.equal(projStore.primary.size, 30);
+  assert.equal(projStore.books.size, 0, "single-business accounts never get book projections");
   const second = await runMorningDigest({ push: push2, cloud: memoryCloudStore() /* full docs unavailable */, projections: projStore, vapid, today: "2026-10-11", now: T, fetchImpl: ok });
   assert.deepEqual([second.notified, second.fromProjection], [30, 30], "next day uses projections only");
   // Deadline already passed: nothing starts, everything is reported as remaining.
@@ -150,4 +152,129 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   const resumed = await runMorningDigest({ push: push2, cloud: cloud2, projections: projStore, vapid, today: "2026-10-12", now: T, fetchImpl: ok });
   assert.deepEqual([resumed.notified, resumed.remaining], [30, 0]);
   console.log("[digest] runner uses projections, backfills them, honours deadlines, and resumes");
+}
+
+// Several businesses (books): one combined notification; one book is byte-identical to morningDigest.
+{
+  const { morningDigestBooks, digestProjection, bookProjection, parseProjection, workspaceFromProjection, memoryProjectionStore, NAME_BUSINESSES_ON_LOCK_SCREEN } = await import("../src/lib/workspace/digest.ts");
+  const { updateBusiness } = await import("../src/lib/workspace/model.ts");
+  assert.equal(NAME_BUSINESSES_ON_LOCK_SCREEN, false, "lock-screen business names ship off");
+  // One book ≡ morningDigest over 160 random workspaces (and with nameBooks on, too).
+  let rnd = 9;
+  const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+  const day = (offset) => new Date(Date.UTC(2026, 9, 10) + offset * 86_400_000).toISOString().slice(0, 10);
+  for (let trial = 0; trial < 160; trial++) {
+    let w = upsertClient(upsertClient(emptyWorkspace(), client("cli_c000000", "Acme"), T), client("cli_c100000", "Rohan"), T);
+    for (let i = 0; i < rand(12); i++) w = upsertInvoice(w, inv(`inv_r${trial}x${i}0000`, `R-${i}`, `cli_c${rand(2)}00000`, day(rand(30) - 20), 1000 * (1 + rand(900))), T);
+    const today2 = day(rand(5));
+    for (const nameBooks of [false, true]) {
+      assert.deepEqual(morningDigestBooks([{ id: "biz_primary", name: "Shop", ws: w }], today2, nameBooks), morningDigest(w, today2), `trial ${trial}`);
+    }
+  }
+  assert.equal(morningDigestBooks([], today, false), null);
+
+  // Two books with the same client name: never collapsed, chased together.
+  let a = updateBusiness(upsertClient(emptyWorkspace(), client("cli_acme0001", "Acme Traders"), T), { name: "Sharma Stores", upiId: "sharma@okaxis" }, T);
+  a = upsertInvoice(a, inv("inv_00000001", "A-1", "cli_acme0001", "2026-10-01", 500000), T); // 9 days late
+  let b = updateBusiness(upsertClient(emptyWorkspace(), client("cli_acme0001", "Acme Traders"), T), { name: "Sharma Tutors", upiId: "tutor@okhdfc" }, T);
+  b = upsertInvoice(b, inv("inv_00000001", "T-1", "cli_acme0001", "2026-09-20", 250000), T); // 20 days late
+  b = upsertInvoice(b, inv("inv_00000002", "T-2", "cli_acme0001", "2026-10-10", 100000), T); // due today
+  const two = [{ id: "biz_primary", name: "Sharma Stores", ws: a }, { id: "biz_tutors000001", name: "Sharma Tutors", ws: b }];
+  assert.deepEqual(morningDigestBooks(two, today, false), {
+    title: "3 invoices to chase today",
+    body: "₹7,500 overdue, 1 due today. Start with Acme Traders — ₹2,500, 20 days late.",
+    url: "/app/?business=biz_tutors000001",
+    tag: "digest-2026-10-10",
+    count: 3,
+  });
+  assert.equal(morningDigestBooks(two, today, true).body, "₹7,500 overdue, 1 due today. Start with Acme Traders (Sharma Tutors) — ₹2,500, 20 days late.");
+  // Top invoice in the primary → plain /app/; an empty name drops the parentheses.
+  const primaryTop = [{ id: "biz_primary", name: "", ws: b }, { id: "biz_stores000001", name: "Sharma Stores", ws: a }];
+  assert.equal(morningDigestBooks(primaryTop, today, true).url, "/app/");
+  assert.equal(morningDigestBooks(primaryTop, today, true).body, "₹7,500 overdue, 1 due today. Start with Acme Traders — ₹2,500, 20 days late.");
+  // From projections (what the cron reads) the result is the same.
+  const fromProj = two.map((x) => ({ ...x, ws: workspaceFromProjection(parseProjection(JSON.stringify(x.id === "biz_primary" ? digestProjection(x.ws) : bookProjection(x.ws)))) }));
+  assert.deepEqual(morningDigestBooks(fromProj, today, false), morningDigestBooks(two, today, false));
+
+  // Projection versions: the primary keeps writing v1; other books write v2 with the name.
+  assert.equal(digestProjection(a).v, 1);
+  assert.equal("name" in digestProjection(a), false, "primary projections stay byte-identical (no name)");
+  assert.deepEqual([bookProjection(b).v, bookProjection(b).name], [2, "Sharma Tutors"]);
+  assert.deepEqual([parseProjection({ v: 1, open: [], plans: [] }).name, parseProjection({ v: 2, name: "X", open: [], plans: [] }).name], ["", "X"]);
+  assert.equal(parseProjection({ v: 99, name: "X", open: [], plans: [] }), null);
+
+  // Runner: the hash merges with the legacy key; only live books count; dead fields are dropped;
+  // a missing book projection is read from that book's document and backfilled; one push per account.
+  const owner = "ownerMB";
+  const cloudMB = memoryCloudStore();
+  const { slotFor, syncBookIndex } = await import("../src/lib/workspace/cloud.ts");
+  const indexStore = memoryCloudStore();
+  await syncWorkspace(cloudMB, slotFor(owner, "biz_primary"), a, T);
+  await syncWorkspace(cloudMB, slotFor(owner, "biz_tutors000001"), b, T);
+  await syncBookIndex(indexStore, owner, { v: 1, books: { biz_primary: { id: "biz_primary", createdAt: 0 }, biz_tutors000001: { id: "biz_tutors000001", createdAt: 1 }, biz_gone00000001: { id: "biz_gone00000001", createdAt: 2 } } }, T, async () => 20);
+  await syncBookIndex(indexStore, owner, { v: 1, books: { biz_gone00000001: { id: "biz_gone00000001", createdAt: 2, deletedAt: 5 } } }, T + 1, async () => 20);
+  const projMB = memoryProjectionStore(async (o) => (await indexStore.read(o)).doc);
+  await projMB.put(owner, "biz_primary", digestProjection(a));
+  // A deleted book's projection (with a huge overdue amount) must be ignored and removed.
+  let ghost = upsertClient(emptyWorkspace(), client("cli_ghost001", "Ghost Client"), T);
+  ghost = upsertInvoice(ghost, inv("inv_00000009", "G-1", "cli_ghost001", "2026-01-01", 99900000), T);
+  await projMB.put(owner, "biz_gone00000001", bookProjection(ghost));
+  const pushMB = memoryPushStore();
+  const dev = device();
+  await pushMB.add(owner, { endpoint: "https://fcm.googleapis.com/fcm/send/mb", keys: { p256dh: dev.pub, auth: dev.auth }, createdAt: T });
+  const sent = [];
+  const capture = async (url, init) => { sent.push(Buffer.from(init.body)); return new Response(null, { status: 201 }); };
+  const run1 = await runMorningDigest({ push: pushMB, cloud: cloudMB, projections: projMB, books: indexStore, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([run1.notified, run1.sent, run1.fromProjection], [1, 1, 0], "the tutors book had no projection: read from its document");
+  assert.deepEqual(await projMB.bookIds(owner), ["biz_tutors000001"], "dead field dropped, missing live field backfilled");
+  const decrypt = (bodyBuf) => {
+    const e = createECDH("prime256v1"); e.setPrivateKey(fromB64u(dev.priv));
+    const pub = bodyBuf.subarray(21, 86);
+    const k = Buffer.from(hkdfSync("sha256", e.computeSecret(pub), fromB64u(dev.auth), Buffer.concat([Buffer.from("WebPush: info\0", "latin1"), fromB64u(dev.pub), pub]), 32));
+    const sl = bodyBuf.subarray(0, 16);
+    const dc = createDecipheriv("aes-128-gcm", Buffer.from(hkdfSync("sha256", k, sl, Buffer.from("Content-Encoding: aes128gcm\0", "latin1"), 16)), Buffer.from(hkdfSync("sha256", k, sl, Buffer.from("Content-Encoding: nonce\0", "latin1"), 12)));
+    const c = bodyBuf.subarray(86);
+    dc.setAuthTag(c.subarray(c.length - 16));
+    const pl = Buffer.concat([dc.update(c.subarray(0, c.length - 16)), dc.final()]);
+    return JSON.parse(pl.subarray(0, pl.length - 1).toString());
+  };
+  assert.deepEqual(decrypt(sent[0]), morningDigestBooks(two, today, false), "combined digest of the live books, nothing from the deleted one");
+  const again = await runMorningDigest({ push: pushMB, cloud: cloudMB, projections: projMB, books: indexStore, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([again.notified, again.sent, sent.length], [0, 0, 1], "markDigest: once per account per day");
+  const next = await runMorningDigest({ push: pushMB, cloud: memoryCloudStore(), projections: projMB, books: indexStore, vapid, today: "2026-10-11", now: T, fetchImpl: capture });
+  assert.deepEqual([next.notified, next.fromProjection], [1, 1], "next day: projections only");
+  // An unreadable index skips the account (no push, no writes).
+  const bad = memoryProjectionStore(async () => "{not json");
+  await bad.put("ownerBad", "biz_primary", digestProjection(a));
+  const pushBad = memoryPushStore();
+  await pushBad.add("ownerBad", { endpoint: "https://fcm.googleapis.com/fcm/send/bad", keys: { p256dh: dev.pub, auth: dev.auth }, createdAt: T });
+  const skipped = await runMorningDigest({ push: pushBad, cloud: cloudMB, projections: bad, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([skipped.notified, skipped.sent], [0, 0]);
+  // Without a projection store, the index store decides which books are live.
+  const pushNo = memoryPushStore();
+  await pushNo.add(owner, { endpoint: "https://fcm.googleapis.com/fcm/send/no", keys: { p256dh: dev.pub, auth: dev.auth }, createdAt: T });
+  const before = sent.length;
+  const noProj = await runMorningDigest({ push: pushNo, cloud: cloudMB, books: indexStore, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([noProj.notified, noProj.sent], [1, 1]);
+  assert.deepEqual(decrypt(sent[before]), morningDigestBooks(two, today, false));
+  // Projections unavailable AND the index read fails: skip the account (no primary-only digest, not marked, retried later).
+  const failing = { ...projMB, getAll: async () => { throw new Error("KV blip"); } };
+  const brokenIndex = { ...indexStore, read: async () => { throw new Error("KV blip"); } };
+  const pushErr = memoryPushStore();
+  await pushErr.add(owner, { endpoint: "https://fcm.googleapis.com/fcm/send/err", keys: { p256dh: dev.pub, auth: dev.auth }, createdAt: T });
+  const sentBefore = sent.length;
+  const errRun = await runMorningDigest({ push: pushErr, cloud: cloudMB, projections: failing, books: brokenIndex, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([errRun.notified, errRun.sent, sent.length - sentBefore], [0, 0, 0]);
+  const retry = await runMorningDigest({ push: pushErr, cloud: cloudMB, projections: failing, books: indexStore, vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([retry.notified, retry.sent], [1, 1], "not marked: a later run the same day sends it");
+  assert.deepEqual(decrypt(sent.at(-1)), morningDigestBooks(two, today, false), "…with every live business");
+  // An absent index (single-business account) with projections unavailable still sends today's digest.
+  const pushSolo = memoryPushStore();
+  const soloCloud = memoryCloudStore();
+  await syncWorkspace(soloCloud, "ownerSolo", ws, T);
+  await pushSolo.add("ownerSolo", { endpoint: "https://fcm.googleapis.com/fcm/send/solo", keys: { p256dh: dev.pub, auth: dev.auth }, createdAt: T });
+  const soloRun = await runMorningDigest({ push: pushSolo, cloud: soloCloud, projections: failing, books: memoryCloudStore(), vapid, today, now: T, fetchImpl: capture });
+  assert.deepEqual([soloRun.notified, soloRun.sent], [1, 1]);
+  assert.deepEqual(decrypt(sent.at(-1)), morningDigest(ws, today));
+  console.log("[digest] several businesses: one book ≡ morningDigest (160 cases), exact combined text, live-only runner with backfill, once per day");
 }

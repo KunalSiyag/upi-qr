@@ -1,5 +1,10 @@
-import { readWorkspace, type CloudStore } from "../workspace/cloud.ts";
-import { digestProjection, morningDigest, workspaceFromProjection, type DigestProjection } from "../workspace/digest.ts";
+import { readWorkspace, slotFor, type CloudStore } from "../workspace/cloud.ts";
+import { emptyIndex, liveBookIds, parseBookIndex, PRIMARY_BOOK_ID, type BookIndex } from "../workspace/books.ts";
+import {
+  bookProjection, digestProjection, morningDigestBooks, NAME_BUSINESSES_ON_LOCK_SCREEN, workspaceFromProjection,
+  type AccountProjections, type DigestProjection,
+} from "../workspace/digest.ts";
+import type { Workspace } from "../workspace/model.ts";
 import type { PushStore } from "./store.ts";
 import { safePushEndpoint, sendPush, type VapidKeys } from "./webpush.ts";
 
@@ -16,8 +21,9 @@ export interface DigestRunResult {
 }
 
 interface ProjectionReader {
-  get(owner: string): Promise<DigestProjection | null>;
-  put(owner: string, projection: DigestProjection): Promise<void>;
+  getAll(owner: string): Promise<AccountProjections>;
+  put(owner: string, bookId: string, projection: DigestProjection): Promise<void>;
+  drop(owner: string, bookId: string): Promise<void>;
 }
 
 /**
@@ -34,8 +40,10 @@ export async function runMorningDigest(deps: {
   allowLocalEndpoints?: boolean;
   fetchImpl?: typeof fetch;
   concurrency?: number;
-  /** Compact per-account input; when missing, the full workspace is read and the projection backfilled. */
+  /** Compact per-account input (one request per account); a missing book projection is backfilled from the book's document. */
   projections?: ProjectionReader;
+  /** Book index store, read only when projections are unavailable. Absent = only the primary book. */
+  books?: CloudStore;
   /** Stop starting new accounts after this time (epoch ms) so the function never times out mid-run. */
   deadline?: number;
 }): Promise<DigestRunResult> {
@@ -49,16 +57,43 @@ export async function runMorningDigest(deps: {
       const owner = owners[next++];
       const subscriptions = await deps.push.list(owner);
       if (subscriptions.length === 0) { await deps.push.forget(owner); continue; }
-      let workspace;
-      const projection = await deps.projections?.get(owner).catch(() => null);
-      if (projection) {
-        workspace = workspaceFromProjection(projection);
-        result.fromProjection++;
-      } else {
-        workspace = (await readWorkspace(deps.cloud, owner)).workspace;
-        await deps.projections?.put(owner, digestProjection(workspace)).catch(() => undefined);
+      // Which books are live: the index (deleted books are ignored), or only the primary when there is none.
+      let all: AccountProjections | null = null;
+      if (deps.projections) all = await deps.projections.getAll(owner).catch(() => null);
+      let index: BookIndex = emptyIndex();
+      let rawIndex: unknown = all ? all.index : null;
+      if (!all && deps.books) {
+        try {
+          rawIndex = (await deps.books.read(owner)).doc;
+        } catch {
+          continue; // the index can't be read: skip this account today (not marked, so a later run retries)
+        }
       }
-      const digest = morningDigest(workspace, deps.today);
+      if (rawIndex !== null && rawIndex !== undefined) {
+        const parsed = parseBookIndex(rawIndex);
+        if (!parsed) continue; // unreadable index: skip this account today, write nothing
+        index = parsed;
+      }
+      const live = liveBookIds(index);
+      const projections = all?.projections ?? {};
+      for (const id of Object.keys(projections)) {
+        if (id !== PRIMARY_BOOK_ID && !live.includes(id)) await deps.projections?.drop(owner, id).catch(() => undefined);
+      }
+      const books: { id: string; name: string; ws: Workspace }[] = [];
+      let projected = true;
+      for (const id of live) {
+        const projection = projections[id];
+        if (projection) {
+          books.push({ id, name: projection.name ?? "", ws: workspaceFromProjection(projection) });
+          continue;
+        }
+        projected = false;
+        const workspace = (await readWorkspace(deps.cloud, slotFor(owner, id))).workspace;
+        await deps.projections?.put(owner, id, id === PRIMARY_BOOK_ID ? digestProjection(workspace) : bookProjection(workspace)).catch(() => undefined);
+        books.push({ id, name: workspace.business.name, ws: workspace });
+      }
+      if (projected) result.fromProjection++;
+      const digest = morningDigestBooks(books, deps.today, NAME_BUSINESSES_ON_LOCK_SCREEN);
       if (!digest) continue;
       if (!(await deps.push.markDigest(owner, deps.today))) continue;
       result.notified++;

@@ -37,14 +37,21 @@ export interface PaylinkStore {
   get(token: string): Promise<PaylinkRecord | null>;
   /** Pre-rendered page data per token for one owner (written at sync), so a page view reads ~300 bytes. */
   getView(owner: string, token: string): Promise<PaylinkSnapshot | null>;
-  /** Replaces all of an owner's snapshots. */
+  /** Replaces all of an owner's snapshots. Only for owners whose links are all in the primary book (see refreshViews). */
   putViews(owner: string, views: Record<string, PaylinkSnapshot>): Promise<void>;
+  /** Sets some snapshots and removes others, leaving the rest (other books' snapshots) untouched. */
+  patchViews(owner: string, set: Record<string, PaylinkSnapshot>, drop: string[]): Promise<void>;
+  /** Tokens that have a stored snapshot (for orphan cleanup on "Delete cloud copy"). */
+  viewTokens(owner: string): Promise<string[]>;
   /** Existing token for this invoice, if any. */
   tokenFor(owner: string, invoiceId: string): Promise<string | null>;
   /** invoiceId → token for every active link of the owner. */
   list(owner: string): Promise<Record<string, string>>;
   put(token: string, record: PaylinkRecord): Promise<void>;
+  /** Revokes one link: record, claims, its pl:own field (the record's invoiceId) and its snapshot. */
   remove(owner: string, token: string, invoiceId: string): Promise<void>;
+  /** Revokes every link of one non-primary book (keys "<bookId>/…"); payers then get 404. */
+  removeBook(owner: string, bookId: string): Promise<void>;
   claims(token: string): Promise<PaylinkClaim[]>;
   addClaim(token: string, claim: PaylinkClaim): Promise<void>;
   clearClaims(token: string): Promise<void>;
@@ -132,21 +139,33 @@ export async function createStatementLink(
   now: number,
   plan: { statementLinks: boolean; activePaylinks: number },
   validVpa: (vpa: string) => boolean,
+  /** Store key: the bare subject for the primary book, linkKey(bookId, subject) for others. */
+  key: string = statementSubject(clientId),
 ): Promise<CreateResult> {
   if (!plan.statementLinks) return { status: "not_pro", message: "Statement links are part of Pro." };
   const view = statementView(ws, clientId, "1970-01-01");
   if (!view) return { status: "missing_client", message: "This client hasn't synced yet. Wait a moment and try again." };
   if (view.totalPaise <= 0) return { status: "no_balance", message: "This client has nothing due." };
-  if (!validVpa(view.upiId)) return { status: "no_upi", message: "Add your UPI ID in Settings before sharing links." };
-  const subject = statementSubject(clientId);
-  const existing = await store.tokenFor(owner, subject);
+  const qualified = key !== statementSubject(clientId);
+  if (!validVpa(view.upiId)) return { status: "no_upi", message: qualified ? noUpiFor(ws) : "Add your UPI ID in Settings before sharing links." };
+  const existing = await store.tokenFor(owner, key);
   if (existing && (await store.get(existing))) return { status: "ok", token: existing, created: false };
   if (Object.keys(await store.list(owner)).length >= plan.activePaylinks) {
     return { status: "limit", message: `You can keep ${plan.activePaylinks} links active. Turn some off to make room.` };
   }
   const token = newToken();
-  await store.put(token, { owner, invoiceId: subject, createdAt: now });
+  await store.put(token, recordFor(owner, key, now));
   return { status: "ok", token, created: true };
+}
+
+/** The no-UPI message for a non-primary book names that business (the primary keeps today's text). */
+const noUpiFor = (ws: Workspace) => `Add a UPI ID for ${ws.business.name.trim() || "this business"} in Settings before sharing pay links.`;
+
+/** Primary records stay byte-identical ({ owner, invoiceId, createdAt }); other books also carry businessId. */
+function recordFor(owner: string, key: string, now: number): PaylinkRecord {
+  const { bookId } = parseLinkKey(key);
+  if (!bookId) throw new RangeError("Invalid pay-link key.");
+  return bookId === PRIMARY_BOOK_ID ? { owner, invoiceId: key, createdAt: now } : { owner, invoiceId: key, createdAt: now, businessId: bookId };
 }
 
 export type CreateResult =
@@ -162,19 +181,21 @@ export async function createPaylink(
   now: number,
   activeLimit: number,
   validVpa: (vpa: string) => boolean,
+  /** Store key: the bare invoice id for the primary book, linkKey(bookId, invoiceId) for others. */
+  key: string = invoiceId,
 ): Promise<CreateResult> {
   const view = payPageView(ws, invoiceId, "1970-01-01");
   if (!view) return { status: "missing_invoice", message: "This invoice hasn't synced yet. Wait a moment and try again." };
   if (view.state === "void" || view.balancePaise <= 0) return { status: "no_balance", message: "Nothing is due on this invoice." };
-  if (!validVpa(view.upiId)) return { status: "no_upi", message: "Add your UPI ID in Settings before sharing pay links." };
-  const existing = await store.tokenFor(owner, invoiceId);
+  if (!validVpa(view.upiId)) return { status: "no_upi", message: key !== invoiceId ? noUpiFor(ws) : "Add your UPI ID in Settings before sharing pay links." };
+  const existing = await store.tokenFor(owner, key);
   if (existing && (await store.get(existing))) return { status: "ok", token: existing, created: false };
   const active = Object.keys(await store.list(owner)).length;
   if (active >= activeLimit) {
     return { status: "limit", message: `Free accounts can keep ${activeLimit} pay links active. Revoke links for paid invoices to make room.` };
   }
   const token = newToken();
-  await store.put(token, { owner, invoiceId, createdAt: now });
+  await store.put(token, recordFor(owner, key, now));
   return { status: "ok", token, created: true };
 }
 
@@ -220,6 +241,12 @@ export function memoryPaylinkStore(): PaylinkStore {
   return {
     async getView(owner, token) { return views.get(owner)?.[token] ?? null; },
     async putViews(owner, next) { views.set(owner, { ...next }); },
+    async viewTokens(owner) { return Object.keys(views.get(owner) ?? {}); },
+    async patchViews(owner, set, drop) {
+      const next = { ...(views.get(owner) ?? {}), ...set };
+      for (const token of drop) delete next[token];
+      views.set(owner, next);
+    },
     async get(token) { return records.get(token) ?? null; },
     async tokenFor(owner, invoiceId) { return byOwner.get(owner)?.get(invoiceId) ?? null; },
     async list(owner) { return Object.fromEntries(byOwner.get(owner) ?? []); },
@@ -232,6 +259,17 @@ export function memoryPaylinkStore(): PaylinkStore {
       records.delete(token);
       claimLists.delete(token);
       byOwner.get(owner)?.delete(invoiceId);
+      if (views.get(owner)) delete views.get(owner)![token];
+    },
+    async removeBook(owner, bookId) {
+      if (bookId === PRIMARY_BOOK_ID) return;
+      for (const [key, token] of [...(byOwner.get(owner) ?? [])]) {
+        if (parseLinkKey(key).bookId !== bookId) continue;
+        records.delete(token);
+        claimLists.delete(token);
+        byOwner.get(owner)?.delete(key);
+        if (views.get(owner)) delete views.get(owner)![token];
+      }
     },
     async claims(token) { return [...(claimLists.get(token) ?? [])]; },
     async addClaim(token, claim) { claimLists.set(token, [claim, ...(claimLists.get(token) ?? [])].slice(0, MAX_PENDING_CLAIMS)); },
@@ -288,4 +326,41 @@ export function snapshotsForLinks(ws: Workspace, links: Record<string, string>):
     if (snapshot) out[token] = snapshot;
   }
   return out;
+}
+
+/**
+ * Re-renders the snapshots of one book's links from that book's workspace (the
+ * owning book, so the page shows that business's name and UPI ID). Accounts
+ * whose links are all in the primary book keep today's exact write (one
+ * replace of the owner's snapshots); otherwise only this book's snapshots are
+ * set or dropped and other books' stay as they are.
+ * extra: snapshots to set as well (the pay page's own token when its link isn't listed).
+ * skipWhenNoLinks: write nothing when the owner has no links (the sync path).
+ * Returns the tokens whose snapshots it wrote, so a caller that must undo can drop them.
+ */
+export async function refreshViews(
+  store: PaylinkStore,
+  owner: string,
+  bookId: string,
+  ws: Workspace,
+  opts: { extra?: Record<string, PaylinkSnapshot>; skipWhenNoLinks?: boolean } = {},
+): Promise<string[]> {
+  const links = await store.list(owner);
+  const keys = Object.keys(links);
+  const extra = opts.extra ?? {};
+  if (bookId === PRIMARY_BOOK_ID && keys.every((key) => !key.includes("/"))) {
+    if (opts.skipWhenNoLinks && !keys.length) return [];
+    const views = { ...snapshotsForLinks(ws, links), ...extra };
+    await store.putViews(owner, views);
+    return Object.keys(views);
+  }
+  const mine: Record<string, string> = {};
+  for (const [key, token] of Object.entries(links)) {
+    const parsed = parseLinkKey(key);
+    if (parsed.bookId === bookId) mine[parsed.subject] = token;
+  }
+  const set = { ...snapshotsForLinks(ws, mine), ...extra };
+  const drop = Object.values(mine).filter((token) => !set[token]);
+  if (Object.keys(set).length || drop.length) await store.patchViews(owner, set, drop);
+  return Object.keys(set);
 }

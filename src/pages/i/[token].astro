@@ -4,10 +4,12 @@ import "../../styles/global.css";
 import QRCode from "qrcode";
 import { formatPaise as upiAmount, isTrustedMutation, readLimitedText, requestFingerprint, validUtr, validVpa } from "../../lib/apiSecurity";
 import { consumeRateLimit } from "../../lib/rateLimit";
-import { readWorkspace } from "../../lib/workspace/cloud";
-import { cloudStore, rateLimitsAvailable } from "../../lib/workspace/kvCloudStore";
+import { readBookIndex, readWorkspace, slotFor } from "../../lib/workspace/cloud";
+import { bookIndexStore, cloudStore, rateLimitsAvailable } from "../../lib/workspace/kvCloudStore";
 import { paylinkStore } from "../../lib/workspace/kvPaylinkStore";
-import { addClaim, snapshotFor, snapshotsForLinks, snapshotView, validPaylinkToken, type StatementView } from "../../lib/workspace/paylinks";
+import { addClaim, refreshViews, snapshotFor, snapshotView, validPaylinkToken, type StatementView } from "../../lib/workspace/paylinks";
+import { liveBookIds, parseLinkKey, PRIMARY_BOOK_ID } from "../../lib/workspace/books";
+import { NAME_BUSINESSES_ON_LOCK_SCREEN } from "../../lib/workspace/digest";
 import { formatPaise, parseRupeesToPaise } from "../../lib/workspace/model";
 import { planFor } from "../../lib/billing/plans";
 import { recordMetric } from "../../lib/metrics";
@@ -37,22 +39,29 @@ let view: ReturnType<typeof payPageView> = null;
 let statement: StatementView | null = null;
 let branded = true;
 let owner = "";
+let businessId = "";
 try {
   const record = await paylinkStore().get(token);
   if (!record) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
   owner = record.owner;
+  businessId = parseLinkKey(record.invoiceId).bookId;
   // "Today" for due-date wording is India time.
   const today = new Date(Date.now() + 330 * 60_000).toISOString().slice(0, 10);
   // Fast path: the snapshot written at the owner's last sync (a few hundred bytes).
   let snapshot = await paylinkStore().getView(record.owner, token).catch(() => null);
   if (!snapshot) {
-    // Older links or a missed write: read the workspace once and backfill every snapshot for this owner.
-    const { workspace } = await readWorkspace(cloudStore(), record.owner);
-    snapshot = snapshotFor(workspace, record.invoiceId);
-    const store = paylinkStore();
-    const views = snapshotsForLinks(workspace, await store.list(record.owner).catch(() => ({})));
-    if (snapshot) views[token] = snapshot;
-    await store.putViews(record.owner, views).catch(() => undefined);
+    // Older links or a missed write: read the owning book once and backfill its snapshots.
+    // A book-qualified key resolves only to that book, never to another one (no fallback).
+    const { bookId, subject } = parseLinkKey(record.invoiceId);
+    if (!bookId) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+    if (bookId !== PRIMARY_BOOK_ID) {
+      const books = await readBookIndex(bookIndexStore(), record.owner);
+      if (books === "corrupt") throw new Error("Book index is unreadable.");
+      if (!liveBookIds(books.index).includes(bookId)) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+    }
+    const { workspace } = await readWorkspace(cloudStore(), slotFor(record.owner, bookId));
+    snapshot = snapshotFor(workspace, subject);
+    await refreshViews(paylinkStore(), record.owner, bookId, workspace, { extra: snapshot ? { [token]: snapshot } : {} }).catch(() => undefined);
   }
   const live = snapshot ? snapshotView(snapshot, today) : null;
   if (live?.kind === "statement") {
@@ -96,8 +105,14 @@ if (Astro.request.method === "POST") {
           // Tell the merchant now, on devices with notifications on (best effort, ≤2.5 s).
           const vapid = vapidConfig();
           if (vapid) {
+            // Lock-screen business names (off): only for accounts with more than one live business.
+            let business: { businessName?: string; businessId?: string } = {};
+            if (NAME_BUSINESSES_ON_LOCK_SCREEN && businessId) {
+              const books = await readBookIndex(bookIndexStore(), owner).catch(() => "corrupt" as const);
+              if (books !== "corrupt" && liveBookIds(books.index).length > 1) business = { businessName: view.merchantName, businessId };
+            }
             await sendClaimAlert({ push: pushStore(), vapid, allowLocalEndpoints: allowLocalPushEndpoints() }, owner, token, {
-              invoiceNumber: view.invoiceNumber, amountPaise, utr, statement: Boolean(statement),
+              invoiceNumber: view.invoiceNumber, amountPaise, utr, statement: Boolean(statement), ...business,
             }).catch(() => undefined);
           }
           return Astro.redirect(`/i/${token}/?claimed=1`, 303);
