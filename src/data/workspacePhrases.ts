@@ -401,6 +401,8 @@ export const WS_HI: Record<string, string> = {
   "This client hasn't synced yet. Wait a moment and try again.": "यह ग्राहक अभी सिंक नहीं हुआ। थोड़ा रुककर फिर कोशिश करें।",
   "This device only": "सिर्फ़ इस डिवाइस पर",
   "This invoice hasn't synced yet. Wait a moment and try again.": "यह इनवॉइस अभी सिंक नहीं हुआ। थोड़ा रुककर फिर कोशिश करें।",
+  // Server answer (paylinks.ts NOT_YET_FOREIGN), translated by tr() like the other server errors.
+  "Pay links for foreign-currency invoices aren't available yet.": "विदेशी मुद्रा वाले इनवॉइस के लिए पेमेंट लिंक अभी उपलब्ध नहीं हैं।",
   "Tick payments to record": "दर्ज करने के लिए पेमेंट चुनें",
   "To collect": "लेना बाकी",
   "Tone": "लहजा",

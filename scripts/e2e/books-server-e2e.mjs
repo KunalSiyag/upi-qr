@@ -141,7 +141,8 @@ try {
   r = await api("PUT", "/api/v1/workspace/", { user: PRO, body: { workspace: { ...primaryDoc, business: { ...primaryDoc.business, phone: "9999999999", updatedAt: T + 1 } }, businessId: B } });
   check("old-client PUT with businessId → the first business only", r.status === 200 && JSON.parse(await value(`ws:doc:${O}`)).business.phone === "9999999999" && JSON.parse(await value(`ws:doc:${O}:${B}`)).business.phone === "", r.text.slice(0, 200));
   r = await api("GET", "/api/v1/workspace/", { user: PRO });
-  check("GET /api/v1/workspace/ is the first business, same response shape", r.status === 200 && r.json.workspace.business.name === "Sharma Stores" && JSON.stringify(Object.keys(r.json)) === '["workspace","rev","owner"]', r.text.slice(0, 200));
+  // Same shape plus intl: 1 (docs/spec-foreign-clients.md §2.6: the server keeps ws.intl; old clients ignore the field).
+  check("GET /api/v1/workspace/ is the first business, same response shape", r.status === 200 && r.json.workspace.business.name === "Sharma Stores" && JSON.stringify(Object.keys(r.json)) === '["workspace","rev","owner","intl"]' && r.json.intl === 1, r.text.slice(0, 200));
 
   // --- Pay links per business ---
   r = await api("POST", `/api/v1/paylinks/books/${B}/`, { user: PRO, body: { invoiceId: "inv_00000001", expectedOwner: O } });
@@ -265,7 +266,7 @@ try {
   const SOLO = "user_e2eBooksSolo";
   const S = ownerOf(SOLO);
   r = await api("PUT", "/api/v1/workspace/", { user: SOLO, body: { workspace: workspace("Solo Shop", "solo@okaxis", "Q-1", 4000) } });
-  check("single business: PUT response shape unchanged", r.status === 200 && JSON.stringify(Object.keys(r.json)) === '["workspace","rev","owner"]' && r.json.rev === 1);
+  check("single business: PUT response shape unchanged (plus intl: 1)", r.status === 200 && JSON.stringify(Object.keys(r.json)) === '["workspace","rev","owner","intl"]' && r.json.intl === 1 && r.json.rev === 1 && !("intl" in r.json.workspace));
   r = await api("POST", "/api/v1/paylinks/", { user: SOLO, body: { invoiceId: "inv_00000001" } });
   const soloToken = r.json?.token;
   await api("PUT", "/api/v1/workspace/", { user: SOLO, body: { workspace: workspace("Solo Shop", "solo@okaxis", "Q-1", 4000) } });

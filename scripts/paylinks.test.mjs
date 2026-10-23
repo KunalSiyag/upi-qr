@@ -241,4 +241,57 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
   assert.ok(await store.get(pa.token), "removeBook never touches the primary");
 }
 
+// Clients abroad, PR 1 (docs/spec-foreign-clients.md §1.6, §4.1): every server view builder is INR-only, so a
+// server a rollback lands on answers 404 for foreign subjects and never renders a US$ invoice as ₹.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const P = await import("../src/lib/workspace/paylinks.ts");
+  const { paidLinkTokens, emptyIndex } = await import("../src/lib/workspace/books.ts");
+  const legacyModel = await import("./fixtures/legacy-model.ts");
+  const usd = (id, amountPaise, clientId = client.id) => ({ ...inv(id, amountPaise), clientId, currency: "USD" });
+  const settings = { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "Fort", payUrl: "https://paypal.me/sharma", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T };
+  let base = updateBusiness(upsertClient(emptyWorkspace(), client, T), { name: "Sharma Tuition", upiId: "sharma@okaxis" }, T);
+  base = upsertInvoice(base, inv("inv_00000001", 300000), T);
+  let mixed = M.upsertInvoice(base, usd("inv_usd00001", 300000), T);
+  mixed = M.upsertClient(mixed, { ...client, id: "cli_globex01", name: "Globex" }, T);
+  mixed = M.upsertInvoice(mixed, usd("inv_usd00002", 9900, "cli_globex01"), T);
+  mixed = M.sanitizeWorkspace({ ...mixed, intl: { ...mixed.intl, settings } });
+
+  assert.equal(P.payPageView(mixed, "inv_usd00001", "2026-10-10"), null, "a foreign id has no ₹ view");
+  assert.equal(P.snapshotFor(mixed, "inv_usd00001"), null);
+  // The INR snapshot is byte-identical to today's (deployed code's view of the stripped copy) and carries no bank details.
+  const inrSnap = JSON.stringify(P.snapshotFor(mixed, "inv_00000001"));
+  assert.equal(inrSnap, JSON.stringify(P.snapshotFor(base, "inv_00000001")));
+  assert.equal(inrSnap, JSON.stringify(P.snapshotFor(legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(mixed))), "inv_00000001")));
+  assert.doesNotMatch(inrSnap, /"pay"|IBAN|SWIFT|HDFCINBB|GB82WEST|paypal/);
+  // Statements: null for any client with an open foreign invoice (a mixed one, and one who owes only US$).
+  assert.equal(P.statementView(mixed, client.id, "2026-10-10"), null);
+  assert.equal(P.statementView(mixed, "cli_globex01", "2026-10-10"), null, "never 'Paid' for a client who owes only US$");
+  assert.equal(P.snapshotFor(mixed, "stmt:cli_globex01"), null);
+  const settled = M.addPayment(mixed, "inv_usd00001", { amountPaise: 300000, date: "2026-10-05", mode: "bank", reference: "W1" }, T + 1);
+  assert.deepEqual(P.statementView(settled, client.id, "2026-10-10"), P.statementView(base, client.id, "2026-10-10"), "a paid foreign invoice doesn't block the ₹ statement");
+  // Link creation: a foreign subject is 404 not_found until the server can render it (PR 3).
+  {
+    const store = memoryPaylinkStore();
+    const r = await P.createPaylink(store, "o9", mixed, "inv_usd00001", token, T, 10, vpa);
+    assert.deepEqual([r.status, P.createStatusCode(r.status)], ["not_found", 404]);
+    assert.equal(r.message, P.NOT_YET_FOREIGN);
+    assert.deepEqual(await store.list("o9"), {}, "nothing is stored");
+    const s1 = await P.createStatementLink(store, "o9", mixed, "cli_globex01", token, T, { statementLinks: true, activePaylinks: 10 }, vpa);
+    assert.deepEqual([s1.status, P.createStatusCode(s1.status)], ["not_found", 404]);
+    assert.equal((await P.createPaylink(store, "o9", mixed, "inv_00000001", token, T, 10, vpa)).status, "ok", "INR links are unchanged");
+    assert.deepEqual(["limit", "not_pro", "no_upi", "missing_invoice"].map(P.createStatusCode), [402, 402, 409, 409]);
+  }
+  // paidLinkTokens resolves both maps: a live foreign invoice with a balance is never "paid".
+  {
+    const shelf = { index: emptyIndex(), books: { biz_primary: mixed } };
+    const links = { inv_usd00001: { token: "t-usd" }, inv_00000001: { token: "t-inr" }, inv_gone0001: { token: "t-gone" } };
+    assert.deepEqual(paidLinkTokens(links, shelf, new Set(["biz_primary"]), "2026-10-10"), ["t-gone"]);
+    const stripped = { index: emptyIndex(), books: { biz_primary: legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(mixed))) } };
+    assert.deepEqual(paidLinkTokens(links, stripped, new Set(["biz_primary"]), "2026-10-10"), ["t-usd", "t-gone"], "(an old tab's stripped copy counts it as paid: the §1.7 server guard, PR 3)");
+    const paid = { index: emptyIndex(), books: { biz_primary: M.addPayment(mixed, "inv_usd00001", { amountPaise: 300000, date: "2026-10-05", mode: "bank", reference: "" }, T + 1) } };
+    assert.deepEqual(paidLinkTokens(links, paid, new Set(["biz_primary"]), "2026-10-10"), ["t-usd", "t-gone"]);
+  }
+}
+
 console.log("[paylinks] public view privacy, live balance, create guards, free limit, revoke, and claims checks passed");

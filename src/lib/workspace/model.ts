@@ -8,8 +8,18 @@
  * another device, the cloud) can be merged last-writer-wins per record.
  *
  * Imported by the browser island and by scripts/workspace.test.mjs, so keep
- * this file free of runtime imports.
+ * this file free of runtime imports other than ./currency.ts (itself import-free).
+ *
+ * Clients abroad (docs/spec-foreign-clients.md): foreign-currency invoices and
+ * plans live only in `ws.intl`, a section code from before that feature drops,
+ * so an old reader only ever sees INR records. `amountPaise` means integer minor
+ * units of the record's currency (paise for INR, cents for USD).
  */
+
+import {
+  formatMoney, FOREIGN_CURRENCIES, isForeignCurrency, MAX_MINOR, normalizeAccount, normalizeFy, normalizeLutArn,
+  normalizeSwift, parseMoneyToMinor, safePayUrl, type CurrencyCode, type ForeignCurrency, type Minor,
+} from "./currency.ts";
 
 export const WORKSPACE_VERSION = 1;
 export const MSMED_CREDIT_DAYS = 45;
@@ -41,11 +51,14 @@ export interface Client {
 
 export interface Payment {
   id: string;
-  amountPaise: number;
+  /** Minor units of the invoice's currency (paise for INR). */
+  amountPaise: Minor;
   date: string;
   mode: PaymentMode;
   reference: string;
   createdAt: number;
+  /** Foreign-currency invoices only: rupees actually credited by the bank (FIRA/FIRC), integer paise. Absent = not recorded. */
+  inrCreditedPaise?: number;
 }
 
 export interface ReminderLog {
@@ -59,13 +72,18 @@ export interface Invoice {
   clientId: string;
   issueDate: string;
   dueDate: string;
-  amountPaise: number;
+  /** Minor units of `currency` (paise for INR). */
+  amountPaise: Minor;
   description: string;
   payments: Payment[];
   reminders: ReminderLog[];
   voided: boolean;
   /** Set on invoices generated from a monthly plan. */
   recurringId?: string;
+  /** Set only on records in ws.intl.invoices; absent = INR. Never written as "INR". */
+  currency?: ForeignCurrency;
+  /** Only on records in ws.intl.invoices: marked as an export of services under LUT. Never inferred from the currency. */
+  exportLut?: true;
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
@@ -75,7 +93,8 @@ export interface Invoice {
 export interface RecurringPlan {
   id: string;
   clientId: string;
-  amountPaise: number;
+  /** Minor units of `currency` (paise for INR). */
+  amountPaise: Minor;
   description: string;
   /** Issue day of the month, 1–28 so every month has it. */
   dayOfMonth: number;
@@ -85,9 +104,48 @@ export interface RecurringPlan {
   /** Last month to bill, "YYYY-MM", or "" for no end. */
   endMonth: string;
   paused: boolean;
+  /** Only in ws.intl.recurring; absent = INR. */
+  currency?: ForeignCurrency;
   createdAt: number;
   updatedAt: number;
   deletedAt?: number;
+}
+
+export interface PayDetailsFields {
+  accountName: string;
+  bankName: string;
+  /** normalizeSwift or "" */
+  swift: string;
+  /** IBAN or account number: normalizeAccount or "" */
+  account: string;
+  /** Bank address, ABA routing, sort code, BSB, transit: free text, ≤ 300 chars, ≤ 6 lines. */
+  bankDetails: string;
+  /** safePayUrl or "" */
+  payUrl: string;
+}
+
+export interface IntlSettings extends PayDetailsFields {
+  /** "Invoice clients in other currencies": shows currency pickers. Existing foreign invoices show either way. */
+  on: boolean;
+  /** Optional per-currency receiving details, used whole (never mixed field by field with the default set). */
+  byCurrency?: Partial<Record<ForeignCurrency, PayDetailsFields>>;
+  exportUnderLut: boolean;
+  /** normalizeLutArn or "" */
+  lutArn: string;
+  /** The financial year the LUT was furnished for (normalizeFy, "2026-27"). */
+  lutFy: string;
+  updatedAt: number;
+}
+
+export interface ClientIntl { currency: ForeignCurrency; updatedAt: number; deletedAt?: number }
+
+export interface IntlData {
+  settings?: IntlSettings;
+  /** Foreign-currency invoices; every record has a valid `currency`. Ids never also appear in ws.invoices. */
+  invoices: Record<string, Invoice>;
+  recurring: Record<string, RecurringPlan>;
+  /** Client default billing currency, keyed by ws.clients id. */
+  clients: Record<string, ClientIntl>;
 }
 
 export interface Workspace {
@@ -96,6 +154,8 @@ export interface Workspace {
   clients: Record<string, Client>;
   invoices: Record<string, Invoice>;
   recurring: Record<string, RecurringPlan>;
+  /** Clients abroad (docs/spec-foreign-clients.md). Absent on INR-only books. Code from before this feature drops it. */
+  intl?: IntlData;
 }
 
 export type InvoiceState = "paid" | "void" | "overdue" | "partial" | "due";
@@ -108,6 +168,8 @@ export interface InvoiceView {
   state: InvoiceState;
   /** Positive when overdue, 0 on the due date, negative before it. */
   daysPastDue: number;
+  /** Derived, never stored: "INR" for legacy records. */
+  currency: CurrencyCode;
 }
 
 // ---------------------------------------------------------------------------
@@ -131,23 +193,14 @@ export function newId(prefix: string): string {
 // ---------------------------------------------------------------------------
 // Money and dates
 
-/** Exact rupee-string → paise. Accepts "1,250.5" style input; null if invalid. */
+/** Exact rupee-string → paise. Accepts "1,250.5" style input; null if invalid or above MAX_MINOR (₹100 crore). */
 export function parseRupeesToPaise(input: string): number | null {
-  const value = input.replace(/[,\s₹]/g, "");
-  const match = /^(\d{1,10})(?:\.(\d{0,2}))?$/.exec(value);
-  if (!match) return null;
-  const paise = Number(match[1]) * 100 + Number((match[2] || "").padEnd(2, "0"));
-  return Number.isSafeInteger(paise) ? paise : null;
+  return parseMoneyToMinor(input, "INR");
 }
 
 /** ₹ with Indian digit grouping; paise shown only when non-zero. */
 export function formatPaise(paise: number): string {
-  const negative = paise < 0;
-  const abs = Math.abs(Math.trunc(paise));
-  const rupees = Math.floor(abs / 100);
-  const rem = abs % 100;
-  const grouped = new Intl.NumberFormat("en-IN").format(rupees);
-  return `${negative ? "−" : ""}₹${grouped}${rem ? `.${String(rem).padStart(2, "0")}` : ""}`;
+  return formatMoney(paise, "INR");
 }
 
 /** Plain decimal for form fields and UPI `am` (e.g. 125050 → "1250.50"). */
@@ -200,21 +253,55 @@ export function viewInvoice(invoice: Invoice, clients: Record<string, Client>, t
   else if (daysPastDue > 0) state = "overdue";
   else if (paid > 0) state = "partial";
   else state = "due";
-  return { invoice, client: clients[invoice.clientId], paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue };
+  return { invoice, client: clients[invoice.clientId], paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue, currency: currencyOf(invoice) };
 }
 
+/** The record's currency: "INR" unless it carries a foreign one (only records in ws.intl do). */
+export function currencyOf(record: Invoice | RecurringPlan): CurrencyCode {
+  return isForeignCurrency(record.currency) ? record.currency : "INR";
+}
+
+const own = <T>(map: Record<string, T> | undefined, id: string): T | undefined =>
+  map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined;
+
+/** An invoice in either map (legacy first), tombstones included. */
+export function getInvoice(ws: Workspace, id: string): Invoice | undefined {
+  return own(ws.invoices, id) ?? own(ws.intl?.invoices, id);
+}
+
+/** A plan in either map (legacy first), tombstones included. */
+export function getPlan(ws: Workspace, id: string): RecurringPlan | undefined {
+  return own(ws.recurring, id) ?? own(ws.intl?.recurring, id);
+}
+
+/**
+ * Live INR invoices only (the legacy map). UI code keeps using this until it is currency-aware
+ * (spec §1.6), so it never shows, sums or edits a foreign invoice half-way.
+ */
 export function liveInvoices(ws: Workspace): Invoice[] {
   return Object.values(ws.invoices).filter((invoice) => !invoice.deletedAt);
+}
+
+/** Every live invoice, INR and foreign. Only for currency-aware code. */
+export function allLiveInvoices(ws: Workspace): Invoice[] {
+  const foreign = ws.intl ? Object.values(ws.intl.invoices).filter((invoice) => !invoice.deletedAt) : [];
+  return foreign.length ? [...liveInvoices(ws), ...foreign] : liveInvoices(ws);
 }
 
 export function liveClients(ws: Workspace): Client[] {
   return Object.values(ws.clients).filter((client) => !client.deletedAt).sort((a, b) => a.name.localeCompare(b.name));
 }
 
+const byIssueDesc = (a: InvoiceView, b: InvoiceView) => b.invoice.issueDate.localeCompare(a.invoice.issueDate) || b.invoice.createdAt - a.invoice.createdAt;
+
+/** Views of live INR invoices only (see liveInvoices). */
 export function invoiceViews(ws: Workspace, today: string): InvoiceView[] {
-  return liveInvoices(ws)
-    .map((invoice) => viewInvoice(invoice, ws.clients, today))
-    .sort((a, b) => b.invoice.issueDate.localeCompare(a.invoice.issueDate) || b.invoice.createdAt - a.invoice.createdAt);
+  return liveInvoices(ws).map((invoice) => viewInvoice(invoice, ws.clients, today)).sort(byIssueDesc);
+}
+
+/** Views of every live invoice, INR and foreign, in invoiceViews order. Only for currency-aware code. */
+export function allInvoiceViews(ws: Workspace, today: string): InvoiceView[] {
+  return allLiveInvoices(ws).map((invoice) => viewInvoice(invoice, ws.clients, today)).sort(byIssueDesc);
 }
 
 export interface AgingBucket {
@@ -234,7 +321,7 @@ export function agingBuckets(views: InvoiceView[]): AgingBucket[] {
     { key: "d45_plus", label: "45+ days late", balancePaise: 0, count: 0 },
   ];
   for (const view of views) {
-    if (view.balancePaise === 0) continue;
+    if (view.balancePaise === 0 || view.currency !== "INR") continue;
     const d = view.daysPastDue;
     const bucket = d <= 0 ? buckets[0] : d <= 15 ? buckets[1] : d <= 30 ? buckets[2] : d <= MSMED_CREDIT_DAYS ? buckets[3] : buckets[4];
     bucket.balancePaise += view.balancePaise;
@@ -260,6 +347,8 @@ export function summarize(views: InvoiceView[], today: string, dueSoonDays = 7):
     dueSoonPaise: 0, dueSoonCount: 0, collectedThisMonthPaise: 0, openCount: 0,
   };
   for (const view of views) {
+    // ₹ figures never include a foreign amount.
+    if (view.currency !== "INR") continue;
     if (!view.invoice.voided) {
       for (const payment of view.invoice.payments) {
         if (payment.date.slice(0, 7) === month) summary.collectedThisMonthPaise += payment.amountPaise;
@@ -289,7 +378,7 @@ export function chaseList(views: InvoiceView[]): InvoiceView[] {
 export function clientBalances(views: InvoiceView[]): Map<string, { balancePaise: number; overduePaise: number; open: number }> {
   const map = new Map<string, { balancePaise: number; overduePaise: number; open: number }>();
   for (const view of views) {
-    if (view.balancePaise === 0) continue;
+    if (view.balancePaise === 0 || view.currency !== "INR") continue;
     const entry = map.get(view.invoice.clientId) ?? { balancePaise: 0, overduePaise: 0, open: 0 };
     entry.balancePaise += view.balancePaise;
     if (view.state === "overdue") entry.overduePaise += view.balancePaise;
@@ -306,7 +395,8 @@ export function nextInvoiceNumber(ws: Workspace): string {
   const prefix = ws.business.invoicePrefix || "INV-";
   let max = 0;
   let width = 4;
-  for (const invoice of liveInvoices(ws)) {
+  // One number series across INR and foreign invoices.
+  for (const invoice of allLiveInvoices(ws)) {
     if (!invoice.number.startsWith(prefix)) continue;
     const digits = /^(\d+)$/.exec(invoice.number.slice(prefix.length))?.[1];
     if (!digits) continue;
@@ -320,8 +410,30 @@ export function upsertClient(ws: Workspace, client: Client, now: number): Worksp
   return { ...ws, clients: { ...ws.clients, [client.id]: { ...client, updatedAt: now } } };
 }
 
+function emptyIntl(): IntlData {
+  return { invoices: {}, recurring: {}, clients: {} };
+}
+
+/** A legacy (INR) record never carries a currency, an export mark or INR-credited amounts. */
+function asLegacyInvoice(invoice: Invoice): Invoice {
+  const { currency: _currency, exportLut: _export, ...rest } = invoice;
+  if (!rest.payments.some((p) => p.inrCreditedPaise !== undefined)) return rest;
+  return { ...rest, payments: rest.payments.map(({ inrCreditedPaise: _credited, ...p }) => p) };
+}
+
+/**
+ * Routes by currency: a foreign currency → ws.intl.invoices (creating intl if needed); anything else →
+ * ws.invoices with any currency key removed. Refuses (returns ws unchanged) when the id already lives in the
+ * other map: a record's currency never changes under its id (replaceInvoiceCurrency makes a new id).
+ */
 export function upsertInvoice(ws: Workspace, invoice: Invoice, now: number): Workspace {
-  return { ...ws, invoices: { ...ws.invoices, [invoice.id]: { ...invoice, updatedAt: now } } };
+  if (isForeignCurrency(invoice.currency)) {
+    if (own(ws.invoices, invoice.id)) return ws;
+    const intl = ws.intl ?? emptyIntl();
+    return { ...ws, intl: { ...intl, invoices: { ...intl.invoices, [invoice.id]: { ...invoice, updatedAt: now } } } };
+  }
+  if (own(ws.intl?.invoices, invoice.id)) return ws;
+  return { ...ws, invoices: { ...ws.invoices, [invoice.id]: { ...asLegacyInvoice(invoice), updatedAt: now } } };
 }
 
 export function updateBusiness(ws: Workspace, patch: Partial<Omit<Business, "updatedAt">>, now: number): Workspace {
@@ -329,7 +441,7 @@ export function updateBusiness(ws: Workspace, patch: Partial<Omit<Business, "upd
 }
 
 export function addPayment(ws: Workspace, invoiceId: string, payment: Omit<Payment, "id" | "createdAt">, now: number): Workspace {
-  const invoice = ws.invoices[invoiceId];
+  const invoice = getInvoice(ws, invoiceId);
   if (!invoice || invoice.deletedAt) return ws;
   if (!Number.isSafeInteger(payment.amountPaise) || payment.amountPaise <= 0) return ws;
   const record: Payment = { ...payment, id: newId("pay"), createdAt: now };
@@ -337,8 +449,9 @@ export function addPayment(ws: Workspace, invoiceId: string, payment: Omit<Payme
 }
 
 /**
- * Spreads one payment from a client across their open invoices, oldest due
- * first (how a statement payment is applied). Any excess is reported, not recorded.
+ * Spreads one payment from a client across their open invoices of one currency
+ * (INR unless given), oldest due first (how a statement payment is applied).
+ * Any excess is reported, not recorded.
  */
 export function allocatePayment(
   ws: Workspace,
@@ -347,11 +460,12 @@ export function allocatePayment(
   payment: Omit<Payment, "id" | "createdAt" | "amountPaise">,
   today: string,
   now: number,
+  currency: CurrencyCode = "INR",
 ): { ws: Workspace; allocations: { invoiceId: string; amountPaise: number }[]; unallocatedPaise: number } {
   const allocations: { invoiceId: string; amountPaise: number }[] = [];
   if (!Number.isSafeInteger(amountPaise) || amountPaise <= 0) return { ws, allocations, unallocatedPaise: 0 };
-  const open = liveInvoices(ws)
-    .filter((inv) => inv.clientId === clientId)
+  const open = allLiveInvoices(ws)
+    .filter((inv) => inv.clientId === clientId && currencyOf(inv) === currency)
     .map((inv) => viewInvoice(inv, ws.clients, today))
     .filter((v) => v.balancePaise > 0 && v.state !== "void")
     .sort((a, b) => a.invoice.dueDate.localeCompare(b.invoice.dueDate) || a.invoice.issueDate.localeCompare(b.invoice.issueDate));
@@ -464,40 +578,65 @@ export function recordReceiptPayment(
 }
 
 export function removePayment(ws: Workspace, invoiceId: string, paymentId: string, now: number): Workspace {
-  const invoice = ws.invoices[invoiceId];
+  const invoice = getInvoice(ws, invoiceId);
   if (!invoice) return ws;
   return upsertInvoice(ws, { ...invoice, payments: invoice.payments.filter((p) => p.id !== paymentId) }, now);
 }
 
 export function logReminder(ws: Workspace, invoiceId: string, channel: ReminderLog["channel"], now: number): Workspace {
-  const invoice = ws.invoices[invoiceId];
+  const invoice = getInvoice(ws, invoiceId);
   if (!invoice) return ws;
   return upsertInvoice(ws, { ...invoice, reminders: [...invoice.reminders, { at: now, channel }].slice(-20) }, now);
 }
 
 export function deleteInvoice(ws: Workspace, invoiceId: string, now: number): Workspace {
-  const invoice = ws.invoices[invoiceId];
+  const invoice = getInvoice(ws, invoiceId);
   if (!invoice) return ws;
   return upsertInvoice(ws, { ...invoice, deletedAt: now }, now);
 }
 
-/** Tombstones the client; refuses while live invoices still reference it. */
+/**
+ * Tombstones the client (and its billing-currency entry); refuses while live invoices in either map
+ * still reference it.
+ */
 export function deleteClient(ws: Workspace, clientId: string, now: number): Workspace {
-  const client = ws.clients[clientId];
+  const client = own(ws.clients, clientId);
   if (!client) return ws;
-  if (liveInvoices(ws).some((invoice) => invoice.clientId === clientId)) return ws;
-  return upsertClient(ws, { ...client, deletedAt: now }, now);
+  if (allLiveInvoices(ws).some((invoice) => invoice.clientId === clientId)) return ws;
+  const next = upsertClient(ws, { ...client, deletedAt: now }, now);
+  const entry = own(next.intl?.clients, clientId);
+  if (!next.intl || !entry || entry.deletedAt) return next;
+  return { ...next, intl: { ...next.intl, clients: { ...next.intl.clients, [clientId]: { ...entry, deletedAt: now, updatedAt: now } } } };
+}
+
+export function emptyIntlSettings(now: number): IntlSettings {
+  return { on: false, accountName: "", bankName: "", swift: "", account: "", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: now };
+}
+
+/**
+ * The intl part of an erase at `at`: every live entry last written before `at` gets a tombstone, and
+ * settings written before `at` become an empty record. Entries written after `at` are newer and stay.
+ */
+function eraseIntl(intl: IntlData, at: number): IntlData {
+  const tomb = <T extends { updatedAt: number; deletedAt?: number }>(map: Record<string, T>): Record<string, T> =>
+    Object.fromEntries(Object.entries(map).map(([id, r]) => [id, r.deletedAt || r.updatedAt > at ? r : { ...r, deletedAt: at, updatedAt: at }]));
+  const out: IntlData = { invoices: tomb(intl.invoices), recurring: tomb(intl.recurring), clients: tomb(intl.clients) };
+  if (intl.settings) out.settings = intl.settings.updatedAt > at ? intl.settings : emptyIntlSettings(at);
+  return out;
 }
 
 /** Tombstones every record (so merges with other copies honour the erase) and clears business details. */
 export function eraseWorkspace(ws: Workspace, now: number): Workspace {
-  return {
+  const erased: Workspace = {
     version: ws.version,
     business: { ...emptyBusiness(now) },
     clients: Object.fromEntries(Object.entries(ws.clients).map(([id, c]) => [id, c.deletedAt ? c : { ...c, deletedAt: now, updatedAt: now }])),
     invoices: Object.fromEntries(Object.entries(ws.invoices).map(([id, i]) => [id, i.deletedAt ? i : { ...i, deletedAt: now, updatedAt: now }])),
     recurring: Object.fromEntries(Object.entries(ws.recurring).map(([id, r]) => [id, r.deletedAt ? r : { ...r, deletedAt: now, updatedAt: now }])),
   };
+  // An empty settings record is written only when intl already exists (INR-only bytes stay as they are).
+  if (ws.intl) erased.intl = eraseIntl({ ...ws.intl, settings: ws.intl.settings ?? emptyIntlSettings(now) }, now);
+  return erased;
 }
 
 function sortKeysDeep(value: unknown): unknown {
@@ -537,6 +676,68 @@ function pickNewer<T extends { updatedAt: number; deletedAt?: number }>(a: T | u
   return b.deletedAt && !a.deletedAt ? b : a;
 }
 
+const canonicalOf = (value: unknown): string => JSON.stringify(sortKeysDeep(value));
+
+/**
+ * The new section's merge is commutative (only new code writes it): higher updatedAt, then the tombstone,
+ * then the greater canonical string. Legacy maps keep pickNewer and its tie rule (old clients rely on it).
+ */
+function pickNewerIntl<T extends { updatedAt: number; deletedAt?: number }>(a: T | undefined, b: T | undefined): T | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  if (a.updatedAt !== b.updatedAt) return a.updatedAt > b.updatedAt ? a : b;
+  if (Boolean(a.deletedAt) !== Boolean(b.deletedAt)) return a.deletedAt ? a : b;
+  return canonicalOf(b) > canonicalOf(a) ? b : a;
+}
+
+function mergeIntlMap<T extends { updatedAt: number; deletedAt?: number }>(a: Record<string, T>, b: Record<string, T>): Record<string, T> {
+  const out: Record<string, T> = {};
+  for (const id of new Set([...Object.keys(a), ...Object.keys(b)])) out[id] = pickNewerIntl(own(a, id), own(b, id))!;
+  return out;
+}
+
+/** Normal form: undefined unless there are settings or at least one entry; when present, all three maps. */
+export function normalizeIntl(intl: IntlData | undefined): IntlData | undefined {
+  if (!intl) return undefined;
+  const invoices = intl.invoices ?? {};
+  const recurring = intl.recurring ?? {};
+  const clients = intl.clients ?? {};
+  if (!intl.settings && !Object.keys(invoices).length && !Object.keys(recurring).length && !Object.keys(clients).length) return undefined;
+  return { ...(intl.settings ? { settings: intl.settings } : {}), invoices, recurring, clients };
+}
+
+/** ws with `intl` set to the normal form of `intl` (the key is removed when that is empty). */
+function withIntl(ws: Workspace, intl: IntlData | undefined): Workspace {
+  const normal = normalizeIntl(intl);
+  if (normal) return { ...ws, intl: normal };
+  if (!("intl" in ws)) return ws;
+  const { intl: _gone, ...rest } = ws;
+  return rest;
+}
+
+/** The book without its foreign section: exactly what code from before that feature holds for the same data. */
+export function withoutIntl(ws: Workspace): Workspace {
+  return withIntl(ws, undefined);
+}
+
+/** Absence never deletes, at section, map and entry level; the result is in normal form. */
+export function mergeIntl(a: IntlData | undefined, b: IntlData | undefined): IntlData | undefined {
+  if (!a && !b) return undefined;
+  if (!a || !b) return normalizeIntl(a ?? b);
+  let settings = a.settings ?? b.settings;
+  if (a.settings && b.settings) {
+    settings = a.settings.updatedAt !== b.settings.updatedAt
+      ? (a.settings.updatedAt > b.settings.updatedAt ? a.settings : b.settings)
+      : (canonicalOf(b.settings) > canonicalOf(a.settings) ? b.settings : a.settings);
+  }
+  return normalizeIntl({
+    ...(settings ? { settings } : {}),
+    invoices: mergeIntlMap(a.invoices, b.invoices),
+    recurring: mergeIntlMap(a.recurring, b.recurring),
+    clients: mergeIntlMap(a.clients, b.clients),
+  });
+}
+
 export function mergeWorkspaces(a: Workspace, b: Workspace): Workspace {
   const clients: Record<string, Client> = {};
   for (const id of new Set([...Object.keys(a.clients), ...Object.keys(b.clients)])) {
@@ -550,13 +751,16 @@ export function mergeWorkspaces(a: Workspace, b: Workspace): Workspace {
   for (const id of new Set([...Object.keys(a.recurring), ...Object.keys(b.recurring)])) {
     recurring[id] = pickNewer(a.recurring[id], b.recurring[id])!;
   }
-  return {
+  const merged: Workspace = {
     version: Math.max(a.version, b.version),
     business: b.business.updatedAt > a.business.updatedAt ? b.business : a.business,
     clients,
     invoices,
     recurring,
   };
+  const intl = mergeIntl(a.intl, b.intl);
+  if (intl) merged.intl = intl;
+  return merged;
 }
 
 /**
@@ -576,19 +780,52 @@ export function restoreFrom(current: Workspace, backup: Workspace, now: number):
     if (!plan.deletedAt && merged.recurring[id]?.deletedAt) merged.recurring[id] = { ...plan, updatedAt: now };
   }
   if (!merged.business.name && backup.business.name) merged.business = { ...backup.business, updatedAt: now };
+  if (backup.intl) {
+    const intl = merged.intl ?? emptyIntl();
+    const revive = <T extends { deletedAt?: number }>(into: Record<string, T>, from: Record<string, T>): Record<string, T> => {
+      const out = { ...into };
+      for (const [id, record] of Object.entries(from)) if (!record.deletedAt && own(out, id)?.deletedAt) out[id] = { ...record, updatedAt: now };
+      return out;
+    };
+    const restored: IntlData = {
+      ...(intl.settings ? { settings: intl.settings } : {}),
+      invoices: revive(intl.invoices, backup.intl.invoices),
+      recurring: revive(intl.recurring, backup.intl.recurring),
+      clients: revive(intl.clients, backup.intl.clients),
+    };
+    // Settings come back only when this copy has none, or only empty ones (the business.name rule).
+    if (backup.intl.settings && !settingsEmpty(backup.intl.settings) && (!restored.settings || settingsEmpty(restored.settings))) {
+      restored.settings = { ...backup.intl.settings, updatedAt: now };
+    }
+    return withIntl(merged, restored);
+  }
   return merged;
+}
+
+const detailsEmpty = (d: PayDetailsFields) => !d.accountName && !d.bankName && !d.swift && !d.account && !d.bankDetails && !d.payUrl;
+
+function settingsEmpty(s: IntlSettings): boolean {
+  return !s.on && !s.exportUnderLut && !s.lutArn && !s.lutFy && detailsEmpty(s) && !Object.keys(s.byCurrency ?? {}).length;
 }
 
 /** Drops tombstones older than `maxAgeDays` so storage does not grow forever. */
 export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Workspace {
   const cutoff = now - maxAgeDays * DAY_MS;
   const keep = <T extends { deletedAt?: number }>(record: T) => !record.deletedAt || record.deletedAt > cutoff;
-  return {
+  const pruned: Workspace = {
     ...ws,
     clients: Object.fromEntries(Object.entries(ws.clients).filter(([, c]) => keep(c))),
     invoices: Object.fromEntries(Object.entries(ws.invoices).filter(([, i]) => keep(i))),
     recurring: Object.fromEntries(Object.entries(ws.recurring).filter(([, r]) => keep(r))),
   };
+  if (!ws.intl) return pruned;
+  // Pruning the last foreign tombstone returns the exact INR-only bytes.
+  return withIntl(pruned, {
+    ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
+    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i))),
+    recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
+    clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -596,16 +833,23 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
 
 const str = (value: unknown, max: number) => (typeof value === "string" ? value.slice(0, max) : "");
 const num = (value: unknown) => (typeof value === "number" && Number.isFinite(value) ? value : 0);
-const paise = (value: unknown) => (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= 100_000_000_000 ? value : null);
+/** Integer minor units, 0 to MAX_MINOR (the ceiling the parsers use too). */
+const paise = (value: unknown) => (typeof value === "number" && Number.isSafeInteger(value) && value >= 0 && value <= MAX_MINOR ? value : null);
 
-function sanitizePayment(raw: unknown): Payment | null {
+/** `foreign`: a payment of a ws.intl invoice, which may carry the INR credited for it. */
+function sanitizePayment(raw: unknown, foreign = false): Payment | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const amount = paise(r.amountPaise);
   const date = str(r.date, 10);
   if (!amount || !isIsoDate(date)) return null;
   const mode = PAYMENT_MODES.includes(r.mode as PaymentMode) ? (r.mode as PaymentMode) : "other";
-  return { id: str(r.id, 40) || newId("pay"), amountPaise: amount, date, mode, reference: str(r.reference, 60), createdAt: num(r.createdAt) };
+  const payment: Payment = { id: str(r.id, 40) || newId("pay"), amountPaise: amount, date, mode, reference: str(r.reference, 60), createdAt: num(r.createdAt) };
+  if (foreign) {
+    const credited = paise(r.inrCreditedPaise);
+    if (credited) payment.inrCreditedPaise = credited;
+  }
+  return payment;
 }
 
 function sanitizeClient(id: string, raw: unknown): Client | null {
@@ -621,14 +865,15 @@ function sanitizeClient(id: string, raw: unknown): Client | null {
   return client;
 }
 
-function sanitizeInvoice(id: string, raw: unknown): Invoice | null {
+/** A `currency` key on a legacy record is ignored (it stays INR, as every old reader shows it). */
+function sanitizeInvoice(id: string, raw: unknown, foreign = false): Invoice | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   const amount = paise(r.amountPaise);
   const issueDate = str(r.issueDate, 10);
   const dueDate = str(r.dueDate, 10);
   if (amount === null || !isIsoDate(issueDate) || !isIsoDate(dueDate)) return null;
-  const payments = Array.isArray(r.payments) ? r.payments.map(sanitizePayment).filter((p): p is Payment => p !== null).slice(0, 200) : [];
+  const payments = Array.isArray(r.payments) ? r.payments.map((p) => sanitizePayment(p, foreign)).filter((p): p is Payment => p !== null).slice(0, 200) : [];
   const reminders = Array.isArray(r.reminders)
     ? r.reminders.filter((x): x is ReminderLog => !!x && typeof x === "object" && typeof (x as ReminderLog).at === "number").slice(-20)
     : [];
@@ -663,6 +908,97 @@ function sanitizePlan(id: string, raw: unknown): RecurringPlan | null {
 
 const ID_RE = /^[a-z]{2,8}_[A-Za-z0-9]{6,40}$/;
 
+const MAX_INTL_INVOICES = 20_000;
+const MAX_INTL_PLANS = 2_000;
+const MAX_INTL_CLIENTS = 5_000;
+
+function sanitizeBankDetails(value: unknown): string {
+  const text = str(value, 2000).replace(/\r\n?/g, "\n").replace(/[\u0000-\u0009\u000b-\u001f\u007f]/g, "");
+  return text.split("\n").map((line) => line.trim()).slice(0, 6).join("\n").trim().slice(0, 300);
+}
+
+function sanitizePayDetails(raw: unknown): PayDetailsFields {
+  const r = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  return {
+    accountName: str(r.accountName, 80).trim(),
+    bankName: str(r.bankName, 80).trim(),
+    swift: normalizeSwift(str(r.swift, 40)),
+    account: normalizeAccount(str(r.account, 80)),
+    bankDetails: sanitizeBankDetails(r.bankDetails),
+    payUrl: typeof r.payUrl === "string" ? safePayUrl(r.payUrl) : "",
+  };
+}
+
+/** Every field through its normalizer: an invalid SWIFT, URL, ARN or FY becomes "", never an error. */
+function sanitizeIntlSettings(raw: unknown): IntlSettings | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const exportUnderLut = r.exportUnderLut === true;
+  const settings: IntlSettings = {
+    on: r.on === true,
+    ...sanitizePayDetails(r),
+    exportUnderLut,
+    lutArn: exportUnderLut ? normalizeLutArn(str(r.lutArn, 40)) : "",
+    lutFy: exportUnderLut ? normalizeFy(str(r.lutFy, 10)) : "",
+    updatedAt: num(r.updatedAt),
+  };
+  if (r.byCurrency && typeof r.byCurrency === "object") {
+    const byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> = {};
+    for (const currency of FOREIGN_CURRENCIES) {
+      const value = own(r.byCurrency as Record<string, unknown>, currency);
+      if (!value || typeof value !== "object") continue;
+      const details = sanitizePayDetails(value);
+      if (!detailsEmpty(details)) byCurrency[currency] = details;
+    }
+    if (Object.keys(byCurrency).length) settings.byCurrency = byCurrency;
+  }
+  return settings;
+}
+
+/**
+ * The foreign section from untrusted JSON. Records without a foreign currency are dropped, never coerced to
+ * INR; ids that also exist in the legacy maps are dropped (the legacy record is what old readers see). Each
+ * map has its own cap, never reduced by the legacy count (the byte cap bounds the total).
+ */
+function sanitizeIntl(raw: unknown, legacyInvoices: Record<string, Invoice>, legacyPlans: Record<string, RecurringPlan>): IntlData | undefined {
+  if (!raw || typeof raw !== "object") return undefined;
+  const r = raw as Record<string, unknown>;
+  const intl = emptyIntl();
+  const settings = sanitizeIntlSettings(r.settings);
+  if (settings) intl.settings = settings;
+  const invoices = (r.invoices && typeof r.invoices === "object" ? r.invoices : {}) as Record<string, unknown>;
+  for (const [id, value] of Object.entries(invoices).slice(0, MAX_INTL_INVOICES)) {
+    if (!ID_RE.test(id) || own(legacyInvoices, id)) continue;
+    const currency = (value as Record<string, unknown> | null)?.currency;
+    if (!isForeignCurrency(currency)) continue;
+    const invoice = sanitizeInvoice(id, value, true);
+    if (!invoice) continue;
+    invoice.currency = currency;
+    if ((value as Record<string, unknown>).exportLut === true) invoice.exportLut = true;
+    intl.invoices[id] = invoice;
+  }
+  const recurring = (r.recurring && typeof r.recurring === "object" ? r.recurring : {}) as Record<string, unknown>;
+  for (const [id, value] of Object.entries(recurring).slice(0, MAX_INTL_PLANS)) {
+    if (!ID_RE.test(id) || own(legacyPlans, id)) continue;
+    const currency = (value as Record<string, unknown> | null)?.currency;
+    if (!isForeignCurrency(currency)) continue;
+    const plan = sanitizePlan(id, value);
+    if (!plan) continue;
+    plan.currency = currency;
+    intl.recurring[id] = plan;
+  }
+  const clients = (r.clients && typeof r.clients === "object" ? r.clients : {}) as Record<string, unknown>;
+  for (const [id, value] of Object.entries(clients).slice(0, MAX_INTL_CLIENTS)) {
+    if (!ID_RE.test(id) || !value || typeof value !== "object") continue;
+    const v = value as Record<string, unknown>;
+    if (!isForeignCurrency(v.currency)) continue;
+    const entry: ClientIntl = { currency: v.currency, updatedAt: num(v.updatedAt) };
+    if (num(v.deletedAt)) entry.deletedAt = num(v.deletedAt);
+    intl.clients[id] = entry;
+  }
+  return normalizeIntl(intl);
+}
+
 /** Returns a well-formed workspace from untrusted JSON, dropping bad records. */
 export function sanitizeWorkspace(raw: unknown): Workspace {
   const ws = emptyWorkspace();
@@ -691,6 +1027,8 @@ export function sanitizeWorkspace(raw: unknown): Workspace {
     const plan = sanitizePlan(id, value);
     if (plan) ws.recurring[id] = plan;
   }
+  const intl = sanitizeIntl(r.intl, ws.invoices, ws.recurring);
+  if (intl) ws.intl = intl;
   return ws;
 }
 
@@ -699,12 +1037,27 @@ export function sanitizeWorkspace(raw: unknown): Workspace {
 
 export const MAX_BACKFILL_MONTHS = 12;
 
+/** Live INR plans only (the legacy map); see liveInvoices. */
 export function liveRecurring(ws: Workspace): RecurringPlan[] {
   return Object.values(ws.recurring).filter((plan) => !plan.deletedAt);
 }
 
+/** Every live plan, INR and foreign. Only for currency-aware code. */
+export function allLiveRecurring(ws: Workspace): RecurringPlan[] {
+  const foreign = ws.intl ? Object.values(ws.intl.recurring).filter((plan) => !plan.deletedAt) : [];
+  return foreign.length ? [...liveRecurring(ws), ...foreign] : liveRecurring(ws);
+}
+
+/** Same routing and refusal as upsertInvoice. */
 export function upsertPlan(ws: Workspace, plan: RecurringPlan, now: number): Workspace {
-  return { ...ws, recurring: { ...ws.recurring, [plan.id]: { ...plan, updatedAt: now } } };
+  if (isForeignCurrency(plan.currency)) {
+    if (own(ws.recurring, plan.id)) return ws;
+    const intl = ws.intl ?? emptyIntl();
+    return { ...ws, intl: { ...intl, recurring: { ...intl.recurring, [plan.id]: { ...plan, updatedAt: now } } } };
+  }
+  if (own(ws.intl?.recurring, plan.id)) return ws;
+  const { currency: _currency, ...legacy } = plan;
+  return { ...ws, recurring: { ...ws.recurring, [plan.id]: { ...legacy, updatedAt: now } } };
 }
 
 function monthIndex(month: string): number {
@@ -722,6 +1075,18 @@ export function recurringInvoiceId(planId: string, month: string): string {
 }
 
 /**
+ * Months ("YYYY-MM", sorted) that already have an invoice of this plan, tombstones included, read from the
+ * map the plan's invoices live in (ws.invoices for an INR plan, ws.intl.invoices for a foreign one).
+ */
+export function planMonths(ws: Workspace, plan: RecurringPlan): string[] {
+  const map = currencyOf(plan) === "INR" ? ws.invoices : (ws.intl?.invoices ?? {});
+  const prefix = recurringInvoiceId(plan.id, "0000-00").slice(0, -6);
+  const months: string[] = [];
+  for (const id of Object.keys(map)) if (id.startsWith(prefix)) months.push(`${id.slice(-6, -2)}-${id.slice(-2)}`);
+  return months.sort();
+}
+
+/**
  * Creates every due invoice for active plans up to `today` (newest
  * MAX_BACKFILL_MONTHS at most). Months that already have an invoice — or had
  * one the user deleted — are skipped, so this is safe to run on every load.
@@ -730,7 +1095,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
   const created: string[] = [];
   let next = ws;
   const todayIndex = monthIndex(today.slice(0, 7));
-  for (const plan of liveRecurring(ws)) {
+  for (const plan of allLiveRecurring(ws)) {
     if (plan.paused || !next.clients[plan.clientId] || next.clients[plan.clientId].deletedAt) continue;
     const last = Math.min(todayIndex, plan.endMonth ? monthIndex(plan.endMonth) : todayIndex);
     const first = Math.max(monthIndex(plan.startMonth), last - MAX_BACKFILL_MONTHS + 1);
@@ -739,7 +1104,8 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
       const issueDate = `${month}-${String(plan.dayOfMonth).padStart(2, "0")}`;
       if (issueDate > today) continue;
       const id = recurringInvoiceId(plan.id, month);
-      if (next.invoices[id]) continue;
+      // Either map, tombstones included: a foreign plan's months live in ws.intl.invoices.
+      if (getInvoice(next, id)) continue;
       next = upsertInvoice(next, {
         id,
         number: nextInvoiceNumber(next),
@@ -752,6 +1118,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
         reminders: [],
         voided: false,
         recurringId: plan.id,
+        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency } : {}),
         createdAt: now,
         updatedAt: now,
       }, now);
@@ -759,6 +1126,87 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
     }
   }
   return { ws: next, created };
+}
+
+const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
+
+/**
+ * Moves an invoice to another currency: tombstones `id` and creates a copy with a new id, the same number and
+ * fields, in `currency`. Only while it has no payments, and never for a plan month (null): a plan month's id is
+ * recurringInvoiceId(plan, month), and once its tombstone is pruned generateRecurring would bill that month again.
+ */
+export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
+  const invoice = getInvoice(ws, id);
+  if (!invoice || invoice.deletedAt || invoice.payments.length || invoice.recurringId) return null;
+  if (currencyOf(invoice) === currency) return { ws, id };
+  const { currency: _from, exportLut: _export, ...rest } = invoice;
+  const copy: Invoice = { ...rest, id: newId("inv"), ...(isForeignCurrency(currency) ? { currency } : {}) };
+  return { ws: upsertInvoice(deleteInvoice(ws, id, now), copy, now), id: copy.id };
+}
+
+/**
+ * A plan's currency change: `planId` ends after its last generated month and a new plan (new id, same client,
+ * day, due days, description and amount) in `currency` starts the month after. Existing months keep their ids
+ * and currency, so nothing regenerates. A plan with no month yet is replaced as a whole.
+ */
+export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
+  const plan = getPlan(ws, planId);
+  if (!plan || plan.deletedAt) return null;
+  if (currencyOf(plan) === currency) return { ws, id: planId };
+  const months = planMonths(ws, plan);
+  const last = months[months.length - 1];
+  const { currency: _from, ...rest } = plan;
+  const replacement: RecurringPlan = {
+    ...rest, id: newId("rec"), startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
+    ...(isForeignCurrency(currency) ? { currency } : {}),
+  };
+  const ended = last ? { ...plan, endMonth: last } : { ...plan, deletedAt: now };
+  return { ws: upsertPlan(upsertPlan(ws, ended, now), replacement, now), id: replacement.id };
+}
+
+// ---------------------------------------------------------------------------
+// Repairs for what code from before ws.intl can still do to a book (spec §1.7)
+
+/**
+ * The erase time T when this book shows exactly what a pre-intl "Erase workspace" writes: the business is
+ * emptyBusiness(T), at least one legacy record was tombstoned at T and none is live or newer, and some intl
+ * content was written before T (so the erase couldn't see it). Otherwise null.
+ */
+function detectLegacyErase(ws: Workspace): number | null {
+  const b = ws.business;
+  const T = b.updatedAt;
+  if (!ws.intl || !(T > 0)) return null;
+  const empty = emptyBusiness(T);
+  if (b.name !== empty.name || b.upiId !== empty.upiId || b.phone !== empty.phone || b.gstin !== empty.gstin
+    || b.invoicePrefix !== empty.invoicePrefix || b.udyam !== empty.udyam) return null;
+  const legacy = [...Object.values(ws.clients), ...Object.values(ws.invoices), ...Object.values(ws.recurring)];
+  if (!legacy.some((r) => r.deletedAt === T) || !legacy.every((r) => r.deletedAt !== undefined && r.deletedAt <= T)) return null;
+  const intl = ws.intl;
+  const older = <T2 extends { updatedAt: number; deletedAt?: number }>(map: Record<string, T2>) => Object.values(map).some((r) => !r.deletedAt && r.updatedAt < T);
+  const settingsOlder = Boolean(intl.settings && !settingsEmpty(intl.settings) && intl.settings.updatedAt < T);
+  return older(intl.invoices) || older(intl.recurring) || older(intl.clients) || settingsOlder ? T : null;
+}
+
+/**
+ * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
+ * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices
+ * (which that tab couldn't see) is revived, unless it was erased with everything else. Returns `ws` itself
+ * when nothing needs repair, so it never causes a write by itself.
+ */
+export function repairIntl(ws: Workspace, now: number): Workspace {
+  if (!ws.intl) return ws;
+  let next = ws;
+  const erasedAt = detectLegacyErase(ws);
+  if (erasedAt !== null) next = withIntl(next, eraseIntl(ws.intl, erasedAt));
+  let clients: Record<string, Client> | null = null;
+  for (const invoice of Object.values(next.intl?.invoices ?? {})) {
+    if (invoice.deletedAt) continue;
+    const client: Client | undefined = own(clients ?? next.clients, invoice.clientId);
+    if (!client || !client.deletedAt || client.deletedAt === erasedAt) continue;
+    const { deletedAt: _gone, ...revived } = client;
+    clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt + 1, now) } };
+  }
+  return clients ? { ...next, clients } : next;
 }
 
 // ---------------------------------------------------------------------------

@@ -1,4 +1,4 @@
-import { canonicalJson, emptyWorkspace, mergeWorkspaces, pruneTombstones, sanitizeWorkspace, type Workspace } from "./model.ts";
+import { canonicalJson, emptyWorkspace, mergeWorkspaces, pruneTombstones, repairIntl, sanitizeWorkspace, type Workspace } from "./model.ts";
 import {
   applyIncomingIndex, capAdditions, capBookIndex, emptyIndex, liveBookIds, MAX_DELETED_IDS, parseBookIndex, parseLinkKey,
   PRIMARY_BOOK_ID, sanitizeBookIndex, type BookIndex,
@@ -68,7 +68,9 @@ export async function syncWorkspace(store: CloudStore, slot: string, incoming: u
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const { doc, rev } = await store.read(slot);
     const serverCopy = parseStored(doc);
-    const merged = pruneTombstones(mergeWorkspaces(serverCopy, clientCopy), now);
+    // A push from code that can't see ws.intl leaves the stored section as it was (absence never deletes);
+    // repairIntl then applies that code's erase or client delete to it (docs/spec-foreign-clients.md §1.7).
+    const merged = pruneTombstones(repairIntl(mergeWorkspaces(serverCopy, clientCopy), now), now);
     const json = canonicalJson(merged);
     if (rev > 0 && json === canonicalJson(serverCopy)) return { status: "ok", workspace: merged, rev };
     const bytes = new TextEncoder().encode(json).length;
