@@ -1,6 +1,7 @@
 import {
-  canonicalJson, emptyWorkspace, findClient, isIsoDate, liveInvoices, localToday, mergeWorkspaces, newId, pruneTombstones,
-  recordReceiptPayment, restoreFrom, sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice, type ReceiptPayment, type Workspace,
+  canonicalJson, emptyBusiness, emptyWorkspace, findClient, isIsoDate, liveInvoices, localToday, mergeIntl, mergeWorkspaces, newId, pruneTombstones,
+  recordReceiptPayment, repairIntl, restoreFrom, sanitizeWorkspace, updateBusiness, upsertClient, upsertInvoice, withoutIntl, type IntlData, type ReceiptPayment,
+  type Workspace,
 } from "./model.ts";
 import {
   addBook, bookHash, bookRank, canAddBook, emptyIndex, isBookId, isTombstoned, liveBookIds, mergeBookIndex, newBookId, parseBookIndex,
@@ -17,6 +18,12 @@ import { isValidVpa } from "../upi-uri.ts";
  * compatible with older code, so old tabs and an offline PWA keep working on it.
  * Other books live under keys old code never reads, so old code can never
  * delete or merge them. Never write a non-primary book to WORKSPACE_KEY.
+ *
+ * Clients abroad (docs/spec-foreign-clients.md §2): a book's foreign section
+ * (`ws.intl`) lives in a sidecar key, proupiqr-intl-v1:<id>, tagged with the
+ * account that wrote it. The book key holds exactly what older code writes for
+ * the same data, so old and new tabs never rewrite each other. Only
+ * writeBookKeys writes a book key.
  */
 
 export const WORKSPACE_KEY = "proupiqr-workspace-v1";
@@ -35,6 +42,7 @@ export const PENDING_DOCUMENT_KEY = "proupiqr-pending-document";
 const BOOK_PREFIX = "proupiqr-book-v1:";
 const ASIDE_PREFIX = "proupiqr-aside-v1:";
 const STASH_BOOK_PREFIX = "proupiqr-stash-v2:";
+const INTL_PREFIX = "proupiqr-intl-v1:";
 const INVOICE_DRAFT_KEY = "proupiqr-invoice-draft";
 /** The last business limit the server reported for an account: { owner, limit }. Read before the first request and offline. */
 export const PLAN_LIMIT_KEY = "proupiqr-plan-limit-v1";
@@ -49,6 +57,8 @@ const PLACEHOLDER_VPA = "merchant@upi";
 export const BOOKS_UI = true;
 
 export const bookKey = (id: string): string => (id === PRIMARY_BOOK_ID ? WORKSPACE_KEY : `${BOOK_PREFIX}${id}`);
+/** The sidecar of a book's foreign section, the primary included ({ owner, intl }; absent when the book has none). */
+export const intlKey = (id: string): string => `${INTL_PREFIX}${id}`;
 
 // ---------------------------------------------------------------------------
 // Storage access: every call is guarded (blocked storage, quota, private mode).
@@ -103,9 +113,14 @@ function parseJson(raw: string | null): unknown {
 // ---------------------------------------------------------------------------
 // Sync metadata (last server revision and hash per book)
 
+/**
+ * fx: 1 marks meta taken from a server reply that keeps ws.intl. Meta without it may come from a copy older
+ * code stripped, so that book is pulled once (docs/spec-foreign-clients.md §2.5).
+ */
+export interface BookMeta { rev: number; hash: string; fx?: 1 }
 export interface BookSyncMeta {
   owner: string | null;
-  books: Record<string, { rev: number; hash: string }>;
+  books: Record<string, BookMeta>;
 }
 
 export function readSyncMeta(): BookSyncMeta {
@@ -113,23 +128,26 @@ export function readSyncMeta(): BookSyncMeta {
   const books: BookSyncMeta["books"] = {};
   if (raw && raw.books && typeof raw.books === "object") {
     for (const [id, value] of Object.entries(raw.books as Record<string, unknown>)) {
-      const v = value as { rev?: unknown; hash?: unknown } | null;
-      if (isBookId(id) && v && Number.isSafeInteger(v.rev) && typeof v.hash === "string") books[id] = { rev: v.rev as number, hash: v.hash };
+      const v = value as { rev?: unknown; hash?: unknown; fx?: unknown } | null;
+      if (isBookId(id) && v && Number.isSafeInteger(v.rev) && typeof v.hash === "string") {
+        books[id] = v.fx === 1 ? { rev: v.rev as number, hash: v.hash, fx: 1 } : { rev: v.rev as number, hash: v.hash };
+      }
     }
   }
   return { owner: raw && typeof raw.owner === "string" ? raw.owner : null, books };
 }
 
 /** The meta of one book, only when it was recorded for this owner. */
-export function syncMetaFor(owner: string | null, id: string): { rev: number; hash: string } | undefined {
+export function syncMetaFor(owner: string | null, id: string): BookMeta | undefined {
   const meta = readSyncMeta();
   return meta.owner === owner ? meta.books[id] : undefined;
 }
 
-export function writeSyncMeta(owner: string, id: string, rev: number, hash: string): boolean {
+/** fx: the server reply that produced this meta carried intl: 1. */
+export function writeSyncMeta(owner: string, id: string, rev: number, hash: string, fx = false): boolean {
   const meta = readSyncMeta();
   const books = meta.owner === owner ? meta.books : {};
-  books[id] = { rev, hash };
+  books[id] = fx ? { rev, hash, fx: 1 } : { rev, hash };
   return put(BOOK_SYNC_KEY, JSON.stringify({ owner, books }));
 }
 
@@ -229,20 +247,88 @@ function seedFromInvoiceDraft(ws: Workspace): Workspace {
   }
 }
 
+// ---------------------------------------------------------------------------
+// The foreign-section sidecar (docs/spec-foreign-clients.md §2.1)
+
+/** Name of the set-aside copy that keeps another account's foreign section found on this device. */
+export const OTHER_ACCOUNT_INTL = "Clients abroad (another account)";
+
+function readSidecar(id: string, text: string | null = get(intlKey(id))): { owner: string | null; intl: IntlData | undefined } | null {
+  const raw = parseJson(text) as { owner?: unknown; intl?: unknown } | null;
+  if (!raw || typeof raw !== "object" || Array.isArray(raw)) return null;
+  return { owner: typeof raw.owner === "string" ? raw.owner : null, intl: sanitizeWorkspace({ intl: raw.intl }).intl };
+}
+
+/**
+ * Whether a sidecar written for `sideOwner` belongs to this device's current account: the same account, a
+ * signed-out device's own, or a guest's data adopted by the first sign-in (no other account's stash here).
+ * Older code switches accounts without moving sidecars, so anything else is another account's data.
+ */
+function sidecarJoins(sideOwner: string | null): boolean {
+  const current = get(OWNER_KEY);
+  if (sideOwner !== null) return sideOwner === current;
+  if (current === null) return true;
+  return get(STASH_KEY) === null && get(STASH_V2_KEY) === null;
+}
+
+/** The foreign section that may join book `id`; another account's is set aside (verified), then dropped. */
+function sidecarIntl(id: string): IntlData | undefined {
+  const side = readSidecar(id);
+  if (!side) return undefined;
+  if (sidecarJoins(side.owner)) return side.intl;
+  if (!side.intl) drop(intlKey(id));
+  else if (putAside(newBookId(), "other_account", { ...emptyWorkspace(), business: { ...emptyBusiness(0), name: OTHER_ACCOUNT_INTL }, intl: side.intl })) drop(intlKey(id));
+  return undefined;
+}
+
+/** A book key's workspace joined with its sidecar. Merged, never overridden: intl found in a book key is kept. */
+function joinSidecar(id: string, ws: Workspace): Workspace {
+  if (get(intlKey(id)) === null) return ws;
+  const side = sidecarIntl(id);
+  return side ? sanitizeWorkspace({ ...ws, intl: mergeIntl(ws.intl, side) }) : ws;
+}
+
+/**
+ * The only function that writes a book key. The sidecar goes first (a reader that sees the new book key also
+ * sees its sidecar), tagged with the account at write time; then the book key, holding exactly what older code
+ * would write. True only if both writes succeeded (`verified`: each read back).
+ */
+function writeBookKeys(id: string, ws: Workspace, verified = false, now = Date.now()): boolean {
+  const write = verified ? putVerified : put;
+  const pruned = pruneTombstones(ws, now);
+  // Another account's sidecar (left by an older switch) is set aside first and never written over.
+  const existing = readSidecar(id);
+  if (existing && !sidecarJoins(existing.owner)) {
+    sidecarIntl(id);
+    if (get(intlKey(id)) !== null) return false;
+  }
+  let sideOk = true;
+  if (pruned.intl) sideOk = write(intlKey(id), canonicalJson({ owner: get(OWNER_KEY), intl: pruned.intl } as unknown as Workspace));
+  else drop(intlKey(id));
+  const bookOk = write(bookKey(id), canonicalJson(withoutIntl(pruned)));
+  return sideOk && bookOk;
+}
+
 /**
  * One book. The primary keeps today's behaviour (seeded from the invoice draft
  * on first run, empty when unreadable); other books never seed and give null
- * when their key is missing or unreadable.
+ * when their key is missing or unreadable. Either way the book's sidecar joins
+ * it when it belongs to this device's account.
  */
 export function loadBook(id: string): Workspace | null {
   if (!isBookId(id)) return null;
   const raw = get(bookKey(id));
+  let ws: Workspace;
   if (id === PRIMARY_BOOK_ID) {
-    if (raw === null) return storage() ? seedFromInvoiceDraft(emptyWorkspace()) : emptyWorkspace();
-    try { return sanitizeWorkspace(JSON.parse(raw)); } catch { return emptyWorkspace(); }
+    if (raw === null) ws = storage() ? seedFromInvoiceDraft(emptyWorkspace()) : emptyWorkspace();
+    else {
+      try { ws = sanitizeWorkspace(JSON.parse(raw)); } catch { ws = emptyWorkspace(); }
+    }
+  } else {
+    if (raw === null) return null;
+    try { ws = sanitizeWorkspace(JSON.parse(raw)); } catch { return null; }
   }
-  if (raw === null) return null;
-  try { return sanitizeWorkspace(JSON.parse(raw)); } catch { return null; }
+  return joinSidecar(id, ws);
 }
 
 /**
@@ -257,7 +343,7 @@ export function loadShelf(): { shelf: Shelf; cloudOnly: string[] } {
   const meta = readSyncMeta();
   for (const id of liveBookIds(index)) {
     const ws = loadBook(id);
-    if (ws) books[id] = ws;
+    if (ws) books[id] = repairIntl(ws, Date.now());
     else if (meta.books[id]) cloudOnly.push(id);
   }
   return { shelf: { index, books }, cloudOnly };
@@ -270,13 +356,14 @@ export function saveBook(index: BookIndex, id: string, ws: Workspace): boolean {
     const stored = parseBookIndex(get(BOOK_INDEX_KEY));
     if (stored && isTombstoned(stored, id)) return false;
   }
-  return put(bookKey(id), canonicalJson(pruneTombstones(ws, Date.now())));
+  return writeBookKeys(id, ws);
 }
 
-/** Never for the primary (it can't be deleted; old code owns its key too). */
+/** Never for the primary (it can't be deleted; old code owns its key too). Drops the book key and its sidecar. */
 export function removeBookStorage(id: string): void {
   if (!isBookId(id) || id === PRIMARY_BOOK_ID) return;
   drop(bookKey(id));
+  drop(intlKey(id));
 }
 
 /**
@@ -385,6 +472,35 @@ export function sweepStrayBooks(index: BookIndex, owner: string | null = get(OWN
       handled.push(id);
     }
   }
+  sweepStrayIntl(index, owner);
+  return handled;
+}
+
+/**
+ * Sidecars whose id isn't live and has no book key: removed when the server has their content (same hash
+ * rule as books), else set aside first. Never the primary's.
+ */
+export function sweepStrayIntl(index: BookIndex, owner: string | null = get(OWNER_KEY)): string[] {
+  const live = new Set(liveBookIds(index));
+  const handled: string[] = [];
+  for (const key of keys()) {
+    if (!key.startsWith(INTL_PREFIX)) continue;
+    const id = key.slice(INTL_PREFIX.length);
+    if (!isBookId(id) || id === PRIMARY_BOOK_ID || live.has(id) || get(bookKey(id)) !== null) continue;
+    const side = readSidecar(id);
+    const joined: Workspace | null = side?.intl ? { ...emptyWorkspace(), intl: side.intl } : null;
+    const meta = syncMetaFor(owner, id);
+    if (!joined || (meta && meta.hash === bookHash(joined))) {
+      drop(key);
+      handled.push(id);
+      continue;
+    }
+    const asideId = get(`${ASIDE_PREFIX}${id}`) === null ? id : newBookId();
+    if (putAside(asideId, sidecarJoins(side?.owner ?? null) ? "stray" : "other_account", joined)) {
+      drop(key);
+      handled.push(id);
+    }
+  }
   return handled;
 }
 
@@ -434,14 +550,22 @@ export function onShelfChange(
         h.index(mergeBookIndex(current().index, parsed));
         return;
       }
-      const id = event.key === WORKSPACE_KEY ? PRIMARY_BOOK_ID : event.key.startsWith(BOOK_PREFIX) ? event.key.slice(BOOK_PREFIX.length) : "";
+      // A book key or its sidecar: both are re-read and joined (old tabs write only the book key).
+      const id = event.key === WORKSPACE_KEY ? PRIMARY_BOOK_ID
+        : event.key.startsWith(BOOK_PREFIX) ? event.key.slice(BOOK_PREFIX.length)
+        : event.key.startsWith(INTL_PREFIX) ? event.key.slice(INTL_PREFIX.length) : "";
       if (!id || !event.newValue || !isBookId(id)) return;
       // Another account took over this device in another tab: never merge its data into this tab's books.
       if (otherAccount()) { switched = true; h.ownerChanged(); return; }
       const shelf = current();
       const stored = parseBookIndex(get(BOOK_INDEX_KEY));
       if (!liveBookIds(shelf.index).includes(id) || (stored && isTombstoned(stored, id))) return;
-      const incoming = sanitizeWorkspace(JSON.parse(event.newValue));
+      // The book key as written (event or storage) joined with its sidecar when that belongs to this account.
+      const bookRaw = event.key.startsWith(INTL_PREFIX) ? get(bookKey(id)) : event.newValue;
+      if (bookRaw === null) return;
+      const side = readSidecar(id, event.key.startsWith(INTL_PREFIX) ? event.newValue : get(intlKey(id)));
+      const legacy = sanitizeWorkspace(JSON.parse(bookRaw));
+      const incoming = side?.intl && sidecarJoins(side.owner) ? sanitizeWorkspace({ ...legacy, intl: mergeIntl(legacy.intl, side.intl) }) : legacy;
       // Another tab replaced this book with the server's copy (its device-only changes were set aside):
       // take the stored copy as is; merging would bring the set-aside changes back.
       const resets = readResets();
@@ -475,9 +599,14 @@ export function saveWorkspace(ws: Workspace): boolean {
 /** The primary book only (old behaviour), for callers that haven't moved to onShelfChange. */
 export function onExternalChange(current: () => Workspace, apply: (ws: Workspace) => void): () => void {
   const handler = (event: StorageEvent) => {
-    if (event.key !== WORKSPACE_KEY || !event.newValue) return;
+    if ((event.key !== WORKSPACE_KEY && event.key !== intlKey(PRIMARY_BOOK_ID)) || !event.newValue) return;
     try {
-      apply(mergeWorkspaces(current(), sanitizeWorkspace(JSON.parse(event.newValue))));
+      // The book key joined with its sidecar, as loadBook reads them.
+      const raw = event.key === WORKSPACE_KEY ? event.newValue : get(WORKSPACE_KEY);
+      if (raw === null) return;
+      const side = readSidecar(PRIMARY_BOOK_ID, event.key === WORKSPACE_KEY ? get(intlKey(PRIMARY_BOOK_ID)) : event.newValue);
+      const legacy = sanitizeWorkspace(JSON.parse(raw));
+      apply(mergeWorkspaces(current(), side?.intl && sidecarJoins(side.owner) ? sanitizeWorkspace({ ...legacy, intl: mergeIntl(legacy.intl, side.intl) }) : legacy));
     } catch {
       // Ignore malformed writes from other tabs.
     }
@@ -549,7 +678,9 @@ function stashBelongsTo(stashed: Workspace, previous: Workspace, next: Workspace
  */
 export function switchAccountStorage(previousOwner: string, newOwner: string, index: BookIndex, newPrimary: Workspace, now = Date.now()): SwitchResult {
   const primaryRaw = get(WORKSPACE_KEY);
-  const primary = primaryRaw === null ? emptyWorkspace() : sanitizeWorkspace(parseJson(primaryRaw));
+  // Books move joined with their sidecars (the foreign section rides inside the stashed JSON).
+  const primary = joinSidecar(PRIMARY_BOOK_ID, primaryRaw === null ? emptyWorkspace() : sanitizeWorkspace(parseJson(primaryRaw)));
+  const primarySideRaw = get(intlKey(PRIMARY_BOOK_ID));
   let existing = loadStash();
   let stashOwner: string | null = existing?.owner ?? null;
   if (existing && stashOwner === null) {
@@ -581,23 +712,33 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
   const oldPrimaryStash = get(STASH_KEY);
   const oldMeta = get(STASH_V2_KEY);
   const ownerBefore = get(OWNER_KEY);
-  const moved: { id: string; raw: string; value: string; stashKey: string; stashBefore: string | null }[] = [];
+  const moved: { id: string; raw: string; sideRaw: string | null; value: string; stashKey: string; stashBefore: string | null }[] = [];
 
   /** Puts one moved book back; its stash copy goes only after the book key verified. False: it stays stashed. */
   const putBack = (m: (typeof moved)[number]): boolean => {
     const restoreStash = () => { if (m.stashBefore === null) drop(m.stashKey); else put(m.stashKey, m.stashBefore); };
+    if (m.sideRaw !== null && !putVerified(intlKey(m.id), m.sideRaw)) {
+      drop(intlKey(m.id));
+      if (putVerified(m.stashKey, m.value)) return false;
+      putAside(m.id, "stray", sanitizeWorkspace(parseJson(m.value)));
+      return false;
+    }
     if (putVerified(bookKey(m.id), m.raw)) { restoreStash(); return true; }
     // Tight storage: the stash copy is 1 character longer than the book key, so freeing it makes room (the copy is in memory).
     drop(m.stashKey);
     if (putVerified(bookKey(m.id), m.raw)) { restoreStash(); return true; }
     drop(bookKey(m.id));
+    drop(intlKey(m.id));
     if (putVerified(m.stashKey, m.value)) return false;
-    putAside(m.id, "stray", sanitizeWorkspace(parseJson(m.raw)));
+    putAside(m.id, "stray", sanitizeWorkspace(parseJson(m.value)));
     return false;
   };
   const fail = (): SwitchResult => {
     // The previous primary is still in WORKSPACE_KEY (it is replaced last, and a failed write leaves it as it was).
     if (get(WORKSPACE_KEY) !== primaryRaw && primaryRaw !== null) putVerified(WORKSPACE_KEY, primaryRaw);
+    if (get(intlKey(PRIMARY_BOOK_ID)) !== primarySideRaw) {
+      if (primarySideRaw === null) drop(intlKey(PRIMARY_BOOK_ID)); else putVerified(intlKey(PRIMARY_BOOK_ID), primarySideRaw);
+    }
     if (ownerBefore === null) drop(OWNER_KEY); else put(OWNER_KEY, ownerBefore);
     // The stash slot: back to what it was only when that write verifies; the merged copy written by this
     // switch contains the old one, so keeping it (with its meta) loses nothing. Meta and payload always agree.
@@ -621,22 +762,30 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     if (id === PRIMARY_BOOK_ID) continue;
     const raw = get(bookKey(id));
     if (raw === null) continue;
+    const sideRaw = get(intlKey(id));
+    const joined = sideRaw === null ? null : joinSidecar(id, sanitizeWorkspace(parseJson(raw)));
     const stashKey = `${STASH_BOOK_PREFIX}${id}`;
     const stashBefore = get(stashKey);
-    const value = stashBefore !== null ? canonicalJson(mergeWorkspaces(sanitizeWorkspace(parseJson(stashBefore)), sanitizeWorkspace(parseJson(raw)))) : raw;
+    const value = stashBefore !== null
+      ? canonicalJson(mergeWorkspaces(sanitizeWorkspace(parseJson(stashBefore)), joined ?? sanitizeWorkspace(parseJson(raw))))
+      : joined ? canonicalJson(joined) : raw;
     if (!putVerified(stashKey, value)) {
       if (stashBefore !== null && get(stashKey) !== stashBefore) put(stashKey, stashBefore);
       return fail();
     }
-    moved.push({ id, raw, value, stashKey, stashBefore });
+    moved.push({ id, raw, sideRaw: get(intlKey(id)), value, stashKey, stashBefore });
     drop(bookKey(id));
+    drop(intlKey(id));
   }
   // 3. The previous primary (merged with the previous account's older stash, which it then contains), verified.
   const primaryStash = merging && oldPrimaryStash !== null ? canonicalJson(mergeWorkspaces(sanitizeWorkspace(parseJson(oldPrimaryStash)), primary)) : canonicalJson(primary);
   const ids = [...new Set([...(merging ? liveBookIds(merging.shelf.index).filter((id) => id !== PRIMARY_BOOK_ID) : []), ...moved.map((m) => m.id)])];
   if (!putVerified(STASH_KEY, primaryStash) || !putVerified(STASH_V2_KEY, JSON.stringify({ owner: previousOwner, at: now, ids }))) return fail();
-  // 4. The new owner first, so other tabs stop before they see the new account's primary; then the primary, last.
-  if (!putVerified(OWNER_KEY, newOwner) || !putVerified(WORKSPACE_KEY, canonicalJson(pruneTombstones(newPrimary, now)))) return fail();
+  // 4. The new owner first, so other tabs stop before they see the new account's primary; then the primary, last
+  //    (both its keys: the previous account's sidecar is in the stash now and never stays attached to this account).
+  if (!putVerified(OWNER_KEY, newOwner)) return fail();
+  drop(intlKey(PRIMARY_BOOK_ID));
+  if (!writeBookKeys(PRIMARY_BOOK_ID, newPrimary, true, now)) return fail();
   let nextIndex: BookIndex = { ...emptyIndex(), owner: newOwner };
   saveIndex(nextIndex, true);
   resetSyncMeta(newOwner);
@@ -647,14 +796,14 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
     if (!copy?.workspace) continue;
     const ws = sanitizeWorkspace(copy.workspace);
     if (bookId === PRIMARY_BOOK_ID) {
-      const current = sanitizeWorkspace(parseJson(get(WORKSPACE_KEY)));
-      if (putVerified(WORKSPACE_KEY, canonicalJson(pruneTombstones(mergeWorkspaces(current, ws), now)))) drop(`${ASIDE_PREFIX}${asideId}`);
+      const current = loadBook(PRIMARY_BOOK_ID) ?? emptyWorkspace();
+      if (writeBookKeys(PRIMARY_BOOK_ID, mergeWorkspaces(current, ws), true, now)) drop(`${ASIDE_PREFIX}${asideId}`);
       continue;
     }
     const candidate = addBook(nextIndex, bookId, now);
     if (candidate === nextIndex || get(bookKey(bookId)) !== null) continue;
-    if (!putVerified(bookKey(bookId), canonicalJson(ws))) { drop(bookKey(bookId)); continue; }
-    if (!saveIndex(candidate, true)) { drop(bookKey(bookId)); continue; }
+    if (!writeBookKeys(bookId, ws, true, now)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
+    if (!saveIndex(candidate, true)) { drop(bookKey(bookId)); drop(intlKey(bookId)); continue; }
     nextIndex = candidate;
     drop(`${ASIDE_PREFIX}${asideId}`);
   }
@@ -923,9 +1072,11 @@ export function trackDocumentInto(bookId: string, doc: DocumentToTrack, shelf: S
   // With several businesses, a document from another UPI ID never overwrites this book's invoice of the same number.
   const docUpi = normUpi(doc.upiId);
   const foreign = several && docUpi !== "" && docUpi !== PLACEHOLDER_VPA && docUpi !== normUpi(ws.business.upiId);
+  // Matched among INR invoices only (liveInvoices): the generator bridge never touches a foreign-currency invoice.
   const existing = foreign ? undefined : liveInvoices(ws).find((i) => i.number.trim().toLowerCase() === number.toLowerCase());
   const invoiceId = existing?.id ?? newId("inv");
   ws = upsertInvoice(ws, {
+    ...existing,
     id: invoiceId,
     number,
     clientId: client.id,

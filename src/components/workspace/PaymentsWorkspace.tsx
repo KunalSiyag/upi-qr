@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
-  liveRecurring, upsertPlan, allocatePayment,
+  liveRecurring, upsertPlan, allocatePayment, allLiveInvoices, currencyOf, getInvoice, repairIntl,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
@@ -203,7 +203,8 @@ function Workspace() {
     // Another tab switched this device to a different account: never write this tab's data over it.
     if (ownerChangedElsewhere(tabOwner())) { ownerChanged(); return false; }
     const before = current.books[id];
-    const value = before ? mergeWorkspaces(before, next) : next;
+    // Repairs what older code did to the foreign section (docs/spec-foreign-clients.md §1.7); same object when nothing.
+    const value = repairIntl(before ? mergeWorkspaces(before, next) : next, Date.now());
     const saved = saveBook(current.index, id, value);
     shelfRef.current = withBook(current, id, value);
     setShelf((s) => withBook(s, id, s.books[id] && s.books[id] !== before ? mergeWorkspaces(s.books[id], value) : value));
@@ -1214,17 +1215,17 @@ function Workspace() {
         </div>
       </div>
 
-      {sheet?.kind === "invoice" && (
+      {sheet?.kind === "invoice" && (!sheet.id || inrInvoice(ws, sheet.id)) && (
         <InvoiceSheet ws={ws} today={today} invoiceId={sheet.id} onClose={closeSheet} onSave={(next, id) => {
           const isNew = !sheet.id;
           const taken = setWs(next, sheet.bookId);
           setSheet(null);
           if (!taken) return;
-          setFlash(isNew ? tr("{number} added.", { number: next.invoices[id].number }) : tr("Invoice updated."));
+          setFlash(isNew ? tr("{number} added.", { number: getInvoice(next, id)?.number ?? "" }) : tr("Invoice updated."));
           if (isNew) trackProductEvent("invoice_tracked", "workspace");
         }} />
       )}
-      {sheet?.kind === "payment" && ws.invoices[sheet.id] && (
+      {sheet?.kind === "payment" && inrInvoice(ws, sheet.id) && (
         <PaymentSheet ws={ws} today={today} invoiceId={sheet.id} initialAmountPaise={sheet.amountPaise} initialReference={sheet.reference} onClose={closeSheet} onSave={(next) => {
           const claimToken = sheet.claimToken;
           const taken = setWs(next, sheet.bookId);
@@ -1235,7 +1236,7 @@ function Workspace() {
           if (claimToken) void deletePaylink(claimToken, "claims").then(() => refreshLinks());
         }} />
       )}
-      {sheet?.kind === "remind" && ws.invoices[sheet.id] && (
+      {sheet?.kind === "remind" && inrInvoice(ws, sheet.id) && (
         <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={remindLink ? paylinkUrl(remindLink.token) : undefined} onClose={closeSheet} onSent={(next) => {
           // The message is sent either way; the reminder log is kept only where the business takes edits.
           if (!readOnlyRef.current) setWs(next, sheet.bookId);
@@ -1417,7 +1418,7 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
     setHidden(Date.now() - dismissedAt < NUDGE_SNOOZE_MS);
     setInApp(IN_APP_BROWSER.test(navigator.userAgent));
   }, []);
-  const real = books.flatMap((ws) => Object.values(ws.invoices)).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const real = books.flatMap((ws) => liveInvoices(ws)).filter((i) => !isSampleId(i.id));
   const atRisk = real.length >= 2 || real.some((i) => i.payments.length > 0) || (inApp && real.length > 0);
   if (hidden || !atRisk) return null;
   const dismiss = () => {
@@ -1443,12 +1444,21 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
   );
 }
 
+/**
+ * An INR invoice to open a sheet on. Until the UI is currency-aware (docs/spec-foreign-clients.md PR 4),
+ * sheets never open on a foreign-currency invoice.
+ */
+function inrInvoice(ws: Workspace, id: string): boolean {
+  const invoice = getInvoice(ws, id);
+  return Boolean(invoice && currencyOf(invoice) === "INR");
+}
+
 /** UPI payments recorded this month on real (non-sample) invoices, in paise. */
 export function upiCollectedInMonth(ws: Workspace, today: string): number {
   const month = today.slice(0, 7);
   let total = 0;
-  for (const invoice of Object.values(ws.invoices)) {
-    if (invoice.deletedAt || isSampleId(invoice.id)) continue;
+  for (const invoice of liveInvoices(ws)) {
+    if (isSampleId(invoice.id)) continue;
     for (const payment of invoice.payments) if (payment.mode === "upi" && payment.date.startsWith(month)) total += payment.amountPaise;
   }
   return total;
@@ -1645,7 +1655,8 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   const [gstin, setGstin] = useState(existing?.gstin ?? "");
   const [error, setError] = useState("");
   const { tr } = useWs();
-  const hasInvoices = !!clientId && Object.values(ws.invoices).some((i) => !i.deletedAt && i.clientId === clientId);
+  // Both maps: deleteClient refuses while any live invoice, INR or foreign, references the client.
+  const hasInvoices = !!clientId && allLiveInvoices(ws).some((i) => i.clientId === clientId);
 
   return (
     <Sheet title={existing ? tr("Edit {name}", { name: existing.name }) : tr("Add client")} onClose={onClose}>
@@ -1973,7 +1984,7 @@ function GettingStarted({ ws, businessReady, signedIn, onAction }: { ws: Workspa
   useEffect(() => {
     try { setDismissed(localStorage.getItem(CHECKLIST_KEY) === "1"); } catch { setDismissed(false); }
   }, []);
-  const real = Object.values(ws.invoices).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const real = liveInvoices(ws).filter((i) => !isSampleId(i.id));
   const steps: { id: "business" | "invoice" | "remind" | "payment" | "account"; label: string; done: boolean }[] = [
     { id: "business", label: tr("Add your business name and UPI ID"), done: businessReady },
     { id: "invoice", label: tr("Add an invoice you're waiting on"), done: real.length > 0 },

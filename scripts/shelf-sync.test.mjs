@@ -38,21 +38,30 @@ function fakeServer({ owner = OWNER_A, plan = "pro" } = {}) {
     docs: memoryCloudStore(), books: memoryCloudStore(), projections: memoryProjectionStore(), paylinks: memoryPaylinkStore(),
     plan: async () => PLAN[srv.plan], now: () => Date.now(), metric: async () => {},
   };
-  const srv = { d, owner, plan, legacy: false, offline: false, calls: [], override: null };
+  // noIntl: a server from before ws.intl (a rollback): it drops the section and its replies carry no intl: 1.
+  const srv = { d, owner, plan, legacy: false, offline: false, noIntl: false, calls: [], override: null };
+  const strip = (b) => (b && b.workspace && typeof b.workspace === "object" ? { ...b, workspace: { ...b.workspace, intl: undefined } } : b);
+  const out = (status, b) => {
+    if (!srv.noIntl || !b || typeof b !== "object") return reply(status, b);
+    const { intl: _flag, ...rest } = strip(b);
+    return reply(status, rest);
+  };
   globalThis.fetch = async (url, init = {}) => {
     const method = init.method || "GET";
-    const body = init.body ? JSON.parse(init.body) : undefined;
-    srv.calls.push({ method, url, body });
+    const sent = init.body ? JSON.parse(init.body) : undefined;
+    const body = srv.noIntl ? strip(sent) : sent;
+    srv.calls.push({ method, url, body: sent });
     if (srv.offline) throw new TypeError("Failed to fetch");
     const custom = srv.override?.(method, url, body);
     if (custom) return custom;
     if (url === SYNC_URL) {
-      if (method === "GET") return reply(200, { ...(await readWorkspace(d.docs, srv.owner)), owner: srv.owner });
+      // As src/pages/api/v1/workspace/index.ts: replies carry intl: 1.
+      if (method === "GET") return out(200, { ...(await readWorkspace(d.docs, srv.owner)), owner: srv.owner, intl: 1 });
       if (method === "DELETE") return reply(200, (await deleteCloudCopy(d, srv.owner)).body);
       const mismatch = ownerMismatch(body, srv.owner);
       if (mismatch) return reply(mismatch.status, mismatch.body);
       const result = await syncWorkspace(d.docs, srv.owner, body.workspace, Date.now());
-      return reply(200, { workspace: result.workspace, rev: result.rev, owner: srv.owner });
+      return out(200, { workspace: result.workspace, rev: result.rev, owner: srv.owner, intl: 1 });
     }
     if (srv.legacy && url.startsWith(BOOKS_URL)) return new Response("<html>404</html>", { status: 404 });
     let result;
@@ -61,7 +70,7 @@ function fakeServer({ owner = OWNER_A, plan = "pro" } = {}) {
       const id = url.slice(BOOKS_URL.length, -1);
       result = method === "GET" ? await getBook(d, srv.owner, id) : await putBook(d, srv.owner, id, body);
     }
-    return reply(result.status, result.body);
+    return out(result.status, result.body);
   };
   srv.count = (pred) => srv.calls.filter(pred).length;
   srv.bookCalls = () => srv.calls.filter((c) => c.url.startsWith(BOOKS_URL) && c.url !== BOOKS_URL);
@@ -203,7 +212,7 @@ const three = book("Book Three", "three@okaxis", 120000);
   const local = sanitizeWorkspace(JSON.parse(store.getItem(WORKSPACE_KEY)));
   assert.equal(canonicalJson(local), canonicalJson(sanitizeWorkspace(primary)), "the primary's content is unchanged");
   const meta = readSyncMeta();
-  assert.deepEqual(meta, { owner: OWNER_A, books: { biz_primary: { rev: 1, hash: bookHash((await srv.doc(PRIMARY_BOOK_ID)).workspace) } } });
+  assert.deepEqual(meta, { owner: OWNER_A, books: { biz_primary: { rev: 1, hash: bookHash((await srv.doc(PRIMARY_BOOK_ID)).workspace), fx: 1 } } });
   assert.deepEqual(JSON.parse(store.getItem(BOOK_INDEX_KEY)), { v: 1, owner: OWNER_A, books: { biz_primary: { id: "biz_primary", createdAt: 0 } } });
   assert.equal(srv.bookCalls().length, 0);
   h.engine.stop();
@@ -679,6 +688,100 @@ const three = book("Book Three", "three@okaxis", 120000);
   await new Promise((r) => setTimeout(r, 30));
   assert.equal(h.asides, 1);
   h.engine.stop();
+}
+
+/* =====================================================================================================
+ * Clients abroad, PR 1 (docs/spec-foreign-clients.md §2.5, §2.6): one pull after the upgrade, the fx marker,
+ * the cloud-only hold, and no push loop against a server that strips ws.intl.
+ * ===================================================================================================== */
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const legacyModel = await import("./fixtures/legacy-model.ts");
+  const { intlKey } = await import("../src/lib/workspace/localStore.ts");
+  const settings = { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC", swift: "HDFCINBB", account: "50100123456789", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T };
+  const withUsd = (ws, at = T) => {
+    const w = M.upsertInvoice(ws, { ...inv("inv_usd00001", "INV-0002", 120050, at), currency: "USD" }, at);
+    return M.sanitizeWorkspace(JSON.parse(JSON.stringify({ ...w, intl: { ...w.intl, settings } })));
+  };
+  const W = withUsd(primary);
+  const stripped = legacyModel.sanitizeWorkspace(JSON.parse(JSON.stringify(W)));
+  const calls = (srv) => srv.calls.map((c) => `${c.method} ${c.url}`);
+
+  // A device that synced with old code: its meta (no fx) describes the stripped copy, so it pulls once.
+  {
+    const store = oldDevice(stripped, OWNER_A);
+    const srv = fakeServer();
+    await srv.write(PRIMARY_BOOK_ID, W);
+    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 1, bookHash(stripped));
+    let h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 30));
+    assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`, `GET ${SYNC_URL}`], "one pull, no push");
+    assert.equal(h.shelf().books[PRIMARY_BOOK_ID].intl.invoices.inv_usd00001.currency, "USD", "the server's intl fills the empty local section");
+    assert.equal(JSON.parse(store.getItem(intlKey(PRIMARY_BOOK_ID))).intl.settings.swift, "HDFCINBB");
+    assert.equal(readSyncMeta().books[PRIMARY_BOOK_ID].fx, 1, "the marker is written after a reply with intl: 1");
+    // A visibility change with in-session meta makes no request for the book, even after an old tab stripped fx.
+    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 1, bookHash(W));
+    assert.equal(readSyncMeta().books[PRIMARY_BOOK_ID].fx, undefined);
+    srv.calls.length = 0;
+    document.dispatchEvent(new Event("visibilitychange"));
+    await new Promise((r) => setTimeout(r, 30));
+    assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`]);
+    h.engine.stop();
+    // An unchanged reload is still exactly one request (once the marker is there).
+    writeSyncMeta(OWNER_A, PRIMARY_BOOK_ID, 1, bookHash(W), true);
+    srv.calls.length = 0;
+    h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 20));
+    assert.deepEqual(calls(srv), [`GET ${BOOKS_URL}`]);
+    h.engine.stop();
+  }
+
+  // A cloud-only book (no local copy) with pre-upgrade meta stays held: the upgrade never downloads it.
+  {
+    shelfDevice({ [PRIMARY_BOOK_ID]: primary, [B]: two });
+    const srv = fakeServer({ plan: "pro" });
+    let h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 30));
+    h.engine.stop();
+    globalThis.localStorage.removeItem(bookKey(B));
+    writeSyncMeta(OWNER_A, B, readSyncMeta().books[B].rev, readSyncMeta().books[B].hash);
+    assert.equal(readSyncMeta().books[B].fx, undefined);
+    srv.calls.length = 0;
+    h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 20));
+    assert.equal(h.state().books[B], "cloud_only");
+    assert.equal(srv.count((c) => c.url === `${BOOKS_URL}${B}/`), 0, "no GET for a book kept in the cloud");
+    h.engine.stop();
+  }
+
+  // A server that strips intl (no intl: 1): no push loop, flush() true, local intl kept, no fx marker.
+  {
+    const store = shelfDevice({ [PRIMARY_BOOK_ID]: W, [B]: withUsd(two) });
+    const srv = fakeServer({ plan: "pro" });
+    srv.noIntl = true;
+    const h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 600));
+    const puts = srv.count((c) => c.method === "PUT" && c.url !== BOOKS_URL);
+    assert.ok(puts <= 2, `one push per book at most (got ${puts})`);
+    h.edit(PRIMARY_BOOK_ID, withInvoice(h.shelf().books[PRIMARY_BOOK_ID], "inv_00000005", "INV-0005", 5000));
+    assert.equal(await h.engine.flush(PRIMARY_BOOK_ID), true, "flush succeeds: INR pay and statement links keep working");
+    const afterFlush = srv.count((c) => c.method === "PUT");
+    await new Promise((r) => setTimeout(r, 1000));
+    assert.equal(srv.count((c) => c.method === "PUT"), afterFlush, "no repeated pushes");
+    assert.equal(h.state().status, "synced");
+    assert.equal(h.shelf().books[PRIMARY_BOOK_ID].intl.invoices.inv_usd00001.currency, "USD", "local intl is never removed because a reply lacks it");
+    assert.equal(h.shelf().books[B].intl.invoices.inv_usd00001.currency, "USD");
+    assert.ok(store.getItem(intlKey(PRIMARY_BOOK_ID)) && store.getItem(intlKey(B)));
+    assert.equal((await srv.doc(PRIMARY_BOOK_ID)).workspace.invoices.inv_00000005.amountPaise, 5000, "the INR part keeps syncing");
+    assert.equal(readSyncMeta().books[PRIMARY_BOOK_ID].fx, undefined, "no marker from a server without intl: 1");
+    h.engine.stop();
+  }
+  console.log("[shelf-sync] clients abroad: one pull after the upgrade, fx marker, cloud-only hold, no loop against a stripping server");
 }
 
 console.log("[shelf-sync] legacy fallback, rev/hash skip, 404/410/409/402, stash and set-aside: all checks passed");

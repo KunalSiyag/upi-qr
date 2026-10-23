@@ -1,4 +1,4 @@
-import { canonicalJson, mergeWorkspaces, sanitizeWorkspace, type Workspace } from "./model.ts";
+import { canonicalJson, mergeWorkspaces, sanitizeWorkspace, withoutIntl, type Workspace } from "./model.ts";
 import {
   bookHash, emptyIndex, isBookId, liveBookIds, mergeBookIndex, parseBookIndex, PRIMARY_BOOK_ID, type BookIndex, type Shelf,
 } from "./books.ts";
@@ -115,8 +115,8 @@ export interface BookSyncOptions {
   /** Writes into this book whatever book is active; returns whether it was saved to storage. */
   apply: (ws: Workspace) => boolean;
   onStatus: (status: BookSyncStatus, message: string) => void;
-  /** A server copy was accepted (rev, bookHash of the server copy, saved locally). */
-  onSynced?: (rev: number, hash: string, saved: boolean) => void;
+  /** A server copy was accepted (rev, bookHash of the server copy, saved locally, the server keeps ws.intl). */
+  onSynced?: (rev: number, hash: string, saved: boolean, keepsIntl: boolean) => void;
   /** 404 unknown_business / 410 business_deleted: never a local delete. */
   onGone?: (code: "unknown_business" | "business_deleted") => void;
   onOwnerMismatch?: () => void;
@@ -128,6 +128,12 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
   const url = bookUrl(bookId);
   let status: BookSyncStatus = "synced";
   let lastJson: string | null = null;
+  /**
+   * The last reply carried intl: 1 (a server that keeps ws.intl). A server without it (a rollback) answers
+   * with the foreign section stripped; local intl is never removed because of that, and every comparison with
+   * its copy leaves intl out, so the engine neither loops nor fails flush() (docs/spec-foreign-clients.md §2.6).
+   */
+  let serverKeepsIntl = true;
   let inFlight = false;
   let again = false;
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -139,6 +145,8 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
   };
   const active = () => !stopped && !HOLD.has(status);
   const local = () => o.get();
+  /** Every comparison with the server's last copy goes through here. */
+  const sameAsServer = (ws: Workspace) => canonicalJson(serverKeepsIntl ? ws : withoutIntl(ws)) === lastJson;
 
   function schedule(delay: number) {
     clearTimeout(timer);
@@ -146,15 +154,17 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
   }
 
   /** Merges a server answer into this book; answers for another book (a late reply) are dropped. */
-  function accept(body: { workspace?: unknown; rev?: unknown; businessId?: unknown }): boolean {
+  function accept(body: { workspace?: unknown; rev?: unknown; businessId?: unknown; intl?: unknown }): boolean {
     const answerFor = typeof body.businessId === "string" ? body.businessId : PRIMARY_BOOK_ID;
     if (answerFor !== bookId) return false;
     const server = sanitizeWorkspace(body.workspace);
+    serverKeepsIntl = body.intl === 1;
     lastJson = canonicalJson(server);
     const mine = local();
+    // The merge keeps local intl: a section missing from the reply never deletes anything.
     const next = mine ? mergeWorkspaces(mine, server) : server;
     const saved = mine && canonicalJson(next) === canonicalJson(mine) ? true : o.apply(next);
-    if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) o.onSynced?.(body.rev, bookHash(server), saved);
+    if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) o.onSynced?.(body.rev, bookHash(server), saved, serverKeepsIntl);
     return true;
   }
 
@@ -190,7 +200,7 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
       inFlight = false;
     }
     const after = local();
-    if (again || (after && canonicalJson(after) !== lastJson)) schedule(200);
+    if (again || (after && !sameAsServer(after))) schedule(200);
   }
 
   async function pull(): Promise<void> {
@@ -206,7 +216,7 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
     if (!accept(await response.json().catch(() => ({})))) return set("error", "Sync failed. Retrying soon.");
     set("synced");
     const after = local();
-    if (after && canonicalJson(after) !== lastJson) void push();
+    if (after && !sameAsServer(after)) void push();
   }
 
   return {
@@ -215,16 +225,18 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
     push,
     pull,
     /** A server answer the coordinator already has (legacy start, account switch). */
-    acceptStart(body: { workspace?: unknown; rev?: unknown; businessId?: unknown }) {
+    acceptStart(body: { workspace?: unknown; rev?: unknown; businessId?: unknown; intl?: unknown }) {
       if (!accept(body)) return;
       set("synced");
       const after = local();
-      if (after && canonicalJson(after) !== lastJson) void push();
+      if (after && !sameAsServer(after)) void push();
     },
     /** Revision and hash say this copy equals the server's: synced without a request. */
     markClean() {
       const mine = local();
       lastJson = mine ? canonicalJson(mine) : null;
+      // The hash matched the server's copy, intl included.
+      serverKeepsIntl = true;
       set("synced");
     },
     hold(next: BookSyncStatus, message = "") {
@@ -239,7 +251,7 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
     changed() {
       if (!active()) return;
       const mine = local();
-      if (mine && lastJson !== null && canonicalJson(mine) === lastJson) return;
+      if (mine && lastJson !== null && sameAsServer(mine)) return;
       schedule(DEBOUNCE_MS);
     },
     /** Pushes now and resolves once the server has this device's latest copy. */
@@ -249,7 +261,7 @@ export function createBookSync(bookId: string, o: BookSyncOptions) {
       for (let i = 0; i < 50 && inFlight; i++) await new Promise((r) => setTimeout(r, 100));
       await push();
       const mine = local();
-      return status === "synced" && Boolean(mine) && canonicalJson(mine as Workspace) === lastJson;
+      return status === "synced" && Boolean(mine) && sameAsServer(mine as Workspace);
     },
     forget() {
       lastJson = null;
@@ -341,11 +353,12 @@ export function createShelfSync(opts: ShelfSyncOptions) {
         if (s === "syncing" && !starting) notice = "";
         emit();
       },
-      onSynced: (rev, hash, saved) => {
+      onSynced: (rev, hash, saved, keepsIntl) => {
         session.set(id, { rev, hash });
         // §2.5: the revision is recorded only once the book is safely in this browser's storage.
         // Never in legacy mode: a rolled-back server's revisions can't be trusted for the skip check.
-        if (saved && owner && !legacy) writeSyncMeta(owner, id, rev, hash);
+        // fx: this reply came from a server that keeps ws.intl (foreign-clients spec §2.5).
+        if (saved && owner && !legacy) writeSyncMeta(owner, id, rev, hash, keepsIntl);
         lastSyncedAt = Date.now();
       },
       onGone: (code) => {
@@ -374,16 +387,18 @@ export function createShelfSync(opts: ShelfSyncOptions) {
     try {
       const response = await authedFetch(bookUrl(id), "GET");
       if (!response.ok) return;
-      const body = await response.json().catch(() => null) as { workspace?: unknown; rev?: unknown; businessId?: unknown } | null;
+      const body = await response.json().catch(() => null) as { workspace?: unknown; rev?: unknown; businessId?: unknown; intl?: unknown } | null;
       if (!body || body.businessId !== id) return;
       const server = sanitizeWorkspace(body.workspace);
       const now = opts.getBook(id);
-      if (!now || canonicalJson(now) === canonicalJson(server)) return;
+      // A server without intl: 1 strips the foreign section; the local one is kept, never replaced by its absence.
+      const replacement = body.intl === 1 || !now?.intl ? server : { ...server, intl: now.intl };
+      if (!now || canonicalJson(now) === canonicalJson(replacement)) return;
       if (!keepAside(id, "read_only", now)) return;
-      const saved = opts.resetBook(id, server);
+      const saved = opts.resetBook(id, replacement);
       if (typeof body.rev === "number" && Number.isSafeInteger(body.rev)) {
         session.set(id, { rev: body.rev, hash: bookHash(server) });
-        if (saved) writeSyncMeta(owner, id, body.rev, bookHash(server));
+        if (saved) writeSyncMeta(owner, id, body.rev, bookHash(server), body.intl === 1);
       }
       opts.onAside?.();
     } catch {
@@ -679,7 +694,9 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       if (meta && id !== PRIMARY_BOOK_ID) return engine.hold("cloud_only");
       return engine.pull();
     }
-    if (!meta) return engine.pull();
+    // Stored meta without the fx marker may describe a copy older code stripped of ws.intl: pull once
+    // (foreign-clients spec §2.5). Meta this session wrote counts as confirmed.
+    if (!meta || (!("fx" in meta && meta.fx === 1) && !session.has(id))) return engine.pull();
     if (bookHash(mine) !== meta.hash) return engine.push();
     if (meta.rev !== rev) return engine.pull();
     engine.markClean();

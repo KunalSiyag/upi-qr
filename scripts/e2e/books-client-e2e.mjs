@@ -50,9 +50,11 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
       return s.docs[id];
     };
     if (u === '/api/v1/workspace/') {
-      if (method === 'PUT') { const d = put('biz_primary', body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner }); }
+      // A server with the books routes is PR 1 or later: its replies carry intl: 1 (docs/spec-foreign-clients.md §2.6).
+      const fx = s.mode === 'books' ? { intl: 1 } : {};
+      if (method === 'PUT') { const d = put('biz_primary', body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, ...fx }); }
       const d = s.docs.biz_primary || { ws: empty(), rev: 0 };
-      return json({ workspace: d.ws, rev: d.rev, owner: s.owner });
+      return json({ workspace: d.ws, rev: d.rev, owner: s.owner, ...fx });
     }
     if (s.mode !== 'books') return new Response('<!doctype html><title>404</title>', { status: 404, headers: { 'Content-Type': 'text/html' } });
     if (u === '/api/v1/workspace/books/') {
@@ -69,9 +71,9 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
     const id = u.split('/').filter(Boolean).pop();
     if (!idx(s).books[id]) return json({ code: 'unknown_business' }, 404);
     if (idx(s).books[id].deletedAt !== undefined) return json({ code: 'business_deleted' }, 410);
-    if (method === 'PUT') { const d = put(id, body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id }); }
+    if (method === 'PUT') { const d = put(id, body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id, intl: 1 }); }
     const d = s.docs[id] || { ws: empty(), rev: 0 };
-    return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id });
+    return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id, intl: 1 });
   };
 })();
 ` });
