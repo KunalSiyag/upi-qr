@@ -490,9 +490,12 @@ function Workspace() {
   );
   const isPro = paylinks?.plan?.id === "pro";
   const entitlement = PLANS[isPro ? "pro" : "free"];
-  /** MSMED deadline status for an unpaid invoice of a Udyam-registered business; interest only on plans with MSME tools. */
+  /**
+   * MSMED deadline status for an unpaid invoice of a Udyam-registered business; interest only on plans with MSME tools.
+   * Never for a foreign-currency invoice: the Act protects suppliers against buyers in India.
+   */
   const msmeFor = (v: InvoiceView) => {
-    if (!isUdyam(ws.business.udyam) || v.balancePaise <= 0 || v.state === "void") return undefined;
+    if (v.currency !== "INR" || !isUdyam(ws.business.udyam) || v.balancePaise <= 0 || v.state === "void") return undefined;
     const deadline = msmeDeadline(v.invoice);
     const daysLate = daysBetween(deadline, today);
     if (daysLate <= 0) return undefined;
@@ -1453,12 +1456,13 @@ function inrInvoice(ws: Workspace, id: string): boolean {
   return Boolean(invoice && currencyOf(invoice) === "INR");
 }
 
-/** UPI payments recorded this month on real (non-sample) invoices, in paise. */
+/** UPI payments recorded this month on real (non-sample) INR invoices, in paise. */
 export function upiCollectedInMonth(ws: Workspace, today: string): number {
   const month = today.slice(0, 7);
   let total = 0;
   for (const invoice of liveInvoices(ws)) {
-    if (isSampleId(invoice.id)) continue;
+    // Gateway savings are a ₹ figure: never a foreign invoice's payments (spec §3.6).
+    if (isSampleId(invoice.id) || currencyOf(invoice) !== "INR") continue;
     for (const payment of invoice.payments) if (payment.mode === "upi" && payment.date.startsWith(month)) total += payment.amountPaise;
   }
   return total;

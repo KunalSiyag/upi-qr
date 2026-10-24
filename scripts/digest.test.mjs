@@ -295,11 +295,144 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   mixed = M.upsertPlan(mixed, { id: "rec_usdplan001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 1, dueAfterDays: 5, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X, currency: "USD" }, X);
   mixed = M.generateRecurring(mixed, "2026-09-10", X).ws;
   assert.ok(Object.keys(mixed.intl.invoices).length > 1);
-  assert.equal(JSON.stringify(D.digestProjection(mixed)), JSON.stringify(D.digestProjection(inr)), "byte-identical projection: no foreign entries");
-  assert.equal(JSON.stringify(D.bookProjection(mixed)), JSON.stringify(D.bookProjection(inr)));
+  // PR 2: foreign records go only in `fx`; the lists PR 1 and older readers read are byte-identical to the INR book's.
+  const strip = ({ fx, ...rest }) => rest;
+  assert.equal(JSON.stringify(strip(D.digestProjection(mixed))), JSON.stringify(D.digestProjection(inr)), "the INR lists hold no foreign entries");
+  assert.equal(JSON.stringify(strip(D.bookProjection(mixed))), JSON.stringify(D.bookProjection(inr)));
+  assert.ok(D.digestProjection(mixed).fx.open.length > 0 && D.digestProjection(mixed).fx.plans.length === 1);
   for (const day of ["2026-09-20", "2026-10-01", "2026-11-15"]) {
-    assert.deepEqual(D.morningDigest(mixed, day), D.morningDigest(inr, day), "the ₹ digest never includes a US$ amount");
-    assert.deepEqual(D.morningDigest(D.workspaceFromProjection(D.parseProjection(JSON.stringify(D.digestProjection(mixed)))), day), D.morningDigest(inr, day));
+    // A reader that ignores fx (PR 1 and older) gets exactly the INR book's digest.
+    assert.deepEqual(D.morningDigest(D.workspaceFromProjection(strip(D.parseProjection(JSON.stringify(D.digestProjection(mixed))))), day), D.morningDigest(inr, day));
   }
-  console.log("[digest] foreign invoices and plans stay out of the projection and the ₹ digest (PR 1)");
+  console.log("[digest] the projection's INR lists stay INR only; foreign records only in fx");
+}
+
+// Clients abroad, PR 2 (docs/spec-foreign-clients.md §4.7, §9.1): foreign invoices and plans go in the projection's
+// `fx` (old readers ignore it); the digest chases them in their own currency and never adds them to a ₹ figure.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const D = await import("../src/lib/workspace/digest.ts");
+  const today = "2026-10-10";
+  const fresh = () => {
+    let w = M.updateBusiness(emptyWorkspace(), { name: "Shop", upiId: "shop@okaxis" }, T);
+    w = upsertClient(w, client("cli_acme0001", "Acme Traders"), T);
+    w = upsertClient(w, client("cli_globex01", "Globex LLC"), T);
+    return upsertClient(w, client("cli_rohan001", "Rohan"), T);
+  };
+  const foreign = (id, number, clientId, dueDate, amountPaise, currency) => ({ ...inv(id, number, clientId, dueDate, amountPaise), currency });
+
+  /* ---------- exact text ---------- */
+  let w = fresh();
+  w = upsertInvoice(w, inv("inv_00000001", "A-1", "cli_acme0001", "2026-09-22", 2500000), T); // ₹25,000, 18 days late
+  w = upsertInvoice(w, foreign("inv_usd00001", "A-2", "cli_globex01", "2026-09-30", 120000, "USD"), T); // US$1,200.00, 10 days late
+  w = upsertInvoice(w, inv("inv_00000003", "A-3", "cli_rohan001", "2026-10-10", 300000), T); // due today
+  assert.deepEqual(D.morningDigest(w, today), {
+    title: "3 invoices to chase today",
+    body: "₹25,000 + US$1,200.00 overdue, 1 due today. Start with Acme Traders — ₹25,000, 18 days late.",
+    url: "/app/", tag: "digest-2026-10-10", count: 3,
+  });
+  const usdTop = upsertInvoice(w, foreign("inv_eur00001", "A-4", "cli_globex01", "2026-09-10", 5, "EUR"), T);
+  assert.equal(D.morningDigest(usdTop, today).body, "₹25,000 + US$1,200.00 + €0.05 overdue, 1 due today. Start with Globex LLC — €0.05, 30 days late.", "INR first, then CURRENCIES order; the top amount in its own currency");
+  let only = upsertInvoice(fresh(), foreign("inv_usd00001", "A-2", "cli_globex01", "2026-09-30", 120000, "USD"), T);
+  only = upsertInvoice(only, foreign("inv_usd00002", "A-5", "cli_acme0001", "2026-09-29", 100, "USD"), T);
+  assert.equal(D.morningDigest(only, today).body, "US$1,201.00 overdue. Start with Acme Traders — US$1.00, 11 days late.");
+  assert.equal(D.morningDigest(upsertInvoice(fresh(), foreign("inv_sgd00001", "S-1", "cli_globex01", today, 100, "SGD"), T), today).body, "1 due today. Start with Globex LLC — SGD 1.00, due today.");
+  // Several books: the same rule across books (no ₹ figure includes a foreign amount).
+  const other = upsertInvoice(fresh(), inv("inv_00000009", "B-1", "cli_rohan001", "2026-10-05", 50000), T);
+  assert.equal(D.morningDigestBooks([{ id: "biz_primary", name: "Shop", ws: w }, { id: "biz_other000001", name: "Other", ws: other }], today, false).body,
+    "₹25,500 + US$1,200.00 overdue, 1 due today. Start with Acme Traders — ₹25,000, 18 days late.");
+
+  /* ---------- projection shape ---------- */
+  const inrBook = upsertInvoice(upsertInvoice(fresh(), inv("inv_00000001", "A-1", "cli_acme0001", "2026-09-22", 2500000), T), inv("inv_00000003", "A-3", "cli_rohan001", "2026-10-10", 300000), T);
+  assert.equal(JSON.stringify(D.digestProjection(inrBook)), JSON.stringify({ v: 1, open: D.digestProjection(inrBook).open, plans: [] }), "INR-only: no fx key, v1 bytes");
+  assert.equal("fx" in D.bookProjection(inrBook), false);
+  const p = D.digestProjection(w);
+  assert.deepEqual(p.open.map((t) => t[0]), ["inv_00000001", "inv_00000003"]);
+  assert.deepEqual(p.fx, { open: [["inv_usd00001", "A-2", "Globex LLC", "2026-09-01", "2026-09-30", 120000, "USD"]], plans: [] });
+  assert.deepEqual(D.parseProjection(JSON.stringify(p)), { ...p, name: "" });
+  assert.deepEqual(D.parseProjection({ v: 1, open: [], plans: [] }), { v: 1, name: "", open: [], plans: [] }, "an old-shape projection parses");
+  for (const bad of [null, 5, "x", {}, { open: [] }, { open: [], plans: {} }, { open: [["i", "n", "c", "d", "d", 1, "INR"]], plans: [] },
+    { open: [["i", "n", "c", "d", "d", 1]], plans: [] }, { open: [], plans: [["i", "c", 1, 1, 1, "s", "e", [], "XYZ"]] }, { open: ["x"], plans: [] }]) {
+    assert.equal(D.parseProjection({ v: 1, open: [], plans: [], fx: bad }), null, `bad fx ${JSON.stringify(bad)} → null (the runner reads the workspace)`);
+  }
+  // One cap over both lists.
+  {
+    let big = fresh();
+    for (let i = 0; i < 400; i++) big = upsertInvoice(big, inv(`inv_i${String(i).padStart(7, "0")}`, `I-${i}`, "cli_acme0001", "2026-10-01", 100000), T);
+    for (let i = 0; i < 200; i++) big = upsertInvoice(big, foreign(`inv_u${String(i).padStart(7, "0")}`, `U-${i}`, "cli_globex01", "2026-09-01", 100000, "USD"), T);
+    const bp = D.digestProjection(big);
+    assert.deepEqual([bp.open.length, bp.fx.open.length], [300, 200], "500 together, earliest due first");
+  }
+
+  /* ---------- a foreign plan with a paid month: the cron never shows it as due ---------- */
+  {
+    let pw = M.upsertPlan(fresh(), { id: "rec_usdplan001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 1, dueAfterDays: 5, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: T, updatedAt: T }, T);
+    pw = M.generateRecurring(pw, "2026-09-10", T).ws;
+    const aug = M.recurringInvoiceId("rec_usdplan001", "2026-08");
+    pw = addPayment(pw, aug, { amountPaise: 50000, date: "2026-08-03", mode: "bank", reference: "" }, T);
+    const pp = D.digestProjection(pw);
+    assert.deepEqual(pp.fx.plans, [["rec_usdplan001", "Globex LLC", 50000, 1, 5, "2026-08", "", ["2026-08", "2026-09"], "USD"]], "month markers from intl.invoices");
+    assert.deepEqual(pp.fx.open.map((t) => t[0]), [M.recurringInvoiceId("rec_usdplan001", "2026-09")]);
+    assert.deepEqual([pp.open, pp.plans], [[], []]);
+    for (const d of ["2026-09-10", today, "2026-11-20"]) {
+      const fromProjection = D.morningDigest(D.workspaceFromProjection(D.parseProjection(JSON.stringify(pp))), d);
+      assert.deepEqual(fromProjection, D.morningDigest(pw, d), d);
+    }
+    assert.equal(D.morningDigest(pw, today).body, "US$1,000.00 overdue. Start with Globex LLC — US$500.00, 34 days late.", "September and October, never the paid August");
+    // A paused foreign plan is left out, as an INR one is.
+    const paused = M.upsertPlan(pw, { ...M.getPlan(pw, "rec_usdplan001"), paused: true }, T);
+    assert.deepEqual(D.digestProjection(paused).fx.plans, []);
+  }
+
+  /* ---------- equivalence fuzz with random currencies, both projection writers ---------- */
+  {
+    let rnd = 23;
+    const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+    const day = (offset) => new Date(Date.UTC(2026, 9, 10) + offset * 86_400_000).toISOString().slice(0, 10);
+    const currencies = ["INR", "INR", "USD", "EUR", "GBP", "AED", "SGD"];
+    let withFx = 0;
+    for (let trial = 0; trial < 120; trial++) {
+      let fw = emptyWorkspace();
+      const names = ["Acme Traders", "Rohan", "Globex LLC", "Initech GmbH", "Sharma & Sons"];
+      names.forEach((name, i) => { fw = upsertClient(fw, client(`cli_c${i}00000`, name), T); });
+      const count = 3 + rand(30);
+      for (let i = 0; i < count; i++) {
+        const id = `inv_f${trial}x${i}0000`;
+        const issue = day(-rand(90));
+        const due = day(Number(issue.slice(8)) % 2 ? -rand(60) : rand(30));
+        const currency = currencies[rand(currencies.length)];
+        fw = upsertInvoice(fw, { ...inv(id, `N-${i}`, `cli_c${rand(5)}00000`, due < issue ? issue : due, 1000 * (1 + rand(500))), issueDate: issue, ...(currency === "INR" ? {} : { currency }) }, T);
+        if (rand(3) === 0) fw = addPayment(fw, id, { amountPaise: 500 * (1 + rand(10)), date: day(-1), mode: "bank", reference: "" }, T);
+        if (rand(10) === 0) fw = upsertInvoice(fw, { ...M.getInvoice(fw, id), voided: true }, T);
+      }
+      for (let k = 0; k < rand(3); k++) {
+        const currency = currencies[rand(currencies.length)];
+        const plan = { id: `rec_f${trial}p${k}bcdefghijklm`, clientId: `cli_c${rand(5)}00000`, amountPaise: 1000 * (1 + rand(900)), description: "", dayOfMonth: 1 + rand(28), dueAfterDays: rand(10), startMonth: "2026-0" + (5 + rand(4)), endMonth: rand(3) === 0 ? "2026-09" : "", paused: rand(6) === 0, createdAt: T, updatedAt: T, ...(currency === "INR" ? {} : { currency }) };
+        fw = M.upsertPlan(fw, plan, T);
+        fw = M.generateRecurring(fw, day(-rand(40)), T).ws;
+        const months = M.allLiveInvoices(fw).filter((i) => i.recurringId === plan.id);
+        if (months.length && rand(2)) fw = M.deleteInvoice(fw, months[rand(months.length)].id, T);
+        if (months.length && rand(2)) fw = addPayment(fw, months[0].id, { amountPaise: months[0].amountPaise, date: day(-30), mode: "bank", reference: "" }, T);
+      }
+      fw = M.sanitizeWorkspace(JSON.parse(JSON.stringify(fw)));
+      if (D.digestProjection(fw).fx) withFx++;
+      for (const write of [D.digestProjection, D.bookProjection]) {
+        const projected = D.workspaceFromProjection(D.parseProjection(JSON.stringify(write(fw))));
+        for (const offset of [-5, 0, 3, 25, 60]) {
+          assert.deepEqual(D.morningDigest(projected, day(offset)), D.morningDigest(fw, day(offset)), `trial ${trial} offset ${offset}`);
+        }
+      }
+      // A reader that ignores fx (PR 1 and older) sees exactly the INR part of the book.
+      const { fx, ...inrLists } = D.digestProjection(fw);
+      assert.deepEqual(inrLists, D.digestProjection(M.withoutIntl(fw)));
+      // No ₹ figure includes a foreign amount: the ₹ part of the text is the INR-only book's.
+      const full = D.morningDigest(fw, today);
+      const inrDigest = D.morningDigest(M.withoutIntl(fw), today);
+      const rupees = full?.body.match(/^(₹[\d,.]+)(?: \+ |\s+overdue)/)?.[1];
+      const inrRupees = inrDigest?.body.match(/^(₹[\d,.]+) overdue/)?.[1];
+      assert.equal(rupees, inrRupees, `trial ${trial}: ${full?.body} vs ${inrDigest?.body}`);
+    }
+    assert.ok(withFx > 60, `most trials exercise fx (${withFx})`);
+    console.log(`[digest] fx projection ≡ full digest over 120 mixed-currency books × 2 writers × 5 days; exact per-currency text; one 500 cap; bad fx → null`);
+  }
 }

@@ -275,7 +275,8 @@ export function matchCredits(
 ): { suggestions: MatchSuggestion[]; alreadyRecorded: number; unmatched: StatementCredit[] } {
   const recorded = new Set<string>();
   for (const view of views) for (const p of view.invoice.payments) if (p.reference) recorded.add(p.reference.trim());
-  const open = views.filter((v) => v.balancePaise > 0 && v.state !== "void");
+  // A bank statement credit is rupees: never matched to a foreign invoice (1000 paise is not US$10.00), spec §3.6.
+  const open = views.filter((v) => v.currency === "INR" && v.balancePaise > 0 && v.state !== "void");
   const fresh = credits.filter((c) => !(c.utr && recorded.has(c.utr)) && !(c.reference && recorded.has(c.reference)));
   const alreadyRecorded = credits.length - fresh.length;
 

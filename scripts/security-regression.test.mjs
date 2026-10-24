@@ -496,7 +496,11 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const paylinksSrc = read("src/lib/workspace/paylinks.ts");
   assert.match(paylinksSrc, /if \(!invoice \|\| invoice\.deletedAt \|\| currencyOf\(invoice\) !== "INR"\) return null;/, "payPageView refuses foreign invoices");
   assert.match(paylinksSrc, /if \(!client \|\| client\.deletedAt \|\| hasOpenForeign\(ws, clientId\)\) return null;/, "statementView refuses clients with open foreign invoices");
-  assert.match(read("src/lib/workspace/digest.ts"), /const open = liveInvoices\(ws\)[\s\S]*const plans = liveRecurring\(ws\)/, "the projection reads INR records only");
+  // PR 2: the projection's open/plans lists (what older readers read) stay INR; foreign records go only in fx.
+  const digestSrc = read("src/lib/workspace/digest.ts");
+  assert.match(digestSrc, /if \(isForeignCurrency\(v\.currency\)\) fxOpen\.push\(\[\.\.\.tuple, v\.currency\]\);\s*else open\.push\(tuple\);/, "foreign open invoices only in fx");
+  assert.match(digestSrc, /if \(isForeignCurrency\(currency\)\) fxPlans\.push\(\[\.\.\.tuple, currency\]\);\s*else plans\.push\(tuple\);/, "foreign plans only in fx");
+  assert.doesNotMatch(digestSrc, /formatPaise\(/, "digest amounts go through formatMoney with the view's currency");
   // The reply objects themselves (a comment in the GET handler also says "intl: 1").
   assert.match(handlerOf(workspaceApi, "GET"), /return jsonResponse\(\{ workspace, rev, owner, intl: 1 \}\);/);
   assert.match(handlerOf(workspaceApi, "PUT"), /return jsonResponse\(\{ workspace: result\.workspace, rev: result\.rev, owner, intl: 1 \}\);/);
@@ -505,6 +509,24 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(read("src/lib/workspace/booksApi.ts"), /return res\(createStatusCode\(result\.status\), \{ error: result\.message, code: result\.status \}\)/);
   assert.equal((read("src/lib/workspace/booksApi.ts").match(/businessId: id, intl: 1/g) ?? []).length, 2, "book GET and PUT replies carry intl: 1");
   assert.match(read("src/lib/workspace/cloud.ts"), /pruneTombstones\(repairIntl\(mergeWorkspaces\(serverCopy, clientCopy\), now\), now\)/, "the server repairs old clients' erases and deletes");
+}
+
+// Clients abroad, PR 2 (docs/spec-foreign-clients.md §3.6, §9.2): Indian-only features stay INR-only, and the UI
+// still reads INR records only (it switches to allInvoiceViews together with formatMoney in PR 4).
+{
+  const read = (f) => readFileSync(join(projectRoot, f), "utf8");
+  const ui = read("src/components/workspace/PaymentsWorkspace.tsx");
+  assert.match(ui, /const msmeFor = \(v: InvoiceView\) => \{\s*if \(v\.currency !== "INR" \|\|/, "no MSMED deadline or interest on a foreign invoice");
+  assert.match(ui, /if \(isSampleId\(invoice\.id\) \|\| currencyOf\(invoice\) !== "INR"\) continue;/, "gateway savings count INR invoices only");
+  assert.match(ui, /const views = useMemo\(\(\) => invoiceViews\(ws, today\), \[ws, today\]\);/, "the overview stays INR-only until PR 4");
+  assert.doesNotMatch(ui + read("src/components/workspace/Sheets.tsx"), /allInvoiceViews|allLiveInvoices/, "no UI caller reads foreign records yet (spec §0, second invariant)");
+  assert.match(read("src/components/workspace/StatementSheet.tsx"), /const views = useMemo\(\(\) => invoiceViews\(ws, today\), \[ws, today\]\);/, "statement import keeps INR views for good");
+  assert.match(read("src/lib/workspace/statement.ts"), /const open = views\.filter\(\(v\) => v\.currency === "INR" && v\.balancePaise > 0 && v\.state !== "void"\);/, "a bank credit never matches a foreign invoice");
+  const modelSrc = read("src/lib/workspace/model.ts");
+  assert.match(modelSrc, /const rights = msmeRights && !foreign \? msmeRightsLine\(business, lang\) : "";/, "no MSMED line on a foreign reminder");
+  assert.match(modelSrc, /const url = safePayUrl\(details\.payUrl\);/, "a reminder prints a payment URL only through safePayUrl");
+  const claimSrc = read("src/lib/push/claimAlert.ts");
+  assert.match(claimSrc, /const foreign = isForeignCurrency\(claim\.currency\) \? claim\.currency : null;/, "a claim's currency is a known foreign currency or INR");
 }
 
 console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");
