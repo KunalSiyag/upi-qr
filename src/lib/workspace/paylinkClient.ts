@@ -30,7 +30,8 @@ export function paylinkUrl(token: string): string {
 
 export async function fetchPaylinks(): Promise<PaylinkList | null> {
   try {
-    const response = await authedFetch("/api/v1/paylinks/?books=1", "GET");
+    // intl=1: this client resolves foreign-currency invoices, so the server lists their links too (§1.7).
+    const response = await authedFetch("/api/v1/paylinks/?books=1&intl=1", "GET");
     if (!response.ok) return null;
     const body = await response.json() as { links: { invoiceId: string; token: string; claims: PaylinkClaim[] }[]; plan: PaylinkList["plan"] };
     // An old server ignores ?books=1; the keys alone still tell which business a link belongs to.
@@ -84,7 +85,7 @@ export function createStatementLinkFor(clientId: string, bookId: string = PRIMAR
 
 export async function deletePaylink(token: string, scope: "claims" | "link"): Promise<boolean> {
   try {
-    return (await authedFetch(`/api/v1/paylinks/${token}/`, "DELETE", { scope })).ok;
+    return (await authedFetch(`/api/v1/paylinks/${token}/?intl=1`, "DELETE", { scope })).ok;
   } catch {
     return false;
   }

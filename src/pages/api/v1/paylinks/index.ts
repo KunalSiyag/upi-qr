@@ -25,6 +25,8 @@ async function limited(scope: string, userId: string, limit: number) {
  * Active links with any pending "I've paid" claims, plus plan usage. Without
  * ?books=1 (old clients) only the primary book's links (bare keys) are listed,
  * exactly as before; with it, every link carries its businessId and the plan its business limit.
+ * Without ?intl=1, links for foreign-currency invoices (record.intl) are left out: older tabs can't see
+ * those invoices and would revoke the links as "paid" (docs/spec-foreign-clients.md §1.7).
  */
 export const GET: APIRoute = async ({ locals, url }) => {
   const userId = authenticatedUserId(locals);
@@ -35,10 +37,13 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const owner = workspaceOwner(userId);
     const store = paylinkStore();
     const allBooks = url.searchParams.get("books") === "1";
+    const intlClient = url.searchParams.get("intl") === "1";
     const byInvoice = await store.list(owner);
     const used = Object.keys(byInvoice).length;
     const entries = Object.entries(byInvoice).filter(([key]) => allBooks || !key.includes("/"));
-    const links = await Promise.all(entries.map(async ([invoiceId, token]) => ({
+    // Only an older client's request reads the records (one per link) to find the foreign-currency ones.
+    const hidden = intlClient ? [] : await Promise.all(entries.map(async ([, token]) => (await store.get(token))?.intl === 1));
+    const links = await Promise.all(entries.filter((_, i) => !hidden[i]).map(async ([invoiceId, token]) => ({
       invoiceId,
       token,
       claims: await store.claims(token),

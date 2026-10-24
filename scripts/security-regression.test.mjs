@@ -495,7 +495,8 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   // Server view builders: INR-only until they render foreign records (pay page, statements, digest), and replies say intl: 1.
   const paylinksSrc = read("src/lib/workspace/paylinks.ts");
   assert.match(paylinksSrc, /if \(!invoice \|\| invoice\.deletedAt \|\| currencyOf\(invoice\) !== "INR"\) return null;/, "payPageView refuses foreign invoices");
-  assert.match(paylinksSrc, /if \(!client \|\| client\.deletedAt \|\| hasOpenForeign\(ws, clientId\)\) return null;/, "statementView refuses clients with open foreign invoices");
+  // PR 3: a statement's ₹ lines and total read the legacy (INR) map only; foreign invoices get their own sections.
+  assert.match(paylinksSrc, /const lines = liveInvoices\(ws\)\n\s*\.filter\(\(inv\) => inv\.clientId === clientId\)/, "statement ₹ lines come from INR invoices only");
   // PR 2: the projection's open/plans lists (what older readers read) stay INR; foreign records go only in fx.
   const digestSrc = read("src/lib/workspace/digest.ts");
   assert.match(digestSrc, /if \(isForeignCurrency\(v\.currency\)\) fxOpen\.push\(\[\.\.\.tuple, v\.currency\]\);\s*else open\.push\(tuple\);/, "foreign open invoices only in fx");
@@ -504,7 +505,7 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   // The reply objects themselves (a comment in the GET handler also says "intl: 1").
   assert.match(handlerOf(workspaceApi, "GET"), /return jsonResponse\(\{ workspace, rev, owner, intl: 1 \}\);/);
   assert.match(handlerOf(workspaceApi, "PUT"), /return jsonResponse\(\{ workspace: result\.workspace, rev: result\.rev, owner, intl: 1 \}\);/);
-  // A foreign subject's link is refused as 404 not_found (until PR 3) on the primary route as on the book route.
+  // Refused link creations (no_upi, no_intl, …) map through createStatusCode on the primary route as on the book route.
   assert.match(handlerOf(read("src/pages/api/v1/paylinks/index.ts"), "POST"), /if \(result\.status !== "ok"\) return jsonResponse\(\{ error: result\.message, code: result\.status \}, createStatusCode\(result\.status\)\);/);
   assert.match(read("src/lib/workspace/booksApi.ts"), /return res\(createStatusCode\(result\.status\), \{ error: result\.message, code: result\.status \}\)/);
   assert.equal((read("src/lib/workspace/booksApi.ts").match(/businessId: id, intl: 1/g) ?? []).length, 2, "book GET and PUT replies carry intl: 1");
@@ -527,6 +528,60 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(modelSrc, /const url = safePayUrl\(details\.payUrl\);/, "a reminder prints a payment URL only through safePayUrl");
   const claimSrc = read("src/lib/push/claimAlert.ts");
   assert.match(claimSrc, /const foreign = isForeignCurrency\(claim\.currency\) \? claim\.currency : null;/, "a claim's currency is a known foreign currency or INR");
+}
+
+// Clients abroad, PR 3 (docs/spec-foreign-clients.md §4, §9.2): foreign pay pages, statements and claims.
+{
+  const read = (f) => readFileSync(join(projectRoot, f), "utf8");
+  const page = read("src/pages/i/[token].astro");
+  // Headers are exactly today's.
+  assert.ok(page.includes(`Astro.response.headers.set("Content-Security-Policy", "default-src 'self'; img-src 'self' data:; style-src 'self' 'unsafe-inline'; script-src 'none'; base-uri 'none'; form-action 'self'; frame-ancestors 'none'");`));
+  assert.ok(page.includes(`Astro.response.headers.set("X-Frame-Options", "DENY");`) && page.includes(`"Cache-Control": "no-store"`) && page.includes(`"X-Robots-Tag": "noindex, nofollow"`));
+  // A payment URL is rendered only through safePayUrl, and every link that leaves the page is noopener noreferrer nofollow.
+  assert.match(page, /const url = safePayUrl\(text\(pay\?\.payUrl\)\);/, "payment URLs are checked again at render");
+  const hrefs = [...page.matchAll(/href=\{([^}]+)\}|href="([^"]+)"/g)].map((m) => m[1] ?? m[2]);
+  assert.deepEqual([...new Set(hrefs)].sort(), ["/payment-tracker/", "block.url", "foreignBlock.url", "sharedBlock.url", "upiIntent"].sort(), "the page links only to the UPI intent, checked payment URLs and the tracker");
+  for (const line of page.split("\n").filter((l) => /payUrl/.test(l))) assert.match(line, /safePayUrl\(/, `payUrl is read only through safePayUrl: ${line.trim()}`);
+  for (const anchor of page.match(/<a [^>]*target="_blank"[^>]*>/g) ?? []) assert.match(anchor, /rel="noopener noreferrer nofollow"/, anchor);
+  assert.equal((page.match(/target="_blank"/g) ?? []).length, 3, "the three payment-URL buttons");
+  // The foreign card has no QR, no UPI intent and no UPI ID; nothing on the page reads INR credited.
+  const foreignCard = page.slice(page.indexOf("{foreign && foreignBlock && ("), page.indexOf("{branded && !foreign"));
+  assert.ok(foreignCard.length > 1000);
+  assert.doesNotMatch(foreignCard, /QRCode|upi:\/\/|upiIntent|\{qr\}|upiId|UTR/, "no UPI on a foreign page");
+  assert.doesNotMatch(page, /inrCreditedPaise/);
+  // Foreign claims: a transfer reference, the currency from the snapshot (never the form), the same guards.
+  const post = page.slice(page.indexOf('if (Astro.request.method === "POST")'), page.indexOf("const claimed ="));
+  const foreignClaim = post.slice(post.indexOf("if (foreign) {"), post.indexOf("} else {", post.indexOf("if (foreign) {")));
+  assert.match(foreignClaim, /const currency: ForeignCurrency = foreign\.currency;/);
+  assert.match(foreignClaim, /if \(!validTransferRef\(reference\)\)/);
+  assert.match(foreignClaim, /parseMoneyToMinor\(amountText, currency\)/);
+  assert.doesNotMatch(post, /form\.get\("currency"\)/, "the claim currency never comes from the form");
+  assert.ok(post.indexOf("isTrustedMutation(Astro.request)") < post.indexOf("if (foreign) {") && post.indexOf('consumeRateLimit("paylink-claim"') < post.indexOf("if (foreign) {"), "foreign claims pass the same origin check and rate limit");
+  assert.match(post, /readLimitedText\(Astro\.request, 1024\)/);
+  assert.match(read("src/lib/apiSecurity.ts"), /export function validTransferRef\(value: unknown\): value is string \{\n\s*return typeof value === "string" && \/\^\[A-Za-z0-9\]\[A-Za-z0-9\\\/-\]\{5,39\}\$\/\.test\(value\);/);
+  // Older tabs never see or revoke links for foreign-currency invoices (§1.7).
+  const listApi = handlerOf(read("src/pages/api/v1/paylinks/index.ts"), "GET");
+  assert.match(listApi, /const intlClient = url\.searchParams\.get\("intl"\) === "1";/);
+  assert.match(listApi, /intlClient \? \[\] : await Promise\.all\(entries\.map\(async \(\[, token\]\) => \(await store\.get\(token\)\)\?\.intl === 1\)\)/);
+  const deleteApi = read("src/pages/api/v1/paylinks/[token].ts");
+  assert.match(deleteApi, /if \(record\.intl === 1 && url\.searchParams\.get\("intl"\) !== "1"\) \{\n\s*return jsonResponse\([^\n]*, 409\);/);
+  assert.ok(deleteApi.indexOf("record.owner !== workspaceOwner(userId)") < deleteApi.indexOf("record.intl === 1"), "ownership is checked first (no token probing)");
+  const linkClient = read("src/lib/workspace/paylinkClient.ts");
+  assert.match(linkClient, /authedFetch\("\/api\/v1\/paylinks\/\?books=1&intl=1", "GET"\)/);
+  assert.match(linkClient, /authedFetch\(`\/api\/v1\/paylinks\/\$\{token\}\/\?intl=1`, "DELETE"/);
+  const paylinksSrc = read("src/lib/workspace/paylinks.ts");
+  assert.match(paylinksSrc, /return intl \? \{ \.\.\.record, intl: 1 \} : record;/, "only foreign links carry intl: 1");
+  assert.match(paylinksSrc, /return isForeignCurrency\(r\.currency\) \? \{ \.\.\.claim, currency: r\.currency \} : claim;/);
+  // Privacy text keeps up with what the pages show (en + hi).
+  for (const file of ["src/pages/privacy.astro", "src/pages/hi/privacy.astro"]) {
+    const text = read(file);
+    assert.match(text, /SWIFT\/BIC/, `${file} lists SWIFT/BIC`);
+    assert.match(text, /IBAN/, `${file} lists IBAN`);
+    const notifications = text.split("\n").find((l) => /push subscription/.test(l)) ?? "";
+    assert.match(notifications, /transfer reference|ट्रांसफ़र रेफ़रेंस/, `${file}: notifications mention transfer references`);
+    const payLinks = text.split("\n").find((l) => /<strong>Pay links/.test(l)) ?? "";
+    assert.match(payLinks, /bank details|बैंक जानकारी/, `${file}: the statement sentence mentions bank details`);
+  }
 }
 
 console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");

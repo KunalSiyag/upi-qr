@@ -23,6 +23,16 @@ const ws = {
   recurring: {},
 };
 ws.invoices.inv_00000023.payments = [{ id: "pay_aaaaaaaa", amountPaise: 300000, date: addDays(-50), mode: "upi", reference: "", createdAt: T }];
+// Clients abroad (docs/spec-foreign-clients.md §4.4): Riya also owes US$1,200.00, and Globex owes only US$.
+const TOKEN2 = "Sg7pQ2xYz9AbCdEfGhIjKl";
+const usdInv = (id, number, clientId, amount, due) => ({ ...inv(id, number, addDays(-20), due, amount), clientId, currency: "USD" });
+const intl = {
+  settings: { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl: "https://wise.com/pay/me/sharmat", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T },
+  invoices: { inv_usd00031: usdInv("inv_usd00031", "TU-31", "cli_riya0001", 120000, addDays(-3)), inv_usd00032: usdInv("inv_usd00032", "TU-32", "cli_globex01", 75050, addDays(10)) },
+  recurring: {},
+  clients: {},
+};
+const mixedWs = { ...ws, clients: { ...ws.clients, cli_globex01: { id: "cli_globex01", name: "Globex LLC", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, intl };
 
 try {
   // --- Public statement page (dev server + fake KV) ---
@@ -44,6 +54,30 @@ try {
 
   // Free owners can't create statement links (API returns 401 signed-out in tests; plan rule covered by unit tests).
 
+  // --- The same client with a US$ invoice too, and a client who owes only US$ ---
+  await admin("reset", {});
+  await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(mixedWs) });
+  await admin("set", { key: `ws:rev:${OWNER}`, value: "1" });
+  await admin("set", { key: `pl:tok:${TOKEN}`, value: JSON.stringify({ owner: OWNER, invoiceId: "stmt:cli_riya0001", createdAt: T }) });
+  await admin("set", { key: `pl:tok:${TOKEN2}`, value: JSON.stringify({ owner: OWNER, invoiceId: "stmt:cli_globex01", createdAt: T }) });
+  html = await (await fetch(`${DEV}/i/${TOKEN}/`)).text();
+  check("mixed: ₹ section with its QR and total exactly as before", /am=6000\.00/.test(html) && /<img src="data:image\/png;base64,/.test(html) && html.includes("₹6,000 due") && html.indexOf("TU-21") < html.indexOf("TU-22"));
+  check("mixed: a separate US$ section with the bank block", html.includes("USD invoices") && html.includes("TU-31") && html.includes("US$1,200.00 due") && html.includes("HDFCINBB") && html.includes("GB82 WEST 1234 5698 7654 32") && html.includes("Pay on wise.com"));
+  check("mixed: no combined total, no 'Total due' headline", !/Total due/.test(html) && !html.includes("₹7,200") && !html.includes("₹18,000"));
+  check("mixed: the header counts every currency's lines", /Statement · 3 unpaid invoices/.test(html));
+  check("mixed: the ₹ form reads 'Amount paid (₹)', for the UPI part only", html.includes("Amount paid (₹)") && html.includes("For the UPI / ₹ part only."));
+  check("mixed: overdue per currency", html.includes("₹6,000 overdue") && html.includes("US$1,200.00 overdue"));
+  check("mixed: no client identity or descriptions", !/Riya|Globex|9876543210|Sept fees|Oct fees/.test(html), (html.match(/.{40}(?:Riya|Globex|9876543210|Sept fees|Oct fees).{40}/g) || []).join(" | "));
+  res = await fetch(`${DEV}/i/${TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.82" }, body: "utr=512345678901&amount=4500" });
+  const mixedClaims = (await admin("get", { list: `pl:claims:${TOKEN}` })).value.map((c) => JSON.parse(c));
+  check("mixed: a statement claim is a ₹ claim (no currency)", res.status === 303 && mixedClaims.length === 1 && mixedClaims[0].amountPaise === 450000 && !("currency" in mixedClaims[0]), JSON.stringify(mixedClaims));
+  html = await (await fetch(`${DEV}/i/${TOKEN2}/`)).text();
+  check("US$ only: never 'Paid ✓' or 'Nothing is due right now'", !html.includes("Paid ✓") && !html.includes("Nothing is due right now") && html.includes("US$750.50 due"));
+  check("US$ only: the header counts the US$ line", /Statement · 1 unpaid invoice</.test(html));
+  check("US$ only: no QR, no UPI form, a bank-transfer note instead", !html.includes("upi://") && !/<img src="data:/.test(html) && !html.includes("<form") && html.includes("After a bank transfer, send the transfer reference to Sharma Tuition."));
+  res = await fetch(`${DEV}/i/${TOKEN2}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.83" }, body: "utr=612345678901&amount=750" });
+  check("US$ only: a ₹ claim is refused, nothing stored", res.status === 200 && (await admin("get", { list: `pl:claims:${TOKEN2}` })).value.length === 0);
+
   // --- Workspace UI (static build + stubs) ---
   const b = await startBrowser();
   const t = async (js) => { await b.eval(helpers); return b.eval(js); };
@@ -60,7 +94,8 @@ try {
     const u = String(url), m = init.method || 'GET';
     const plan = localStorage.getItem('__plan') || 'free';
     const links = JSON.parse(localStorage.getItem('__links') || '{}');
-    if (u.includes('/api/v1/workspace')) return json({ workspace: init.body ? JSON.parse(init.body).workspace : JSON.parse(localStorage.getItem('proupiqr-workspace-v1')), rev: 1, owner: 'o' });
+    // intl: 1 like a PR 1+ server, which keeps (and echoes) the book's foreign section.
+    if (u.includes('/api/v1/workspace')) return json({ workspace: init.body ? JSON.parse(init.body).workspace : JSON.parse(localStorage.getItem('proupiqr-workspace-v1')), rev: 1, owner: 'o', intl: 1 });
     if (u.includes('/api/v1/billing')) return json({ plan: { id: plan, activePaylinks: 10 }, subscription: null, billingAvailable: false });
     if (u.includes('/api/v1/paylinks')) {
       if (m === 'GET') return json({ links: Object.entries(links).map(([invoiceId, l]) => ({ invoiceId, token: l.token, claims: l.claims })), plan: { id: plan, activePaylinks: 10, used: Object.keys(links).length, statementLinks: plan === 'pro' } });
@@ -72,7 +107,10 @@ try {
   };
 })();` });
     await b.go(`${STATIC}/terms/`, 400);
-    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-owner', 'o'); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(ws))}); localStorage.setItem('__plan', 'free'); true`);
+    // The book also holds Riya's US$ invoice (in its sidecar, as PR 1+ code stores it): this build doesn't show it, and a
+    // statement claim never touches it.
+    const sidecar = JSON.stringify({ intl: { ...intl, invoices: { inv_usd00031: intl.invoices.inv_usd00031 } }, owner: "o" });
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-owner', 'o'); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(ws))}); localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(sidecar)}); localStorage.setItem('__plan', 'free'); true`);
     await b.go(`${STATIC}/app/?tab=clients`, 3500);
     await b.waitFor("/Statement link for all dues/.test(document.body.innerText)", 8000);
     check("free plan sees the Pro upsell on clients", await b.eval("[...document.querySelectorAll('a')].some(a => a.textContent.includes('Statement link for all dues') && a.getAttribute('href') === '/app/?tab=settings&upgrade=monthly')"));
@@ -93,6 +131,8 @@ try {
     const p21 = data.invoices.inv_00000021.payments; const p22 = data.invoices.inv_00000022.payments;
     check("₹4,500 applied FIFO: ₹3,000 to TU-21, ₹1,500 to TU-22", p21.length === 1 && p21[0].amountPaise === 300000 && p22.length === 1 && p22[0].amountPaise === 150000 && p21[0].reference === "412345678901", JSON.stringify({ p21, p22 }));
     check("flash explains the allocation", /Applied ₹4,500 to 2 invoices/.test(await b.eval("document.body.innerText")));
+    const side = await b.eval("JSON.parse(localStorage.getItem('proupiqr-intl-v1:biz_primary') || 'null')");
+    check("the claim is applied to ₹ invoices only: the US$ invoice is untouched", side?.intl?.invoices?.inv_usd00031?.payments?.length === 0 && side.intl.invoices.inv_usd00031.currency === "USD", JSON.stringify(side).slice(0, 300));
     check("claim acknowledged", (await b.eval("JSON.parse(localStorage.getItem('__links'))['stmt:cli_riya0001'].claims.length")) === 0);
     check("no console errors (excluding blocked Clerk)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
   } finally {

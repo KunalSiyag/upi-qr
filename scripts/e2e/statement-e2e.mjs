@@ -19,12 +19,16 @@ const ws = {
   clients: {
     cli_rohan001: { id: "cli_rohan001", name: "Rohan Mehta", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
     cli_acme0001: { id: "cli_acme0001", name: "Acme Traders", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
+    cli_strngr01: { id: "cli_strngr01", name: "Stranger", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
   },
   invoices: {
     inv_rohan007: { id: "inv_rohan007", number: "INV-0007", clientId: "cli_rohan001", issueDate: iso(-20), dueDate: iso(-5), amountPaise: 450000, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T },
     inv_acme0012: { id: "inv_acme0012", number: "INV-0012", clientId: "cli_acme0001", issueDate: iso(-40), dueDate: iso(-25), amountPaise: 2500000, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T },
   },
 };
+// Clients abroad (docs/spec-foreign-clients.md §3.6): a US$12.34 invoice to "Stranger" is 1234 minor units, like the
+// ₹1,234.00 credit from STRANGER below. It lives in the book's foreign section (sidecar) and is never suggested.
+const sidecar = { owner: null, intl: { invoices: { inv_usd00050: { id: "inv_usd00050", number: "INV-0050", clientId: "cli_strngr01", issueDate: iso(-10), dueDate: iso(-1), amountPaise: 123400, currency: "USD", description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T } }, recurring: {}, clients: {} } };
 const csv = `HDFC BANK Ltd.,,,,,,
 Date,Narration,Chq./Ref.No.,Value Dt,Withdrawal Amt.,Deposit Amt.,Closing Balance
 ${dmy(-3)},UPI-ROHAN MEHTA-ROHAN@OKAXIS-HDFC0000001-412345678901-INVOICE INV-0007,0000412345678901,${dmy(-3)},,"4,500.00","54,500.00"
@@ -46,7 +50,7 @@ async function pickFile(path) {
 try {
   await b.send("Network.setBlockedURLs", { urls: ["*clerk.accounts.dev*", "*clerk.browser.js*"] });
   await b.go(BASE + "/app/", 300);
-  await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(ws))}); true`);
+  await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(ws))}); localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify(sidecar))}); true`);
   await b.go(BASE + "/app/?tab=invoices", 2500);
   await t("__t.click(/^Import bank statement$/)");
   await b.waitFor("!!document.querySelector('[role=dialog] input[type=file]')");
@@ -64,6 +68,7 @@ try {
   const tickedNow = await b.eval("[...document.querySelectorAll('[role=dialog] input[type=checkbox]')].map(c => c.checked)");
   check("confident match pre-ticked, weaker one left for review", JSON.stringify(tickedNow.sort()) === JSON.stringify([false, true]), JSON.stringify(tickedNow));
   check("unmatched credit listed separately", /1 other credit not matched/.test(dialog));
+  check("a ₹ credit equal in minor units to a US$ invoice isn't suggested for it", !/INV-0050/.test(dialog) && !/₹1,234 on .* →/.test(dialog), dialog.slice(0, 500));
   await b.eval("[...document.querySelectorAll('[role=dialog] input[type=checkbox]')].forEach(c => { if (!c.checked) c.click(); }); true");
   await t("__t.click(/^Record 2 payments$/, __t.dialog())");
   await b.waitFor("!document.querySelector('[role=dialog]')", 5000);
@@ -72,6 +77,8 @@ try {
   const rohan = data.invoices.inv_rohan007.payments[0];
   check("payment recorded with date, UTR and UPI mode", rohan && rohan.amountPaise === 450000 && rohan.reference === "412345678901" && rohan.mode === "upi" && rohan.date === iso(-3), JSON.stringify(rohan));
   check("both invoices now paid", data.invoices.inv_acme0012.payments[0]?.amountPaise === 2500000);
+  const side = await b.eval("JSON.parse(localStorage.getItem('proupiqr-intl-v1:biz_primary') || 'null')");
+  check("the US$ invoice is untouched and stays in its sidecar", side?.intl?.invoices?.inv_usd00050?.payments?.length === 0 && !JSON.stringify(data).includes("inv_usd00050"), JSON.stringify(side).slice(0, 200));
 
   // Importing the same statement again changes nothing.
   await t("__t.click(/^Import bank statement$/)");

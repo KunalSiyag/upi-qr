@@ -60,7 +60,7 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
         return new Response(JSON.stringify({ token: links[invoiceId].token, created: true }), { status: 201 });
       }
       if (method === 'DELETE') {
-        const token = String(url).split('/').filter(Boolean).pop();
+        const token = String(url).split('?')[0].split('/').filter(Boolean).pop();
         const scope = JSON.parse(init.body).scope;
         for (const [id, l] of Object.entries(links)) if (l.token === token) { if (scope === 'claims') l.claims = []; else delete links[id]; }
         save();

@@ -300,7 +300,8 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   const M = await import("../src/lib/workspace/model.ts");
   const legacy = await import("./fixtures/legacy-model.ts");
   const { bookHash } = await import("../src/lib/workspace/books.ts");
-  const { snapshotFor, statementView, payPageView } = await import("../src/lib/workspace/paylinks.ts");
+  // The PR 1/PR 2 server builders (what a rollback of PR 3 runs); PR 3's own are tested in paylinks.test.mjs.
+  const { snapshotFor, statementView, payPageView } = await import("./fixtures/pr2-paylinks.ts");
   const { digestProjection } = await import("../src/lib/workspace/digest.ts");
   const X = 1_791_000_000_000;
   const DAY = 86_400_000;
@@ -801,7 +802,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.deepEqual(order.filter((id) => !id.startsWith("inv_usd")), M.invoiceViews(o, day).map((v) => v.invoice.id));
     }
     assert.ok(M.invoiceViews(mixed, today).every((v) => v.currency === "INR"));
-    assert.equal(snapshotFor(mixed, "inv_usd00001"), null, "a PR 1 server answers 404 for a foreign invoice link");
+    assert.equal(snapshotFor(mixed, "inv_usd00001"), null, "a PR 1/PR 2 server answers 404 for a foreign invoice link");
     assert.equal(payPageView(mixed, "inv_usd00001", today), null);
     assert.ok(payPageView(mixed, "inv_inr00001", today));
     assert.equal(statementView(mixed, "cli_acme0001", today), null, "never a ₹-only statement for a client who owes US$");

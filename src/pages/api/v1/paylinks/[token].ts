@@ -8,8 +8,12 @@ import { ownerMismatch } from "../../../../lib/workspace/booksApi";
 
 export const prerender = false;
 
-/** { scope: "claims" } acknowledges pending claims; { scope: "link" } revokes the link. Owner only. */
-export const DELETE: APIRoute = async ({ request, locals, params }) => {
+/**
+ * { scope: "claims" } acknowledges pending claims; { scope: "link" } revokes the link. Owner only.
+ * A link for a foreign-currency invoice (record.intl) answers 409 unless the client sends ?intl=1: older tabs
+ * can't see those invoices (docs/spec-foreign-clients.md §1.7).
+ */
+export const DELETE: APIRoute = async ({ request, locals, params, url }) => {
   const userId = authenticatedUserId(locals);
   if (!userId) return jsonResponse({ error: "Sign in first." }, 401);
   if (!isTrustedMutation(request)) return jsonResponse({ error: "Cross-site request rejected." }, 403);
@@ -34,6 +38,9 @@ export const DELETE: APIRoute = async ({ request, locals, params }) => {
     if (!record || record.owner !== workspaceOwner(userId)) return jsonResponse({ error: "Not found." }, 404);
     const mismatch = ownerMismatch(body, record.owner);
     if (mismatch) return jsonResponse(mismatch.body, mismatch.status);
+    if (record.intl === 1 && url.searchParams.get("intl") !== "1") {
+      return jsonResponse({ error: "This pay link is for a foreign-currency invoice. Reload the page to manage it.", code: "intl_link" }, 409);
+    }
     if (body.scope === "claims") await store.clearClaims(params.token);
     else await store.remove(record.owner, params.token, record.invoiceId);
     return jsonResponse({ ok: true });
