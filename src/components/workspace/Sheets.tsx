@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  addDays, addPayment, findClient, formatPaise, isIsoDate, liveClients, logReminder, newId, nextInvoiceNumber,
+  addDays, addPayment, findClient, formatPaise, getInvoice, isIsoDate, liveClients, liveInvoices, logReminder, newId, nextInvoiceNumber,
   paiseToDecimal, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, suggestedTone, upsertClient, upsertInvoice,
   upsertPlan, viewInvoice, whatsappLink, isUdyam, type Invoice, type PaymentMode, type ReminderLang, type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
@@ -26,7 +26,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   onSave: (next: Workspace, invoiceId: string) => void;
   onClose: () => void;
 }) {
-  const existing = invoiceId ? ws.invoices[invoiceId] : undefined;
+  const existing = invoiceId ? getInvoice(ws, invoiceId) : undefined;
   const { tr } = useWs();
   const existingClient = existing ? ws.clients[existing.clientId] : undefined;
   const clients = useMemo(() => liveClients(ws), [ws]);
@@ -57,7 +57,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     if (!isIsoDate(issueDate)) next.issueDate = tr("Pick a valid date.");
     if (!isIsoDate(dueDate)) next.dueDate = tr("Pick a valid date.");
     else if (isIsoDate(issueDate) && dueDate < issueDate) next.dueDate = tr("Due date can't be before the invoice date.");
-    const duplicate = Object.values(ws.invoices).find((i) => !i.deletedAt && i.id !== invoiceId && i.number.trim().toLowerCase() === number.trim().toLowerCase());
+    const duplicate = liveInvoices(ws).find((i) => i.id !== invoiceId && i.number.trim().toLowerCase() === number.trim().toLowerCase());
     if (duplicate) next.number = tr("{number} already exists.", { number: duplicate.number });
     if (phone && phone.replace(/\D/g, "").length < 10) next.phone = tr("Enter a 10-digit mobile number, or leave it blank.");
     if (repeat && untilMonth && isIsoDate(issueDate) && untilMonth < issueDate.slice(0, 7)) next.until = tr("The last month can't be before the first invoice.");
@@ -187,7 +187,7 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
   onSave: (next: Workspace) => void;
   onClose: () => void;
 }) {
-  const view = viewInvoice(ws.invoices[invoiceId], ws.clients, today);
+  const view = viewInvoice(getInvoice(ws, invoiceId) as Invoice, ws.clients, today);
   const { tr } = useWs();
   const [amount, setAmount] = useState(paiseToDecimal(Math.min(initialAmountPaise ?? view.balancePaise, view.balancePaise)));
   const [date, setDate] = useState(today);
@@ -255,7 +255,7 @@ export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent
   onSent: (next: Workspace, channel: "whatsapp" | "sms" | "copy") => void;
   onClose: () => void;
 }) {
-  const view = viewInvoice(ws.invoices[invoiceId], ws.clients, today);
+  const view = viewInvoice(getInvoice(ws, invoiceId) as Invoice, ws.clients, today);
   const { tr, dateLocale, lang: uiLang } = useWs();
   const [tone, setTone] = useState<ReminderTone>(suggestedTone(view));
   const [lang, setLang] = useState<ReminderLang>(() => {

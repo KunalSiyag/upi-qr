@@ -161,6 +161,7 @@ export const WS_HI: Record<string, string> = {
   "Clients are added automatically when you create an invoice.": "इनवॉइस बनाते ही ग्राहक अपने-आप जुड़ जाते हैं।",
   "Clients sent these from your pay links. Check your bank or UPI app before confirming.": "ग्राहकों ने ये आपके पेमेंट लिंक से भेजे हैं। पुष्टि से पहले अपना बैंक या UPI ऐप देखें।",
   "Clients with invoices can't be removed — delete their invoices first.": "जिन ग्राहकों के इनवॉइस हैं, उन्हें हटाया नहीं जा सकता — पहले उनके इनवॉइस डिलीट करें।",
+  "This client has foreign-currency invoices this version can't show yet, so it can't be removed. Reload the page to update.": "इस ग्राहक के विदेशी मुद्रा वाले इनवॉइस हैं, जिन्हें यह वर्शन अभी नहीं दिखा सकता, इसलिए इसे हटाया नहीं जा सकता। अपडेट के लिए पेज रीलोड करें।",
   "Close": "बंद करें",
   "Cloud copy deleted and signed out. This device keeps its data.": "क्लाउड कॉपी डिलीट हो गई और आप साइन आउट हो गए। इस डिवाइस का डेटा बना रहेगा।",
   "Collected this month": "इस महीने मिले",
@@ -401,6 +402,8 @@ export const WS_HI: Record<string, string> = {
   "This client hasn't synced yet. Wait a moment and try again.": "यह ग्राहक अभी सिंक नहीं हुआ। थोड़ा रुककर फिर कोशिश करें।",
   "This device only": "सिर्फ़ इस डिवाइस पर",
   "This invoice hasn't synced yet. Wait a moment and try again.": "यह इनवॉइस अभी सिंक नहीं हुआ। थोड़ा रुककर फिर कोशिश करें।",
+  // Server answer (paylinks.ts NOT_YET_FOREIGN), translated by tr() like the other server errors.
+  "Pay links for foreign-currency invoices aren't available yet.": "विदेशी मुद्रा वाले इनवॉइस के लिए पेमेंट लिंक अभी उपलब्ध नहीं हैं।",
   "Tick payments to record": "दर्ज करने के लिए पेमेंट चुनें",
   "To collect": "लेना बाकी",
   "Tone": "लहजा",
@@ -517,4 +520,6 @@ export const WS_HI: Record<string, string> = {
   "{n} clients": "{n} ग्राहक",
   "Balance": "बकाया",
   "{n} open": "{n} खुले",
+  "Clients abroad (another account)": "विदेशी ग्राहक (दूसरा अकाउंट)",
+  "Clients abroad (set aside)": "विदेशी ग्राहक (अलग रखा गया)",
 };

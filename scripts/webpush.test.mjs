@@ -98,6 +98,15 @@ assert.equal(validSubscriptionKeys({ p256dh: uaPub, auth: b64u(Buffer.alloc(8)) 
   assert.equal(claimNotification({ invoiceNumber: "INV-7", amountPaise: null, utr: "412345678901", statement: false }, "T").body, "For INV-7 · UTR …8901. Check your bank, then confirm it in the tracker.");
   assert.match(claimNotification({ invoiceNumber: "Statement", amountPaise: 150050, utr: "412345678901", statement: true }, "T").body, /^₹1,500\.50 for their statement · /);
   assert.ok(!JSON.stringify(claimNotification({ invoiceNumber: "X", amountPaise: null, utr: "412345678901", statement: false }, "T")).includes("41234567"), "only the last four UTR digits");
+  // A foreign-currency link (docs/spec-foreign-clients.md §4.6): the amount in its currency and a transfer reference.
+  assert.deepEqual(claimNotification({ invoiceNumber: "INV-7", amountPaise: 50000, utr: "UETR-ab12-ffff-1234", statement: false, currency: "USD" }, "Tok1"),
+    { title: "A client says they've paid", body: "US$500.00 for INV-7 · ref …1234. Check your bank, then confirm it in the tracker.", url: "/app/", tag: "claim-Tok1" });
+  assert.equal(claimNotification({ invoiceNumber: "INV-7", amountPaise: null, utr: "REF-001234", statement: false, currency: "EUR" }, "T").body, "For INV-7 · ref …1234. Check your bank, then confirm it in the tracker.");
+  assert.ok(!claimNotification({ invoiceNumber: "INV-7", amountPaise: 50000, utr: "UETR-ab12-ffff-1234", statement: false, currency: "USD" }, "T").body.includes("UTR"));
+  // Anything but a foreign currency is today's INR text, byte for byte.
+  for (const currency of [undefined, "INR", "XYZ", 5]) {
+    assert.equal(claimNotification({ invoiceNumber: "INV-7", amountPaise: 300000, utr: "412345678901", statement: false, currency }, "T").body, "₹3,000 for INV-7 · UTR …8901. Check your bank, then confirm it in the tracker.");
+  }
 
   const owner = "o".repeat(32);
   const store = memoryPushStore();

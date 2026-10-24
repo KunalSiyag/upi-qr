@@ -1,4 +1,5 @@
-import { chaseList, emptyWorkspace, formatPaise, generateRecurring, invoiceViews, liveInvoices, liveRecurring, recurringInvoiceId, viewInvoice, type InvoiceView, type Workspace } from "./model.ts";
+import { allInvoiceViews, allLiveInvoices, allLiveRecurring, chaseList, currencyOf, emptyWorkspace, generateRecurring, planMonths, recurringInvoiceId, viewInvoice, type InvoiceView, type Workspace } from "./model.ts";
+import { addMoney, formatMoney, isForeignCurrency, moneyList, type ForeignCurrency, type MoneyByCurrency } from "./currency.ts";
 import { PRIMARY_BOOK_ID } from "./books.ts";
 
 /**
@@ -16,19 +17,29 @@ export interface Digest {
   count: number;
 }
 
+/**
+ * "₹25,000 overdue", or per currency "₹25,000 + US$1,200.00 overdue" (INR first, then CURRENCIES order).
+ * A ₹ figure never includes a foreign amount, and an INR-only book gets exactly the text from before.
+ */
+function overdueText(overdue: InvoiceView[]): string {
+  let sums: MoneyByCurrency = {};
+  for (const view of overdue) sums = addMoney(sums, view.currency, view.balancePaise);
+  return `${moneyList(sums).map((m) => formatMoney(m.minor, m.currency)).join(" + ")} overdue`;
+}
+
 export function morningDigest(ws: Workspace, today: string): Digest | null {
   // Include this month's recurring invoices even if the app hasn't been opened yet.
-  const chase = chaseList(invoiceViews(generateRecurring(ws, today, 0).ws, today));
+  const chase = chaseList(allInvoiceViews(generateRecurring(ws, today, 0).ws, today));
   if (chase.length === 0) return null;
   const overdue = chase.filter((v) => v.state === "overdue");
   const dueToday = chase.filter((v) => v.daysPastDue === 0);
   const parts: string[] = [];
-  if (overdue.length) parts.push(`${formatPaise(overdue.reduce((sum, v) => sum + v.balancePaise, 0))} overdue`);
+  if (overdue.length) parts.push(overdueText(overdue));
   if (dueToday.length) parts.push(`${dueToday.length} due today`);
   const top = chase[0];
   const who = top.client?.name ?? top.invoice.number;
   const when = top.daysPastDue > 0 ? `${top.daysPastDue} day${top.daysPastDue === 1 ? "" : "s"} late` : "due today";
-  const body = `${parts.join(", ")}. Start with ${who} — ${formatPaise(top.balancePaise)}, ${when}.`;
+  const body = `${parts.join(", ")}. Start with ${who} — ${formatMoney(top.balancePaise, top.currency)}, ${when}.`;
   return {
     title: `${chase.length} invoice${chase.length === 1 ? "" : "s"} to chase today`,
     body: body.length > 180 ? `${body.slice(0, 177)}…` : body,
@@ -51,7 +62,7 @@ export function morningDigestBooks(books: { id: string; name: string; ws: Worksp
   const owner = new Map<InvoiceView, { id: string; name: string }>();
   const views: InvoiceView[] = [];
   for (const book of books) {
-    for (const view of invoiceViews(generateRecurring(book.ws, today, 0).ws, today)) {
+    for (const view of allInvoiceViews(generateRecurring(book.ws, today, 0).ws, today)) {
       owner.set(view, book);
       views.push(view);
     }
@@ -61,14 +72,14 @@ export function morningDigestBooks(books: { id: string; name: string; ws: Worksp
   const overdue = chase.filter((v) => v.state === "overdue");
   const dueToday = chase.filter((v) => v.daysPastDue === 0);
   const parts: string[] = [];
-  if (overdue.length) parts.push(`${formatPaise(overdue.reduce((sum, v) => sum + v.balancePaise, 0))} overdue`);
+  if (overdue.length) parts.push(overdueText(overdue));
   if (dueToday.length) parts.push(`${dueToday.length} due today`);
   const top = chase[0];
   const book = owner.get(top) as { id: string; name: string };
   const who = top.client?.name ?? top.invoice.number;
   const label = nameBooks && book.name.trim() ? ` (${book.name.trim()})` : "";
   const when = top.daysPastDue > 0 ? `${top.daysPastDue} day${top.daysPastDue === 1 ? "" : "s"} late` : "due today";
-  const body = `${parts.join(", ")}. Start with ${who}${label} — ${formatPaise(top.balancePaise)}, ${when}.`;
+  const body = `${parts.join(", ")}. Start with ${who}${label} — ${formatMoney(top.balancePaise, top.currency)}, ${when}.`;
   return {
     title: `${chase.length} invoice${chase.length === 1 ? "" : "s"} to chase today`,
     body: body.length > 180 ? `${body.slice(0, 177)}…` : body,
@@ -98,28 +109,47 @@ export interface DigestProjection {
   open: [string, string, string, string, string, number][];
   /** Live, unpaused plans: id, client name, amount paise, day of month, due-after days, start month, end month, months already created. */
   plans: [string, string, number, number, number, string, string, string[]][];
+  /**
+   * Foreign-currency open invoices and plans, the same tuples plus the currency (amounts in its minor units).
+   * Present only when the book has some; readers from before clients abroad ignore it, so `open`/`plans` stay INR.
+   */
+  fx?: {
+    open: [string, string, string, string, string, number, ForeignCurrency][];
+    plans: [string, string, number, number, number, string, string, string[], ForeignCurrency][];
+  };
 }
 
+/** INR invoices and plans in `open`/`plans`, foreign ones in `fx` (docs/spec-foreign-clients.md §4.7). */
 export function digestProjection(ws: Workspace): DigestProjection {
   const today = "9999-12-31"; // state-independent: keep every open invoice, the digest re-dates them
-  const open = liveInvoices(ws)
+  // One cap over both lists, in due-date order (INR before foreign on equal dates, as allLiveInvoices lists them).
+  const views = allLiveInvoices(ws)
     .map((inv) => viewInvoice(inv, ws.clients, today))
     .filter((v) => v.balancePaise > 0 && !v.invoice.voided)
     .sort((a, b) => a.invoice.dueDate.localeCompare(b.invoice.dueDate))
-    .slice(0, MAX_PROJECTED_INVOICES)
-    .map((v): DigestProjection["open"][number] => [v.invoice.id, v.invoice.number, v.client?.name ?? "", v.invoice.issueDate, v.invoice.dueDate, v.balancePaise]);
-  const plans = liveRecurring(ws)
-    .filter((plan) => !plan.paused && ws.clients[plan.clientId] && !ws.clients[plan.clientId].deletedAt)
-    .map((plan): DigestProjection["plans"][number] => {
-      const months: string[] = [];
-      for (const id of Object.keys(ws.invoices)) {
-        const prefix = recurringInvoiceId(plan.id, "0000-00").slice(0, -6);
-        if (id.startsWith(prefix)) months.push(`${id.slice(-6, -2)}-${id.slice(-2)}`);
-      }
-      months.sort();
-      return [plan.id, ws.clients[plan.clientId].name, plan.amountPaise, plan.dayOfMonth, plan.dueAfterDays, plan.startMonth, plan.endMonth, months.slice(-RECURRING_LOOKBACK_MONTHS)];
-    });
-  return { v: PROJECTION_VERSION, open, plans };
+    .slice(0, MAX_PROJECTED_INVOICES);
+  const open: DigestProjection["open"] = [];
+  const fxOpen: NonNullable<DigestProjection["fx"]>["open"] = [];
+  for (const v of views) {
+    const tuple: DigestProjection["open"][number] = [v.invoice.id, v.invoice.number, v.client?.name ?? "", v.invoice.issueDate, v.invoice.dueDate, v.balancePaise];
+    if (isForeignCurrency(v.currency)) fxOpen.push([...tuple, v.currency]);
+    else open.push(tuple);
+  }
+  const plans: DigestProjection["plans"] = [];
+  const fxPlans: NonNullable<DigestProjection["fx"]>["plans"] = [];
+  for (const plan of allLiveRecurring(ws)) {
+    const client = Object.prototype.hasOwnProperty.call(ws.clients, plan.clientId) ? ws.clients[plan.clientId] : undefined;
+    if (plan.paused || !client || client.deletedAt) continue;
+    // Month markers come from the map the plan's invoices live in (planMonths): intl.invoices for a foreign plan.
+    const months = planMonths(ws, plan).slice(-RECURRING_LOOKBACK_MONTHS);
+    const tuple: DigestProjection["plans"][number] = [plan.id, client.name, plan.amountPaise, plan.dayOfMonth, plan.dueAfterDays, plan.startMonth, plan.endMonth, months];
+    const currency = currencyOf(plan);
+    if (isForeignCurrency(currency)) fxPlans.push([...tuple, currency]);
+    else plans.push(tuple);
+  }
+  const projection: DigestProjection = { v: PROJECTION_VERSION, open, plans };
+  if (fxOpen.length || fxPlans.length) projection.fx = { open: fxOpen, plans: fxPlans };
+  return projection;
 }
 
 /** v2 projection of a non-primary book: v1 plus the book's business name. The primary keeps writing v1. */
@@ -149,7 +179,33 @@ export function workspaceFromProjection(p: DigestProjection): Workspace {
       if (!ws.invoices[rid]) ws.invoices[rid] = { id: rid, number: "", clientId: cid, issueDate: `${month}-01`, dueDate: `${month}-01`, amountPaise: 0, description: "", payments: [], reminders: [], voided: false, recurringId: id, createdAt: 0, updatedAt: 0, deletedAt: 1 };
     }
   }
+  if (p.fx) {
+    // Foreign records go where the model keeps them: ws.intl, with each plan's month markers in intl.invoices.
+    const intl: NonNullable<Workspace["intl"]> = { invoices: {}, recurring: {}, clients: {} };
+    for (const [id, number, client, issueDate, dueDate, balance, currency] of p.fx.open) {
+      intl.invoices[id] = { id, number, clientId: clientId(client), issueDate, dueDate, amountPaise: balance, description: "", payments: [], reminders: [], voided: false, currency, createdAt: 0, updatedAt: 0 };
+    }
+    for (const [id, client, amountPaise, dayOfMonth, dueAfterDays, startMonth, endMonth, months, currency] of p.fx.plans) {
+      const cid = clientId(client);
+      intl.recurring[id] = { id, clientId: cid, amountPaise, description: "", dayOfMonth, dueAfterDays, startMonth, endMonth, paused: false, currency, createdAt: 0, updatedAt: 0 };
+      for (const month of months) {
+        const rid = recurringInvoiceId(id, month);
+        if (!intl.invoices[rid]) intl.invoices[rid] = { id: rid, number: "", clientId: cid, issueDate: `${month}-01`, dueDate: `${month}-01`, amountPaise: 0, description: "", payments: [], reminders: [], voided: false, recurringId: id, currency, createdAt: 0, updatedAt: 0, deletedAt: 1 };
+      }
+    }
+    ws.intl = intl;
+  }
   return ws;
+}
+
+/** `fx` when present: both arrays, every tuple of its length with a foreign currency last. Anything else is unusable. */
+function parseFx(raw: unknown): DigestProjection["fx"] | null {
+  if (!raw || typeof raw !== "object") return null;
+  const fx = raw as Record<string, unknown>;
+  if (!Array.isArray(fx.open) || !Array.isArray(fx.plans)) return null;
+  const ok = (rows: unknown[], length: number) => rows.every((t) => Array.isArray(t) && t.length === length && isForeignCurrency(t[length - 1]));
+  if (!ok(fx.open, 7) || !ok(fx.plans, 9)) return null;
+  return { open: fx.open as NonNullable<DigestProjection["fx"]>["open"], plans: fx.plans as NonNullable<DigestProjection["fx"]>["plans"] };
 }
 
 export function parseProjection(raw: unknown): DigestProjection | null {
@@ -159,7 +215,14 @@ export function parseProjection(raw: unknown): DigestProjection | null {
   if (typeof r.v !== "number" || !PROJECTION_VERSIONS_READ.includes(r.v) || !Array.isArray(r.open) || !Array.isArray(r.plans)) return null;
   if (r.v >= 2 && typeof r.name !== "string") return null;
   const name = r.v >= 2 ? (r.name as string).slice(0, MAX_PROJECTED_NAME) : "";
-  return { v: r.v, name, open: r.open as DigestProjection["open"], plans: r.plans as DigestProjection["plans"] };
+  const parsed: DigestProjection = { v: r.v, name, open: r.open as DigestProjection["open"], plans: r.plans as DigestProjection["plans"] };
+  if (r.fx !== undefined) {
+    // A bad fx makes the whole projection unusable: the runner then reads the workspace instead.
+    const fx = parseFx(r.fx);
+    if (!fx) return null;
+    parsed.fx = fx;
+  }
+  return parsed;
 }
 
 // ---------------------------------------------------------------------------

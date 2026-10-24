@@ -4,7 +4,7 @@ import {
 } from "./cloud.ts";
 import { BOOK_ID_RE, bookRank, isTombstoned, linkKey, liveBookIds, PRIMARY_BOOK_ID, sanitizeBookIndex, type BookIndex } from "./books.ts";
 import { bookProjection, type ProjectionStore } from "./digest.ts";
-import { createPaylink, createStatementLink, refreshViews, type PaylinkStore } from "./paylinks.ts";
+import { createPaylink, createStatementLink, createStatusCode, refreshViews, type PaylinkStore } from "./paylinks.ts";
 import { PLANS, type Plan } from "./entitlements.ts";
 import type { MetricName } from "../metricsCore.ts";
 
@@ -147,7 +147,8 @@ export async function getBook(d: BooksDeps, owner: string, id: string): Promise<
   const live = await liveIndex(d, owner, id);
   if ("status" in live) return live;
   const { workspace, rev } = await readWorkspace(d.docs, slotFor(owner, id));
-  return res(200, { workspace, rev, owner, businessId: id });
+  // intl: 1 tells clients this server keeps ws.intl (docs/spec-foreign-clients.md §2.6).
+  return res(200, { workspace, rev, owner, businessId: id, intl: 1 });
 }
 
 /**
@@ -182,7 +183,7 @@ export async function putBook(d: BooksDeps, owner: string, id: string, body: Rec
     return gone;
   }
   await d.metric("sync").catch(() => undefined);
-  return res(200, { workspace: result.workspace, rev: result.rev, owner, businessId: id });
+  return res(200, { workspace: result.workspace, rev: result.rev, owner, businessId: id, intl: 1 });
 }
 
 /** POST /api/v1/paylinks/books/<id>/ { invoiceId | clientId, expectedOwner }: a pay or statement link in a non-primary book. */
@@ -212,7 +213,7 @@ export async function createBookLink(
   const result = isStatement
     ? await createStatementLink(d.paylinks, owner, workspace, body.clientId as string, newToken, now, plan, validVpa, key)
     : await createPaylink(d.paylinks, owner, workspace, body.invoiceId as string, newToken, now, plan.activePaylinks, validVpa, key);
-  if (result.status !== "ok") return res(result.status === "limit" || result.status === "not_pro" ? 402 : 409, { error: result.message, code: result.status });
+  if (result.status !== "ok") return res(createStatusCode(result.status), { error: result.message, code: result.status });
   let viewed: string[] = [];
   if (result.created) {
     await d.metric("paylink_created").catch(() => undefined);

@@ -4,7 +4,7 @@ import { consumeRateLimit, rateLimitHeaders } from "../../../../lib/rateLimit";
 import { readWorkspace } from "../../../../lib/workspace/cloud";
 import { cloudStore, rateLimitsAvailable, workspaceOwner } from "../../../../lib/workspace/kvCloudStore";
 import { newPaylinkToken, paylinkStore } from "../../../../lib/workspace/kvPaylinkStore";
-import { createPaylink, createStatementLink, refreshViews } from "../../../../lib/workspace/paylinks";
+import { createPaylink, createStatementLink, createStatusCode, refreshViews } from "../../../../lib/workspace/paylinks";
 import { parseLinkKey, PRIMARY_BOOK_ID } from "../../../../lib/workspace/books";
 import { ownerMismatch } from "../../../../lib/workspace/booksApi";
 import { planFor } from "../../../../lib/billing/plans";
@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     const result = isStatement
       ? await createStatementLink(paylinkStore(), owner, workspace, body.clientId as string, newPaylinkToken, Date.now(), plan, validVpa)
       : await createPaylink(paylinkStore(), owner, workspace, body.invoiceId as string, newPaylinkToken, Date.now(), plan.activePaylinks, validVpa);
-    if (result.status !== "ok") return jsonResponse({ error: result.message, code: result.status }, result.status === "limit" || result.status === "not_pro" ? 402 : 409);
+    if (result.status !== "ok") return jsonResponse({ error: result.message, code: result.status }, createStatusCode(result.status));
     if (result.created) {
       await recordMetric("paylink_created");
       await refreshViews(paylinkStore(), owner, PRIMARY_BOOK_ID, workspace).catch(() => undefined);
