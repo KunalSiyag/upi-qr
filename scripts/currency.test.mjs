@@ -180,6 +180,20 @@ for (const bad of [
   assert.equal(safePayUrl(dotted), "");
   const atCap = `https://paypal.me/${"a".repeat(300 - "https://paypal.me/".length)}`;
   assert.equal(safePayUrl(atCap), atCap, "300 characters is still accepted");
+  // And to the normalized href: typed text under the cap that percent-encoding grows past it is refused, so a stored
+  // payUrl always passes again (sanitize is a fixed point on every device and on the server; review round 6).
+  const grows = `https://paypal.me/${"é".repeat(100)}`;
+  assert.ok(grows.length <= 300 && new URL(grows).href.length > 300);
+  assert.equal(safePayUrl(grows), "");
+  const encoded = `https://paypal.me/${"é".repeat(40)}`;
+  assert.equal(safePayUrl(encoded), new URL(encoded).href, "an href that stays within the cap is kept (normalized)");
+  assert.equal(safePayUrl(safePayUrl(encoded)), safePayUrl(encoded));
+  const withPayUrl = (payUrl) => ({ intl: { settings: { on: true, accountName: "A", bankName: "B", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl, exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: 1 } } });
+  for (const payUrl of [grows, encoded]) {
+    const once = sanitizeWorkspace(withPayUrl(payUrl));
+    assert.equal(JSON.stringify(sanitizeWorkspace(JSON.parse(JSON.stringify(once)))), JSON.stringify(once), "sanitizing a sanitized payUrl changes nothing");
+    assert.ok((once.intl?.settings?.payUrl ?? "").length <= 300);
+  }
 }
 assert.equal(normalizeLutArn(" ad270326000123x "), "AD270326000123X");
 assert.equal(normalizeLutArn("AD27032600012"), "");

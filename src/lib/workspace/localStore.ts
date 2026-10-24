@@ -374,9 +374,10 @@ export function claimGuestSidecars(): void {
  * sees its sidecar), tagged with the account at write time; then the book key, holding exactly what older code
  * would write. True only if both writes succeeded (`verified`: each read back).
  */
-function writeBookKeys(id: string, ws: Workspace, verified = false, now = Date.now()): boolean {
+function writeBookKeys(id: string, ws: Workspace, verified = false, now: number | null = Date.now()): boolean {
   const write = verified ? putVerified : put;
-  const pruned = pruneTombstones(ws, now);
+  // null: written as given, old tombstones kept (a given-back business, byte for byte what main wrote; review round 6).
+  const pruned = now === null ? ws : pruneTombstones(ws, now);
   // Another account's sidecar (left by an older switch) is set aside first and never written over or removed
   // here. When it can't be set aside yet (storage full), it stays for a later try: this account's own sidecar
   // isn't written (false only when there is one to write), but the book key is, since it never holds intl.
@@ -1135,7 +1136,7 @@ export function switchAccountStorage(previousOwner: string, newOwner: string, in
       if (side && !sidecarJoins(side.owner)) return;
       if (own && sideBefore !== null) put(intlKey(bookId), sideBefore); else drop(intlKey(bookId));
     };
-    if (!writeBookKeys(bookId, full, true, now)) { undo(); continue; }
+    if (!writeBookKeys(bookId, full, true, null)) { undo(); continue; }
     if (!saveIndex(candidate, true)) { undo(); continue; }
     nextIndex = candidate;
     discardAside(asideId);

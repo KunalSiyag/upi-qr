@@ -41,6 +41,7 @@ let legacyRuns = 0;
 let roundTrips = 0;
 let leftovers = 0;
 let stashLeftovers = 0;
+let bSaves = 0;
 /** A sidecar written for account C (an older switch left it): not a book of whoever is on the device. */
 const isC = (v) => { try { return JSON.parse(v).owner === C; } catch { return false; } };
 const problems = [];
@@ -144,8 +145,18 @@ for (let trial = 0; trial < TRIALS; trial++) {
       if ([...before].some((id) => !kept.has(id))) fail("lost after the joined load");
       // Then an old tab or PWA switches back to A, and new code loads A: every foreign invoice of A is back in
       // A's books (or a set-aside copy), none lost, and A's books never gain B's.
-      if (!old) {
+      // On every third device B's own foreign section is saved first (sync brought it), so the switch back finds
+      // B's sidecar in the primary's slot (review round 6); every old-code device is switched back too.
+      {
         store.quota = Infinity;
+        const bForeign = [];
+        if (trial % 3 === 0) {
+          const id = `inv_B${(++seq).toString().padStart(7, "0")}`;
+          const bPrimary = loadBook(PRIMARY_BOOK_ID);
+          if (!saveBook(loadShelf().shelf.index, PRIMARY_BOOK_ID, upsertInvoice(bPrimary, { id, number: `N-${seq}`, clientId: client.id, issueDate: "2026-10-01", dueDate: "2026-10-15", amountPaise: 100, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T, currency: "EUR" }, T))) fail("B's foreign save failed");
+          bForeign.push(id);
+          bSaves++;
+        }
         const back = legacySwitch(B, A, legacyLoadShelf().shelf.index, legacySanitize(JSON.parse(JSON.stringify(book("A", "A shop", "a@okaxis", 0, pad)))), T + 9);
         if (!back.ok) { fail(`legacy switch back failed: ${back.reason}`); break; }
         roundTrips++;
@@ -154,6 +165,7 @@ for (let trial = 0; trial < TRIALS; trial++) {
         const onDevice = new Set([...store.map.values()].flatMap((v) => [...idsIn(v)]));
         const lostBack = [...before].filter((id) => !onDevice.has(id));
         if (lostBack.length) fail(`lost ${lostBack.length} after old code switched back`);
+        if (bForeign.some((id) => !onDevice.has(id))) fail("B's foreign invoice lost after old code switched back");
         const reachable = idsIn(JSON.stringify(loadShelf().shelf.books) + JSON.stringify(listAside()));
         const unreachable = [...foreignOfA].filter((id) => !reachable.has(id));
         if (unreachable.length) fail(`${unreachable.length} foreign invoices of A neither in A's books nor set aside`);
@@ -173,7 +185,8 @@ assert.deepEqual(problems.slice(0, 10), [], `${problems.length} problems`);
 assert.ok(runs > 20_000, `expected a wide quota sweep (ran ${runs})`);
 assert.equal(switched, TRIALS - TRIALS / scenarios.length, "every switch except the third-account one succeeds once there is room");
 assert.ok(legacyRuns > 1000, `old-code switches interleaved (${legacyRuns})`);
+assert.ok(bSaves > 200, `B's foreign section in the slot before the switch back (${bSaves})`);
 assert.ok(roundTrips > 500, `new switch then old switch back (${roundTrips})`);
 assert.ok(leftovers > 80, `another account's leftover sidecar on some devices (${leftovers})`);
 assert.ok(stashLeftovers > 80, `another account's leftover stashed foreign section on some devices (${stashLeftovers})`);
-console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${leftovers} with a third account's leftover sidecar, ${stashLeftovers} with its stashed foreign section, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);
+console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${leftovers} with a third account's leftover sidecar, ${stashLeftovers} with its stashed foreign section, ${roundTrips} switched back by old code, ${bSaves} with B's foreign section in the slot): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);
