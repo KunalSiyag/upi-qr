@@ -61,6 +61,10 @@ assert.equal(parseMoneyToMinor("€5", "EUR"), 500);
 assert.equal(parseMoneyToMinor("5 EUR", "EUR"), 500);
 assert.equal(parseMoneyToMinor("£0.05", "GBP"), 5);
 assert.equal(parseMoneyToMinor(`AED${NBSP}1,200`, "AED"), 120000);
+// Review round 5: the AUD markers (A$ is the en-GB prefix, owner Q12), before and after the amount.
+assert.equal(parseMoneyToMinor("A$1,200", "AUD"), 120000);
+assert.equal(parseMoneyToMinor("1,200 A$", "AUD"), 120000);
+assert.equal(parseMoneyToMinor("AU$ 99.5", "AUD"), 9950);
 assert.equal(parseMoneyToMinor("1.005", "USD"), null, "three decimals");
 assert.equal(parseMoneyToMinor("1.200,50", "EUR"), null, "a decimal comma is never guessed");
 assert.equal(parseMoneyToMinor("12,50", "EUR"), null);
@@ -154,6 +158,9 @@ assert.equal(validIban("GB82 WEST 1234 5698 7654 32"), true);
 assert.equal(validIban("GB82WEST12345698765433"), false, "one digit changed");
 assert.equal(validIban("DE89370400440532013000"), true);
 assert.equal(formatIban("GB82WEST12345698765432"), "GB82 WEST 1234 5698 7654 32");
+// Review round 5: check digits one lower leave a mod-97 remainder of 0, which is invalid (only 1 is).
+assert.equal(validIban("GB81WEST12345698765432"), false, "remainder 0 is not valid");
+assert.equal(formatIban("ABCD1234"), "ABCD 1234", "no trailing space when the length is a multiple of 4");
 assert.deepEqual([...PAY_URL_HOSTS], ["paypal.me", "www.paypal.me", "paypal.com", "www.paypal.com", "wise.com", "buy.stripe.com", "rzp.io"]);
 assert.equal(safePayUrl("https://paypal.me/name"), "https://paypal.me/name");
 assert.equal(safePayUrl("  https://www.paypal.com/paypalme/name  "), "https://www.paypal.com/paypalme/name");
@@ -177,6 +184,7 @@ for (const bad of [
 assert.equal(normalizeLutArn(" ad270326000123x "), "AD270326000123X");
 assert.equal(normalizeLutArn("AD27032600012"), "");
 assert.equal(normalizeLutArn("AD270326000123X9"), "");
+assert.equal(normalizeLutArn("AD270326000123"), "", "14 characters: one short");
 
 /* ---------- financial years and the export note ---------- */
 assert.equal(fyOf("2027-03-31"), "2026-27");

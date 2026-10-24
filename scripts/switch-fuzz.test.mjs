@@ -40,6 +40,7 @@ let switched = 0;
 let legacyRuns = 0;
 let roundTrips = 0;
 let leftovers = 0;
+let stashLeftovers = 0;
 /** A sidecar written for account C (an older switch left it): not a book of whoever is on the device. */
 const isC = (v) => { try { return JSON.parse(v).owner === C; } catch { return false; } };
 const problems = [];
@@ -85,6 +86,14 @@ for (let trial = 0; trial < TRIALS; trial++) {
     const where = nExtras && rand(2) ? extras[0] : PRIMARY_BOOK_ID;
     store.setItem(`proupiqr-intl-v1:${where}`, canonicalJson({ owner: C, intl: book("C", "C shop", "c@okaxis", 0, pad, 1 + rand(2)).intl }));
     leftovers++;
+  }
+  // Every 7th new-code device (another residue) holds C's stashed foreign section in the stash slot of one of A's
+  // books: a new-code switch C→A stashed it and an older tab's "Discard" left it (it never reads that key). At low
+  // quotas it can't be set aside: the switch must then fail rather than merge it into A's stash (review round 5).
+  if (!old && trial % 7 === 5 && scenario !== "thirdV2") {
+    const where = nExtras && rand(2) ? extras[0] : PRIMARY_BOOK_ID;
+    store.setItem(`proupiqr-stash-intl-v1:${where}`, canonicalJson({ owner: C, intl: book("C", "C shop", "c@okaxis", 0, pad, 1 + rand(2)).intl }));
+    stashLeftovers++;
   }
 
   const base = new Map(store.map);
@@ -166,4 +175,5 @@ assert.equal(switched, TRIALS - TRIALS / scenarios.length, "every switch except 
 assert.ok(legacyRuns > 1000, `old-code switches interleaved (${legacyRuns})`);
 assert.ok(roundTrips > 500, `new switch then old switch back (${roundTrips})`);
 assert.ok(leftovers > 80, `another account's leftover sidecar on some devices (${leftovers})`);
-console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${leftovers} with a third account's leftover sidecar, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);
+assert.ok(stashLeftovers > 80, `another account's leftover stashed foreign section on some devices (${stashLeftovers})`);
+console.log(`[switch-fuzz] ${runs} quota cases over ${TRIALS} devices (${switched} switches, ${legacyRuns} by old code, foreign sidecars on half, ${leftovers} with a third account's leftover sidecar, ${stashLeftovers} with its stashed foreign section, ${roundTrips} switched back by old code): 0 losses, 0 cross-account keys, no "intl" in a book key (${seconds.toFixed(1)} s)`);

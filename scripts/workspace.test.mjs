@@ -936,6 +936,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(once.clients.cli_acme0001.deletedAt, undefined);
       assert.equal(M.repairIntl(once, TE + 9 * DAY), once, "one pass reaches the fixed point");
     }
+    // Bank details saved after the erase (another device, TE + 70) stay as they are; only older ones are emptied
+    // (review round 5: the settings half of "content written after the erase is left alone").
+    const laterBank = M.sanitizeWorkspace(clone({ ...later, intl: { ...later.intl, settings: { ...settings, swift: "BARCGB22", updatedAt: TE + 70 } } }));
+    assert.equal(laterBank.intl.invoices.inv_usd00001.deletedAt, undefined, "(an older foreign invoice, so the erase is detected)");
+    for (const merged of [M.mergeWorkspaces(laterBank, erased), M.mergeWorkspaces(erased, laterBank)]) {
+      const once = M.repairIntl(merged, TE + 100);
+      assert.equal(once.intl.invoices.inv_usd00001.deletedAt, TE, "(the erase was detected)");
+      assert.deepEqual(once.intl.settings, laterBank.intl.settings, "settings newer than the erase are kept unchanged");
+      assert.equal(M.repairIntl(once, TE + 200), once, "one pass reaches the fixed point");
+    }
     // Same shape where nothing is newer than the erase: no client comes back.
     for (const merged of [M.mergeWorkspaces(W, erased), M.mergeWorkspaces(erased, W)]) {
       const once = M.repairIntl(merged, TE + 100);

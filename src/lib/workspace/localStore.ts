@@ -630,8 +630,9 @@ function putAside(id: string, reason: AsideReason, ws: Workspace, fromPrimary = 
   const key = `${ASIDE_PREFIX}${id}`;
   const before = readAside(id);
   const workspace = before ? mergeWorkspaces(before.workspace, ws) : ws;
-  // The list label: the business name, else the label of a copy that is only a foreign section (metadata only).
-  const name = workspace.business.name || label || before?.name || "";
+  // The list label: the business name, else (only for a copy that is only a foreign section) its label. An INR
+  // copy keeps older code's name, "" when nameless, so its key stays byte-identical (review round 5).
+  const name = workspace.business.name || (intlOnly(workspace) ? label || before?.name || "" : "");
   const meta = { at: Date.now(), reason, name, ...(fromPrimary ? { primary: true } : {}) };
   // Where a foreign section came from (only on the foreign-section key, which older code never reads).
   const from = origin ? { ...(origin.owner !== null ? { owner: origin.owner } : {}), book: origin.book } : {};
@@ -1268,9 +1269,10 @@ export function restoreBackup(
         target = newBookId();
         index = addBook(index, target, now);
       }
-      // A new book starts from emptyWorkspace() (business time 0), never emptyBusiness(now): a nameless backup
-      // restored into it would otherwise look like an old tab's erase at `now` (detectLegacyErase, spec §1.7).
-      books[target] = restoreFrom(books[target] ?? emptyWorkspace(), entry.workspace, now);
+      // A new book for a backup with a foreign section starts from emptyWorkspace() (business time 0), never
+      // emptyBusiness(now): a nameless backup restored into it would otherwise look like an old tab's erase at `now`
+      // (detectLegacyErase, spec §1.7). An INR-only backup starts as older code starts it (review round 5).
+      books[target] = restoreFrom(books[target] ?? emptyWorkspace(entry.workspace.intl ? 0 : now), entry.workspace, now);
       into.push(target);
     }
     return { kind: "done", shelf: { index, books }, restored: into.length, skipped, into, blocked };
@@ -1412,8 +1414,8 @@ export function trackDocumentInto(bookId: string, doc: DocumentToTrack, shelf: S
   // Matched among INR invoices only (liveInvoices): the generator bridge never touches a foreign-currency invoice.
   const existing = foreign ? undefined : liveInvoices(ws).find((i) => i.number.trim().toLowerCase() === number.toLowerCase());
   const invoiceId = existing?.id ?? newId("inv");
+  // The same fields older code writes (no spread): an INR invoice's stored bytes stay as they are (review round 5).
   ws = upsertInvoice(ws, {
-    ...existing,
     id: invoiceId,
     number,
     clientId: client.id,
