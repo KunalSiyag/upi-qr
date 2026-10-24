@@ -1252,6 +1252,18 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.deepEqual([M.summarizeForeign(all, day).EUR.dueSoonPaise, M.summarizeForeign(all, day).EUR.dueSoonCount], [0, 0]);
     assert.deepEqual([M.summarizeForeign(all, day, 30).EUR.dueSoonPaise, M.summarizeForeign(all, day, 30).EUR.dueSoonCount], [99, 1]);
     assert.deepEqual([M.summarizeForeign(all, day, 18).EUR.dueSoonPaise, M.summarizeForeign(all, day, 19).EUR.dueSoonPaise], [0, 99], "the window's edge");
+    // The default window is summarize's 7 days: an INR invoice and a € one due the same day count as due soon together.
+    {
+      const mirrored = M.upsertInvoice(W, invoice("inv_inr00099", "ST-0099", "cli_globex01", 99, { dueDate: "2026-10-30" }), X + 2);
+      for (const [d, expected] of [["2026-10-22", 0], ["2026-10-23", 1]]) {
+        const views = M.allInvoiceViews(mirrored, d);
+        const base = M.summarize(M.allInvoiceViews(W, d), d);
+        const inr = M.summarize(views, d);
+        assert.deepEqual([M.summarizeForeign(views, d).EUR.dueSoonCount, M.summarizeForeign(views, d).EUR.dueSoonPaise], [expected, 99 * expected], `default € window at ${d}`);
+        assert.deepEqual([inr.dueSoonCount - base.dueSoonCount, inr.dueSoonPaise - base.dueSoonPaise], [expected, 99 * expected], `the INR twin at ${d}`);
+      }
+      assert.equal(M.summarizeForeign(M.allInvoiceViews(mirrored, "2026-10-22"), "2026-10-22", 8).EUR.dueSoonCount, 1, "an explicit 8 days widens it");
+    }
 
     assert.deepEqual([...M.clientBalances(all)], [...legacy.clientBalances(legacy.invoiceViews(inrOnly, day))]);
     const fb = M.clientForeignBalances(all);
