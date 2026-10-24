@@ -17,8 +17,9 @@
  */
 
 import {
-  formatMoney, FOREIGN_CURRENCIES, isForeignCurrency, MAX_MINOR, normalizeAccount, normalizeFy, normalizeLutArn,
-  normalizeSwift, parseMoneyToMinor, safePayUrl, type CurrencyCode, type ForeignCurrency, type Minor,
+  CURRENCIES, exportNote, formatIban, formatMoney, FOREIGN_CURRENCIES, isForeignCurrency, looksLikeIban, MAX_MINOR, minorToDecimal,
+  normalizeAccount, normalizeFy, normalizeLutArn, normalizeSwift, parseMoneyToMinor, safePayUrl, type CurrencyCode, type ForeignCurrency,
+  type Minor,
 } from "./currency.ts";
 
 export const WORKSPACE_VERSION = 1;
@@ -242,6 +243,10 @@ export function paidPaise(invoice: Invoice): number {
   return invoice.payments.reduce((sum, p) => sum + p.amountPaise, 0);
 }
 
+/** An own entry of a record map: never an Object.prototype value for an id like "constructor" or "__proto__". */
+const own = <T>(map: Record<string, T> | undefined, id: string): T | undefined =>
+  map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined;
+
 export function viewInvoice(invoice: Invoice, clients: Record<string, Client>, today: string): InvoiceView {
   const paid = paidPaise(invoice);
   const balance = Math.max(0, invoice.amountPaise - paid);
@@ -252,16 +257,13 @@ export function viewInvoice(invoice: Invoice, clients: Record<string, Client>, t
   else if (daysPastDue > 0) state = "overdue";
   else if (paid > 0) state = "partial";
   else state = "due";
-  return { invoice, client: clients[invoice.clientId], paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue, currency: currencyOf(invoice) };
+  return { invoice, client: own(clients, invoice.clientId), paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue, currency: currencyOf(invoice) };
 }
 
 /** The record's currency: "INR" unless it carries a foreign one (only records in ws.intl do). */
 export function currencyOf(record: Invoice | RecurringPlan): CurrencyCode {
   return isForeignCurrency(record.currency) ? record.currency : "INR";
 }
-
-const own = <T>(map: Record<string, T> | undefined, id: string): T | undefined =>
-  map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined;
 
 /** An invoice in either map (legacy first), tombstones included. */
 export function getInvoice(ws: Workspace, id: string): Invoice | undefined {
@@ -324,6 +326,22 @@ export interface AgingBucket {
 
 /** Buckets by days past due; 45+ is where MSMED Act interest applies to B2B dues. */
 export function agingBuckets(views: InvoiceView[]): AgingBucket[] {
+  return agingBucketsOf(views, "INR");
+}
+
+/**
+ * The same buckets per currency, over each currency's own views (amounts in that currency's minor units).
+ * Only currencies with an open balance get an entry. Not shown yet (a later per-currency aging card).
+ */
+export function agingBucketsByCurrency(views: InvoiceView[]): Partial<Record<CurrencyCode, AgingBucket[]>> {
+  const out: Partial<Record<CurrencyCode, AgingBucket[]>> = {};
+  for (const currency of CURRENCIES) {
+    if (views.some((v) => v.currency === currency && v.balancePaise > 0)) out[currency] = agingBucketsOf(views, currency);
+  }
+  return out;
+}
+
+function agingBucketsOf(views: InvoiceView[], currency: CurrencyCode): AgingBucket[] {
   const buckets: AgingBucket[] = [
     { key: "current", label: "Not yet due", balancePaise: 0, count: 0 },
     { key: "d1_15", label: "1–15 days late", balancePaise: 0, count: 0 },
@@ -332,7 +350,7 @@ export function agingBuckets(views: InvoiceView[]): AgingBucket[] {
     { key: "d45_plus", label: "45+ days late", balancePaise: 0, count: 0 },
   ];
   for (const view of views) {
-    if (view.balancePaise === 0 || view.currency !== "INR") continue;
+    if (view.balancePaise === 0 || view.currency !== currency) continue;
     const d = view.daysPastDue;
     const bucket = d <= 0 ? buckets[0] : d <= 15 ? buckets[1] : d <= 30 ? buckets[2] : d <= MSMED_CREDIT_DAYS ? buckets[3] : buckets[4];
     bucket.balancePaise += view.balancePaise;
@@ -351,15 +369,28 @@ export interface Summary {
   openCount: number;
 }
 
+/** ₹ figures over INR views only: a foreign amount is never added to them. */
 export function summarize(views: InvoiceView[], today: string, dueSoonDays = 7): Summary {
+  return summarizeOf(views, today, dueSoonDays, "INR");
+}
+
+/** The same Summary per foreign currency, each over that currency's views only (minor units of that currency). */
+export function summarizeForeign(views: InvoiceView[], today: string, dueSoonDays = 7): Partial<Record<ForeignCurrency, Summary>> {
+  const out: Partial<Record<ForeignCurrency, Summary>> = {};
+  for (const currency of FOREIGN_CURRENCIES) {
+    if (views.some((v) => v.currency === currency)) out[currency] = summarizeOf(views, today, dueSoonDays, currency);
+  }
+  return out;
+}
+
+function summarizeOf(views: InvoiceView[], today: string, dueSoonDays: number, currency: CurrencyCode): Summary {
   const month = today.slice(0, 7);
   const summary: Summary = {
     outstandingPaise: 0, overduePaise: 0, overdueCount: 0,
     dueSoonPaise: 0, dueSoonCount: 0, collectedThisMonthPaise: 0, openCount: 0,
   };
   for (const view of views) {
-    // ₹ figures never include a foreign amount.
-    if (view.currency !== "INR") continue;
+    if (view.currency !== currency) continue;
     if (!view.invoice.voided) {
       for (const payment of view.invoice.payments) {
         if (payment.date.slice(0, 7) === month) summary.collectedThisMonthPaise += payment.amountPaise;
@@ -379,11 +410,42 @@ export function summarize(views: InvoiceView[], today: string, dueSoonDays = 7):
   return summary;
 }
 
-/** Overdue first, oldest and largest first — the order to chase payments in. */
+/** The INR-earned figure for a month: rupees the bank credited on foreign payments, as recorded. Never estimated. */
+export interface InrEarned {
+  /** Sum of inrCreditedPaise over foreign payments dated in the month (non-void invoices), integer paise. */
+  creditedPaise: number;
+  /** Foreign payments dated in the month (non-void invoices), with or without INR credited. */
+  payments: number;
+  /** Of those, the payments without INR credited. */
+  missing: number;
+}
+
+export function inrEarned(views: InvoiceView[], month: string): InrEarned {
+  const out: InrEarned = { creditedPaise: 0, payments: 0, missing: 0 };
+  for (const view of views) {
+    if (view.currency === "INR" || view.invoice.voided) continue;
+    for (const payment of view.invoice.payments) {
+      if (payment.date.slice(0, 7) !== month) continue;
+      out.payments += 1;
+      if (payment.inrCreditedPaise) out.creditedPaise += payment.inrCreditedPaise;
+      else out.missing += 1;
+    }
+  }
+  return out;
+}
+
+const currencyRank = (c: CurrencyCode) => CURRENCIES.indexOf(c);
+
+/**
+ * Overdue first, oldest and largest first — the order to chase payments in. Foreign invoices are included
+ * (chasing is about days late). Within one currency the order is today's (balance, then the stable input
+ * order); amounts in different currencies are never compared: INR first, then CURRENCIES order.
+ */
 export function chaseList(views: InvoiceView[]): InvoiceView[] {
   return views
     .filter((view) => view.state === "overdue" || (view.balancePaise > 0 && view.daysPastDue === 0))
-    .sort((a, b) => b.daysPastDue - a.daysPastDue || b.balancePaise - a.balancePaise);
+    .sort((a, b) => b.daysPastDue - a.daysPastDue
+      || (a.currency === b.currency ? b.balancePaise - a.balancePaise : currencyRank(a.currency) - currencyRank(b.currency)));
 }
 
 export function clientBalances(views: InvoiceView[]): Map<string, { balancePaise: number; overduePaise: number; open: number }> {
@@ -395,6 +457,25 @@ export function clientBalances(views: InvoiceView[]): Map<string, { balancePaise
     if (view.state === "overdue") entry.overduePaise += view.balancePaise;
     entry.open += 1;
     map.set(view.invoice.clientId, entry);
+  }
+  return map;
+}
+
+export interface ClientBalance { balancePaise: number; overduePaise: number; open: number }
+
+/** Per client, per foreign currency: open balance, overdue part and open count, in that currency's minor units. */
+export function clientForeignBalances(views: InvoiceView[]): Map<string, Partial<Record<ForeignCurrency, ClientBalance>>> {
+  const map = new Map<string, Partial<Record<ForeignCurrency, ClientBalance>>>();
+  for (const view of views) {
+    const currency = view.currency;
+    if (view.balancePaise === 0 || !isForeignCurrency(currency)) continue;
+    const byCurrency = map.get(view.invoice.clientId) ?? {};
+    const entry = byCurrency[currency] ?? { balancePaise: 0, overduePaise: 0, open: 0 };
+    entry.balancePaise += view.balancePaise;
+    if (view.state === "overdue") entry.overduePaise += view.balancePaise;
+    entry.open += 1;
+    byCurrency[currency] = entry;
+    map.set(view.invoice.clientId, byCurrency);
   }
   return map;
 }
@@ -1119,7 +1200,9 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
   let next = ws;
   const todayIndex = monthIndex(today.slice(0, 7));
   for (const plan of allLiveRecurring(ws)) {
-    if (plan.paused || !next.clients[plan.clientId] || next.clients[plan.clientId].deletedAt) continue;
+    // Own keys only (as digestProjection checks): a plan whose clientId is "constructor" has no client.
+    const client = own(next.clients, plan.clientId);
+    if (plan.paused || !client || client.deletedAt) continue;
     const last = Math.min(todayIndex, plan.endMonth ? monthIndex(plan.endMonth) : todayIndex);
     const first = Math.max(monthIndex(plan.startMonth), last - MAX_BACKFILL_MONTHS + 1);
     for (let index = first; index <= last; index++) {
@@ -1279,6 +1362,39 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
 }
 
 // ---------------------------------------------------------------------------
+// International payment details and the GST export note (spec §1.6, §6)
+
+const PAY_DETAIL_FIELDS = ["accountName", "bankName", "swift", "account", "bankDetails", "payUrl"] as const;
+
+/**
+ * The receiving details for one currency: the currency's own set (settings.byCurrency) when present, else the
+ * business-level fields. A set is used whole, never mixed field by field with the other, so a payer never sees
+ * one currency's account with another currency's routing. Undefined without settings.
+ */
+export function payDetailsFor(settings: IntlSettings | undefined, currency: ForeignCurrency): PayDetailsFields | undefined {
+  if (!settings) return undefined;
+  const source = settings.byCurrency?.[currency] ?? settings;
+  const out = {} as PayDetailsFields;
+  for (const field of PAY_DETAIL_FIELDS) out[field] = typeof source[field] === "string" ? source[field] : "";
+  return out;
+}
+
+/**
+ * The export line for an invoice: only for a foreign invoice the user marked as an export (exportLut), with the
+ * LUT toggle and ARN set, a business GSTIN, a client without a GSTIN, and the issue date in the LUT's financial
+ * year. Otherwise "". The currency alone never makes an invoice an export (IGST Act s.2(6)).
+ */
+function exportNoteFor(settings: IntlSettings | undefined, business: Business, client: Client | undefined, invoice: Invoice): string {
+  if (!settings?.exportUnderLut || invoice.exportLut !== true || !isForeignCurrency(invoice.currency)) return "";
+  if (!business.gstin.trim() || client?.gstin.trim()) return "";
+  return exportNote(settings.lutArn, settings.lutFy, invoice.issueDate);
+}
+
+export function invoiceExportNote(ws: Workspace, invoice: Invoice): string {
+  return exportNoteFor(ws.intl?.settings, ws.business, own(ws.clients, invoice.clientId), invoice);
+}
+
+// ---------------------------------------------------------------------------
 // Reminders and exports
 
 export type ReminderTone = "friendly" | "due_today" | "overdue" | "final";
@@ -1309,9 +1425,42 @@ export function msmeRightsLine(business: Business, lang: ReminderLang): string {
     : `We are a registered micro/small enterprise (Udyam ${business.udyam}). Under the MSMED Act, payment is due within the agreed credit period of up to 45 days (15 days without a written agreement); later payments carry compound interest (Section 16), and a business buyer can deduct a late payment to an MSE only in the year it is paid (the Income-tax Act's 43B(h) rule, carried into the 2025 Act).`;
 }
 
-export function reminderMessage(view: InvoiceView, business: Business, tone: ReminderTone, payLink?: string, lang: ReminderLang = "en", msmeRights = false): string {
-  const rights = msmeRights ? msmeRightsLine(business, lang) : "";
-  const amount = formatPaise(view.balancePaise);
+/**
+ * How a client abroad pays, for a reminder without a pay link: the bank block (only the lines that are set) and
+ * the payment URL, or the URL alone, or nothing.
+ */
+function foreignPayLines(details: PayDetailsFields | undefined, lang: ReminderLang): string[] {
+  if (!details) return [];
+  const hi = lang === "hi";
+  const url = safePayUrl(details.payUrl);
+  const raw = details.account.trim();
+  const account = looksLikeIban(raw) ? formatIban(raw) : raw;
+  const bank: string[] = [];
+  if (details.accountName.trim()) bank.push(`${hi ? "खाताधारक" : "Account name"}: ${details.accountName.trim()}`);
+  if (details.bankName.trim()) bank.push(`${hi ? "बैंक" : "Bank"}: ${details.bankName.trim()}`);
+  if (details.swift.trim()) bank.push(`SWIFT/BIC: ${details.swift.trim()}`);
+  if (account) bank.push(`${hi ? "IBAN / खाता नंबर" : "IBAN / account no."}: ${account}`);
+  for (const line of details.bankDetails.split("\n")) if (line.trim()) bank.push(line.trim());
+  if (!bank.length) return url ? [`${hi ? "ऑनलाइन भुगतान करें" : "Pay online"}: ${url}`] : [];
+  const lines = [hi ? "बैंक ट्रांसफ़र से भुगतान करें:" : "Pay by bank transfer:", ...bank];
+  if (url) lines.push(`${hi ? "या ऑनलाइन भुगतान करें" : "Or pay online"}: ${url}`);
+  return lines;
+}
+
+/**
+ * INR invoices: the UPI ID (or the pay link) and, if asked, the MSMED rights line; byte-identical to the text
+ * before clients abroad. Foreign invoices (spec §3.8): the amount in its currency, the pay link or the bank
+ * details for that currency (`intl`, the book's settings), the GST export line when it applies, and never UPI,
+ * UTR or MSMED text.
+ */
+export function reminderMessage(
+  view: InvoiceView, business: Business, tone: ReminderTone, payLink?: string, lang: ReminderLang = "en", msmeRights = false, intl?: IntlSettings,
+): string {
+  const currency = view.currency;
+  const foreign = isForeignCurrency(currency);
+  // The MSMED Act protects suppliers against buyers in India: never on a foreign invoice, even if asked.
+  const rights = msmeRights && !foreign ? msmeRightsLine(business, lang) : "";
+  const amount = formatMoney(view.balancePaise, currency);
   const number = view.invoice.number;
   const due = displayDate(view.invoice.dueDate, lang);
   const days = view.daysPastDue;
@@ -1327,9 +1476,15 @@ export function reminderMessage(view: InvoiceView, business: Business, tone: Rem
     };
     lines.push(opening[tone]);
     if (payLink) lines.push(`यहाँ सुरक्षित भुगतान करें: ${payLink}`);
+    else if (foreign) lines.push(...foreignPayLines(payDetailsFor(intl, currency), lang));
     else if (business.upiId) lines.push(`UPI से भुगतान करें: ${business.upiId}`);
     if (rights) lines.push(rights);
-    lines.push(tone === "friendly" ? "धन्यवाद!" : "अगर आपने भुगतान कर दिया है, तो कृपया UTR भेज दें ताकि हम रिकॉर्ड अपडेट कर सकें। धन्यवाद!");
+    // Statutory text, kept in English in Hindi reminders too (the reader is abroad).
+    const note = foreign ? exportNoteFor(intl, business, view.client, view.invoice) : "";
+    if (note) lines.push(note);
+    lines.push(tone === "friendly" ? "धन्यवाद!" : foreign
+      ? "अगर आपने भुगतान कर दिया है, तो कृपया ट्रांसफ़र रेफ़रेंस भेज दें ताकि हम रिकॉर्ड अपडेट कर सकें। धन्यवाद!"
+      : "अगर आपने भुगतान कर दिया है, तो कृपया UTR भेज दें ताकि हम रिकॉर्ड अपडेट कर सकें। धन्यवाद!");
     lines.push(`— ${from}`);
     return lines.join("\n");
   }
@@ -1343,16 +1498,34 @@ export function reminderMessage(view: InvoiceView, business: Business, tone: Rem
   };
   lines.push(opening[tone]);
   if (payLink) lines.push(`Pay securely here: ${payLink}`);
+  else if (foreign) lines.push(...foreignPayLines(payDetailsFor(intl, currency), lang));
   else if (business.upiId) lines.push(`Pay by UPI to: ${business.upiId}`);
   if (rights) lines.push(rights);
-  lines.push(tone === "friendly" ? "Thank you!" : "If you have already paid, please share the UTR so we can update our records. Thank you!");
+  const note = foreign ? exportNoteFor(intl, business, view.client, view.invoice) : "";
+  if (note) lines.push(note);
+  lines.push(tone === "friendly" ? "Thank you!" : foreign
+    ? "If you have already paid, please share the transfer reference so we can update our records. Thank you!"
+    : "If you have already paid, please share the UTR so we can update our records. Thank you!");
   lines.push(`— ${from}`);
   return lines.join("\n");
 }
 
-/** wa.me link; 10-digit Indian numbers get the 91 country code. */
-export function whatsappLink(phone: string, text: string): string {
+/**
+ * wa.me link; 10-digit Indian numbers get the 91 country code. With `international` (the invoice is foreign, or
+ * the client is billed in a foreign currency), a number typed with "+" or "00" is used as typed, without 91 and
+ * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
+ * goes to 919876543210).
+ */
+export function whatsappLink(phone: string, text: string, opts?: { international?: boolean }): string {
   let digits = phone.replace(/\D/g, "");
+  const typed = phone.trim();
+  if (opts?.international && (typed.startsWith("+") || typed.startsWith("00"))) {
+    // A bracketed "(0)" is the trunk prefix ("+44 (0)20 ..."), never dialled from abroad; every other 0 stays.
+    digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
+    if (!typed.startsWith("+")) digits = digits.slice(2);
+    const base = digits.length >= 8 ? `https://wa.me/${digits}` : "https://wa.me/";
+    return `${base}?text=${encodeURIComponent(text)}`;
+  }
   if (digits.length === 11 && digits.startsWith("0")) digits = digits.slice(1);
   if (digits.length === 10) digits = `91${digits}`;
   const base = digits.length >= 11 ? `https://wa.me/${digits}` : "https://wa.me/";
@@ -1366,12 +1539,33 @@ function csvCell(value: string | number): string {
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
+/** Rupees credited on an invoice's payments, only when every payment has a figure (a partial sum never looks complete). */
+function creditedOf(invoice: Invoice): string {
+  const payments = invoice.payments;
+  if (!payments.length || !payments.every((p) => p.inrCreditedPaise)) return "";
+  return paiseToDecimal(payments.reduce((sum, p) => sum + (p.inrCreditedPaise ?? 0), 0));
+}
+
+/**
+ * Invoices as CSV. Without a foreign invoice: exactly the columns and bytes from before clients abroad.
+ * With one (spec §3.7): the (INR) columns stay rupees only (empty on foreign rows, so a SUM over them is still
+ * rupees), and Currency, Amount, Paid, Balance (each in the row's own currency) and INR credited are appended.
+ */
 export function invoicesCsv(views: InvoiceView[]): string {
   const header = ["Invoice", "Client", "Phone", "Issue date", "Due date", "Amount (INR)", "Paid (INR)", "Balance (INR)", "Status", "Days past due", "Description"];
-  const rows = views.map((v) => [
-    v.invoice.number, v.client?.name ?? "", v.client?.phone ?? "", v.invoice.issueDate, v.invoice.dueDate,
-    paiseToDecimal(v.invoice.amountPaise), paiseToDecimal(v.paidPaise), paiseToDecimal(v.balancePaise),
-    v.state, Math.max(0, v.daysPastDue), v.invoice.description,
-  ].map(csvCell).join(","));
+  const mixed = views.some((v) => v.currency !== "INR");
+  const rows = views.map((v) => {
+    const inr = v.currency === "INR";
+    const cells: (string | number)[] = [
+      v.invoice.number, v.client?.name ?? "", v.client?.phone ?? "", v.invoice.issueDate, v.invoice.dueDate,
+      inr ? paiseToDecimal(v.invoice.amountPaise) : "", inr ? paiseToDecimal(v.paidPaise) : "", inr ? paiseToDecimal(v.balancePaise) : "",
+      v.state, Math.max(0, v.daysPastDue), v.invoice.description,
+    ];
+    if (mixed) {
+      cells.push(v.currency, minorToDecimal(v.invoice.amountPaise), minorToDecimal(v.paidPaise), minorToDecimal(v.balancePaise), inr ? "" : creditedOf(v.invoice));
+    }
+    return cells.map(csvCell).join(",");
+  });
+  if (mixed) header.push("Currency", "Amount", "Paid", "Balance", "INR credited");
   return [header.join(","), ...rows].join("\n");
 }

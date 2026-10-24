@@ -141,4 +141,20 @@ assert.equal(fifo.suggestions[0].invoiceId, "inv_sept0001");
 const over = matchCredits([{ key: "k", date: "2026-10-06", amountPaise: 999900, narration: "INV-0007 ROHAN MEHTA", utr: "", reference: "" }], invoiceViews(ws, today), new Map());
 assert.ok(over.suggestions.every((s) => s.amountPaise <= 450000));
 
+// Clients abroad (docs/spec-foreign-clients.md §3.6): a bank credit is rupees, so it is never offered for a foreign
+// invoice, even one of the same minor amount (₹4,500 is 450000 paise; US$4,500.00 is 450000 cents).
+{
+  const { allInvoiceViews, withoutIntl } = await import("../src/lib/workspace/model.ts");
+  let mixed = upsertInvoice(ws, { ...inv("inv_usd00007", "INV-0008", "cli_rohan001", "2026-09-25", "2026-10-05", 450000), currency: "USD" }, T);
+  mixed = upsertInvoice(mixed, { ...inv("inv_usd00012", "INV-0013", "cli_acme0001", "2026-09-01", "2026-09-15", 2500000), currency: "USD" }, T);
+  assert.ok(mixed.intl.invoices.inv_usd00007);
+  const all = allInvoiceViews(mixed, today);
+  assert.equal(all.filter((v) => v.currency === "USD").length, 2);
+  const credits = [...parsed.credits, { key: "usd", date: "2026-10-02", amountPaise: 450000, narration: "INV-0008 ROHAN MEHTA", utr: "", reference: "" }];
+  const withForeign = matchCredits(credits, all);
+  assert.ok(withForeign.suggestions.every((m) => !m.invoiceId.startsWith("inv_usd")), "no foreign invoice is ever suggested");
+  assert.deepEqual(withForeign, matchCredits(credits, invoiceViews(withoutIntl(mixed), today)), "INR matching is unchanged");
+  assert.deepEqual(matchCredits(parsed.credits, all), result);
+}
+
 console.log("[statement] CSV parsing (HDFC/ICICI/SBI/Axis/typed/signed), matching, FIFO, claims, and de-duplication checks passed");

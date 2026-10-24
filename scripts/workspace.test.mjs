@@ -807,7 +807,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(statementView(mixed, "cli_acme0001", today), null, "never a ₹-only statement for a client who owes US$");
     assert.equal(statementView(mixed, "cli_globex01", today), null, "never 'Paid' for a client who owes only US$");
     assert.equal(snapshotFor(mixed, "stmt:cli_globex01"), null);
-    assert.deepEqual(digestProjection(mixed), digestProjection(inrOnly), "the digest projection leaves foreign records out");
+    // PR 2 adds the foreign records as `fx`, which PR 1 and older readers ignore: the lists they read stay INR only.
+    const { fx, ...inrLists } = digestProjection(mixed);
+    assert.deepEqual(inrLists, digestProjection(inrOnly), "the projection's open/plans lists leave foreign records out");
+    assert.deepEqual(fx.open.map((t) => [t[0], t[6]]), [["inv_usd00001", "USD"], ["inv_usd00002", "USD"]]);
   }
 
   /* ---------- currency changes, plans and generateRecurring ---------- */
@@ -1179,6 +1182,337 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first.
     const unnamed = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: gone.intl });
     assert.equal(M.repairIntl(unnamed, E), unnamed);
+  }
+}
+
+/* =====================================================================================================
+ * Clients abroad, PR 2 (docs/spec-foreign-clients.md §3, §6, §9.1): money logic and text. Pure functions with no
+ * UI caller yet; every INR output is compared with the model from before clients abroad (legacy-model.ts).
+ * ===================================================================================================== */
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const legacy = await import("./fixtures/legacy-model.ts");
+  const { LUT_ENDORSEMENT } = await import("../src/lib/workspace/currency.ts");
+  const X = 1_791_000_000_000;
+  const clone = (x) => JSON.parse(JSON.stringify(x));
+  const cli = (id, name, extra = {}) => ({ id, name, phone: "", email: "", gstin: "", createdAt: X, updatedAt: X, ...extra });
+  const invoice = (id, number, clientId, amountPaise, extra = {}) => ({
+    id, number, clientId, issueDate: "2026-09-01", dueDate: "2026-09-20", amountPaise, description: "", payments: [], reminders: [], voided: false, createdAt: X, updatedAt: X, ...extra,
+  });
+  const ARN = "AD270326000123X";
+  const settings = {
+    on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "50100123456789", bankDetails: "Fort, Mumbai\n\nIFSC HDFC0000001",
+    payUrl: "https://paypal.me/sharma", exportUnderLut: true, lutArn: ARN, lutFy: "2026-27", updatedAt: X,
+    byCurrency: { USD: { accountName: "Sharma Tuition", bankName: "Wise US", swift: "", account: "8310006789", bankDetails: "ACH routing 026073150", payUrl: "" } },
+  };
+  // INR and US$ invoices of equal minor amounts (Acme); Globex is billed in US$ and €; Initech has an Indian GSTIN.
+  let inrBook = updateBusiness(emptyWorkspace(), { name: "Sharma Tuition", upiId: "sharma@okaxis", invoicePrefix: "ST-", gstin: "27AAAAA0000A1Z5", udyam: "UDYAM-MH-12-1234567" }, X);
+  inrBook = upsertClient(inrBook, cli("cli_acme0001", "Acme Pvt Ltd", { phone: "98765 43210" }), X);
+  inrBook = upsertClient(inrBook, cli("cli_globex01", "Globex LLC", { phone: "+1 415 555 0100" }), X);
+  inrBook = upsertClient(inrBook, cli("cli_initech1", "Initech India", { gstin: "29BBBBB1111B1Z5" }), X);
+  inrBook = upsertInvoice(inrBook, invoice("inv_inr00001", "ST-0001", "cli_acme0001", 450000), X);
+  inrBook = upsertInvoice(inrBook, invoice("inv_inr00002", "ST-0002", "cli_acme0001", 120000, { dueDate: "2026-10-10" }), X);
+  let W = M.upsertInvoice(inrBook, invoice("inv_usd00001", "ST-0003", "cli_acme0001", 450000, { currency: "USD", exportLut: true }), X);
+  W = M.upsertInvoice(W, invoice("inv_usd00002", "ST-0004", "cli_globex01", 120050, { currency: "USD", exportLut: true }), X);
+  W = M.upsertInvoice(W, invoice("inv_eur00001", "ST-0005", "cli_globex01", 99, { currency: "EUR", exportLut: true, dueDate: "2026-10-30" }), X);
+  W = M.upsertInvoice(W, invoice("inv_usd00003", "ST-0006", "cli_initech1", 7000, { currency: "USD", exportLut: true }), X);
+  W = M.addPayment(W, "inv_usd00002", { amountPaise: 50, date: "2026-09-25", mode: "bank", reference: "UETR1", inrCreditedPaise: 4150 }, X + 1);
+  W = { ...W, intl: { ...W.intl, settings } };
+  W = M.sanitizeWorkspace(clone(W));
+  assert.equal(W.intl.settings.bankDetails, settings.bankDetails);
+  const inrOnly = M.withoutIntl(W);
+  const day = "2026-10-11";
+  const all = M.allInvoiceViews(W, day);
+  const viewOf = (id, ws = W) => M.allInvoiceViews(ws, day).find((v) => v.invoice.id === id);
+
+  /* ---------- aggregates (§3.3): ₹ figures equal the INR-only book's; foreign ones are exact per currency ---------- */
+  {
+    assert.deepEqual(M.summarize(all, day), M.summarize(M.invoiceViews(inrOnly, day), day));
+    assert.deepEqual(M.summarize(all, day), legacy.summarize(legacy.invoiceViews(inrOnly, day), day), "the ₹ summary is the old model's");
+    const foreign = M.summarizeForeign(all, day);
+    assert.deepEqual(Object.keys(foreign), ["USD", "EUR"]);
+    assert.deepEqual(foreign.USD, { outstandingPaise: 450000 + 120000 + 7000, overduePaise: 577000, overdueCount: 3, dueSoonPaise: 0, dueSoonCount: 0, collectedThisMonthPaise: 0, openCount: 3 });
+    assert.deepEqual(foreign.EUR, { outstandingPaise: 99, overduePaise: 0, overdueCount: 0, dueSoonPaise: 0, dueSoonCount: 0, collectedThisMonthPaise: 0, openCount: 1 });
+    assert.equal(M.summarizeForeign(all, "2026-09-26").USD.collectedThisMonthPaise, 50, "collected in the invoice's own currency");
+    assert.equal(M.summarizeForeign(M.allInvoiceViews(W, "2026-10-25"), "2026-10-25").EUR.dueSoonPaise, 99);
+    assert.deepEqual(M.summarizeForeign(M.invoiceViews(inrOnly, day), day), {}, "no entry for an INR-only book");
+
+    assert.deepEqual(M.agingBuckets(all), legacy.agingBuckets(legacy.invoiceViews(inrOnly, day)));
+    const aging = M.agingBucketsByCurrency(all);
+    assert.deepEqual(Object.keys(aging), ["INR", "USD", "EUR"]);
+    assert.deepEqual(aging.INR, M.agingBuckets(all));
+    assert.deepEqual(aging.USD.map((b) => [b.key, b.balancePaise, b.count]), [["current", 0, 0], ["d1_15", 0, 0], ["d16_30", 577000, 3], ["d31_45", 0, 0], ["d45_plus", 0, 0]]);
+    assert.deepEqual(aging.EUR.find((b) => b.key === "current").balancePaise, 99);
+    // A currency whose invoices are all paid or void gets no entry.
+    const eurPaid = M.addPayment(W, "inv_eur00001", { amountPaise: 99, date: day, mode: "bank", reference: "" }, X + 2);
+    assert.deepEqual(Object.keys(M.agingBucketsByCurrency(M.allInvoiceViews(eurPaid, day))), ["INR", "USD"], "a fully paid currency drops out");
+    const eurVoid = M.upsertInvoice(W, { ...W.intl.invoices.inv_eur00001, voided: true }, X + 2);
+    assert.deepEqual(Object.keys(M.agingBucketsByCurrency(M.allInvoiceViews(eurVoid, day))), ["INR", "USD"], "a void-only currency drops out");
+    // dueSoonDays reaches the foreign summaries: the € invoice is due in 19 days.
+    assert.deepEqual([M.summarizeForeign(all, day).EUR.dueSoonPaise, M.summarizeForeign(all, day).EUR.dueSoonCount], [0, 0]);
+    assert.deepEqual([M.summarizeForeign(all, day, 30).EUR.dueSoonPaise, M.summarizeForeign(all, day, 30).EUR.dueSoonCount], [99, 1]);
+    assert.deepEqual([M.summarizeForeign(all, day, 18).EUR.dueSoonPaise, M.summarizeForeign(all, day, 19).EUR.dueSoonPaise], [0, 99], "the window's edge");
+    // The default window is summarize's 7 days: an INR invoice and a € one due the same day count as due soon together.
+    {
+      const mirrored = M.upsertInvoice(W, invoice("inv_inr00099", "ST-0099", "cli_globex01", 99, { dueDate: "2026-10-30" }), X + 2);
+      for (const [d, expected] of [["2026-10-22", 0], ["2026-10-23", 1]]) {
+        const views = M.allInvoiceViews(mirrored, d);
+        const base = M.summarize(M.allInvoiceViews(W, d), d);
+        const inr = M.summarize(views, d);
+        assert.deepEqual([M.summarizeForeign(views, d).EUR.dueSoonCount, M.summarizeForeign(views, d).EUR.dueSoonPaise], [expected, 99 * expected], `default € window at ${d}`);
+        assert.deepEqual([inr.dueSoonCount - base.dueSoonCount, inr.dueSoonPaise - base.dueSoonPaise], [expected, 99 * expected], `the INR twin at ${d}`);
+      }
+      assert.equal(M.summarizeForeign(M.allInvoiceViews(mirrored, "2026-10-22"), "2026-10-22", 8).EUR.dueSoonCount, 1, "an explicit 8 days widens it");
+    }
+
+    assert.deepEqual([...M.clientBalances(all)], [...legacy.clientBalances(legacy.invoiceViews(inrOnly, day))]);
+    const fb = M.clientForeignBalances(all);
+    assert.deepEqual(Object.fromEntries(fb), {
+      cli_acme0001: { USD: { balancePaise: 450000, overduePaise: 450000, open: 1 } },
+      cli_globex01: { USD: { balancePaise: 120000, overduePaise: 120000, open: 1 }, EUR: { balancePaise: 99, overduePaise: 0, open: 1 } },
+      cli_initech1: { USD: { balancePaise: 7000, overduePaise: 7000, open: 1 } },
+    });
+    assert.equal(M.clientForeignBalances(M.invoiceViews(inrOnly, day)).size, 0);
+    // A paid or void foreign invoice owes nothing.
+    const settled = M.addPayment(M.upsertInvoice(W, { ...W.intl.invoices.inv_usd00003, voided: true }, X + 2), "inv_usd00001", { amountPaise: 450000, date: day, mode: "bank", reference: "" }, X + 2);
+    assert.deepEqual(Object.keys(Object.fromEntries(M.clientForeignBalances(M.allInvoiceViews(settled, day)))), ["cli_globex01"]);
+  }
+
+  /* ---------- INR earned (§3.5): recorded credits only, never estimated ---------- */
+  {
+    assert.deepEqual(M.inrEarned(all, "2026-09"), { creditedPaise: 4150, payments: 1, missing: 0 });
+    assert.deepEqual(M.inrEarned(all, "2026-10"), { creditedPaise: 0, payments: 0, missing: 0 });
+    let w = M.addPayment(W, "inv_usd00001", { amountPaise: 1000, date: "2026-10-02", mode: "bank", reference: "" }, X + 3);
+    w = M.addPayment(w, "inv_usd00001", { amountPaise: 2000, date: "2026-10-03", mode: "other", reference: "PayPal", inrCreditedPaise: 166_000 }, X + 3);
+    w = M.addPayment(w, "inv_inr00001", { amountPaise: 5000, date: "2026-10-03", mode: "upi", reference: "" }, X + 3);
+    w = M.addPayment(w, "inv_eur00001", { amountPaise: 99, date: "2026-10-04", mode: "bank", reference: "", inrCreditedPaise: 9_900 }, X + 3);
+    assert.deepEqual(M.inrEarned(M.allInvoiceViews(w, day), "2026-10"), { creditedPaise: 175_900, payments: 3, missing: 1 }, "INR payments never count");
+    const voided = M.upsertInvoice(w, { ...M.getInvoice(w, "inv_eur00001"), voided: true }, X + 4);
+    assert.deepEqual(M.inrEarned(M.allInvoiceViews(voided, day), "2026-10"), { creditedPaise: 166_000, payments: 2, missing: 1 }, "a void invoice's payments don't count");
+  }
+
+  /* ---------- chase order (§3.3): INR order unchanged; currencies never compared by amount ---------- */
+  {
+    assert.deepEqual(M.chaseList(all).map((v) => v.invoice.id), ["inv_inr00001", "inv_usd00001", "inv_usd00002", "inv_usd00003", "inv_inr00002"]);
+    assert.deepEqual(M.chaseList([...all].reverse()).map((v) => v.invoice.id), ["inv_inr00001", "inv_usd00001", "inv_usd00002", "inv_usd00003", "inv_inr00002"], "the cross-currency tiebreak is deterministic");
+    assert.deepEqual(M.chaseList(all).filter((v) => v.currency === "INR"), M.chaseList(M.invoiceViews(inrOnly, day)));
+    // Two INR invoices with the same days and balance keep the input order (the id never decides), as before.
+    const twins = [invoice("inv_zzzz0001", "Z-1", "cli_acme0001", 5000), invoice("inv_aaaa0001", "A-1", "cli_acme0001", 5000)].map((i) => M.viewInvoice(i, W.clients, day));
+    for (const order of [twins, [...twins].reverse()]) {
+      assert.deepEqual(M.chaseList(order).map((v) => v.invoice.id), order.map((v) => v.invoice.id));
+      assert.deepEqual(M.chaseList(order).map((v) => v.invoice.id), legacy.chaseList(order).map((v) => v.invoice.id));
+    }
+    // Same-currency foreign ties behave the same way; mixed ties: INR, then CURRENCIES order (USD before EUR before SGD).
+    const mixedTies = ["SGD", "EUR", "INR", "USD"].map((c, n) => M.viewInvoice(invoice(`inv_tie${n}0001`, `T-${n}`, "cli_acme0001", 5000, c === "INR" ? {} : { currency: c }), W.clients, day));
+    assert.deepEqual(M.chaseList(mixedTies).map((v) => v.currency), ["INR", "USD", "EUR", "SGD"]);
+    // Same days late, the foreign minor amount larger: still INR first, then USD before EUR (amounts never compared).
+    const sameDay = [["inv_inr0small", 1000, "INR"], ["inv_usd00big1", 5000, "USD"], ["inv_eur00big1", 900000, "EUR"], ["inv_usd0small", 1, "USD"]]
+      .map(([id, amount, c]) => M.viewInvoice(invoice(id, id.slice(-4), "cli_acme0001", amount, c === "INR" ? {} : { currency: c }), W.clients, day));
+    for (const order of [sameDay, [...sameDay].reverse(), [sameDay[2], sameDay[1], sameDay[3], sameDay[0]]]) {
+      assert.deepEqual(M.chaseList(order).map((v) => v.invoice.id), ["inv_inr0small", "inv_usd00big1", "inv_usd0small", "inv_eur00big1"], "₹10.00 before US$50.00 before €9,000.00");
+    }
+    // The bare pairs from the review: ₹10.00 vs US$50.00, US$1.00 vs €9,000.00, either input order.
+    for (const [a, b] of [[sameDay[0], sameDay[1]], [sameDay[3], sameDay[2]]]) {
+      assert.deepEqual(M.chaseList([a, b]).map((v) => v.invoice.id), [a.invoice.id, b.invoice.id]);
+      assert.deepEqual(M.chaseList([b, a]).map((v) => v.invoice.id), [a.invoice.id, b.invoice.id]);
+    }
+    // A randomized INR corpus orders exactly as the old model did.
+    let seed = 7;
+    const rand = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+    for (let trial = 0; trial < 200; trial++) {
+      const views = Array.from({ length: 2 + rand(12) }, (_, n) => M.viewInvoice(invoice(`inv_r${trial}n${n}xxx`, `R-${n}`, "cli_acme0001", 1000 * (1 + rand(4)), { dueDate: `2026-10-${String(1 + rand(12)).padStart(2, "0")}` }), W.clients, day));
+      assert.deepEqual(M.chaseList(views).map((v) => v.invoice.id), legacy.chaseList(views).map((v) => v.invoice.id), `trial ${trial}`);
+    }
+  }
+
+  /* ---------- payment details and the export note (§1.6, §6) ---------- */
+  {
+    assert.deepEqual(M.payDetailsFor(W.intl.settings, "USD"), settings.byCurrency.USD, "the currency's own set, whole");
+    assert.deepEqual(M.payDetailsFor(W.intl.settings, "EUR"), { accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "50100123456789", bankDetails: settings.bankDetails, payUrl: "https://paypal.me/sharma" });
+    assert.equal(M.payDetailsFor(undefined, "USD"), undefined);
+    assert.ok(!("on" in M.payDetailsFor(W.intl.settings, "EUR")) && !("lutArn" in M.payDetailsFor(W.intl.settings, "EUR")), "only the six public fields");
+
+    const line = `${LUT_ENDORSEMENT} (LUT ARN ${ARN})`;
+    assert.equal(M.invoiceExportNote(W, M.getInvoice(W, "inv_usd00001")), line, "a marked US$ invoice issued in the LUT's FY");
+    assert.equal(M.invoiceExportNote(W, M.getInvoice(W, "inv_usd00003")), "", "never for a client with a GSTIN");
+    const unmarked = M.upsertInvoice(W, (({ exportLut, ...rest }) => rest)(M.getInvoice(W, "inv_usd00001")), X + 5);
+    assert.equal(M.invoiceExportNote(unmarked, M.getInvoice(unmarked, "inv_usd00001")), "", "never inferred from the currency");
+    assert.equal(M.invoiceExportNote(W, { ...M.getInvoice(W, "inv_usd00001"), issueDate: "2027-04-01" }), "", "issued in the next FY: the LUT has expired");
+    assert.equal(M.invoiceExportNote(W, { ...M.getInvoice(W, "inv_usd00001"), issueDate: "2027-03-31" }), line);
+    assert.equal(M.invoiceExportNote(updateBusiness(W, { gstin: "" }, X + 5), M.getInvoice(W, "inv_usd00001")), "", "no business GSTIN, no LUT");
+    const off = { ...W, intl: { ...W.intl, settings: { ...W.intl.settings, exportUnderLut: false } } };
+    assert.equal(M.invoiceExportNote(off, M.getInvoice(W, "inv_usd00001")), "", "the LUT toggle off");
+    assert.equal(M.invoiceExportNote(inrOnly, M.getInvoice(W, "inv_inr00001")), "", "never on an INR record");
+    assert.equal(M.invoiceExportNote(W, { ...M.getInvoice(W, "inv_inr00001"), exportLut: true }), "", "an INR record never carries the line, even if marked");
+  }
+
+  /* ---------- reminders (§3.8) ---------- */
+  {
+    const tones = ["friendly", "due_today", "overdue", "final"];
+    // INR: byte-identical to the old model for every tone, language, link and MSMED choice, with intl settings passed.
+    for (const ws of [W, inrOnly]) {
+      for (const v of M.invoiceViews(ws, day)) {
+        for (const tone of tones) for (const lang of ["en", "hi"]) for (const link of [undefined, "https://www.proupiqr.in/i/Tok1/"]) for (const rights of [false, true]) {
+          assert.equal(M.reminderMessage(v, ws.business, tone, link, lang, rights, ws.intl?.settings), legacy.reminderMessage(v, ws.business, tone, link, lang, rights), `${v.invoice.id} ${tone} ${lang}`);
+        }
+      }
+    }
+    const banned = /UPI|UTR|upi:\/\/|okaxis|MSMED|Udyam|UDYAM|43B/;
+    const usd = viewOf("inv_usd00001");
+    const text = M.reminderMessage(usd, W.business, "overdue", undefined, "en", true, W.intl.settings);
+    assert.deepEqual(text.split("\n").slice(1), [
+      "Pay by bank transfer:",
+      "Account name: Sharma Tuition",
+      "Bank: Wise US",
+      "IBAN / account no.: 8310006789",
+      "ACH routing 026073150",
+      `${LUT_ENDORSEMENT} (LUT ARN ${ARN})`,
+      "If you have already paid, please share the transfer reference so we can update our records. Thank you!",
+      "— Sharma Tuition",
+    ], "the USD override, the export line, a transfer reference");
+    assert.match(text.split("\n")[0], /^Hi Acme Pvt Ltd, invoice ST-0003 for US\$4,500\.00 was due on .+ and is now 21 days overdue\.$/);
+    assert.doesNotMatch(text, banned);
+    const eur = M.reminderMessage(viewOf("inv_eur00001"), W.business, "friendly", undefined, "en", true, W.intl.settings);
+    assert.deepEqual(eur.split("\n"), [
+      eur.split("\n")[0],
+      "Pay by bank transfer:",
+      "Account name: Sharma Tuition LLP",
+      "Bank: HDFC Bank",
+      "SWIFT/BIC: HDFCINBB",
+      "IBAN / account no.: 50100123456789",
+      "Fort, Mumbai",
+      "IFSC HDFC0000001",
+      "Or pay online: https://paypal.me/sharma",
+      `${LUT_ENDORSEMENT} (LUT ARN ${ARN})`,
+      "Thank you!",
+      "— Sharma Tuition",
+    ], "EUR has no override: the default set, blank lines dropped");
+    assert.match(eur, /^Hi Globex LLC, a friendly reminder that invoice ST-0005 for €0\.99 is due on /);
+    // Hindi: the Hindi bank block, the export line in English, a transfer reference.
+    const hi = M.reminderMessage(viewOf("inv_eur00001"), W.business, "overdue", undefined, "hi", true, W.intl.settings).split("\n");
+    assert.deepEqual(hi.slice(1), [
+      "बैंक ट्रांसफ़र से भुगतान करें:",
+      "खाताधारक: Sharma Tuition LLP",
+      "बैंक: HDFC Bank",
+      "SWIFT/BIC: HDFCINBB",
+      "IBAN / खाता नंबर: 50100123456789",
+      "Fort, Mumbai",
+      "IFSC HDFC0000001",
+      "या ऑनलाइन भुगतान करें: https://paypal.me/sharma",
+      `${LUT_ENDORSEMENT} (LUT ARN ${ARN})`,
+      "अगर आपने भुगतान कर दिया है, तो कृपया ट्रांसफ़र रेफ़रेंस भेज दें ताकि हम रिकॉर्ड अपडेट कर सकें। धन्यवाद!",
+      "— Sharma Tuition",
+    ]);
+    assert.match(hi[0], /€0\.99/);
+    // With a pay link: the link only (the page shows the details).
+    const linked = M.reminderMessage(usd, W.business, "final", "https://www.proupiqr.in/i/Tok9/", "en", false, W.intl.settings).split("\n");
+    assert.deepEqual(linked.slice(1), ["Pay securely here: https://www.proupiqr.in/i/Tok9/", `${LUT_ENDORSEMENT} (LUT ARN ${ARN})`, "If you have already paid, please share the transfer reference so we can update our records. Thank you!", "— Sharma Tuition"]);
+    assert.equal(M.reminderMessage(usd, W.business, "final", "https://x.example/i/T/", "hi", false, W.intl.settings).split("\n")[1], "यहाँ सुरक्षित भुगतान करें: https://x.example/i/T/");
+    // An IBAN is grouped in fours; a URL alone; nothing set.
+    const withIban = { ...settings, byCurrency: undefined, account: "GB82WEST12345698765432", payUrl: "" };
+    assert.ok(M.reminderMessage(usd, W.business, "overdue", undefined, "en", false, withIban).includes("\nIBAN / account no.: GB82 WEST 1234 5698 7654 32\n"));
+    assert.ok(!M.reminderMessage(usd, W.business, "overdue", undefined, "en", false, withIban).includes("Or pay online"));
+    const urlOnly = { ...M.emptyIntlSettings(X), payUrl: "https://wise.com/pay/me/sharma" };
+    assert.deepEqual(M.reminderMessage(usd, W.business, "friendly", undefined, "en", false, urlOnly).split("\n").slice(1), ["Pay online: https://wise.com/pay/me/sharma", "Thank you!", "— Sharma Tuition"]);
+    assert.equal(M.reminderMessage(usd, W.business, "friendly", undefined, "hi", false, urlOnly).split("\n")[1], "ऑनलाइन भुगतान करें: https://wise.com/pay/me/sharma");
+    // A hostile URL that reached the settings some other way is never printed.
+    const hostile = { ...M.emptyIntlSettings(X), payUrl: "javascript:alert(1)" };
+    assert.deepEqual(M.reminderMessage(usd, W.business, "friendly", undefined, "en", false, hostile).split("\n").slice(1), ["Thank you!", "— Sharma Tuition"]);
+    for (const nothing of [undefined, M.emptyIntlSettings(X)]) {
+      const t = M.reminderMessage(usd, W.business, "overdue", undefined, "en", true, nothing).split("\n");
+      assert.deepEqual(t.slice(1), ["If you have already paid, please share the transfer reference so we can update our records. Thank you!", "— Sharma Tuition"], "no payment line, no export line without settings");
+    }
+    // LUT without a business GSTIN, or for a client with a GSTIN: no export line.
+    assert.ok(!M.reminderMessage(usd, { ...W.business, gstin: "" }, "overdue", undefined, "en", false, W.intl.settings).includes("LUT ARN"));
+    assert.ok(!M.reminderMessage(viewOf("inv_usd00003"), W.business, "overdue", undefined, "en", false, W.intl.settings).includes("LUT ARN"));
+    // A clientId that is an Object.prototype key (crafted sync or hand-edited backup) has no client: the view's
+    // client is undefined (never a prototype value), the reminder is built, and its export note is invoiceExportNote's.
+    for (const clientId of ["constructor", "toString", "__proto__", "hasOwnProperty", "valueOf"]) {
+      const raw = clone(W);
+      raw.intl.invoices.inv_usd00001.clientId = clientId;
+      raw.invoices.inv_inr00001.clientId = clientId;
+      const pw = M.sanitizeWorkspace(raw);
+      assert.equal(pw.intl.invoices.inv_usd00001.clientId, clientId, "the sanitizer keeps the invoice");
+      const v = viewOf("inv_usd00001", pw);
+      assert.equal(v.client, undefined, `${clientId}: no client`);
+      const note = M.invoiceExportNote(pw, v.invoice);
+      assert.ok(note.includes(ARN), "the note applies (no client GSTIN)");
+      for (const tone of tones) for (const lang of ["en", "hi"]) {
+        const t = M.reminderMessage(v, pw.business, tone, undefined, lang, true, pw.intl.settings).split("\n");
+        assert.ok(t.includes(note), `${clientId} ${tone} ${lang}: the same export note`);
+        assert.ok(t[0].startsWith(lang === "hi" ? "नमस्ते जी," : "Hi there,"), t[0]);
+      }
+      const inr = viewOf("inv_inr00001", pw);
+      assert.equal(inr.client, undefined);
+      assert.ok(M.reminderMessage(inr, pw.business, "overdue").startsWith("Hi there,"), "an INR invoice too: never \"Hi Object\"");
+    }
+    // Never UPI, UTR, upi:// or MSMED text on a foreign reminder, whatever is asked.
+    for (const v of all.filter((x) => x.currency !== "INR")) {
+      for (const tone of tones) for (const lang of ["en", "hi"]) for (const link of [undefined, "https://www.proupiqr.in/i/Tok1/"]) for (const intl of [undefined, W.intl.settings, urlOnly]) {
+        const t = M.reminderMessage(v, W.business, tone, link, lang, true, intl);
+        assert.doesNotMatch(t, banned, `${v.invoice.id} ${tone} ${lang}`);
+        assert.ok(!t.includes("₹"), "a foreign reminder has no ₹ amount");
+      }
+    }
+  }
+
+  /* ---------- WhatsApp numbers (§3.8) ---------- */
+  {
+    const intl = { international: true };
+    assert.equal(M.whatsappLink("+1 415 555 0100", "Hi", intl), "https://wa.me/14155550100?text=Hi");
+    assert.equal(M.whatsappLink("+44 7700 900123", "Hi", intl), "https://wa.me/447700900123?text=Hi");
+    assert.equal(M.whatsappLink("00971501234567", "Hi", intl), "https://wa.me/971501234567?text=Hi");
+    assert.equal(M.whatsappLink("+44 07700 900123", "Hi", intl), "https://wa.me/4407700900123?text=Hi", "used as typed, no 0 stripped");
+    assert.equal(M.whatsappLink("+1 234", "Hi", intl), "https://wa.me/?text=Hi", "too short to be a number");
+    assert.equal(M.whatsappLink("+65 8123 4567", "Hi", intl), "https://wa.me/6581234567?text=Hi", "a 10-digit Singapore number");
+    assert.equal(M.whatsappLink("0065 8123 4567", "Hi", intl), "https://wa.me/6581234567?text=Hi", "the 00 prefix at that length");
+    assert.equal(M.whatsappLink("+12 345 678", "Hi", intl), "https://wa.me/12345678?text=Hi", "8 digits: the shortest number kept");
+    assert.equal(M.whatsappLink("+12 345 67", "Hi", intl), "https://wa.me/?text=Hi", "7 digits: dropped");
+    // A bracketed "(0)" is the trunk prefix, dropped; a significant 0 (Italy) stays.
+    assert.equal(M.whatsappLink("+44 (0)20 7946 0958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("+44 ( 0 ) 20 7946 0958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("0044(0)2079460958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("+39 06 1234 5678", "Hi", intl), "https://wa.me/390612345678?text=Hi", "Italy keeps its 0");
+    assert.equal(M.whatsappLink("+39 (06) 1234 5678", "Hi", intl), "https://wa.me/390612345678?text=Hi", "only a lone bracketed 0 goes");
+    // International without a "+": today's rule (a 10-digit number is Indian).
+    assert.equal(M.whatsappLink("98765 43210", "Hi", intl), "https://wa.me/919876543210?text=Hi");
+    // Without the option (INR): today's output, byte for byte, including a "+" typed before an Indian number.
+    for (const phone of ["+98765 43210", "98765 43210", "098765 43210", "+91 98765 43210", "+1 415 555 0100", "00971501234567", "", "12345"]) {
+      assert.equal(M.whatsappLink(phone, "Hi ₹"), legacy.whatsappLink(phone, "Hi ₹"), phone);
+      assert.equal(M.whatsappLink(phone, "Hi ₹", { international: false }), legacy.whatsappLink(phone, "Hi ₹"), phone);
+    }
+    assert.equal(M.whatsappLink("+98765 43210", "Hi"), "https://wa.me/919876543210?text=Hi");
+  }
+
+  /* ---------- CSV (§3.7) ---------- */
+  {
+    // No foreign invoice in the export: exactly the old bytes (also for an export of a mixed book's INR views).
+    assert.equal(M.invoicesCsv(M.invoiceViews(W, day)), legacy.invoicesCsv(legacy.invoiceViews(inrOnly, day)));
+    assert.equal(M.invoicesCsv([]), legacy.invoicesCsv([]));
+    const csv = M.invoicesCsv(all).split("\n");
+    assert.equal(csv[0], "Invoice,Client,Phone,Issue date,Due date,Amount (INR),Paid (INR),Balance (INR),Status,Days past due,Description,Currency,Amount,Paid,Balance,INR credited");
+    const row = (number) => csv.find((r) => r.startsWith(`${number},`));
+    assert.equal(row("ST-0001"), "ST-0001,Acme Pvt Ltd,98765 43210,2026-09-01,2026-09-20,4500.00,0.00,4500.00,overdue,21,,INR,4500.00,0.00,4500.00,");
+    assert.equal(row("ST-0004"), "ST-0004,Globex LLC,'+1 415 555 0100,2026-09-01,2026-09-20,,,,overdue,21,,USD,1200.50,0.50,1200.00,41.50", "(INR) columns empty on foreign rows");
+    assert.equal(row("ST-0005"), "ST-0005,Globex LLC,'+1 415 555 0100,2026-09-01,2026-10-30,,,,due,0,,EUR,0.99,0.00,0.99,", "no payments: no INR credited");
+    // The first 11 columns keep their positions; a SUM over Amount (INR) is still rupees only.
+    const inrSum = csv.slice(1).map((r) => r.split(",")[5]).filter(Boolean).reduce((s, x) => s + Number(x.replace(".", "")), 0);
+    assert.equal(inrSum, 450000 + 120000);
+    // INR credited only when every payment has it.
+    const partial = M.addPayment(W, "inv_usd00002", { amountPaise: 100, date: "2026-10-01", mode: "bank", reference: "" }, X + 6);
+    assert.ok(M.invoicesCsv(M.allInvoiceViews(partial, day)).split("\n").find((r) => r.startsWith("ST-0004,")).endsWith(",USD,1200.50,1.50,1199.00,"));
+    const full = M.addPayment(W, "inv_usd00002", { amountPaise: 100, date: "2026-10-01", mode: "bank", reference: "", inrCreditedPaise: 8_300 }, X + 6);
+    assert.ok(M.invoicesCsv(M.allInvoiceViews(full, day)).split("\n").find((r) => r.startsWith("ST-0004,")).endsWith(",USD,1200.50,1.50,1199.00,124.50"));
+    // Formula injection is neutralized on foreign rows too.
+    const hostile = M.upsertInvoice(W, { ...M.getInvoice(W, "inv_eur00001"), number: "=HYPERLINK(\"x\")", description: "@SUM(A1)" }, X + 6);
+    const hostileRow = M.invoicesCsv(M.allInvoiceViews(hostile, day)).split("\n").find((r) => r.includes("HYPERLINK"));
+    assert.ok(hostileRow.startsWith(`"'=HYPERLINK(""x"")"`) && hostileRow.includes(",'@SUM(A1),EUR,"));
+  }
+
+  /* ---------- MSMED rights and statement import stay INR-only (§3.6) ---------- */
+  {
+    assert.equal(M.msmeRightsLine(W.business, "en").includes("UDYAM-MH-12-1234567"), true, "the INR line exists for this business");
+    assert.ok(!M.reminderMessage(viewOf("inv_usd00001"), W.business, "final", undefined, "en", true, W.intl.settings).includes("UDYAM"));
   }
 }
 

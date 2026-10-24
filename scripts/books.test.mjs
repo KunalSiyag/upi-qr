@@ -246,6 +246,8 @@ assert.deepEqual(claimNotification({ ...claim, businessName: "  Riya   Designs "
 });
 assert.equal(claimNotification({ ...claim, businessId: PRIMARY_BOOK_ID }, "tok").url, "/app/");
 assert.equal(claimNotification({ ...claim, businessId: "javascript:alert(1)" }, "tok").url, "/app/", "only valid book ids reach the URL");
+assert.equal(claimNotification({ ...claim, amountPaise: 50_000, utr: "WISE-TR-991234", currency: "USD", businessName: "Riya Designs", businessId: A }, "tok").body,
+  "US$500.00 for INV-0042 (Riya Designs) · ref …1234. Check your bank, then confirm it in the tracker.", "a foreign claim: its currency and a transfer reference");
 
 /* ---------- metrics ---------- */
 assert.ok(METRICS.includes("business_added") && METRICS.includes("business_limit"));
