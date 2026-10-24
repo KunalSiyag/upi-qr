@@ -130,6 +130,8 @@ try {
   writeFileSync(backupPath, JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(snapshot) }));
   await t(`__t.click(/^Settings$/)`);
   await sleep(200);
+  // INTL_UI is off in this build (docs/spec-foreign-clients.md §5.1): no Clients abroad card, nothing new to create.
+  check("no Clients abroad card while INTL_UI is off", !/Clients abroad/.test(await text()) && !(await b.eval("!!document.getElementById('ws-intl-on')")));
   await t(`__t.click(/^Erase workspace on this device/)`);
   await t(`__t.click(/^Erase$/)`);
   await sleep(200);

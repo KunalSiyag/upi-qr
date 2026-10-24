@@ -22,10 +22,10 @@ const SUITES = [
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
   "books-server-e2e", "books-client-e2e", "books-e2e", "currency-e2e",
 ];
-// Suites that need the clients-abroad UI on (INTL_UI, docs/spec-foreign-clients.md §5.1). The runner builds a
+// Suites that need the clients-abroad UI on (INTL_UI, docs/spec-foreign-clients.md §5.1), all or in part. The runner builds a
 // separate flag-on copy of the static site for them (PROUPIQR_E2E_INTL_UI=1) and serves it at INTL_BASE; the
 // normal build in .vercel/output stays exactly as it was.
-const INTL_SUITES = ["currency-e2e"];
+const INTL_SUITES = ["currency-e2e", "books-e2e", "hindi-e2e"];
 const INTL_STATIC_DIR = join(ROOT, ".vercel", "e2e-intl-static");
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");

@@ -56,6 +56,38 @@ try {
   // ?lang=hi wins (links from Hindi pages).
   await b.go(BASE + "/app/?lang=hi", 2500);
   check("?lang=hi opens the Hindi app", (await text()).includes("सारांश"));
+  // Clients abroad in Hindi (docs/spec-foreign-clients.md §5.10): labels translated, currency codes and symbols stay Latin.
+  const abroad = { ...ws, clients: { ...ws.clients, cli_globex01: { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: T, updatedAt: T } } };
+  const intl = { settings: { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "50100123456789", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T },
+    invoices: { inv_usd00001: { ...ws.invoices.inv_00000001, id: "inv_usd00001", number: "TU-0002", clientId: "cli_globex01", amountPaise: 120000, currency: "USD" } }, recurring: {}, clients: {} };
+  const seedAbroad = async (base) => {
+    await b.go(base + "/terms/", 300);
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(abroad))});
+      localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); localStorage.setItem('proupiqr-workspace-lang', 'hi'); true`);
+  };
+  // Foreign data shown in this (flag-off) build: amounts in their own currency, in the Hindi UI too.
+  await seedAbroad(BASE);
+  await b.go(BASE + "/app/", 2500);
+  page = await text();
+  check("Hindi overview: the foreign row in US$ (Western grouping)", /US\$1,200\.00 वसूलना है/.test(page) && page.includes("लेना बाकी"), page.slice(0, 600));
+  const INTL = process.env.INTL_BASE;
+  check("the flag-on build is available (INTL_BASE)", Boolean(INTL));
+  if (INTL) {
+    await seedAbroad(INTL);
+    await b.go(INTL + "/app/?tab=settings", 2500);
+    await t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('विदेशी ग्राहक')); if (!d.open) d.querySelector('summary').click(); return true; })()");
+    await sleep(200);
+    page = await text();
+    check("Hindi Settings card: title, labels and button", page.includes("विदेशी ग्राहक") && page.includes("खाताधारक का नाम") && page.includes("IBAN या खाता नंबर") && page.includes("भुगतान की जानकारी सेव करें"));
+    check("Hindi Settings card: SWIFT / BIC and LUT ARN stay Latin", page.includes("SWIFT / BIC") && page.includes("LUT ARN"));
+    await t("[...document.querySelectorAll('button')].find(b => b.textContent === '+ नया इनवॉइस').click(), true");
+    await b.waitFor("!!document.getElementById('ws-currency')");
+    const sheet = await b.eval("document.querySelector('[role=dialog]').innerText");
+    check("Hindi invoice sheet: currency label translated, codes Latin", sheet.includes("मुद्रा") && (await b.eval("[...document.getElementById('ws-currency').options].map(o => o.textContent).join('|')")) === "INR (₹)|USD (US$)|EUR (€)|GBP (£)|AED|AUD (A$)|CAD (CA$)|SGD");
+    await t("document.getElementById('ws-currency').value = 'USD', document.getElementById('ws-currency').dispatchEvent(new Event('change', { bubbles: true })), true");
+    await sleep(100);
+    check("Hindi invoice sheet: राशि (USD)", (await b.eval("document.querySelector('[role=dialog]').innerText")).includes("राशि (USD)"));
+  }
   check("no console errors (excluding blocked Clerk)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));
