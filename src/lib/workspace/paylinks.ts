@@ -319,15 +319,14 @@ export const NO_INTL_FOR = "Add international payment details for {business} in 
 const noIntlFor = (ws: Workspace) => NO_INTL_FOR.replace("{business}", () => ws.business.name.trim() || "this business");
 
 /**
- * Claims waiting per business, for the switcher badge. Until the UI shows foreign-currency claim cards (PR 4),
- * claims on foreign links (they always carry `currency`) are left out, so the badge never counts a claim the
- * screen can't show, confirm or dismiss.
+ * Claims waiting per business, for the switcher badge: every claim, INR and foreign (the workspace shows a claim
+ * card for each since PR 4; review round 1 of PR 3 left foreign ones out while it couldn't).
  */
 export function pendingClaimCounts(links: Record<string, { claims: readonly { currency?: string }[] }>): Record<string, number> {
   const counts: Record<string, number> = {};
   for (const [key, link] of Object.entries(links)) {
     const { bookId } = parseLinkKey(key);
-    counts[bookId] = (counts[bookId] ?? 0) + link.claims.filter((claim) => !claim.currency).length;
+    counts[bookId] = (counts[bookId] ?? 0) + link.claims.length;
   }
   return counts;
 }
