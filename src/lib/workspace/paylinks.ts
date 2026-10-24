@@ -313,7 +313,9 @@ const noUpiFor = (ws: Workspace) => `Add a UPI ID for ${ws.business.name.trim() 
 
 /** A foreign-currency link without international payment details (no_intl); the client tr()s both texts. */
 export const NO_INTL = "Add international payment details in Settings before sharing pay links for foreign-currency invoices.";
-const noIntlFor = (ws: Workspace) => `Add international payment details for ${ws.business.name.trim() || "this business"} in Settings before sharing pay links.`;
+/** no_intl for a non-primary book; the client translates the template with its own { business } (paylinkClient). */
+export const NO_INTL_FOR = "Add international payment details for {business} in Settings before sharing pay links.";
+const noIntlFor = (ws: Workspace) => NO_INTL_FOR.replace("{business}", () => ws.business.name.trim() || "this business");
 
 /**
  * Primary records stay byte-identical ({ owner, invoiceId, createdAt }); other books also carry businessId, and a

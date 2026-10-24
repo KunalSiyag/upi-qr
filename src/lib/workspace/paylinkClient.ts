@@ -1,6 +1,6 @@
 import { authedFetch } from "./sync.ts";
 import { isBookId, parseLinkKey, PRIMARY_BOOK_ID } from "./books.ts";
-import type { PaylinkClaim } from "./paylinks.ts";
+import { NO_INTL, NO_INTL_FOR, type PaylinkClaim } from "./paylinks.ts";
 
 /** Browser client for /api/v1/paylinks/ (the primary business) and /api/v1/paylinks/books/<id>/ (other businesses). */
 
@@ -22,7 +22,12 @@ export interface LinkContext {
   expectedOwner?: string | null;
   /** Legacy server (no books routes): links for other businesses are never requested. */
   legacy?: boolean;
+  /** The business's name as the UI shows it, for messages that name it (no_intl outside the primary). */
+  businessName?: string;
 }
+
+/** A refused link: `error` is English for tr(error, vars). */
+export type LinkError = { error: string; code?: string; vars?: Record<string, string> };
 
 export function paylinkUrl(token: string): string {
   return `${location.origin}/i/${token}/`;
@@ -56,7 +61,7 @@ async function createLink(
   ctx: LinkContext,
   failMessage: string,
   offlineMessage: string,
-): Promise<{ token: string } | { error: string; code?: string }> {
+): Promise<{ token: string } | LinkError> {
   const route = linkRoute(bookId, ctx);
   if (!route) return { error: failMessage, code: "unavailable" };
   try {
@@ -66,6 +71,9 @@ async function createLink(
       // Calm, translatable messages for the multi-business answers; the server's text otherwise.
       if (reply.code === "plan_read_only") return { error: "This business is read-only on the Free plan. Upgrade to edit it again.", code: reply.code };
       if (reply.code === "owner_mismatch") return { error: "This tab is signed in to a different account now. Reload the page.", code: reply.code };
+      // The server fills in the business name, so its text has no Hindi key; send the template and the name instead.
+      if (reply.code === "no_intl" && bookId === PRIMARY_BOOK_ID) return { error: NO_INTL, code: reply.code };
+      if (reply.code === "no_intl" && ctx.businessName) return { error: NO_INTL_FOR, code: reply.code, vars: { business: ctx.businessName } };
       return { error: reply.error ?? failMessage, code: reply.code };
     }
     return { token: reply.token };
@@ -74,12 +82,12 @@ async function createLink(
   }
 }
 
-export function createPaylinkFor(invoiceId: string, bookId: string = PRIMARY_BOOK_ID, ctx: LinkContext = {}): Promise<{ token: string } | { error: string; code?: string }> {
+export function createPaylinkFor(invoiceId: string, bookId: string = PRIMARY_BOOK_ID, ctx: LinkContext = {}): Promise<{ token: string } | LinkError> {
   return createLink({ invoiceId }, bookId, ctx, "Couldn't create a pay link. Try again.", "You're offline. Connect to create a pay link.");
 }
 
 /** Statement links (Pro): one per client, keyed "stmt:<clientId>" (book-qualified outside the primary). */
-export function createStatementLinkFor(clientId: string, bookId: string = PRIMARY_BOOK_ID, ctx: LinkContext = {}): Promise<{ token: string } | { error: string; code?: string }> {
+export function createStatementLinkFor(clientId: string, bookId: string = PRIMARY_BOOK_ID, ctx: LinkContext = {}): Promise<{ token: string } | LinkError> {
   return createLink({ clientId }, bookId, ctx, "Couldn't create a statement link. Try again.", "You're offline. Connect to create a statement link.");
 }
 

@@ -540,7 +540,20 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   // A payment URL is rendered only through safePayUrl, and every link that leaves the page is noopener noreferrer nofollow.
   assert.match(page, /const url = safePayUrl\(text\(pay\?\.payUrl\)\);/, "payment URLs are checked again at render");
   const hrefs = [...page.matchAll(/href=\{([^}]+)\}|href="([^"]+)"/g)].map((m) => m[1] ?? m[2]);
-  assert.deepEqual([...new Set(hrefs)].sort(), ["/payment-tracker/", "block.url", "foreignBlock.url", "sharedBlock.url", "upiIntent"].sort(), "the page links only to the UPI intent, checked payment URLs and the tracker");
+  assert.deepEqual([...new Set(hrefs)].sort(), ["/payment-tracker/", "sectionPay.url", "foreignBlock.url", "sharedBlock.url", "upiIntent"].sort(), "the page links only to the UPI intent, checked payment URLs and the tracker");
+  // Tailwind scans every src file, so code like `!hidden[i]` or `!block.url` emits `!hidden` / `!block` rules into the
+  // global CSS of every page and changes its hash (review round 1). Name such identifiers so they can't read as utilities.
+  {
+    const { readdirSync, statSync } = await import("node:fs");
+    const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+    const important = /(^|[^\w-])!(block|hidden|flex|grid|inline|visible|invisible|fixed|static|absolute|relative|sticky|truncate|italic|underline|uppercase|lowercase|contents|table|grow|shrink|border|rounded|shadow|ring|outline|container|transform|filter|collapse|isolate)(?![\w-])/;
+    for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(astro|ts|tsx)$/.test(f))) {
+      for (const line of readFileSync(file, "utf8").split("\n")) {
+        if (/class(Name)?=/.test(line)) continue;
+        assert.doesNotMatch(line, important, `${file.slice(projectRoot.length + 1)}: Tailwind reads this as an important utility: ${line.trim().slice(0, 120)}`);
+      }
+    }
+  }
   for (const line of page.split("\n").filter((l) => /payUrl/.test(l))) assert.match(line, /safePayUrl\(/, `payUrl is read only through safePayUrl: ${line.trim()}`);
   for (const anchor of page.match(/<a [^>]*target="_blank"[^>]*>/g) ?? []) assert.match(anchor, /rel="noopener noreferrer nofollow"/, anchor);
   assert.equal((page.match(/target="_blank"/g) ?? []).length, 3, "the three payment-URL buttons");
@@ -573,6 +586,8 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(paylinksSrc, /return intl \? \{ \.\.\.record, intl: 1 \} : record;/, "only foreign links carry intl: 1");
   assert.match(paylinksSrc, /return isForeignCurrency\(r\.currency\) \? \{ \.\.\.claim, currency: r\.currency \} : claim;/);
   // Privacy text keeps up with what the pages show (en + hi).
+  const { PAY_URL_HOSTS } = await import("../src/lib/workspace/currency.ts");
+  const PAY_PROVIDERS = [[/(^|\.)paypal\.(me|com)$/, "PayPal"], [/(^|\.)wise\.com$/, "Wise"], [/(^|\.)stripe\.com$/, "Stripe"], [/^rzp\.io$/, "Razorpay"]];
   for (const file of ["src/pages/privacy.astro", "src/pages/hi/privacy.astro"]) {
     const text = read(file);
     assert.match(text, /SWIFT\/BIC/, `${file} lists SWIFT/BIC`);
@@ -581,6 +596,13 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
     assert.match(notifications, /transfer reference|ट्रांसफ़र रेफ़रेंस/, `${file}: notifications mention transfer references`);
     const payLinks = text.split("\n").find((l) => /<strong>Pay links/.test(l)) ?? "";
     assert.match(payLinks, /bank details|बैंक जानकारी/, `${file}: the statement sentence mentions bank details`);
+    // Every payment-link provider the allowlist accepts is named where the synced fields and pay pages are described.
+    const synced = text.split("\n").find((l) => /<strong>Payments workspace sync/.test(l)) ?? "";
+    for (const host of PAY_URL_HOSTS) {
+      const provider = PAY_PROVIDERS.find(([re]) => re.test(host))?.[1];
+      assert.ok(provider, `PAY_URL_HOSTS ${host}: name its provider here and in the privacy policy`);
+      assert.ok(synced.includes(provider) && payLinks.includes(provider), `${file} names ${provider} (${host})`);
+    }
   }
 }
 

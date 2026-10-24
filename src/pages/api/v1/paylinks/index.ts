@@ -42,8 +42,8 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const used = Object.keys(byInvoice).length;
     const entries = Object.entries(byInvoice).filter(([key]) => allBooks || !key.includes("/"));
     // Only an older client's request reads the records (one per link) to find the foreign-currency ones.
-    const hidden = intlClient ? [] : await Promise.all(entries.map(async ([, token]) => (await store.get(token))?.intl === 1));
-    const links = await Promise.all(entries.filter((_, i) => !hidden[i]).map(async ([invoiceId, token]) => ({
+    const isIntl = intlClient ? [] : await Promise.all(entries.map(async ([, token]) => (await store.get(token))?.intl === 1));
+    const links = await Promise.all(entries.filter((_, i) => !isIntl[i]).map(async ([invoiceId, token]) => ({
       invoiceId,
       token,
       claims: await store.claims(token),

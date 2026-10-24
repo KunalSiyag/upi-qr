@@ -287,7 +287,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
           {claimError && !inrPart && !claimed && <p role="alert" class="text-center text-xs font-bold text-[#a8321d]">{claimError}</p>}
 
           {sections.map((section) => {
-            const block = statement?.payByCurrency ? sectionBlock(section.currency) : null;
+            const sectionPay = statement?.payByCurrency ? sectionBlock(section.currency) : null;
             return (
               <section class="space-y-3 border-t border-forest/10 pt-5" aria-label={`${section.currency} invoices`}>
                 <p class="text-sm font-black">{section.currency} invoices · pay by bank transfer</p>
@@ -304,15 +304,15 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
                   </tbody>
                   <tfoot><tr class="border-t border-forest/10"><td class="pt-1.5 font-bold" colspan="2">{section.currency} due</td><td class="pt-1.5 text-right font-bold tabular-nums">{formatMoney(section.totalMinor, section.currency)}</td></tr></tfoot>
                 </table>
-                {block && (
+                {sectionPay && (
                   <Fragment>
-                    {block.url && <a href={block.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {block.host}</a>}
-                    {block.rows.length > 0 && (
+                    {sectionPay.url && <a href={sectionPay.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {sectionPay.host}</a>}
+                    {sectionPay.rows.length > 0 && (
                       <dl class="space-y-1 rounded-2xl bg-cream p-4 text-sm">
-                        {block.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                        {sectionPay.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
                       </dl>
                     )}
-                    {!block.url && block.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
+                    {!sectionPay.url && sectionPay.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
                   </Fragment>
                 )}
               </section>

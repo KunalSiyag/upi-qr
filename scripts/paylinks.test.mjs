@@ -125,8 +125,9 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
 {
   const { snapshotFor, snapshotView, parseSnapshot, snapshotsForLinks } = await import("../src/lib/workspace/paylinks.ts");
   const { addPayment: pay } = await import("../src/lib/workspace/model.ts");
+  // 32-bit LCG (Math.imul): a float product passes 2^53 and loses the low bits, so `% n` was 0 for any even n.
   let rnd = 7;
-  const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+  const rand = (n) => { rnd = (Math.imul(rnd, 1103515245) + 12345) >>> 0; return (rnd >>> 16) % n; };
   const d = (o) => new Date(Date.UTC(2026, 9, 10) + o * 86_400_000).toISOString().slice(0, 10);
   for (let trial = 0; trial < 30; trial++) {
     let w = updateBusiness(upsertClient(emptyWorkspace(), client, T), { name: "Shop", upiId: "shop@okaxis" }, T);
@@ -368,6 +369,9 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
     three = M.upsertInvoice(three, { ...usd("inv_usd00003", 100), number: "INV-U3", dueDate: "2026-10-02", issueDate: "2026-09-20" }, T);
     const s3 = P.statementView(three, client.id, day);
     assert.deepEqual(s3.foreign.map((s) => [s.currency, s.lines.map((l) => l.number), s.totalMinor, s.overdueMinor]), [["USD", ["INV-U3", "INV-01"], 300100, 300100], ["EUR", ["INV-01"], 1234, 1234], ["GBP", ["INV-01"], 700, 0]]);
+    // Three currencies sharing one set of details: one pay block, no payByCurrency.
+    assert.deepEqual(s3.pay, details);
+    assert.equal("payByCurrency" in s3, false);
     // Different details per currency → payByCurrency, no shared pay.
     const per = P.statementView(withSettings(three, { ...settings, byCurrency: { USD: wise } }), client.id, day);
     assert.equal("pay" in per, false);
@@ -399,7 +403,9 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
   // --- snapshot equivalence fuzz with currencies, settings, overrides and mixed clients ---
   {
     let rnd = 11;
-    const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+    const rand = (n) => { rnd = (Math.imul(rnd, 1103515245) + 12345) >>> 0; return (rnd >>> 16) % n; };
+    // Coverage: the fuzz fails if it stops producing the cases it exists for (it once produced only void invoices).
+    const seen = { foreignDue: 0, foreignOverdue: 0, foreignPartial: 0, foreignPaid: 0, foreignVoid: 0, inrDue: 0, inrOverdue: 0, inrPartial: 0, statement2: 0, overdueSection: 0, payShared: 0, payByCurrency: 0, exportLine: 0, exportNote: 0, multiCurrencySection: 0 };
     const d = (o) => new Date(Date.UTC(2026, 9, 10) + o * 86_400_000).toISOString().slice(0, 10);
     const codes = ["INR", "INR", "USD", "EUR", "GBP", "AED", "AUD", "CAD", "SGD"];
     const clients = ["cli_aaaaaaaa", "cli_bbbbbbbb", "cli_cccccccc"];
@@ -424,16 +430,29 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
         const today = d(offset);
         for (const id of ids) {
           const snap = P.parseSnapshot(JSON.stringify(P.snapshotFor(w, id)));
-          const expected = P.payPageView(w, id, today) ?? P.foreignPayView(w, id, today);
+          const inr = P.payPageView(w, id, today);
+          const expected = inr ?? P.foreignPayView(w, id, today);
           assert.deepEqual(snap ? P.snapshotView(snap, today).view : null, expected, `invoice ${id} @${today}`);
+          const key = (inr ? "inr" : "foreign") + expected.state[0].toUpperCase() + expected.state.slice(1);
+          if (key in seen) seen[key]++;
         }
         for (const id of clients) {
           const st = P.parseSnapshot(JSON.stringify(P.snapshotFor(w, `stmt:${id}`)));
-          assert.deepEqual(P.snapshotView(st, today).view, P.statementView(w, id, today), `statement ${id} @${today}`);
-          assert.equal(st.kind, P.statementView(w, id, today).foreign ? "statement2" : "statement");
+          const live = P.statementView(w, id, today);
+          assert.deepEqual(P.snapshotView(st, today).view, live, `statement ${id} @${today}`);
+          assert.equal(st.kind, live.foreign ? "statement2" : "statement");
+          if (!live.foreign) continue;
+          seen.statement2++;
+          if (live.foreign.some((s) => s.overdueMinor > 0)) seen.overdueSection++;
+          if (live.foreign.length > 1) seen.multiCurrencySection++;
+          if (live.pay) seen.payShared++;
+          if (live.payByCurrency) seen.payByCurrency++;
+          if (live.foreign.some((s) => s.lines.some((l) => l.export))) seen.exportLine++;
+          if (live.exportNote) seen.exportNote++;
         }
       }
     }
+    for (const [name, count] of Object.entries(seen)) assert.ok(count >= 5, `fuzz coverage: ${name} seen ${count} times`);
   }
   // parseSnapshot checks the foreign parts a page renders.
   {
@@ -444,6 +463,12 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
       { ...good, view: { ...good.view, balanceMinor: -1 } }, { ...good, view: { ...good.view, amountMinor: 1.5 } }, { ...good, view: { ...good.view, pay: null } },
       { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [] } },
       { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "INR", lines: [], totalMinor: 0 }] } },
+      // Shapes the page reads outside its try block (section.lines.map, statement.lines.length) and the totals it prints.
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), lines: null } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), lines: "x" } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: null, totalMinor: 0, overdueMinor: 0 }] } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: [], totalMinor: -1, overdueMinor: 0 }] } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: [], totalMinor: 1.5, overdueMinor: 0 }] } },
       { kind: "receipt", view: {} },
     ]) assert.equal(P.parseSnapshot(JSON.stringify(bad)), null, JSON.stringify(bad).slice(0, 80));
   }
@@ -511,6 +536,12 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
     assert.equal((await stmt(noIntl, client.id)).status, "ok");
     assert.equal((await stmt(noUpi, client.id)).status, "ok");
     assert.equal((await stmt(updateBusiness(noIntl, { upiId: "" }, T + 1), client.id)).status, "no_upi");
+    // Every foreign currency the client owes in must be payable: USD and EUR owed, EUR's own details unpayable → no_intl.
+    let two = M.upsertInvoice(noUpi, { ...usd("inv_eur00009", 4000, "cli_globex01"), currency: "EUR" }, T);
+    const eurUnpayable = withSettings(two, { ...settings, byCurrency: { EUR: { ...wise, account: "", payUrl: "" } } });
+    assert.equal(M.intlPayable(eurUnpayable.intl.settings, "USD"), true);
+    assert.deepEqual([(await stmt(eurUnpayable, "cli_globex01")).status], ["no_intl"]);
+    assert.equal((await stmt(withSettings(two, { ...settings, byCurrency: { EUR: wise } }), "cli_globex01")).status, "ok");
     // A statement link record never carries intl (statement subjects aren't counted as paid by older tabs).
     const s = memoryPaylinkStore();
     const sm = await P.createStatementLink(s, "o9", mixed, "cli_globex01", token, T, pro, vpa);
@@ -568,6 +599,57 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
     const paid = { index: emptyIndex(), books: { biz_primary: M.addPayment(mixed, "inv_usd00001", { amountPaise: 300000, date: "2026-10-05", mode: "bank", reference: "" }, T + 1) } };
     assert.deepEqual(paidLinkTokens(links, paid, new Set(["biz_primary"]), "2026-10-10"), ["t-usd", "t-gone"]);
   }
+  // The switcher badge counts only claims this build can show (review round 1): a claim on a foreign link carries
+  // currency and has no claim card until PR 4, so it is left out; INR invoice and statement claims count as before.
+  {
+    const { pendingClaimCounts } = await import("../src/lib/workspace/books.ts");
+    const inrClaim = { utr: "412345678901", amountPaise: 100, at: 1 };
+    const usdClaim = { utr: "WISE123456", amountPaise: 50000, at: 2, currency: "USD" };
+    assert.deepEqual(pendingClaimCounts({
+      inv_00000001: { claims: [inrClaim] },
+      inv_usd00001: { claims: [usdClaim, { ...usdClaim, utr: "WISE123457" }] },
+      "stmt:cli_aaaaaaaa": { claims: [inrClaim, { ...inrClaim, utr: "512345678901" }] },
+      "biz_bbbbbb01/inv_usd00001": { claims: [usdClaim] },
+      "biz_bbbbbb01/inv_00000002": { claims: [] },
+      "biz_cccccc01/inv_00000003": { claims: [inrClaim] },
+    }), { biz_primary: 3, biz_bbbbbb01: 0, biz_cccccc01: 1 });
+  }
+}
+
+// no_intl reaches the user translated (review round 1): the server names a non-primary business in its text, which
+// has no Hindi key, so the client sends the {business} template with the name the UI shows.
+{
+  const { createPaylinkFor, createStatementLinkFor } = await import("../src/lib/workspace/paylinkClient.ts");
+  const { WS_HI } = await import("../src/data/workspacePhrases.ts");
+  const P = await import("../src/lib/workspace/paylinks.ts");
+  const hi = (english, vars) => (WS_HI[english] ?? english).replace(/\{(\w+)\}/g, (m, k) => (vars && k in vars ? String(vars[k]) : m));
+  const realFetch = globalThis.fetch;
+  let reply;
+  globalThis.fetch = async () => new Response(JSON.stringify(reply), { status: 409, headers: { "Content-Type": "application/json" } });
+  try {
+    reply = { error: "Add international payment details for Book Two in Settings before sharing pay links.", code: "no_intl" };
+    for (const make of [createPaylinkFor, createStatementLinkFor]) {
+      const named = await make("inv_usd00001", "biz_bbbbbb01", { businessName: "Book Two" });
+      assert.deepEqual(named, { error: P.NO_INTL_FOR, code: "no_intl", vars: { business: "Book Two" } });
+      assert.equal(hi(named.error, named.vars), "पेमेंट लिंक भेजने से पहले सेटिंग्स में Book Two की अंतरराष्ट्रीय भुगतान की जानकारी जोड़ें।");
+      // Without a name from the UI: the server's English text, as before.
+      assert.deepEqual(await make("inv_usd00001", "biz_bbbbbb01", {}), { error: reply.error, code: "no_intl" });
+    }
+    reply = { error: P.NO_INTL, code: "no_intl" };
+    const primary = await createPaylinkFor("inv_usd00001");
+    assert.deepEqual(primary, { error: P.NO_INTL, code: "no_intl" });
+    assert.notEqual(hi(primary.error), primary.error, "the primary's no_intl text has a Hindi key");
+    // Other refusals keep the server's text.
+    reply = { error: "Add your UPI ID in Settings before sharing pay links.", code: "no_upi" };
+    assert.deepEqual(await createPaylinkFor("inv_00000001"), reply);
+  } finally {
+    globalThis.fetch = realFetch;
+  }
+  // The server's qualified text is the template with the name filled in (a "$&" in a name is kept literally).
+  const usdOnly = upsertInvoice(updateBusiness(upsertClient(emptyWorkspace(), client, T), { name: "A$&B", upiId: "ab@okaxis" }, T), { ...inv("inv_usd00001", 5000), currency: "USD" }, T);
+  const named = await P.createPaylink(memoryPaylinkStore(), "o9", usdOnly, "inv_usd00001", token, T, 10, vpa, "biz_bbbbbb01/inv_usd00001");
+  assert.equal(named.status, "no_intl");
+  assert.equal(named.message, P.NO_INTL_FOR.replace("{business}", "A$$&B"));
 }
 
 console.log("[paylinks] public view privacy, live balance, create guards, free limit, revoke, claims, and foreign-currency links/statements checks passed");

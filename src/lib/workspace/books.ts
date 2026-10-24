@@ -389,6 +389,20 @@ export function paidLinkTokens(links: Record<string, { token: string }>, shelf: 
   return tokens;
 }
 
+/**
+ * Claims waiting per business, for the switcher badge. Until the UI shows foreign-currency claim cards (PR 4),
+ * claims on foreign links (they always carry `currency`) are left out, so the badge never counts a claim the
+ * screen can't show, confirm or dismiss.
+ */
+export function pendingClaimCounts(links: Record<string, { claims: readonly { currency?: string }[] }>): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const [key, link] of Object.entries(links)) {
+    const { bookId } = parseLinkKey(key);
+    counts[bookId] = (counts[bookId] ?? 0) + link.claims.filter((claim) => !claim.currency).length;
+  }
+  return counts;
+}
+
 // ---------------------------------------------------------------------------
 // Hashes for the sync skip check
 

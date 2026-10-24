@@ -25,7 +25,7 @@ import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
 import {
-  addBook, bookRank, deleteBook, emptyIndex, isBookId, isTombstoned, linkFor, liveBookIds, newBookId, paidLinkTokens as paidTokensOf, parseLinkKey, PRIMARY_BOOK_ID,
+  addBook, bookRank, deleteBook, emptyIndex, isBookId, isTombstoned, linkFor, liveBookIds, newBookId, paidLinkTokens as paidTokensOf, parseLinkKey, pendingClaimCounts, PRIMARY_BOOK_ID,
   type BookIndex, type Shelf,
 } from "../../lib/workspace/books";
 import { BusinessSwitcher, UsageLine, type SwitcherBook, type SwitcherUsage } from "./BusinessSwitcher";
@@ -401,7 +401,7 @@ function Workspace() {
   }, [signedIn, refreshLinks]);
 
   /** Who asks for links: the account this tab syncs as, and whether the server has the business routes. */
-  const linkContext = (): LinkContext => ({ expectedOwner: syncRef.current?.owner() ?? null, legacy: syncRef.current?.legacy() ?? true });
+  const linkContext = (): LinkContext => ({ expectedOwner: syncRef.current?.owner() ?? null, legacy: syncRef.current?.legacy() ?? true, businessName: activeName });
 
   async function makeLink(invoiceId: string) {
     setLinkBusy(invoiceId);
@@ -420,7 +420,7 @@ function Workspace() {
         } else if (BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) {
           setUpsell("business_paylink");
           trackProductEvent("upgrade_prompt", "businesses");
-        } else setFlash(tr(result.error));
+        } else setFlash(tr(result.error, result.vars));
       }
       else {
         await refreshLinks();
@@ -512,7 +512,7 @@ function Workspace() {
       }
       const result = await createStatementLinkFor(clientId, active, linkContext());
       if ("error" in result && BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) setUpsell("business_paylink");
-      else if ("error" in result) setFlash(tr(result.error));
+      else if ("error" in result) setFlash(tr(result.error, result.vars));
       else { await refreshLinks(); setFlash(tr("Statement link ready — it always shows this client's current dues.")); }
     } finally {
       setLinkBusy(null);
@@ -664,14 +664,7 @@ function Workspace() {
     upsellRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
   }, [upsell]);
 
-  const claimCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (paylinks) for (const [key, link] of Object.entries(paylinks.byInvoice)) {
-      const { bookId } = parseLinkKey(key);
-      counts[bookId] = (counts[bookId] ?? 0) + link.claims.length;
-    }
-    return counts;
-  }, [paylinks]);
+  const claimCounts = useMemo(() => (paylinks ? pendingClaimCounts(paylinks.byInvoice) : {}), [paylinks]);
   const switcherBooks: SwitcherBook[] = useMemo(() => liveIds.map((id) => ({
     id,
     name: shelf.books[id]?.business.name ?? "",
