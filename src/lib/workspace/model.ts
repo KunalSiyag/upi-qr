@@ -1389,6 +1389,38 @@ export function intlPayable(settings: IntlSettings | undefined, currency: Foreig
   return Boolean((d.accountName.trim() && d.account.trim() && (d.swift.trim() || d.bankDetails.trim())) || safePayUrl(d.payUrl));
 }
 
+/** The client's default billing currency: its live intl.clients entry, else "INR". It only pre-fills the invoice sheet. */
+export function clientCurrency(ws: Workspace, clientId: string): CurrencyCode {
+  const entry = own(ws.intl?.clients, clientId);
+  return entry && !entry.deletedAt && isForeignCurrency(entry.currency) ? entry.currency : "INR";
+}
+
+/**
+ * Sets a client's billing currency. A foreign currency writes the side record; "INR" tombstones an existing one
+ * (INR is the default and is never written). Unchanged → the same workspace, so saving a client writes nothing new.
+ */
+export function setClientCurrency(ws: Workspace, clientId: string, currency: CurrencyCode, now: number): Workspace {
+  const entry = own(ws.intl?.clients, clientId);
+  if (isForeignCurrency(currency)) {
+    if (entry && !entry.deletedAt && entry.currency === currency) return ws;
+    const intl = ws.intl ?? emptyIntl();
+    return { ...ws, intl: { ...intl, clients: { ...intl.clients, [clientId]: { currency, updatedAt: now } } } };
+  }
+  if (!ws.intl || !entry || entry.deletedAt) return ws;
+  return { ...ws, intl: { ...ws.intl, clients: { ...ws.intl.clients, [clientId]: { ...entry, deletedAt: now, updatedAt: now } } } };
+}
+
+/**
+ * The business's clients-abroad settings, patched (one last-writer-wins record). The result goes through the
+ * sanitizer's own rules (normalized fields, LUT fields only with the LUT on, empty per-currency sets dropped), so
+ * what is kept in memory is exactly what the next load would read.
+ */
+export function updateIntlSettings(ws: Workspace, patch: Partial<Omit<IntlSettings, "updatedAt">>, now: number): Workspace {
+  const intl = ws.intl ?? emptyIntl();
+  const settings = sanitizeIntlSettings({ ...(intl.settings ?? emptyIntlSettings(now)), ...patch, updatedAt: now });
+  return settings ? { ...ws, intl: { ...intl, settings } } : ws;
+}
+
 /**
  * The export line for an invoice: only for a foreign invoice the user marked as an export (exportLut), with the
  * LUT toggle and ARN set, a business GSTIN, a client without a GSTIN, and the issue date in the LUT's financial

@@ -1517,4 +1517,71 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   }
 }
 
+/* ---------- PR 4 helpers: client billing currency and the settings record (§1.6) ---------- */
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const X = Date.UTC(2026, 9, 1);
+  const client = { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: X, updatedAt: X };
+  const inr = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), client, X);
+  const bytes = M.canonicalJson(M.sanitizeWorkspace(inr));
+
+  // INR is the default and is never written: an INR-only book keeps its bytes (no intl key).
+  assert.equal(M.clientCurrency(inr, client.id), "INR");
+  assert.equal(M.setClientCurrency(inr, client.id, "INR", X + 1), inr, "INR on a client without an entry writes nothing");
+  assert.equal(M.canonicalJson(M.sanitizeWorkspace(M.setClientCurrency(inr, client.id, "INR", X + 1))), bytes);
+  assert.equal(M.clientCurrency(inr, "constructor"), "INR", "own keys only");
+
+  const usd = M.setClientCurrency(inr, client.id, "USD", X + 2);
+  assert.equal(M.clientCurrency(usd, client.id), "USD");
+  assert.deepEqual(usd.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 });
+  assert.equal(M.setClientCurrency(usd, client.id, "USD", X + 3), usd, "unchanged → same object (no write)");
+  assert.deepEqual(M.sanitizeWorkspace(JSON.parse(JSON.stringify(usd))).intl.clients, usd.intl.clients, "round trip");
+  const eur = M.setClientCurrency(usd, client.id, "EUR", X + 4);
+  assert.equal(M.clientCurrency(eur, client.id), "EUR");
+  // Back to INR: a tombstone, never an "INR" entry.
+  const back = M.setClientCurrency(eur, client.id, "INR", X + 5);
+  assert.equal(M.clientCurrency(back, client.id), "INR");
+  assert.deepEqual(back.intl.clients[client.id], { currency: "EUR", updatedAt: X + 5, deletedAt: X + 5 });
+  assert.ok(!JSON.stringify(back).includes('"INR"'));
+  // The tombstone wins the merge against the older entry in both orders, and the pruned book is INR bytes again.
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(eur, back), client.id), "INR");
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(back, eur), client.id), "INR");
+  assert.equal(M.canonicalJson(M.pruneTombstones(M.sanitizeWorkspace(back), X + 5 + 91 * 86_400_000)), bytes);
+
+  // Settings: one record, normalized like the sanitizer; every field kept on a later patch.
+  const on = M.updateIntlSettings(inr, { on: true }, X + 10);
+  assert.equal(on.intl.settings.on, true);
+  assert.equal(on.intl.settings.updatedAt, X + 10);
+  assert.deepEqual(Object.keys(on.intl.invoices), []);
+  const details = M.updateIntlSettings(on, {
+    accountName: "  Sharma Tuition LLP ", bankName: "HDFC Bank", swift: "hdfc in bb", account: "gb82 west 1234 5698 7654 32",
+    bankDetails: "ABA 026009593\n\n", payUrl: "https://paypal.me/sharma",
+  }, X + 11);
+  const s = details.intl.settings;
+  assert.equal(s.on, true, "an earlier field survives a later patch");
+  assert.equal(s.swift, "HDFCINBB");
+  assert.equal(s.account, "GB82WEST12345698765432");
+  assert.equal(s.payUrl, "https://paypal.me/sharma");
+  assert.ok(M.intlPayable(s, "USD"));
+  assert.equal(M.updateIntlSettings(on, { payUrl: "https://evil.example/pay" }, X + 12).intl.settings.payUrl, "", "unsafe URLs are dropped");
+  // LUT fields are kept only with the LUT on; an all-empty per-currency set is dropped.
+  const lutOff = M.updateIntlSettings(details, { lutArn: "AD2704260012345", lutFy: "2026-27" }, X + 13).intl.settings;
+  assert.equal(lutOff.lutArn, "");
+  const lut = M.updateIntlSettings(details, { exportUnderLut: true, lutArn: "ad27 0426 0012345", lutFy: "2026-27" }, X + 14).intl.settings;
+  assert.equal(lut.lutArn, "AD2704260012345");
+  assert.equal(lut.lutFy, "2026-27");
+  const empty = { accountName: "", bankName: "", swift: "", account: "", bankDetails: "", payUrl: "" };
+  const withUsd = M.updateIntlSettings(details, { byCurrency: { USD: { ...empty, accountName: "Wise USD", account: "8310123456", bankDetails: "ACH 026073150" }, EUR: empty } }, X + 15);
+  assert.deepEqual(Object.keys(withUsd.intl.settings.byCurrency), ["USD"]);
+  assert.equal(M.payDetailsFor(withUsd.intl.settings, "USD").accountName, "Wise USD");
+  assert.equal(M.payDetailsFor(withUsd.intl.settings, "EUR").accountName, "Sharma Tuition LLP");
+  const cleared = M.updateIntlSettings(withUsd, { byCurrency: { USD: empty } }, X + 16);
+  assert.ok(!("byCurrency" in cleared.intl.settings), "clearing all six fields removes the override");
+  // What is kept in memory equals what the next load reads.
+  assert.equal(M.canonicalJson(M.sanitizeWorkspace(JSON.parse(JSON.stringify(withUsd)))), M.canonicalJson(withUsd));
+  // The settings record merges last-writer-wins as a whole.
+  assert.equal(M.mergeWorkspaces(details, withUsd).intl.settings.updatedAt, X + 15);
+  assert.equal(M.mergeWorkspaces(withUsd, details).intl.settings.updatedAt, X + 15);
+}
+
 console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");
