@@ -293,4 +293,54 @@ const inv = (id, number, amountPaise, at = T) => ({
   assert.deepEqual(await orphanStore.viewTokens("o2"), ["tokLive"]);
 }
 
+// Clients abroad, PR 1 (docs/spec-foreign-clients.md §1.3, §2.6): the server keeps ws.intl through pushes from
+// code that can't see it, repairs what that code did, sanitizes hostile values, and counts intl in the size cap.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const legacy = await import("./fixtures/legacy-model.ts");
+  const store = memoryCloudStore();
+  const settings = { on: true, accountName: "Rohan Tutors", bankName: "HDFC", swift: "HDFCINBB", account: "50100123456789", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T };
+  let w = M.upsertInvoice(upsertClient(emptyWorkspace(), client, T), inv("inv_00000001", "A-1", 10000), T);
+  w = M.upsertInvoice(w, { ...inv("inv_usd00001", "A-2", 10000), currency: "USD" }, T);
+  w = M.sanitizeWorkspace({ ...w, intl: { ...w.intl, settings } });
+  const first = await syncWorkspace(store, "fx", w, T);
+  assert.deepEqual(first.workspace.intl, w.intl);
+  // An old client's PUT (its sanitizer drops intl) with an edited INR record and business keeps the stored intl.
+  let old = legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(first.workspace)));
+  old = legacy.addPayment(old, "inv_00000001", { amountPaise: 5000, date: today, mode: "upi", reference: "" }, T + 1);
+  old = legacy.updateBusiness(old, { name: "Renamed" }, T + 2);
+  const afterOld = await syncWorkspace(store, "fx", JSON.parse(JSON.stringify(old)), T + 3);
+  assert.equal(afterOld.rev, 2);
+  assert.deepEqual(afterOld.workspace.intl, w.intl, "an old client's push never strips the stored section");
+  assert.equal(afterOld.workspace.business.name, "Renamed");
+  assert.match(store.docs.get("fx").json, /"currency":"USD"/);
+  // A no-change INR-only PUT (an old client re-pushing the same data) doesn't write.
+  assert.equal((await syncWorkspace(store, "fx", JSON.parse(JSON.stringify(old)), T + 4)).rev, 2);
+  // An old tab deleted the client its old UI showed with no invoices: the server revives it.
+  const oldDelete = legacy.deleteClient(legacy.upsertInvoice(old, { ...old.invoices.inv_00000001, deletedAt: T + 5 }, T + 5), client.id, T + 6);
+  const revived = await syncWorkspace(store, "fx", JSON.parse(JSON.stringify(oldDelete)), T + 7);
+  assert.equal(revived.workspace.clients[client.id].deletedAt, undefined, "a client with a live foreign invoice comes back");
+  assert.equal(revived.workspace.intl.invoices.inv_usd00001.deletedAt, undefined);
+  // Hostile intl values come out sanitized.
+  const hostile = await syncWorkspace(memoryCloudStore(), "fy", {
+    business: { name: "X" },
+    intl: {
+      settings: { accountName: "x".repeat(10_000), payUrl: "javascript:alert(1)", swift: "<img>", updatedAt: "now" },
+      invoices: { inv_nan00001: { ...inv("inv_nan00001", "N", Number.NaN), currency: "USD" }, inv_str00001: { ...inv("inv_str00001", "N", "100"), currency: "USD" }, "__proto__": { currency: "USD" } },
+      clients: { cli_aaaaaaaa: { currency: "javascript:", updatedAt: 1 } },
+    },
+  }, T);
+  assert.deepEqual(hostile.workspace.intl.invoices, {});
+  assert.deepEqual(hostile.workspace.intl.clients, {});
+  assert.deepEqual([hostile.workspace.intl.settings.accountName.length, hostile.workspace.intl.settings.payUrl, hostile.workspace.intl.settings.swift, hostile.workspace.intl.settings.updatedAt], [80, "", "", 0]);
+  // The size cap counts intl.
+  const huge = { ...emptyWorkspace(), intl: { invoices: {}, recurring: {}, clients: {} } };
+  for (let i = 0; i < 4000; i++) {
+    const id = `inv_big${String(i).padStart(6, "0")}`;
+    huge.intl.invoices[id] = { ...inv(id, `B-${i}`, 100), currency: "EUR", description: "y".repeat(250) };
+  }
+  const tooBig = await syncWorkspace(memoryCloudStore(), "fz", huge, T);
+  assert.equal(tooBig.status, "too_large");
+}
+
 console.log("[workspace-cloud] multi-device merge, CAS retry, conflict cap, size limit, sanitizer, book slots, book index (limits, downgrade, races, tombstones) and cleanup checks passed");

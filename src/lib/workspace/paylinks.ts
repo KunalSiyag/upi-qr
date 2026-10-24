@@ -1,4 +1,4 @@
-import { isIsoDate, viewInvoice, type InvoiceState, type Workspace } from "./model.ts";
+import { allLiveInvoices, currencyOf, getInvoice, isIsoDate, liveInvoices, viewInvoice, type InvoiceState, type Workspace } from "./model.ts";
 import { isBookId, parseLinkKey, PRIMARY_BOOK_ID } from "./books.ts";
 
 /**
@@ -68,10 +68,14 @@ export interface PayPageView {
   state: InvoiceState;
 }
 
-/** What the public page may show. Deliberately excludes the client's name and contact details. */
+/**
+ * What the public page may show. Deliberately excludes the client's name and contact details.
+ * INR invoices only: a foreign-currency invoice is null (no ₹ amount, no UPI QR for it), so a server
+ * that can't render foreign links answers 404 instead (docs/spec-foreign-clients.md §1.6).
+ */
 export function payPageView(ws: Workspace, invoiceId: string, today: string): PayPageView | null {
-  const invoice = ws.invoices[invoiceId];
-  if (!invoice || invoice.deletedAt) return null;
+  const invoice = getInvoice(ws, invoiceId);
+  if (!invoice || invoice.deletedAt || currencyOf(invoice) !== "INR") return null;
   const view = viewInvoice(invoice, ws.clients, today);
   return {
     merchantName: ws.business.name.trim() || "Merchant",
@@ -111,12 +115,21 @@ export interface StatementView {
   overduePaise: number;
 }
 
-/** Open invoices for one client, oldest due first. No client identity and no descriptions (they often contain names). */
+/** A live client with an open (unpaid, not void) foreign-currency invoice. */
+export function hasOpenForeign(ws: Workspace, clientId: string): boolean {
+  return allLiveInvoices(ws).some((inv) => inv.clientId === clientId && currencyOf(inv) !== "INR" && viewInvoice(inv, ws.clients, "0000-01-01").balancePaise > 0);
+}
+
+/**
+ * Open INR invoices for one client, oldest due first. No client identity and no descriptions (they often
+ * contain names). Null for a client with open foreign-currency invoices: this build can't show them, and a
+ * statement without them would read "Paid" while money is still owed.
+ */
 export function statementView(ws: Workspace, clientId: string, today: string): StatementView | null {
-  const client = ws.clients[clientId];
-  if (!client || client.deletedAt) return null;
-  const lines = Object.values(ws.invoices)
-    .filter((inv) => !inv.deletedAt && inv.clientId === clientId)
+  const client = Object.prototype.hasOwnProperty.call(ws.clients, clientId) ? ws.clients[clientId] : undefined;
+  if (!client || client.deletedAt || hasOpenForeign(ws, clientId)) return null;
+  const lines = liveInvoices(ws)
+    .filter((inv) => inv.clientId === clientId)
     .map((inv) => viewInvoice(inv, ws.clients, today))
     .filter((v) => v.balancePaise > 0 && v.state !== "void")
     .sort((a, b) => a.invoice.dueDate.localeCompare(b.invoice.dueDate) || a.invoice.issueDate.localeCompare(b.invoice.issueDate))
@@ -143,6 +156,7 @@ export async function createStatementLink(
   key: string = statementSubject(clientId),
 ): Promise<CreateResult> {
   if (!plan.statementLinks) return { status: "not_pro", message: "Statement links are part of Pro." };
+  if (hasOpenForeign(ws, clientId)) return { status: "not_found", message: NOT_YET_FOREIGN };
   const view = statementView(ws, clientId, "1970-01-01");
   if (!view) return { status: "missing_client", message: "This client hasn't synced yet. Wait a moment and try again." };
   if (view.totalPaise <= 0) return { status: "no_balance", message: "This client has nothing due." };
@@ -168,9 +182,17 @@ function recordFor(owner: string, key: string, now: number): PaylinkRecord {
   return bookId === PRIMARY_BOOK_ID ? { owner, invoiceId: key, createdAt: now } : { owner, invoiceId: key, createdAt: now, businessId: bookId };
 }
 
+/** not_found (API 404): a link for foreign-currency invoices, which this server can't render yet. */
 export type CreateResult =
   | { status: "ok"; token: string; created: boolean }
-  | { status: "missing_invoice" | "missing_client" | "not_pro" | "no_balance" | "no_upi" | "limit"; message: string };
+  | { status: "missing_invoice" | "missing_client" | "not_pro" | "no_balance" | "no_upi" | "limit" | "not_found"; message: string };
+
+export const NOT_YET_FOREIGN = "Pay links for foreign-currency invoices aren't available yet.";
+
+/** HTTP status of a refused link creation. */
+export function createStatusCode(status: Exclude<CreateResult["status"], "ok">): number {
+  return status === "limit" || status === "not_pro" ? 402 : status === "not_found" ? 404 : 409;
+}
 
 export async function createPaylink(
   store: PaylinkStore,
@@ -184,6 +206,8 @@ export async function createPaylink(
   /** Store key: the bare invoice id for the primary book, linkKey(bookId, invoiceId) for others. */
   key: string = invoiceId,
 ): Promise<CreateResult> {
+  const subject = getInvoice(ws, invoiceId);
+  if (subject && !subject.deletedAt && currencyOf(subject) !== "INR") return { status: "not_found", message: NOT_YET_FOREIGN };
   const view = payPageView(ws, invoiceId, "1970-01-01");
   if (!view) return { status: "missing_invoice", message: "This invoice hasn't synced yet. Wait a moment and try again." };
   if (view.state === "void" || view.balancePaise <= 0) return { status: "no_balance", message: "Nothing is due on this invoice." };

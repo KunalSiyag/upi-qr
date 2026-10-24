@@ -1,4 +1,4 @@
-import { chaseList, emptyWorkspace, formatPaise, generateRecurring, invoiceViews, liveInvoices, liveRecurring, recurringInvoiceId, viewInvoice, type InvoiceView, type Workspace } from "./model.ts";
+import { chaseList, emptyWorkspace, formatPaise, generateRecurring, invoiceViews, liveInvoices, liveRecurring, planMonths, recurringInvoiceId, viewInvoice, type InvoiceView, type Workspace } from "./model.ts";
 import { PRIMARY_BOOK_ID } from "./books.ts";
 
 /**
@@ -100,6 +100,7 @@ export interface DigestProjection {
   plans: [string, string, number, number, number, string, string, string[]][];
 }
 
+/** INR invoices and plans only: foreign ones are left out (docs/spec-foreign-clients.md §1.6). */
 export function digestProjection(ws: Workspace): DigestProjection {
   const today = "9999-12-31"; // state-independent: keep every open invoice, the digest re-dates them
   const open = liveInvoices(ws)
@@ -111,12 +112,7 @@ export function digestProjection(ws: Workspace): DigestProjection {
   const plans = liveRecurring(ws)
     .filter((plan) => !plan.paused && ws.clients[plan.clientId] && !ws.clients[plan.clientId].deletedAt)
     .map((plan): DigestProjection["plans"][number] => {
-      const months: string[] = [];
-      for (const id of Object.keys(ws.invoices)) {
-        const prefix = recurringInvoiceId(plan.id, "0000-00").slice(0, -6);
-        if (id.startsWith(prefix)) months.push(`${id.slice(-6, -2)}-${id.slice(-2)}`);
-      }
-      months.sort();
+      const months = planMonths(ws, plan);
       return [plan.id, ws.clients[plan.clientId].name, plan.amountPaise, plan.dayOfMonth, plan.dueAfterDays, plan.startMonth, plan.endMonth, months.slice(-RECURRING_LOOKBACK_MONTHS)];
     });
   return { v: PROJECTION_VERSION, open, plans };

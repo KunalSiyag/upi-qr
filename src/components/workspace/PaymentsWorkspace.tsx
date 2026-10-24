@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
-  liveRecurring, upsertPlan, allocatePayment,
+  liveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, currencyOf, getInvoice, repairIntl,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
@@ -9,9 +9,9 @@ import {
 import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
-  backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
-  markBookReset, readOnlyBookIds, restoreBackup, savePlanLimit, storedOwner,
-  recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
+  asideBackupJson, backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
+  readOnlyBookIds, resetBook as resetStoredBook, restoreBackup, savePlanLimit, storedOwner,
+  OTHER_ACCOUNT_INTL, SET_ASIDE_INTL, recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
 } from "../../lib/workspace/localStore";
 import { createShelfSync, READ_ONLY, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
@@ -203,7 +203,8 @@ function Workspace() {
     // Another tab switched this device to a different account: never write this tab's data over it.
     if (ownerChangedElsewhere(tabOwner())) { ownerChanged(); return false; }
     const before = current.books[id];
-    const value = before ? mergeWorkspaces(before, next) : next;
+    // Repairs what older code did to the foreign section (docs/spec-foreign-clients.md §1.7); same object when nothing.
+    const value = repairIntl(before ? mergeWorkspaces(before, next) : next, Date.now());
     const saved = saveBook(current.index, id, value);
     shelfRef.current = withBook(current, id, value);
     setShelf((s) => withBook(s, id, s.books[id] && s.books[id] !== before ? mergeWorkspaces(s.books[id], value) : value));
@@ -332,7 +333,8 @@ function Workspace() {
       const { ws: next, created } = generateRecurring(book, today, now);
       if (!created.length) continue;
       updates[id] = next;
-      if (id === active) createdHere = created.length;
+      // Foreign plan months are generated too, but this build shows only INR rows, so only those are announced.
+      if (id === active) createdHere = created.filter((cid) => { const inv = getInvoice(next, cid); return inv !== undefined && currencyOf(inv) === "INR"; }).length;
     }
     if (!Object.keys(updates).length) return;
     setShelf((s) => {
@@ -363,8 +365,7 @@ function Workspace() {
       resetBook: (id, next) => {
         if (frozenRef.current || !liveBookIds(shelfRef.current.index).includes(id)) return false;
         // Other tabs replace their copy too, instead of merging the set-aside changes back.
-        markBookReset(id);
-        const saved = saveBook(shelfRef.current.index, id, next);
+        const saved = resetStoredBook(shelfRef.current.index, id, next);
         replaceBook(id, next);
         return saved;
       },
@@ -1214,17 +1215,17 @@ function Workspace() {
         </div>
       </div>
 
-      {sheet?.kind === "invoice" && (
+      {sheet?.kind === "invoice" && (!sheet.id || inrInvoice(ws, sheet.id)) && (
         <InvoiceSheet ws={ws} today={today} invoiceId={sheet.id} onClose={closeSheet} onSave={(next, id) => {
           const isNew = !sheet.id;
           const taken = setWs(next, sheet.bookId);
           setSheet(null);
           if (!taken) return;
-          setFlash(isNew ? tr("{number} added.", { number: next.invoices[id].number }) : tr("Invoice updated."));
+          setFlash(isNew ? tr("{number} added.", { number: getInvoice(next, id)?.number ?? "" }) : tr("Invoice updated."));
           if (isNew) trackProductEvent("invoice_tracked", "workspace");
         }} />
       )}
-      {sheet?.kind === "payment" && ws.invoices[sheet.id] && (
+      {sheet?.kind === "payment" && inrInvoice(ws, sheet.id) && (
         <PaymentSheet ws={ws} today={today} invoiceId={sheet.id} initialAmountPaise={sheet.amountPaise} initialReference={sheet.reference} onClose={closeSheet} onSave={(next) => {
           const claimToken = sheet.claimToken;
           const taken = setWs(next, sheet.bookId);
@@ -1235,7 +1236,7 @@ function Workspace() {
           if (claimToken) void deletePaylink(claimToken, "claims").then(() => refreshLinks());
         }} />
       )}
-      {sheet?.kind === "remind" && ws.invoices[sheet.id] && (
+      {sheet?.kind === "remind" && inrInvoice(ws, sheet.id) && (
         <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={remindLink ? paylinkUrl(remindLink.token) : undefined} onClose={closeSheet} onSent={(next) => {
           // The message is sent either way; the reminder log is kept only where the business takes edits.
           if (!readOnlyRef.current) setWs(next, sheet.bookId);
@@ -1417,7 +1418,7 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
     setHidden(Date.now() - dismissedAt < NUDGE_SNOOZE_MS);
     setInApp(IN_APP_BROWSER.test(navigator.userAgent));
   }, []);
-  const real = books.flatMap((ws) => Object.values(ws.invoices)).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const real = books.flatMap((ws) => liveInvoices(ws)).filter((i) => !isSampleId(i.id));
   const atRisk = real.length >= 2 || real.some((i) => i.payments.length > 0) || (inApp && real.length > 0);
   if (hidden || !atRisk) return null;
   const dismiss = () => {
@@ -1443,12 +1444,21 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
   );
 }
 
+/**
+ * An INR invoice to open a sheet on. Until the UI is currency-aware (docs/spec-foreign-clients.md PR 4),
+ * sheets never open on a foreign-currency invoice.
+ */
+function inrInvoice(ws: Workspace, id: string): boolean {
+  const invoice = getInvoice(ws, id);
+  return Boolean(invoice && currencyOf(invoice) === "INR");
+}
+
 /** UPI payments recorded this month on real (non-sample) invoices, in paise. */
 export function upiCollectedInMonth(ws: Workspace, today: string): number {
   const month = today.slice(0, 7);
   let total = 0;
-  for (const invoice of Object.values(ws.invoices)) {
-    if (invoice.deletedAt || isSampleId(invoice.id)) continue;
+  for (const invoice of liveInvoices(ws)) {
+    if (isSampleId(invoice.id)) continue;
     for (const payment of invoice.payments) if (payment.mode === "upi" && payment.date.startsWith(month)) total += payment.amountPaise;
   }
   return total;
@@ -1462,8 +1472,10 @@ function GatewaySavings({ ws, today, isPro }: { ws: Workspace; today: string; is
   const { tr } = useWs();
   const collected = upiCollectedInMonth(ws, today);
   if (collected < SAVINGS_FROM_PAISE) return null;
-  // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee.
-  const breakEven = Math.ceil((PRO_PRICES.monthly.paise * 10_000) / UPI_MDR.gatewayRateBps / 100) * 100;
+  // Monthly sales whose gateway fee would equal the Pro price, rounded up to the rupee, in integer paise only.
+  const bps = UPI_MDR.gatewayRateBps;
+  const salesPaise = Math.floor((PRO_PRICES.monthly.paise * 10_000 + bps - 1) / bps);
+  const breakEven = salesPaise + ((100 - (salesPaise % 100)) % 100);
   return (
     <section className={`${card} flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between`}>
       <div className="min-w-0 text-sm leading-6">
@@ -1645,7 +1657,11 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   const [gstin, setGstin] = useState(existing?.gstin ?? "");
   const [error, setError] = useState("");
   const { tr } = useWs();
-  const hasInvoices = !!clientId && Object.values(ws.invoices).some((i) => !i.deletedAt && i.clientId === clientId);
+  // deleteClient refuses while a live INR invoice, or any live foreign invoice or plan, references the client.
+  // This build shows INR records only (foreign-clients spec §0, second invariant), so a client held only by foreign
+  // records gets a message naming that cause, never "delete their invoices" for invoices it can't show.
+  const hasInvoices = !!clientId && liveInvoices(ws).some((i) => i.clientId === clientId);
+  const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords(ws, clientId);
 
   return (
     <Sheet title={existing ? tr("Edit {name}", { name: existing.name }) : tr("Add client")} onClose={onClose}>
@@ -1667,11 +1683,12 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="submit" className={`${primaryButton} flex-1`}>{tr("Save")}</button>
-          {existing && !hasInvoices && (
+          {existing && !hasInvoices && !hasHidden && (
             <button type="button" onClick={() => onSave(deleteClient(ws, existing.id, Date.now()), tr("{name} removed.", { name: existing.name }))} className={`${ghostButton} ${dangerText}`}>{tr("Remove client")}</button>
           )}
         </div>
         {existing && hasInvoices && <p className="text-xs text-muted">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
+        {existing && hasHidden && <p className="text-xs text-muted">{tr("This client has foreign-currency invoices this version can't show yet, so it can't be removed. Reload the page to update.")}</p>}
       </form>
     </Sheet>
   );
@@ -1934,16 +1951,19 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
           </div>
         </div>
       )}
-      {aside.map((book) => (
+      {aside.map((book) => {
+        // A copy that is only a foreign section is stored under a fixed English name: shown in the UI language.
+        const name = book.name === OTHER_ACCOUNT_INTL ? tr("Clients abroad (another account)") : book.name === SET_ASIDE_INTL ? tr("Clients abroad (set aside)") : book.name || tr("Your business");
+        return (
         <div key={book.id} className="mt-4 rounded-[10px] bg-fog p-3 text-[13px] text-charcoal">
           {book.reason === "other_account" ? (
             <>
-              <p className="font-medium text-ink">{tr("{business}: data from another account that used this device, kept safe here.", { business: book.name || tr("Your business") })}</p>
+              <p className="font-medium text-ink">{tr("{business}: data from another account that used this device, kept safe here.", { business: name })}</p>
               <p className="mt-0.5">{tr("Download it if it's yours; it won't be added to this account.")}</p>
             </>
           ) : (
             <>
-              <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: book.name || tr("Your business") })}</p>
+              <p className="font-medium text-ink">{tr("Unsynced changes to {business}, kept safe on this device.", { business: name })}</p>
               <p className="mt-0.5">{book.reason === "deleted_elsewhere"
                 ? tr("These are this account's changes, made before the business was deleted on another device. Download them to keep them; Discard removes them for good.")
                 : book.reason === "read_only"
@@ -1952,14 +1972,12 @@ function SyncPanel({ state, paylinks, paidLinkTokens, onRevokePaid, invoiceCount
             </>
           )}
           <div className="mt-2 flex gap-3">
-            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, book.fromPrimary
-              // A first business of some account: a plain workspace backup, restorable anywhere (it asks before merging into another business).
-              ? JSON.stringify({ app: "proupiqr-workspace", exportedAt: new Date().toISOString(), workspace: book.workspace }, null, 2)
-              : backupJson({ index: { v: 1, books: { [PRIMARY_BOOK_ID]: { id: PRIMARY_BOOK_ID, createdAt: 0 }, [book.id]: { id: book.id, createdAt: 1 } } }, books: { [book.id]: book.workspace } }, { book: book.id }), "application/json")}>{tr("Download it")}</button>
+            <button type="button" className="font-medium text-leaf hover:underline" onClick={() => downloadText(`proupiqr-business-${book.id}.json`, asideBackupJson(book), "application/json")}>{tr("Download it")}</button>
             <button type="button" className="font-medium text-leaf hover:underline" onClick={() => { discardAside(book.id); setAside(listAside()); }}>{tr("Discard")}</button>
           </div>
         </div>
-      ))}
+        );
+      })}
     </section>
   );
 }
@@ -1973,7 +1991,7 @@ function GettingStarted({ ws, businessReady, signedIn, onAction }: { ws: Workspa
   useEffect(() => {
     try { setDismissed(localStorage.getItem(CHECKLIST_KEY) === "1"); } catch { setDismissed(false); }
   }, []);
-  const real = Object.values(ws.invoices).filter((i) => !i.deletedAt && !isSampleId(i.id));
+  const real = liveInvoices(ws).filter((i) => !isSampleId(i.id));
   const steps: { id: "business" | "invoice" | "remind" | "payment" | "account"; label: string; done: boolean }[] = [
     { id: "business", label: tr("Add your business name and UPI ID"), done: businessReady },
     { id: "invoice", label: tr("Add an invoice you're waiting on"), done: real.length > 0 },

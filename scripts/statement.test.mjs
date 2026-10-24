@@ -15,6 +15,20 @@ assert.equal(parseStatementAmount("1,23,456.78"), 12345678);
 assert.equal(parseStatementAmount("₹ 500"), 50000);
 assert.equal(parseStatementAmount("4500.5 Cr"), 450050);
 assert.equal(parseStatementAmount("0.00"), null);
+// Digit strings joined, never "* 100": the same paise as the old arithmetic for every 1-12 digit amount.
+{
+  let seed = 11;
+  const rand = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
+  for (let i = 0; i < 2000; i++) {
+    const major = String(rand(10 ** 6) * 10 ** rand(7)).slice(0, 1 + rand(12));
+    const fraction = ["", String(rand(10)), String(rand(100)).padStart(2, "0")][rand(3)];
+    const text = fraction ? `${major}.${fraction}` : major;
+    const expected = /^0+(\.0+)?$/.test(text) ? null : Number(major) * 100 + Number(fraction.padEnd(2, "0"));
+    assert.equal(parseStatementAmount(text), expected, text);
+  }
+  assert.equal(parseStatementAmount("999999999999.99"), 99999999999999);
+  assert.equal(parseStatementAmount("0001.5"), 150);
+}
 assert.equal(parseStatementAmount(""), null);
 assert.equal(parseStatementAmount("abc"), null);
 assert.equal(extractUtr("UPI/412345678901/Rohan"), "412345678901");

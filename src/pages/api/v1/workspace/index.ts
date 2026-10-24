@@ -30,7 +30,8 @@ export const GET: APIRoute = async ({ locals }) => {
     if (blocked) return blocked;
     const owner = workspaceOwner(userId);
     const { workspace, rev } = await readWorkspace(store(), owner);
-    return jsonResponse({ workspace, rev, owner });
+    // intl: 1 tells clients this server keeps ws.intl (docs/spec-foreign-clients.md §2.6); old clients ignore it.
+    return jsonResponse({ workspace, rev, owner, intl: 1 });
   } catch {
     return jsonResponse({ error: "Sync is unavailable right now. Your data is safe on this device." }, 503);
   }
@@ -66,7 +67,7 @@ export const PUT: APIRoute = async ({ request, locals }) => {
     await refreshViews(paylinkStore(), owner, PRIMARY_BOOK_ID, result.workspace, { skipWhenNoLinks: true }).catch(() => undefined);
     await recordMetric("sync");
     if (result.rev === 1) await recordMetric("workspace_created");
-    return jsonResponse({ workspace: result.workspace, rev: result.rev, owner });
+    return jsonResponse({ workspace: result.workspace, rev: result.rev, owner, intl: 1 });
   } catch {
     return jsonResponse({ error: "Sync is unavailable right now. Your data is safe on this device." }, 503);
   }

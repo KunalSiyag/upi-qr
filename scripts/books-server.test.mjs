@@ -364,4 +364,32 @@ assert.equal(ownerMismatch({ expectedOwner: null }, OWNER).status, 409);
   assert.equal((await putBookIndex(d, OWNER, { index: index(meta("biz_onemore01")) }, consumeAdd)).status, 429);
 }
 
+// Clients abroad, PR 1 (docs/spec-foreign-clients.md §2.6, §9.1): intl is kept per book, never crosses into
+// the primary, replies carry intl: 1, and the primary's document stays byte-identical for INR-only accounts.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const { d } = deps("pro");
+  await syncWorkspace(d.docs, OWNER, book("Primary Shop", "shop@okaxis", "P-1"), T);
+  const primaryJson = d.docs.docs.get(OWNER).json;
+  assert.doesNotMatch(primaryJson, /intl|currency/, "an INR-only primary document has no new keys");
+  assert.equal(primaryJson, JSON.stringify(JSON.parse(primaryJson)), "stored as canonical JSON, as before");
+  await putIndex(d, index(meta("biz_bbbbbb01")));
+  const withIntl = M.upsertInvoice(book("Book Two", "two@okhdfc", "B-1"), { ...inv("inv_usd00001", "B-2", 5000), currency: "USD" }, T);
+  const put = await putBook(d, OWNER, "biz_bbbbbb01", { workspace: withIntl, expectedOwner: OWNER });
+  assert.deepEqual([put.status, put.body.intl, put.body.workspace.intl.invoices.inv_usd00001.currency], [200, 1, "USD"]);
+  const get = await getBook(d, OWNER, "biz_bbbbbb01");
+  assert.deepEqual([get.body.intl, get.body.workspace.intl.invoices.inv_usd00001.currency], [1, "USD"]);
+  assert.equal(d.docs.docs.get(OWNER).json, primaryJson, "book B's intl never appears in the primary");
+  // An old client's push of book B (no intl) keeps it.
+  const oldPush = await putBook(d, OWNER, "biz_bbbbbb01", { workspace: M.withoutIntl(withIntl), expectedOwner: OWNER });
+  assert.equal(oldPush.body.workspace.intl.invoices.inv_usd00001.currency, "USD");
+  assert.equal(oldPush.body.rev, put.body.rev, "a push without intl changes nothing and doesn't write");
+  // A pay link for the foreign invoice: 404 not_found, nothing stored.
+  const link = await createBookLink(d, OWNER, "biz_bbbbbb01", { invoiceId: "inv_usd00001", expectedOwner: OWNER }, token, vpa);
+  assert.deepEqual([link.status, link.body.code], [404, "not_found"]);
+  assert.deepEqual(await d.paylinks.list(OWNER), {});
+  // The projection of book B leaves the foreign invoice out.
+  assert.equal(JSON.stringify((await d.projections.getAll(OWNER)).projections.biz_bbbbbb01.open), JSON.stringify([["inv_00000001", "B-1", "Rohan", "2026-10-01", "2026-10-15", 100000]]));
+}
+
 console.log("[books-server] Free limit 1, trial 3, paid Pro 20, read-only downgrade (402) and 503 on billing errors, owner checks, per-book slots and links, delete + cleanup retry, race undo, delete cloud copy");

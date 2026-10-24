@@ -278,3 +278,28 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   assert.deepEqual(decrypt(sent.at(-1)), morningDigest(ws, today));
   console.log("[digest] several businesses: one book ≡ morningDigest (160 cases), exact combined text, live-only runner with backfill, once per day");
 }
+
+// Clients abroad, PR 1 (docs/spec-foreign-clients.md §1.6): the projection and the digest leave foreign
+// invoices and plans out until the digest can show them per currency (PR 2), so a rollback never sums US$ as ₹.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const D = await import("../src/lib/workspace/digest.ts");
+  const X = 1_791_000_000_000;
+  const c = (id, name) => ({ id, name, phone: "", email: "", gstin: "", createdAt: X, updatedAt: X });
+  const i = (id, clientId, amountPaise, extra = {}) => ({ id, number: id.slice(-4), clientId, issueDate: "2026-09-01", dueDate: "2026-09-20", amountPaise, description: "", payments: [], reminders: [], voided: false, createdAt: X, updatedAt: X, ...extra });
+  let inr = M.upsertClient(M.upsertClient(M.emptyWorkspace(), c("cli_acme0001", "Acme"), X), c("cli_globex01", "Globex"), X);
+  inr = M.upsertInvoice(inr, i("inv_inr00001", "cli_acme0001", 250000), X);
+  inr = M.upsertPlan(inr, { id: "rec_inrplan001", clientId: "cli_acme0001", amountPaise: 100000, description: "", dayOfMonth: 2, dueAfterDays: 5, startMonth: "2026-09", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
+  inr = M.generateRecurring(inr, "2026-09-10", X).ws;
+  let mixed = M.upsertInvoice(inr, i("inv_usd00001", "cli_globex01", 999999, { currency: "USD" }), X);
+  mixed = M.upsertPlan(mixed, { id: "rec_usdplan001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 1, dueAfterDays: 5, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X, currency: "USD" }, X);
+  mixed = M.generateRecurring(mixed, "2026-09-10", X).ws;
+  assert.ok(Object.keys(mixed.intl.invoices).length > 1);
+  assert.equal(JSON.stringify(D.digestProjection(mixed)), JSON.stringify(D.digestProjection(inr)), "byte-identical projection: no foreign entries");
+  assert.equal(JSON.stringify(D.bookProjection(mixed)), JSON.stringify(D.bookProjection(inr)));
+  for (const day of ["2026-09-20", "2026-10-01", "2026-11-15"]) {
+    assert.deepEqual(D.morningDigest(mixed, day), D.morningDigest(inr, day), "the ₹ digest never includes a US$ amount");
+    assert.deepEqual(D.morningDigest(D.workspaceFromProjection(D.parseProjection(JSON.stringify(D.digestProjection(mixed)))), day), D.morningDigest(inr, day));
+  }
+  console.log("[digest] foreign invoices and plans stay out of the projection and the ₹ digest (PR 1)");
+}
