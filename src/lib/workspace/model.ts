@@ -183,11 +183,10 @@ export function emptyWorkspace(now = 0): Workspace {
   return { version: WORKSPACE_VERSION, business: emptyBusiness(now), clients: {}, invoices: {}, recurring: {} };
 }
 
+/** `<prefix>_` plus 20 hex characters from the platform CSPRNG (getRandomValues also works outside secure contexts). */
 export function newId(prefix: string): string {
-  const random = typeof crypto !== "undefined" && "randomUUID" in crypto
-    ? crypto.randomUUID().replace(/-/g, "")
-    : Math.random().toString(36).slice(2) + Math.random().toString(36).slice(2);
-  return `${prefix}_${random.slice(0, 20)}`;
+  const bytes = crypto.getRandomValues(new Uint8Array(10));
+  return `${prefix}_${Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("")}`;
 }
 
 // ---------------------------------------------------------------------------

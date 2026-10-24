@@ -380,6 +380,9 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(ts|tsx|astro|mjs)$/.test(f) && !f.endsWith(join("workspace", "books.ts")))) {
     assert.doesNotMatch(readFileSync(file, "utf8"), /byInvoice\[/, `${file} must read pay links through linkFor() (byInvoice[ indexes another business's link for the same id)`);
   }
+  for (const file of walk(join(projectRoot, "src/lib")).filter((f) => /\.(ts|tsx|mjs)$/.test(f))) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /Math\.random\(/, `${file} must use crypto.getRandomValues for ids and tokens, never Math.random`);
+  }
   assert.match(syncClient, /expectedOwner: o\.owner\(\)/, "book writes carry expectedOwner");
   assert.match(syncClient, /\{ index, expectedOwner: owner \}/, "index writes carry expectedOwner");
   assert.match(syncClient, /status === 404 \|\| response\.status === 405\) return startLegacy/, "a server without the books routes runs the primary only");
