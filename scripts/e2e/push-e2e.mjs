@@ -137,6 +137,7 @@ try {
   const fxOverdue = { ...fxWs, intl: { ...fxWs.intl, invoices: { ...fxWs.intl.invoices, inv_usd00008: { ...fxWs.intl.invoices.inv_usd00007, id: "inv_usd00008", number: "INV-8", issueDate: addDays(istToday, -20), dueDate: addDays(istToday, -8) } } } };
   await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(fxOverdue) });
   await fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(["del", `ws:proj:${OWNER}`, `push:digest:${OWNER}:${istToday}`]) });
+  await fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(["sadd", "push:owners", OWNER]) });
   const fxDigestBefore = received.length;
   const fxRun = await (await cron({ Authorization: `Bearer ${SECRET}` })).json();
   const fxDigest = received.length > fxDigestBefore ? decrypt(received.at(-1).body) : null;
