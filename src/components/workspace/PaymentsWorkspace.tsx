@@ -904,7 +904,7 @@ function Workspace() {
                         <p className="font-medium text-ink">{tr("{name} says they paid {amount}", { name: view.client?.name ?? tr("Client"), amount: formatMoney(claim.amountPaise ?? view.balancePaise, view.currency) })}</p>
                         <p className="text-[13px] text-muted">{view.invoice.number} · {view.currency === "INR"
                           ? <>UTR <span className="font-mono">{claim.utr}</span></>
-                          : <span className="font-mono">{tr("Reference …{last4}", { last4: claim.utr.slice(-4) })}</span>} · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                          : <span className="tabular-nums">{tr("Reference …{last4}", { last4: claim.utr.slice(-4) })}</span>} · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
                         {!readOnly && view.balancePaise > 0 && (
