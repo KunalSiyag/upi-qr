@@ -384,10 +384,18 @@ assert.equal(ownerMismatch({ expectedOwner: null }, OWNER).status, 409);
   const oldPush = await putBook(d, OWNER, "biz_bbbbbb01", { workspace: M.withoutIntl(withIntl), expectedOwner: OWNER });
   assert.equal(oldPush.body.workspace.intl.invoices.inv_usd00001.currency, "USD");
   assert.equal(oldPush.body.rev, put.body.rev, "a push without intl changes nothing and doesn't write");
-  // A pay link for the foreign invoice: 404 not_found, nothing stored.
+  // A pay link for the foreign invoice without international details: 409 no_intl naming the business, nothing stored.
   const link = await createBookLink(d, OWNER, "biz_bbbbbb01", { invoiceId: "inv_usd00001", expectedOwner: OWNER }, token, vpa);
-  assert.deepEqual([link.status, link.body.code], [404, "not_found"]);
+  assert.deepEqual([link.status, link.body.code, link.body.error], [409, "no_intl", "Add international payment details for Book Two in Settings before sharing pay links."]);
   assert.deepEqual(await d.paylinks.list(OWNER), {});
+  // With details (PR 3): created, the record carries intl: 1, and the snapshot is a "foreign" one with Book Two's details.
+  const settings = { on: true, accountName: "Book Two LLP", bankName: "HDFC", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T };
+  await putBook(d, OWNER, "biz_bbbbbb01", { workspace: { ...withIntl, intl: { ...withIntl.intl, settings } }, expectedOwner: OWNER });
+  const made = await createBookLink(d, OWNER, "biz_bbbbbb01", { invoiceId: "inv_usd00001", expectedOwner: OWNER }, token, vpa);
+  assert.equal(made.status, 201);
+  assert.deepEqual(await d.paylinks.get(made.body.token), { owner: OWNER, invoiceId: "biz_bbbbbb01/inv_usd00001", createdAt: (await d.paylinks.get(made.body.token)).createdAt, businessId: "biz_bbbbbb01", intl: 1 });
+  const fsnap = await d.paylinks.getView(OWNER, made.body.token);
+  assert.deepEqual([fsnap.kind, fsnap.view.currency, fsnap.view.balanceMinor, fsnap.view.pay.accountName, "upiId" in fsnap.view], ["foreign", "USD", 5000, "Book Two LLP", false]);
   // The projection of book B leaves the foreign invoice out.
   assert.equal(JSON.stringify((await d.projections.getAll(OWNER)).projections.biz_bbbbbb01.open), JSON.stringify([["inv_00000001", "B-1", "Rohan", "2026-10-01", "2026-10-15", 100000]]));
 }

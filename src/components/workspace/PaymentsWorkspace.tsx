@@ -16,6 +16,7 @@ import {
 } from "../../lib/workspace/localStore";
 import { createShelfSync, READ_ONLY, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
 import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type LinkContext, type PaylinkList } from "../../lib/workspace/paylinkClient";
+import { pendingClaimCounts } from "../../lib/workspace/paylinks";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
 import { InvoiceSheet, PaymentSheet, ReminderSheet } from "./Sheets";
@@ -401,7 +402,7 @@ function Workspace() {
   }, [signedIn, refreshLinks]);
 
   /** Who asks for links: the account this tab syncs as, and whether the server has the business routes. */
-  const linkContext = (): LinkContext => ({ expectedOwner: syncRef.current?.owner() ?? null, legacy: syncRef.current?.legacy() ?? true });
+  const linkContext = (): LinkContext => ({ expectedOwner: syncRef.current?.owner() ?? null, legacy: syncRef.current?.legacy() ?? true, businessName: activeName });
 
   async function makeLink(invoiceId: string) {
     setLinkBusy(invoiceId);
@@ -420,7 +421,7 @@ function Workspace() {
         } else if (BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) {
           setUpsell("business_paylink");
           trackProductEvent("upgrade_prompt", "businesses");
-        } else setFlash(tr(result.error));
+        } else setFlash(tr(result.error, result.vars));
       }
       else {
         await refreshLinks();
@@ -512,7 +513,7 @@ function Workspace() {
       }
       const result = await createStatementLinkFor(clientId, active, linkContext());
       if ("error" in result && BOOKS_UI && (result.code === "plan_read_only" || result.code === "business_limit")) setUpsell("business_paylink");
-      else if ("error" in result) setFlash(tr(result.error));
+      else if ("error" in result) setFlash(tr(result.error, result.vars));
       else { await refreshLinks(); setFlash(tr("Statement link ready — it always shows this client's current dues.")); }
     } finally {
       setLinkBusy(null);
@@ -664,14 +665,7 @@ function Workspace() {
     upsellRef.current?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "nearest" });
   }, [upsell]);
 
-  const claimCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    if (paylinks) for (const [key, link] of Object.entries(paylinks.byInvoice)) {
-      const { bookId } = parseLinkKey(key);
-      counts[bookId] = (counts[bookId] ?? 0) + link.claims.length;
-    }
-    return counts;
-  }, [paylinks]);
+  const claimCounts = useMemo(() => (paylinks ? pendingClaimCounts(paylinks.byInvoice) : {}), [paylinks]);
   const switcherBooks: SwitcherBook[] = useMemo(() => liveIds.map((id) => ({
     id,
     name: shelf.books[id]?.business.name ?? "",

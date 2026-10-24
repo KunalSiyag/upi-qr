@@ -118,6 +118,14 @@ export function validUtr(value: unknown): value is string {
   return typeof value === "string" && /^[A-Za-z0-9]{10,35}$/.test(value);
 }
 
+/**
+ * A transfer reference a payer abroad types on a foreign-currency pay link: a bank or MT103 reference, a
+ * 36-character UETR, or a PayPal/Wise transaction id. 6–40 letters, digits, dashes or slashes.
+ */
+export function validTransferRef(value: unknown): value is string {
+  return typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9\/-]{5,39}$/.test(value);
+}
+
 export function parseInrToPaise(value: unknown): number | null {
   if (typeof value !== "string" && typeof value !== "number") return null;
   const input = String(value).trim();

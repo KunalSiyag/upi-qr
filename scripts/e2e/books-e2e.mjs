@@ -60,7 +60,7 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
     if (u.includes('/api/v1/paylinks')) {
       if (method === 'GET') return json({ links: s.links.map((l) => ({ invoiceId: l.key, token: l.token, claims: l.claims || [] })), plan: { id: s.plan.id, activePaylinks: s.plan.id === 'pro' ? 10000 : 10, used: s.links.length, businesses: s.plan.businesses } });
       if (method === 'DELETE') {
-        const token = u.split('/').filter(Boolean).pop();
+        const token = u.split('?')[0].split('/').filter(Boolean).pop();
         if (body && body.scope === 'claims') s.links.forEach((l) => { if (l.token === token) l.claims = []; });
         else s.links = s.links.filter((l) => l.token !== token);
         save(s);

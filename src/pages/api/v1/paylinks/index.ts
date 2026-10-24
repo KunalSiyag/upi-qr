@@ -25,6 +25,8 @@ async function limited(scope: string, userId: string, limit: number) {
  * Active links with any pending "I've paid" claims, plus plan usage. Without
  * ?books=1 (old clients) only the primary book's links (bare keys) are listed,
  * exactly as before; with it, every link carries its businessId and the plan its business limit.
+ * Without ?intl=1, links for foreign-currency invoices (record.intl) are left out: older tabs can't see
+ * those invoices and would revoke the links as "paid" (docs/spec-foreign-clients.md §1.7).
  */
 export const GET: APIRoute = async ({ locals, url }) => {
   const userId = authenticatedUserId(locals);
@@ -35,15 +37,18 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const owner = workspaceOwner(userId);
     const store = paylinkStore();
     const allBooks = url.searchParams.get("books") === "1";
+    const intlClient = url.searchParams.get("intl") === "1";
     const byInvoice = await store.list(owner);
     const used = Object.keys(byInvoice).length;
     const entries = Object.entries(byInvoice).filter(([key]) => allBooks || !key.includes("/"));
-    const links = await Promise.all(entries.map(async ([invoiceId, token]) => ({
-      invoiceId,
-      token,
-      claims: await store.claims(token),
-      ...(allBooks ? { businessId: parseLinkKey(invoiceId).bookId } : {}),
-    })));
+    // Only an older client's request reads the records (one per link) to find the foreign-currency ones. Each
+    // record is read at the same time as its claims, never before them, so it adds no round trip in sequence.
+    const rows = await Promise.all(entries.map(async ([invoiceId, token]) => {
+      const [record, claims] = await Promise.all([intlClient ? null : store.get(token), store.claims(token)]);
+      if (record?.intl === 1) return null;
+      return { invoiceId, token, claims, ...(allBooks ? { businessId: parseLinkKey(invoiceId).bookId } : {}) };
+    }));
+    const links = rows.filter((row) => row !== null);
     const plan = await planFor(owner);
     // `used` is account-wide (the active-link limit is per account), even when only primary links are listed.
     return jsonResponse({ links, plan: { id: plan.id, activePaylinks: plan.activePaylinks, used, statementLinks: plan.statementLinks, ...(allBooks ? { businesses: plan.businesses } : {}) } });

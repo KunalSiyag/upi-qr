@@ -1380,6 +1380,16 @@ export function payDetailsFor(settings: IntlSettings | undefined, currency: Fore
 }
 
 /**
+ * Whether a payer abroad can pay in `currency` from the saved details: a bank account (name, account and a SWIFT
+ * code or routing text) or a payment link. Pay links for foreign-currency invoices require it (no_intl).
+ */
+export function intlPayable(settings: IntlSettings | undefined, currency: ForeignCurrency): boolean {
+  const d = payDetailsFor(settings, currency);
+  if (!d) return false;
+  return Boolean((d.accountName.trim() && d.account.trim() && (d.swift.trim() || d.bankDetails.trim())) || safePayUrl(d.payUrl));
+}
+
+/**
  * The export line for an invoice: only for a foreign invoice the user marked as an export (exportLut), with the
  * LUT toggle and ARN set, a business GSTIN, a client without a GSTIN, and the issue date in the LUT's financial
  * year. Otherwise "". The currency alone never makes an invoice an export (IGST Act s.2(6)).

@@ -111,6 +111,27 @@ try {
   check("claim accepted", claim.status === 303, String(claim.status));
   const alert = received.length > before ? decrypt(received.at(-1).body) : null;
   check("claim alert pushed at once, with only the last UTR digits", alert?.title === "A client says they've paid" && alert.body === "₹25,000 for A-1 · UTR …8901. Check your bank, then confirm it in the tracker." && alert.url === "/app/", JSON.stringify(alert));
+
+  // A payer abroad reports a transfer (docs/spec-foreign-clients.md §4.6): the alert carries the invoice's currency
+  // (from the snapshot) and says "ref", never ₹ or UTR.
+  const FX_TOKEN = "Fx3pQ2xYz9AbCdEfGhIjKl";
+  const fxWs = {
+    ...ws,
+    intl: {
+      settings: { on: true, accountName: "Push Test Shop LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl: "https://paypal.me/pushtestshop", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T },
+      invoices: { inv_usd00007: { id: "inv_usd00007", number: "INV-7", clientId: "cli_acme0001", issueDate: addDays(istToday, -10), dueDate: addDays(istToday, 5), currency: "USD", amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T } },
+      recurring: {},
+      clients: {},
+    },
+  };
+  await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(fxWs) });
+  await admin("set", { key: `pl:tok:${FX_TOKEN}`, value: JSON.stringify({ owner: OWNER, invoiceId: "inv_usd00007", createdAt: T, intl: 1 }) });
+  await admin("set", { hash: `pl:own:${OWNER}`, field: "inv_usd00007", value: FX_TOKEN });
+  const fxBefore = received.length;
+  const fxClaim = await fetch(`${DEV}/i/${FX_TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV }, body: "ref=eb6305c9-1f7f-49de-aed0-16487c271234&amount=500" });
+  check("foreign claim accepted", fxClaim.status === 303, String(fxClaim.status));
+  const fxAlert = received.length > fxBefore ? decrypt(received.at(-1).body) : null;
+  check("foreign claim alert names the currency and the reference, not ₹ or UTR", fxAlert?.body === "US$500.00 for INV-7 · ref …1234. Check your bank, then confirm it in the tracker." && fxAlert.url === "/app/", JSON.stringify(fxAlert));
 } catch (error) {
   if (String(error).includes("__prod_done__")) { /* production branch finished */ }
   else check("test script ran to completion", false, String(error).slice(0, 500));

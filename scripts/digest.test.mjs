@@ -90,7 +90,7 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   const { digestProjection, workspaceFromProjection, parseProjection } = await import("../src/lib/workspace/digest.ts");
   const { upsertPlan, deleteInvoice: del, generateRecurring } = await import("../src/lib/workspace/model.ts");
   let rnd = 42;
-  const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+  const rand = (n) => { rnd = (Math.imul(rnd, 1103515245) + 12345) >>> 0; return (rnd >>> 16) % n; };
   const day = (offset) => new Date(Date.UTC(2026, 9, 10) + offset * 86_400_000).toISOString().slice(0, 10);
   for (let trial = 0; trial < 40; trial++) {
     let w = emptyWorkspace();
@@ -161,7 +161,7 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   assert.equal(NAME_BUSINESSES_ON_LOCK_SCREEN, false, "lock-screen business names ship off");
   // One book ≡ morningDigest over 160 random workspaces (and with nameBooks on, too).
   let rnd = 9;
-  const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+  const rand = (n) => { rnd = (Math.imul(rnd, 1103515245) + 12345) >>> 0; return (rnd >>> 16) % n; };
   const day = (offset) => new Date(Date.UTC(2026, 9, 10) + offset * 86_400_000).toISOString().slice(0, 10);
   for (let trial = 0; trial < 160; trial++) {
     let w = upsertClient(upsertClient(emptyWorkspace(), client("cli_c000000", "Acme"), T), client("cli_c100000", "Rohan"), T);
@@ -416,7 +416,7 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   /* ---------- equivalence fuzz with random currencies, both projection writers ---------- */
   {
     let rnd = 23;
-    const rand = (n) => { rnd = (rnd * 1103515245 + 12345) % 2147483648; return rnd % n; };
+    const rand = (n) => { rnd = (Math.imul(rnd, 1103515245) + 12345) >>> 0; return (rnd >>> 16) % n; };
     const day = (offset) => new Date(Date.UTC(2026, 9, 10) + offset * 86_400_000).toISOString().slice(0, 10);
     const currencies = ["INR", "INR", "USD", "EUR", "GBP", "AED", "SGD"];
     let withFx = 0;

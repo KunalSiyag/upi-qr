@@ -2,15 +2,16 @@
 export const prerender = false;
 import "../../styles/global.css";
 import QRCode from "qrcode";
-import { formatPaise as upiAmount, isTrustedMutation, readLimitedText, requestFingerprint, validUtr, validVpa } from "../../lib/apiSecurity";
+import { formatPaise as upiAmount, isTrustedMutation, readLimitedText, requestFingerprint, validTransferRef, validUtr, validVpa } from "../../lib/apiSecurity";
 import { consumeRateLimit } from "../../lib/rateLimit";
 import { readBookIndex, readWorkspace, slotFor } from "../../lib/workspace/cloud";
 import { bookIndexStore, cloudStore, rateLimitsAvailable } from "../../lib/workspace/kvCloudStore";
 import { paylinkStore } from "../../lib/workspace/kvPaylinkStore";
-import { addClaim, refreshViews, snapshotFor, snapshotView, validPaylinkToken, type StatementView } from "../../lib/workspace/paylinks";
+import { addClaim, refreshViews, snapshotFor, snapshotView, validPaylinkToken, type ForeignPayView, type IntlPayDetails, type PaylinkClaim, type PayPageView, type StatementView } from "../../lib/workspace/paylinks";
 import { liveBookIds, parseLinkKey, PRIMARY_BOOK_ID } from "../../lib/workspace/books";
 import { NAME_BUSINESSES_ON_LOCK_SCREEN } from "../../lib/workspace/digest";
 import { formatPaise, parseRupeesToPaise } from "../../lib/workspace/model";
+import { formatIban, formatMoney, looksLikeIban, minorToDecimal, parseMoneyToMinor, safePayUrl, type ForeignCurrency } from "../../lib/workspace/currency";
 import { planFor } from "../../lib/billing/plans";
 import { recordMetric } from "../../lib/metrics";
 import { allowLocalPushEndpoints, vapidConfig } from "../../lib/push/config";
@@ -35,8 +36,10 @@ const gone = (status: number, message: string) => new Response(message, { status
 const { token } = Astro.params;
 if (!validPaylinkToken(token)) return gone(404, "This pay link is not valid.");
 
-let view: ReturnType<typeof payPageView> = null;
+let view: PayPageView | null = null;
 let statement: StatementView | null = null;
+// A foreign-currency invoice (snapshot kind "foreign"): its own currency and bank/URL details, never UPI.
+let foreign: ForeignPayView | null = null;
 let branded = true;
 let owner = "";
 let businessId = "";
@@ -64,23 +67,33 @@ try {
     await refreshViews(paylinkStore(), record.owner, bookId, workspace, { extra: snapshot ? { [token]: snapshot } : {} }).catch(() => undefined);
   }
   const live = snapshot ? snapshotView(snapshot, today) : null;
-  if (live?.kind === "statement") {
+  if (live?.kind === "statement" || live?.kind === "statement2") {
     statement = live.view;
-    // A statement is shown through the same layout: its "invoice" is the total due.
+    // A statement is shown through the same layout: its "invoice" is the ₹ total due. With foreign sections
+    // ("statement2"), it is paid only when every currency is, and overdue when any line in any currency is.
+    const sections = statement.foreign ?? [];
+    const owed = statement.totalPaise > 0 || sections.some((s) => s.totalMinor > 0);
+    const late = statement.overduePaise > 0 || sections.some((s) => s.overdueMinor > 0);
     if (statement) view = {
       merchantName: statement.merchantName, upiId: statement.upiId, invoiceNumber: "Statement",
       amountPaise: statement.totalPaise, balancePaise: statement.totalPaise, dueDate: "", description: "",
-      state: statement.totalPaise > 0 ? (statement.overduePaise > 0 ? "overdue" : "due") : "paid",
+      state: owed ? (late ? "overdue" : "due") : "paid",
     };
   } else if (live?.kind === "invoice") {
     view = live.view;
+  } else if (live?.kind === "foreign") {
+    foreign = live.view;
   }
   branded = (await planFor(record.owner)).brandedPayPage;
 } catch {
   return gone(503, "Pay links are temporarily unavailable. Please try again in a few minutes.");
 }
-if (!view) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
-const upiOk = validVpa(view.upiId);
+if (!view && !foreign) return gone(404, "This pay link is no longer active. Ask the sender for a new one.");
+const merchantName = (view ?? foreign)!.merchantName;
+const upiOk = view ? validVpa(view.upiId) : false;
+// Statement sections in other currencies (kind "statement2"); empty on every INR page.
+const sections = statement?.foreign ?? [];
+const inrPart = !statement || sections.length === 0 || statement.lines.length > 0;
 
 let claimError = "";
 if (Astro.request.method === "POST") {
@@ -91,14 +104,27 @@ if (Astro.request.method === "POST") {
       claimError = "Too many submissions. Try again in 15 minutes.";
     } else {
       const form = new URLSearchParams(await readLimitedText(Astro.request, 1024));
-      const utr = (form.get("utr") || "").trim();
       const amountText = (form.get("amount") || "").trim();
-      const amountPaise = amountText ? parseRupeesToPaise(amountText) : null;
-      if (!validUtr(utr)) claimError = "Enter the 12-digit UTR / reference number shown in your UPI app.";
-      else if (statement && !amountPaise) claimError = "Enter the amount you paid, so it can be applied to your oldest dues first.";
-      else if (amountText && !amountPaise) claimError = "Enter the amount you paid, like 1500 or 1500.50, or leave it blank.";
-      else {
-        const result = await addClaim(paylinkStore(), token, { utr, amountPaise, at: Date.now() });
+      let claim: PaylinkClaim | null = null;
+      if (foreign) {
+        // A transfer reference, not a UTR. The currency comes from the snapshot, never from the form.
+        const currency: ForeignCurrency = foreign.currency;
+        const reference = (form.get("ref") || "").trim();
+        const amountMinor = amountText ? parseMoneyToMinor(amountText, currency) : null;
+        if (!validTransferRef(reference)) claimError = "Enter the transfer reference from your bank, PayPal or Wise (6–40 letters, digits or dashes).";
+        else if (amountText && !amountMinor) claimError = "Enter the amount like 1,200.50, or leave it blank.";
+        else claim = { utr: reference, amountPaise: amountMinor, at: Date.now(), currency };
+      } else {
+        const utr = (form.get("utr") || "").trim();
+        const amountPaise = amountText ? parseRupeesToPaise(amountText) : null;
+        if (!inrPart) claimError = `After a bank transfer, send the transfer reference to ${merchantName}.`;
+        else if (!validUtr(utr)) claimError = "Enter the 12-digit UTR / reference number shown in your UPI app.";
+        else if (statement && !amountPaise) claimError = "Enter the amount you paid, so it can be applied to your oldest dues first.";
+        else if (amountText && !amountPaise) claimError = "Enter the amount you paid, like 1500 or 1500.50, or leave it blank.";
+        else claim = { utr, amountPaise, at: Date.now() };
+      }
+      if (claim) {
+        const result = await addClaim(paylinkStore(), token, claim);
         if (result === "full") claimError = "Several payments are already waiting for confirmation. Please contact the sender directly.";
         else {
           await recordMetric("claim_submitted");
@@ -109,10 +135,11 @@ if (Astro.request.method === "POST") {
             let business: { businessName?: string; businessId?: string } = {};
             if (NAME_BUSINESSES_ON_LOCK_SCREEN && businessId) {
               const books = await readBookIndex(bookIndexStore(), owner).catch(() => "corrupt" as const);
-              if (books !== "corrupt" && liveBookIds(books.index).length > 1) business = { businessName: view.merchantName, businessId };
+              if (books !== "corrupt" && liveBookIds(books.index).length > 1) business = { businessName: merchantName, businessId };
             }
             await sendClaimAlert({ push: pushStore(), vapid, allowLocalEndpoints: allowLocalPushEndpoints() }, owner, token, {
-              invoiceNumber: view.invoiceNumber, amountPaise, utr, statement: Boolean(statement), ...business,
+              invoiceNumber: (view ?? foreign)!.invoiceNumber, amountPaise: claim.amountPaise, utr: claim.utr, statement: Boolean(statement),
+              ...(claim.currency ? { currency: claim.currency } : {}), ...business,
             }).catch(() => undefined);
           }
           return Astro.redirect(`/i/${token}/?claimed=1`, 303);
@@ -125,14 +152,45 @@ if (Astro.request.method === "POST") {
 }
 
 const claimed = Astro.url.searchParams.get("claimed") === "1";
-const payable = upiOk && view.balancePaise > 0 && view.state !== "void" && view.state !== "paid";
-const upiIntent = payable
+const payable = Boolean(view) && upiOk && view!.balancePaise > 0 && view!.state !== "void" && view!.state !== "paid";
+const upiIntent = payable && view
   ? `upi://pay?${new URLSearchParams({ pa: view.upiId, pn: view.merchantName.slice(0, 50), am: upiAmount(view.balancePaise), cu: "INR", tn: (statement ? `Dues to ${view.merchantName}` : `Invoice ${view.invoiceNumber}`).slice(0, 50) }).toString()}`
   : "";
 const qr = payable ? await QRCode.toDataURL(upiIntent, { width: 320, margin: 2, errorCorrectionLevel: "M", color: { dark: "#113b2c", light: "#ffffff" } }) : "";
-const dueText = view.dueDate
-  ? new Date(`${view.dueDate}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
+const dueDate = (view ?? foreign)!.dueDate;
+const dueText = dueDate
+  ? new Date(`${dueDate}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" })
   : "";
+const shortDate = (iso: string) => new Date(`${iso}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" });
+
+// International payment details. The URL is checked again here (old snapshots, hostile storage): only an https
+// link to an allowlisted payment host is ever rendered.
+const text = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const payBlock = (pay: IntlPayDetails | undefined) => {
+  const url = safePayUrl(text(pay?.payUrl));
+  let host = "";
+  try { host = url ? new URL(url).hostname.replace(/^www\./, "") : ""; } catch { host = ""; }
+  const account = text(pay?.account);
+  const rows = ([
+    ["Account name", text(pay?.accountName)],
+    ["Bank", text(pay?.bankName)],
+    ["SWIFT/BIC", text(pay?.swift)],
+    ["IBAN / account no.", looksLikeIban(account) ? formatIban(account) : account],
+    ["Bank address / routing", text(pay?.bankDetails)],
+  ] as [string, string][]).filter(([, value]) => value);
+  return { url: host ? url : "", host, rows };
+};
+const foreignPayable = Boolean(foreign) && foreign!.balanceMinor > 0 && foreign!.state !== "void" && foreign!.state !== "paid";
+const foreignBlock = foreign ? payBlock(foreign.pay) : null;
+const sharedBlock = sections.length ? payBlock(statement?.pay) : null;
+const sectionBlock = (currency: ForeignCurrency) => payBlock(statement?.payByCurrency?.[currency]);
+const exportNumbers = sections.flatMap((s) => s.lines.filter((l) => l.export).map((l) => l.number));
+const allExport = exportNumbers.length === sections.reduce((n, s) => n + s.lines.length, 0);
+const lineCount = (statement?.lines.length ?? 0) + sections.reduce((n, s) => n + s.lines.length, 0);
+const title = foreign
+  ? (foreignPayable ? `Pay ${formatMoney(foreign.balanceMinor, foreign.currency)} to ${foreign.merchantName}` : `Pay ${foreign.merchantName} · ${foreign.invoiceNumber}`)
+  : statement ? `Dues to ${merchantName}` : `Pay ${merchantName} · ${view!.invoiceNumber}`;
+const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white shadow-[0_18px_48px_rgba(17,59,44,0.12)]";
 ---
 
 <html lang="en">
@@ -141,18 +199,27 @@ const dueText = view.dueDate
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="referrer" content="same-origin" />
-    <title>{statement ? `Dues to ${view.merchantName}` : `Pay ${view.merchantName} · ${view.invoiceNumber}`}</title>
+    <title>{title}</title>
   </head>
   <body class="min-h-screen bg-[#fffdf6] px-4 py-8 font-sans text-forest">
     <main class="mx-auto max-w-md">
-      <div class="overflow-hidden rounded-[14px] border border-forest/10 bg-white shadow-[0_18px_48px_rgba(17,59,44,0.12)]">
+      {view && (
+      <div class={card}>
         <div class="bg-forest p-6 text-center text-white">
           <p class="text-sm font-bold text-white/70">{view.merchantName}</p>
-          <p class="mt-1 text-xs text-white/60">{statement ? `Statement · ${statement.lines.length} unpaid invoice${statement.lines.length === 1 ? "" : "s"}` : `Invoice ${view.invoiceNumber}${dueText ? ` · due ${dueText}` : ""}`}</p>
+          <p class="mt-1 text-xs text-white/60">{statement ? `Statement · ${lineCount} unpaid invoice${lineCount === 1 ? "" : "s"}` : `Invoice ${view.invoiceNumber}${dueText ? ` · due ${dueText}` : ""}`}</p>
           {view.state === "paid" ? (
             <p class="mt-4 text-3xl font-black">Paid ✓</p>
           ) : view.state === "void" ? (
             <p class="mt-4 text-2xl font-black">Cancelled</p>
+          ) : statement && sections.length > 0 ? (
+            <>
+              {/* Never one "Total due" across currencies: one line per currency, ₹ first. */}
+              {statement.totalPaise > 0 && <p class="mt-4 text-2xl font-black tabular-nums">{formatMoney(statement.totalPaise, "INR")} due</p>}
+              {sections.map((s) => <p class="mt-1 text-2xl font-black tabular-nums">{formatMoney(s.totalMinor, s.currency)} due</p>)}
+              {statement.overduePaise > 0 && <p class="mt-1 text-xs text-white/70">{formatMoney(statement.overduePaise, "INR")} overdue</p>}
+              {sections.filter((s) => s.overdueMinor > 0).map((s) => <p class="mt-1 text-xs text-white/70">{formatMoney(s.overdueMinor, s.currency)} overdue</p>)}
+            </>
           ) : (
             <>
               <p class="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-sun">{statement ? "Total due" : "Amount due"}</p>
@@ -165,6 +232,7 @@ const dueText = view.dueDate
         </div>
 
         <div class="space-y-5 p-6">
+          {statement && sections.length > 0 && statement.lines.length > 0 && <p class="text-sm font-black">Rupee invoices · pay by UPI</p>}
           {statement && statement.lines.length > 0 && (
             <table class="w-full text-left text-sm">
               <thead><tr class="text-xs text-forest/50"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
@@ -172,7 +240,7 @@ const dueText = view.dueDate
                 {statement.lines.map((line) => (
                   <tr class="border-t border-forest/5">
                     <td class="py-1.5 font-bold">{line.number}</td>
-                    <td class={`py-1.5 ${line.overdue ? "font-bold text-[#a8321d]" : "text-forest/70"}`}>{new Date(`${line.dueDate}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "short", timeZone: "UTC" })}{line.overdue ? " · overdue" : ""}</td>
+                    <td class={`py-1.5 ${line.overdue ? "font-bold text-[#a8321d]" : "text-forest/70"}`}>{shortDate(line.dueDate)}{line.overdue ? " · overdue" : ""}</td>
                     <td class="py-1.5 text-right tabular-nums">{formatPaise(line.balancePaise)}</td>
                   </tr>
                 ))}
@@ -181,7 +249,7 @@ const dueText = view.dueDate
           )}
           {view.state === "paid" && <p class="text-center text-sm text-forest/70">{statement ? "Nothing is due right now. Thank you!" : "This invoice is fully paid. Thank you!"}</p>}
           {view.state === "void" && <p class="text-center text-sm text-forest/70">The sender cancelled this invoice. Nothing is due.</p>}
-          {!upiOk && view.state !== "paid" && view.state !== "void" && <p class="text-center text-sm text-forest/70">The sender hasn't added a UPI ID yet. Please contact them for payment details.</p>}
+          {!upiOk && inrPart && view.state !== "paid" && view.state !== "void" && <p class="text-center text-sm text-forest/70">The sender hasn't added a UPI ID yet. Please contact them for payment details.</p>}
 
           {claimed && (
             <div role="status" class="rounded-2xl bg-mint p-4 text-sm">
@@ -207,20 +275,150 @@ const dueText = view.dueDate
                   {claimError && <p role="alert" class="mt-2 text-xs font-bold text-[#a8321d]">{claimError}</p>}
                   <label for="utr" class="mt-3 block text-xs font-bold text-forest/70">UTR / reference number</label>
                   <input id="utr" name="utr" required minlength="10" maxlength="35" pattern="[A-Za-z0-9]{10,35}" inputmode="numeric" autocomplete="off" placeholder="412345678901" class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
-                  <label for="amount" class="mt-3 block text-xs font-bold text-forest/70">Amount paid{statement ? "" : " (optional)"}</label>
+                  <label for="amount" class="mt-3 block text-xs font-bold text-forest/70">{sections.length > 0 ? "Amount paid (₹)" : `Amount paid${statement ? "" : " (optional)"}`}</label>
+                  {sections.length > 0 && <p class="mt-0.5 text-[11px] text-forest/50">For the UPI / ₹ part only.</p>}
                   <input id="amount" name="amount" inputmode="decimal" autocomplete="off" maxlength="14" required={Boolean(statement)} placeholder={upiAmount(view.balancePaise)} class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
                   <button type="submit" class="mt-3 w-full rounded-xl bg-white px-4 py-2.5 text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Send payment reference</button>
                 </form>
               )}
             </>
           )}
+
+          {claimError && !inrPart && !claimed && <p role="alert" class="text-center text-xs font-bold text-[#a8321d]">{claimError}</p>}
+
+          {sections.map((section) => {
+            const sectionPay = statement?.payByCurrency ? sectionBlock(section.currency) : null;
+            return (
+              <section class="space-y-3 border-t border-forest/10 pt-5" aria-label={`${section.currency} invoices`}>
+                <p class="text-sm font-black">{section.currency} invoices · pay by bank transfer</p>
+                <table class="w-full text-left text-sm">
+                  <thead><tr class="text-xs text-forest/50"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
+                  <tbody>
+                    {section.lines.map((line) => (
+                      <tr class="border-t border-forest/5">
+                        <td class="py-1.5 font-bold">{line.number}</td>
+                        <td class={`py-1.5 ${line.overdue ? "font-bold text-[#a8321d]" : "text-forest/70"}`}>{shortDate(line.dueDate)}{line.overdue ? " · overdue" : ""}</td>
+                        <td class="py-1.5 text-right tabular-nums">{formatMoney(line.balancePaise, section.currency)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                  <tfoot><tr class="border-t border-forest/10"><td class="pt-1.5 font-bold" colspan="2">{section.currency} due</td><td class="pt-1.5 text-right font-bold tabular-nums">{formatMoney(section.totalMinor, section.currency)}</td></tr></tfoot>
+                </table>
+                {sectionPay && (
+                  <Fragment>
+                    {sectionPay.url && <a href={sectionPay.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {sectionPay.host}</a>}
+                    {sectionPay.rows.length > 0 && (
+                      <dl class="space-y-1 rounded-2xl bg-cream p-4 text-sm">
+                        {sectionPay.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                      </dl>
+                    )}
+                    {!sectionPay.url && sectionPay.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
+                  </Fragment>
+                )}
+              </section>
+            );
+          })}
+          {sharedBlock && !statement?.payByCurrency && (
+            <div class="space-y-3">
+              {sharedBlock.url && <a href={sharedBlock.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {sharedBlock.host}</a>}
+              {sharedBlock.rows.length > 0 && (
+                <dl class="space-y-1 rounded-2xl bg-cream p-4 text-sm">
+                  {sharedBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                </dl>
+              )}
+              {!sharedBlock.url && sharedBlock.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
+            </div>
+          )}
+          {sections.length > 0 && (
+            <p class="text-xs text-forest/60">After a bank transfer, send the transfer reference to {view.merchantName}. Use the invoice numbers as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
+          )}
+          {sections.length > 0 && statement?.exportNote && exportNumbers.length > 0 && (
+            <p class="text-[11px] leading-4 text-forest/50">{allExport ? statement.exportNote : `${exportNumbers.join(", ")}: ${statement.exportNote}`}</p>
+          )}
         </div>
 
         <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
-          Money goes straight to {view.merchantName}'s UPI account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark {statement ? "these invoices" : "this invoice"} paid.
+          {sections.length > 0 ? (
+            <Fragment>Money goes straight to {view.merchantName}'s UPI, bank or payment account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark these invoices paid.</Fragment>
+          ) : (
+            <Fragment>Money goes straight to {view.merchantName}'s UPI account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark {statement ? "these invoices" : "this invoice"} paid.</Fragment>
+          )}
         </div>
       </div>
-      {branded && (
+      )}
+
+      {foreign && foreignBlock && (
+      <div class={card}>
+        <div class="bg-forest p-6 text-center text-white">
+          <p class="text-sm font-bold text-white/70">{foreign.merchantName}</p>
+          <p class="mt-1 text-xs text-white/60">{`Invoice ${foreign.invoiceNumber}${dueText ? ` · due ${dueText}` : ""}`}</p>
+          {foreign.state === "paid" ? (
+            <p class="mt-4 text-3xl font-black">Paid ✓</p>
+          ) : foreign.state === "void" ? (
+            <p class="mt-4 text-2xl font-black">Cancelled</p>
+          ) : (
+            <>
+              <p class="mt-4 text-xs font-bold uppercase tracking-[0.2em] text-sun">Amount due</p>
+              <p class="mt-1 text-4xl font-black tabular-nums">{formatMoney(foreign.balanceMinor, foreign.currency)}</p>
+              {foreign.balanceMinor !== foreign.amountMinor && <p class="mt-1 text-xs text-white/60">of {formatMoney(foreign.amountMinor, foreign.currency)} ({formatMoney(foreign.amountMinor - foreign.balanceMinor, foreign.currency)} already paid)</p>}
+            </>
+          )}
+          {foreign.description && <p class="mt-3 text-sm text-white/80">{foreign.description}</p>}
+        </div>
+
+        <div class="space-y-5 p-6">
+          {foreign.exportNote && <p class="text-[11px] leading-4 text-forest/50">{foreign.exportNote}</p>}
+          {foreign.state === "paid" && <p class="text-center text-sm text-forest/70">This invoice is fully paid. Thank you!</p>}
+          {foreign.state === "void" && <p class="text-center text-sm text-forest/70">The sender cancelled this invoice. Nothing is due.</p>}
+
+          {claimed && (
+            <div role="status" class="rounded-2xl bg-mint p-4 text-sm">
+              <p class="font-black text-leaf">Thanks — reference sent to {foreign.merchantName}.</p>
+              <p class="mt-1 text-forest/70">They will check it against their bank statement and mark the invoice paid.</p>
+            </div>
+          )}
+
+          {foreignPayable && (
+            <>
+              {foreignBlock.url && (
+                <a href={foreignBlock.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-forest px-4 py-4 text-center text-base font-black text-white hover:bg-graphite">Pay on {foreignBlock.host}</a>
+              )}
+              {foreignBlock.rows.length > 0 && (
+                <div>
+                  <p class="text-sm font-black">{foreignBlock.url ? "Or pay by bank transfer" : "Pay by bank transfer"}</p>
+                  <dl class="mt-2 space-y-1 rounded-2xl bg-cream p-4 text-sm">
+                    {foreignBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                  </dl>
+                  <p class="mt-2 text-xs text-forest/60">Use {foreign.invoiceNumber} as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
+                </div>
+              )}
+              {!foreignBlock.url && foreignBlock.rows.length === 0 && (
+                <p class="text-center text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>
+              )}
+
+              {!claimed && (foreignBlock.url || foreignBlock.rows.length > 0) && (
+                <form method="POST" class="rounded-2xl border border-forest/10 bg-cream p-4">
+                  <p class="text-sm font-black">Sent the payment?</p>
+                  <p class="mt-1 text-xs text-forest/60">Send the transfer reference so {foreign.merchantName} can match your payment.</p>
+                  {claimError && <p role="alert" class="mt-2 text-xs font-bold text-[#a8321d]">{claimError}</p>}
+                  <label for="ref" class="mt-3 block text-xs font-bold text-forest/70">Transfer reference (from your bank, PayPal or Wise)</label>
+                  <input id="ref" name="ref" required minlength="6" maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9\/\-]{5,39}" autocomplete="off" class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-leaf" />
+                  <label for="amount" class="mt-3 block text-xs font-bold text-forest/70">Amount sent ({foreign.currency}, optional)</label>
+                  <input id="amount" name="amount" inputmode="decimal" autocomplete="off" maxlength="20" placeholder={minorToDecimal(foreign.balanceMinor)} class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
+                  <button type="submit" class="mt-3 w-full rounded-xl bg-white px-4 py-2.5 text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">I've sent it</button>
+                </form>
+              )}
+            </>
+          )}
+          {claimError && !foreignPayable && !claimed && <p role="alert" class="text-center text-xs font-bold text-[#a8321d]">{claimError}</p>}
+        </div>
+
+        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
+          Money goes straight to {foreign.merchantName}'s bank or payment account. Pro UPI QR never handles it.
+        </div>
+      </div>
+      )}
+      {branded && !foreign && inrPart && (
         <a href="/payment-tracker/" class="mx-auto mt-6 flex max-w-md items-center gap-3 rounded-2xl bg-white/80 px-4 py-3 text-left text-xs text-forest/70 ring-1 ring-forest/10 transition hover:bg-white">
           <span class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-mint text-sm font-black text-leaf" aria-hidden="true">₹</span>
           <span><b class="text-forest">0% gateway fee: paid straight by UPI.</b> Send your own pay links free with the <span class="font-bold text-leaf underline">Pro UPI QR payment tracker</span></span>
