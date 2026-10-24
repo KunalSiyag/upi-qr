@@ -7,7 +7,7 @@ import {
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
-import { CURRENCIES, formatMoney, isForeignCurrency, moneyList, type CurrencyCode } from "../../lib/workspace/currency";
+import { CURRENCIES, formatMoney, isForeignCurrency, type CurrencyCode } from "../../lib/workspace/currency";
 import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {

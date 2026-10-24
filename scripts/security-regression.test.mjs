@@ -407,16 +407,14 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
   assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
   assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");
-  // ClientSheet (foreign-clients review round 3): the INR-only build counts the invoices it shows, and names foreign
-  // records it can't show instead of asking the user to delete invoices that aren't on screen (workspace.test simulates it).
-  assert.match(ui, /const hasInvoices = !!clientId && liveInvoices\(ws\)\.some\(\(i\) => i\.clientId === clientId\);\s*const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords\(ws, clientId\);/);
-  assert.match(ui, /\{existing && !hasInvoices && !hasHidden && \(/, "\"Remove client\" only when deleteClient would remove");
-  // The INR-only build (spec §0, second invariant): no sheet opens for a foreign invoice, the monthly-billing flash
-  // counts INR invoices only, and every book applied from storage or the server is repaired (§1.7).
-  assert.match(ui, /\{sheet\?\.kind === "invoice" && \(!sheet\.id \|\| inrInvoice\(ws, sheet\.id\)\) && \(/, "the invoice sheet never opens for a foreign id");
-  assert.match(ui, /\{sheet\?\.kind === "payment" && inrInvoice\(ws, sheet\.id\) && \(/);
-  assert.match(ui, /\{sheet\?\.kind === "remind" && inrInvoice\(ws, sheet\.id\) && \(/);
-  assert.match(ui, /createdHere = created\.filter\(\(cid\) => \{ const inv = getInvoice\(next, cid\); return inv !== undefined && currencyOf\(inv\) === "INR"; \}\)\.length;/, "foreign plan months are not counted in the flash");
+  // ClientSheet (PR 4): it counts invoices in both maps, and a live foreign plan also blocks removal (as deleteClient does).
+  assert.match(ui, /const hasInvoices = !!clientId && allLiveInvoices\(ws\)\.some\(\(i\) => i\.clientId === clientId\);\s*const hasPlan = !!clientId && !hasInvoices && clientHasForeignRecords\(ws, clientId\);/);
+  assert.match(ui, /\{existing && !hasInvoices && !hasPlan && \(/, "\"Remove client\" only when deleteClient would remove");
+  // PR 4 handles foreign records fully (spec §0, second invariant): sheets open on any live invoice of the book, and
+  // every book applied from storage or the server is repaired (§1.7).
+  assert.match(ui, /\{sheet\?\.kind === "invoice" && \(!sheet\.id \|\| getInvoice\(ws, sheet\.id\)\) && \(/);
+  assert.match(ui, /\{sheet\?\.kind === "payment" && getInvoice\(ws, sheet\.id\) && \(/);
+  assert.match(ui, /\{sheet\?\.kind === "remind" && getInvoice\(ws, sheet\.id\) && \(/);
   assert.match(ui, /book\.name === OTHER_ACCOUNT_INTL \? tr\("Clients abroad \(another account\)"\) : book\.name === SET_ASIDE_INTL \? tr\("Clients abroad \(set aside\)"\)/, "set-aside foreign sections are named in the UI language");
   assert.match(ui, /const value = repairIntl\(before \? mergeWorkspaces\(before, next\) : next, Date\.now\(\)\);\s*const saved = saveBook\(current\.index, id, value\);/, "applyBook repairs before saving");
   // The business switcher (PR 4): a listbox that never looks like a dialog, a section tab or an invoice row to the e2e selectors.
@@ -515,15 +513,32 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(read("src/lib/workspace/cloud.ts"), /pruneTombstones\(repairIntl\(mergeWorkspaces\(serverCopy, clientCopy\), now\), now\)/, "the server repairs old clients' erases and deletes");
 }
 
-// Clients abroad, PR 2 (docs/spec-foreign-clients.md §3.6, §9.2): Indian-only features stay INR-only, and the UI
-// still reads INR records only (it switches to allInvoiceViews together with formatMoney in PR 4).
+// Clients abroad, PR 2 + PR 4 (docs/spec-foreign-clients.md §3.6, §5, §9.2): Indian-only features stay INR-only; the UI
+// reads every record (allInvoiceViews) and formats each amount in its own currency.
 {
   const read = (f) => readFileSync(join(projectRoot, f), "utf8");
   const ui = read("src/components/workspace/PaymentsWorkspace.tsx");
   assert.match(ui, /const msmeFor = \(v: InvoiceView\) => \{\s*if \(v\.currency !== "INR" \|\|/, "no MSMED deadline or interest on a foreign invoice");
   assert.match(ui, /if \(isSampleId\(invoice\.id\) \|\| currencyOf\(invoice\) !== "INR"\) continue;/, "gateway savings count INR invoices only");
-  assert.match(ui, /const views = useMemo\(\(\) => invoiceViews\(ws, today\), \[ws, today\]\);/, "the overview stays INR-only until PR 4");
-  assert.doesNotMatch(ui + read("src/components/workspace/Sheets.tsx"), /allInvoiceViews|allLiveInvoices/, "no UI caller reads foreign records yet (spec §0, second invariant)");
+  assert.match(ui, /const views = useMemo\(\(\) => allInvoiceViews\(ws, today\), \[ws, today\]\);/, "the workspace shows every invoice (PR 4)");
+  assert.doesNotMatch(ui, /\binvoiceViews\(/, "no INR-only view list left in the workspace UI (StatementSheet keeps its own)");
+  // Rows, chase list, plans, claims and sheets format in the record's currency; formatPaise stays only on ₹ figures.
+  const rowSrc = ui.split("function InvoiceRow(")[1].split("\nfunction ")[0];
+  assert.doesNotMatch(rowSrc.replace(/formatPaise\((msme\.interestPaise|p\.inrCreditedPaise)\)/g, ""), /formatPaise\(/, "invoice rows format amounts with formatMoney");
+  assert.match(ui, /formatMoney\(v\.balancePaise, v\.currency\)/, "the chase list formats each amount in its currency");
+  assert.match(ui, /formatMoney\(claim\.amountPaise \?\? view\.balancePaise, view\.currency\)/, "a claim is shown in its invoice's currency");
+  const sheetsSrc = read("src/components/workspace/Sheets.tsx");
+  assert.doesNotMatch(sheetsSrc, /formatPaise|parseRupeesToPaise\(amount\)/, "sheets parse and format in the invoice's currency");
+  assert.match(sheetsSrc, /const modes = foreign \? PAYMENT_MODES\.filter\(\(m\) => m !== "upi"\) : PAYMENT_MODES;/, "no UPI mode on a foreign payment");
+  // INTL_UI (§5.1): false in source; only a local e2e build can turn it on, never on Vercel or CI.
+  const storeSrc = read("src/lib/workspace/localStore.ts");
+  assert.match(storeSrc, /export const INTL_UI: boolean = false \|\| E2E_INTL_UI;/, "PR 4 ships INTL_UI false (PR 5 flips it)");
+  assert.match(read("astro.config.mjs"), /const E2E_INTL_UI = process\.env\.PROUPIQR_E2E_INTL_UI === "1" && !process\.env\.VERCEL && !process\.env\.CI;/, "the e2e override never applies to Vercel or CI builds");
+  // §5.9: the Settings card adds no dialog, file input or aria-expanded (e2e selectors stay unambiguous).
+  const card = read("src/components/workspace/IntlSettingsCard.tsx");
+  assert.doesNotMatch(card, /role="dialog"|aria-expanded|aria-current|type="file"|<li\b/);
+  // No new control whose whole text is one the e2e suites click by exact text.
+  for (const label of ["Save", "Save settings", "Remind", "Delete", "Record payment", "Add invoice", "Save payment"]) assert.ok(!card.includes(`{tr("${label}")}`), label);
   assert.match(read("src/components/workspace/StatementSheet.tsx"), /const views = useMemo\(\(\) => invoiceViews\(ws, today\), \[ws, today\]\);/, "statement import keeps INR views for good");
   assert.match(read("src/lib/workspace/statement.ts"), /const open = views\.filter\(\(v\) => v\.currency === "INR" && v\.balancePaise > 0 && v\.state !== "void"\);/, "a bank credit never matches a foreign invoice");
   const modelSrc = read("src/lib/workspace/model.ts");

@@ -794,6 +794,18 @@ const three = book("Book Three", "three@okaxis", 120000);
     h.engine.stop();
   }
 
+  // A server that keeps intl never raises the device-only status line.
+  {
+    shelfDevice({ [PRIMARY_BOOK_ID]: W, [B]: withUsd(two) });
+    fakeServer({ plan: "pro" });
+    const h = host();
+    await h.engine.start();
+    await new Promise((r) => setTimeout(r, 300));
+    assert.equal(h.state().status, "synced");
+    assert.equal(h.state().intlLocal, undefined, "no device-only line against a server that keeps intl");
+    h.engine.stop();
+  }
+
   // A server that strips intl (no intl: 1): no push loop, flush() true, local intl kept, no fx marker.
   {
     const store = shelfDevice({ [PRIMARY_BOOK_ID]: W, [B]: withUsd(two) });
@@ -810,6 +822,7 @@ const three = book("Book Three", "three@okaxis", 120000);
     await new Promise((r) => setTimeout(r, 1000));
     assert.equal(srv.count((c) => c.method === "PUT"), afterFlush, "no repeated pushes");
     assert.equal(h.state().status, "synced");
+    assert.equal(h.state().intlLocal, true, "the status line says foreign invoices are saved on this device only (PR 4)");
     assert.equal(h.shelf().books[PRIMARY_BOOK_ID].intl.invoices.inv_usd00001.currency, "USD", "local intl is never removed because a reply lacks it");
     assert.equal(h.shelf().books[B].intl.invoices.inv_usd00001.currency, "USD");
     assert.ok(store.getItem(intlKey(PRIMARY_BOOK_ID)) && store.getItem(intlKey(B)));
