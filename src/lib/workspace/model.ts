@@ -1212,6 +1212,17 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
       const id = recurringInvoiceId(plan.id, month);
       // Either map, tombstones included: a foreign plan's months live in ws.intl.invoices.
       if (getInvoice(next, id)) continue;
+      // A foreign plan's export mark (§6) carries forward from its latest earlier live month, so a plan started with
+      // "Export of services" ticked keeps the LUT line on every month, and unticking it on a month stops it from then on.
+      let exportLut = false;
+      if (isForeignCurrency(plan.currency)) {
+        for (let back = index - 1; back >= monthIndex(plan.startMonth); back--) {
+          const earlier = getInvoice(next, recurringInvoiceId(plan.id, monthFromIndex(back)));
+          if (!earlier || earlier.deletedAt) continue;
+          exportLut = earlier.exportLut === true;
+          break;
+        }
+      }
       next = upsertInvoice(next, {
         id,
         number: nextInvoiceNumber(next),
@@ -1224,7 +1235,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
         reminders: [],
         voided: false,
         recurringId: plan.id,
-        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency } : {}),
+        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency, ...(exportLut ? { exportLut: true } : {}) } : {}),
         createdAt: now,
         updatedAt: now,
       }, now);
@@ -1255,24 +1266,48 @@ export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: Curr
 
 /**
  * A plan's currency change: `planId` ends after its last generated month and a new plan (new id, same client,
- * day, due days, description and amount) in `currency` starts the month after. Existing months keep their ids
- * and currency, so nothing regenerates. A plan with no month yet is replaced as a whole.
+ * day, due days and description) in `currency`, billing `amountMinor` (minor units of `currency`), starts the month
+ * after. The old amount never carries over: ₹50,000 is not US$50,000. Existing months keep their ids and currency,
+ * so nothing regenerates. A plan with no month yet is replaced as a whole. Null for an invalid amount.
  */
-export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
+export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number, amountMinor: Minor): { ws: Workspace; id: string } | null {
   const plan = getPlan(ws, planId);
   if (!plan || plan.deletedAt) return null;
   if (currencyOf(plan) === currency) return { ws, id: planId };
+  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > MAX_MINOR) return null;
   const months = planMonths(ws, plan);
   const last = months[months.length - 1];
   // An ended plan whose months are all billed has no month left to bill in another currency.
   if (last && plan.endMonth && monthAfter(last) > plan.endMonth) return null;
   const { currency: _from, ...rest } = plan;
   const replacement: RecurringPlan = {
-    ...rest, id: newId("rec"), startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
+    ...rest, id: newId("rec"), amountPaise: amountMinor, startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
     ...(isForeignCurrency(currency) ? { currency } : {}),
   };
   const ended = last ? { ...plan, endMonth: last } : { ...plan, deletedAt: now };
   return { ws: upsertPlan(upsertPlan(ws, ended, now), replacement, now), id: replacement.id };
+}
+
+/**
+ * Plan months billed twice after a currency change (§1.7, risk 22): a copy that hadn't seen the change (an offline
+ * device, an older tab) billed a month of the old plan after its new endMonth, and the plan that replaced it, for the
+ * same client in another currency, bills that month too. The two can't converge (the new plan has a new id), so they
+ * are shown for the user to delete one. Unpaid, live months of the old plan only. Empty for an INR-only book.
+ */
+export function monthsBilledTwice(ws: Workspace): Set<string> {
+  const out = new Set<string>();
+  if (!ws.intl) return out;
+  const plans = allLiveRecurring(ws);
+  for (const invoice of allLiveInvoices(ws)) {
+    if (!invoice.recurringId || invoice.payments.length) continue;
+    const plan = getPlan(ws, invoice.recurringId);
+    const month = invoice.issueDate.slice(0, 7);
+    if (!plan || !plan.endMonth || month <= plan.endMonth) continue;
+    const replaced = plans.some((other) => other.id !== plan.id && other.clientId === plan.clientId && currencyOf(other) !== currencyOf(plan)
+      && other.startMonth <= month && (!other.endMonth || month <= other.endMonth));
+    if (replaced) out.add(invoice.id);
+  }
+  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -1418,7 +1453,45 @@ export function setClientCurrency(ws: Workspace, clientId: string, currency: Cur
 export function updateIntlSettings(ws: Workspace, patch: Partial<Omit<IntlSettings, "updatedAt">>, now: number): Workspace {
   const intl = ws.intl ?? emptyIntl();
   const settings = sanitizeIntlSettings({ ...(intl.settings ?? emptyIntlSettings(now)), ...patch, updatedAt: now });
-  return settings ? { ...ws, intl: { ...intl, settings } } : ws;
+  if (!settings) return ws;
+  // An all-empty save with no record yet writes nothing: an INR-only book keeps its bytes (no intl key). An existing
+  // record is always written, so turning everything off beats an older record on another device.
+  if (!intl.settings && settingsEmpty(settings)) return ws;
+  return { ...ws, intl: { ...intl, settings } };
+}
+
+/** What the Clients abroad form edits: the settings record without its timestamp. */
+export type IntlSettingsForm = Omit<IntlSettings, "updatedAt" | "byCurrency"> & { byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> };
+
+/**
+ * A save from the Clients abroad form: only what the user changed between `before` (the form as it was filled) and
+ * `after` is applied, onto the settings as they are in `ws` now. Sync or another tab may have merged newer settings
+ * into `ws` since the form was filled, and a field, the LUT group or a per-currency set the user didn't touch keeps
+ * that newer value. The LUT toggle, ARN and year move together; a per-currency set moves whole. Nothing changed →
+ * `ws` itself (no write).
+ */
+export function editIntlSettings(ws: Workspace, before: IntlSettingsForm, after: IntlSettingsForm, now: number): Workspace {
+  const patch: Partial<Omit<IntlSettings, "updatedAt">> = {};
+  if (before.on !== after.on) patch.on = after.on;
+  for (const field of PAY_DETAIL_FIELDS) if (before[field] !== after[field]) patch[field] = after[field];
+  if (before.exportUnderLut !== after.exportUnderLut || before.lutArn !== after.lutArn || before.lutFy !== after.lutFy) {
+    patch.exportUnderLut = after.exportUnderLut;
+    patch.lutArn = after.lutArn;
+    patch.lutFy = after.lutFy;
+  }
+  const sameSet = (a?: PayDetailsFields, b?: PayDetailsFields) => PAY_DETAIL_FIELDS.every((f) => (a?.[f] ?? "") === (b?.[f] ?? ""));
+  const touched = FOREIGN_CURRENCIES.filter((c) => !sameSet(own(before.byCurrency, c), own(after.byCurrency, c)));
+  if (touched.length) {
+    const byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> = { ...ws.intl?.settings?.byCurrency };
+    for (const c of touched) {
+      const set = own(after.byCurrency, c);
+      if (set) byCurrency[c] = set;
+      else delete byCurrency[c];
+    }
+    patch.byCurrency = byCurrency;
+  }
+  if (!Object.keys(patch).length) return ws;
+  return updateIntlSettings(ws, patch, now);
 }
 
 /**

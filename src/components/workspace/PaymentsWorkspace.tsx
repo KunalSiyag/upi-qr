@@ -2,12 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
-  getPlan, inrEarned, parseRupeesToPaise, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
+  getPlan, inrEarned, monthsBilledTwice, parseRupeesToPaise, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
-import { CURRENCIES, formatMoney, isForeignCurrency, type CurrencyCode } from "../../lib/workspace/currency";
+import { CURRENCIES, formatMoney, isForeignCurrency, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
 import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
@@ -461,12 +461,25 @@ function Workspace() {
   const chase = useMemo(() => chaseList(views).slice(0, 6), [views]);
   const balances = useMemo(() => clientBalances(views), [views]);
   const foreignBalances = useMemo(() => clientForeignBalances(views), [views]);
-  /** Invoice numbers used more than once (an older tab can issue a number a foreign invoice already has, §1.7). */
+  /** Clients billed only abroad (foreign invoices or a foreign billing currency, no INR invoice): never "₹0" (§5.7). */
+  const foreignOnly = useMemo(() => {
+    const inr = new Set<string>();
+    const fx = new Set<string>();
+    for (const v of views) (v.currency === "INR" ? inr : fx).add(v.invoice.clientId);
+    return (clientId: string) => !inr.has(clientId) && (fx.has(clientId) || clientCurrency(ws, clientId) !== "INR");
+  }, [views, ws]);
+  /**
+   * Numbers held by both an INR and a foreign invoice: an older tab can't see foreign invoices and can issue a number
+   * one already has (§1.7). Two INR invoices sharing a number (two offline devices) is not flagged: an INR-only book
+   * renders exactly as before (Q9).
+   */
   const duplicateNumbers = useMemo(() => {
-    const seen = new Map<string, number>();
-    for (const v of views) { const key = v.invoice.number.trim().toLowerCase(); seen.set(key, (seen.get(key) ?? 0) + 1); }
-    return new Set([...seen].filter(([, n]) => n > 1).map(([key]) => key));
+    const inr = new Set<string>();
+    const foreign = new Set<string>();
+    for (const v of views) (v.currency === "INR" ? inr : foreign).add(v.invoice.number.trim().toLowerCase());
+    return new Set([...foreign].filter((key) => inr.has(key)));
   }, [views]);
+  const billedTwice = useMemo(() => monthsBilledTwice(ws), [ws]);
   const pickers = intlPickers(ws);
   const clients = useMemo(() => liveClients(ws), [ws]);
   // This screen shows one business, so it only ever reads that business's links (§4.4): entries are filtered by the
@@ -1054,6 +1067,7 @@ function Workspace() {
                         view={v}
                         wide={hasForeign}
                         duplicate={duplicateNumbers.has(v.invoice.number.trim().toLowerCase())}
+                        billedTwice={billedTwice.has(v.invoice.id)}
                         msme={msmeFor(v)}
                         signedIn={signedIn}
                         readOnly={readOnly}
@@ -1154,7 +1168,9 @@ function Workspace() {
                             </div>
                             <span className="hidden truncate text-[13px] tabular-nums text-charcoal md:block">{c.phone || tr("No number")}</span>
                             <div className="text-right">
-                              {(bal?.balancePaise ?? 0) > 0 || fx.length === 0 ? <p className="text-sm font-semibold tabular-nums text-ink">{formatPaise(bal?.balancePaise ?? 0)}</p> : null}
+                              {(bal?.balancePaise ?? 0) > 0 || fx.length === 0
+                                ? <p className="text-sm font-semibold tabular-nums text-ink">{!bal && fx.length === 0 && foreignOnly(c.id) ? "—" : formatPaise(bal?.balancePaise ?? 0)}</p>
+                                : null}
                               {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
                               {fx.map(([currency, b]) => (
                                 <div key={currency}>
@@ -1558,12 +1574,13 @@ function Stat({ label, value, note, tone, dot, className = "" }: { label: string
   );
 }
 
-function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment, onCredit }: {
+function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment, onCredit }: {
   view: InvoiceView;
   /** The list holds foreign amounts ("AED 12,345,678.00"): a wider amount column. */
   wide: boolean;
   /** Another live invoice has the same number (§1.7). */
   duplicate: boolean;
+  billedTwice: boolean;
   /** A read-only business (after a downgrade): no edits, payments or new links. */
   readOnly: boolean;
   /** Set when a Udyam-registered business's invoice is past its MSMED deadline; interest is null without MSME tools. */
@@ -1615,6 +1632,7 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
             <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{money(view.paidPaise)}</dd></div>
           </dl>
           {duplicate && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("Another invoice has this number.")}</p>}
+          {billedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This month is also billed in the plan's new currency. Delete one of the two.")}</p>}
           {invoice.description && <p className="mt-3 text-[13px] text-charcoal">{invoice.description}</p>}
           {invoice.payments.length > 0 && (
             <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
@@ -1641,8 +1659,8 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
                       setCrediting(null);
                     }}>
                       <label htmlFor={`ws-credit-${p.id}`} className="sr-only">{tr("INR credited (₹, optional)")}</label>
-                      <input id={`ws-credit-${p.id}`} className={`${inputClass} w-36 py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus />
-                      <button type="submit" className={rowPrimary}>{tr("Add INR credited")}</button>
+                      <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus />
+                      <button type="submit" className={rowButton}>{tr("Add INR credited")}</button>
                       <button type="button" onClick={() => setCrediting(null)} className={ghostButton}>{tr("Cancel")}</button>
                       {creditError && <p role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
                     </form>
@@ -1790,23 +1808,34 @@ function PlanCurrencySheet({ ws, planId, onSave, onClose }: { ws: Workspace; pla
   const { tr } = useWs();
   const plan = getPlan(ws, planId);
   const [currency, setCurrency] = useState<CurrencyCode>(plan ? currencyOf(plan) : "INR");
+  // The monthly amount in the new currency. Never prefilled: ₹50,000 is not US$50,000.
+  const [amount, setAmount] = useState("");
+  const [amountError, setAmountError] = useState("");
   const [error, setError] = useState("");
   if (!plan) return null;
+  const changing = currency !== currencyOf(plan);
   return (
     <Sheet title={tr("Billing currency")} onClose={onClose}>
       <p className={cardNote}>{ws.clients[plan.clientId]?.name ?? tr("Client")} · {formatMoney(plan.amountPaise, currencyOf(plan))} · {tr("Day {d} of each month", { d: plan.dayOfMonth })}</p>
       <form noValidate className="mt-4 space-y-3" onSubmit={(e) => {
         e.preventDefault();
-        if (currency === currencyOf(plan)) return onClose();
-        const moved = replacePlanCurrency(ws, planId, currency, Date.now());
+        if (!changing) return onClose();
+        const amountMinor = parseMoneyToMinor(amount, currency);
+        if (!amountMinor) return setAmountError(isForeignCurrency(currency) ? tr("Enter the amount like 1,200.50.") : tr("Enter an amount like 1500 or 1500.50."));
+        const moved = replacePlanCurrency(ws, planId, currency, Date.now(), amountMinor);
         if (!moved) return setError(tr("This plan has no month left to bill."));
         onSave(moved.ws);
       }}>
         <Field label={tr("Currency")} htmlFor="ws-plan-currency">
-          <select id="ws-plan-currency" className={inputClass} value={currency} onChange={(e) => { setCurrency(e.target.value as CurrencyCode); setError(""); }}>
+          <select id="ws-plan-currency" className={inputClass} value={currency} onChange={(e) => { setCurrency(e.target.value as CurrencyCode); setAmount(""); setAmountError(""); setError(""); }}>
             {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
           </select>
         </Field>
+        {changing && (
+          <Field label={isForeignCurrency(currency) ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-plan-amount" error={amountError}>
+            <input id="ws-plan-amount" className={inputClass} value={amount} onChange={(e) => { setAmount(e.target.value); setAmountError(""); }} inputMode="decimal" placeholder={isForeignCurrency(currency) ? "1,200.50" : "1500"} />
+          </Field>
+        )}
         <p className="text-xs leading-5 text-muted">{tr("Months already created keep their currency.")}</p>
         {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">

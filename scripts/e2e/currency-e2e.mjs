@@ -20,12 +20,19 @@ const book = () => b.eval("localStorage.getItem('proupiqr-workspace-v1') || ''")
 const sidecar = () => b.eval("localStorage.getItem('proupiqr-intl-v1:biz_primary') || ''");
 const kpis = () => b.eval("document.querySelector('[aria-label=Summary]')?.innerText || ''");
 const noScroll = () => b.eval("document.documentElement.scrollWidth <= window.innerWidth + 1");
-/** Opens the invoice row whose text includes `needle` (rows are `li [aria-expanded]`). */
-const openRow = (needle) => t(`(() => { const r = [...document.querySelectorAll('li [aria-expanded]')].find(b => b.textContent.includes(${JSON.stringify(needle)})); if (!r) throw new Error('no row ${needle}'); if (r.getAttribute('aria-expanded') !== 'true') r.click(); return true; })()`);
+/** Opens the invoice row whose text includes `needle` (rows are `li [aria-expanded]`), closing the others so row actions are its own. */
+const openRow = (needle) => t(`(() => { const rows = [...document.querySelectorAll('li [aria-expanded]')]; const r = rows.find(b => b.textContent.includes(${JSON.stringify(needle)})); if (!r) throw new Error('no row ${needle}');
+  for (const o of rows) if (o !== r && o.getAttribute('aria-expanded') === 'true') o.click();
+  if (r.getAttribute('aria-expanded') !== 'true') r.click(); return true; })()`);
 /** Captures what downloadText() hands to URL.createObjectURL while `js` runs. */
 const download = (js) => t(`(async () => { const blobs = []; const orig = URL.createObjectURL; URL.createObjectURL = (x) => { blobs.push(x); return orig(x); };
   try { ${js}; } finally { URL.createObjectURL = orig; } return blobs[0] ? blobs[0].text() : ''; })()`);
 const tab = async (name) => { await t(`__t.click(/^${name}/)`); await sleep(250); };
+/** Writes `key` from another same-origin document, so this tab gets a storage event (as from another tab). */
+const otherTabWrite = (key, js) => b.eval(`new Promise((resolve) => { const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; f.onload = () => {
+  const v = (${js})(localStorage.getItem(${JSON.stringify(key)})); f.contentWindow.localStorage.setItem(${JSON.stringify(key)}, v); f.remove(); resolve(true); }; document.body.appendChild(f); })`);
+/** The Clients list row (li) whose text includes `name`. */
+const clientRow = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.innerText || ''`);
 const openSettingsCard = () => t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); if (!d.open) d.querySelector('summary').click(); return true; })()");
 
 try {
@@ -65,10 +72,15 @@ try {
   check("valid details saved", /Payment details saved\./.test(await text()) && (await sidecar()).includes("HDFCINBB") && (await sidecar()).includes('"on":true'));
 
   // LUT needs a GSTIN, an ARN and its financial year; the preview is the statutory line.
-  await t(`__t.set('ws-s-gstin', '27AAAPL1234C1Z5'), __t.click(/^Save settings$/)`);
+  await t(`__t.set('ws-s-gstin', '27AAAPL1234C1Z5'), __t.set('ws-s-udyam', 'UDYAM-MH-12-1234567'), __t.click(/^Save settings$/)`);
   await sleep(300);
   check("LUT enabled once the business has a GSTIN", !(await b.eval("document.getElementById('ws-intl-lut').disabled")));
-  await t(`document.getElementById('ws-intl-lut').click(), __t.set('ws-intl-lut-arn', 'ad2704260012345'), __t.click(/^Save payment details$/)`);
+  await t(`document.getElementById('ws-intl-lut').click(), __t.set('ws-intl-lut-arn', 'AD27'), __t.click(/^Save payment details$/)`);
+  await sleep(200);
+  page = await text();
+  check("a short ARN is refused", /Enter the 15-character ARN\./.test(page));
+  check("the summary line points at the messages (nothing is highlighted)", /Some details need fixing\. See the messages above\./.test(page) && !/highlighted/.test(page));
+  await t(`__t.set('ws-intl-lut-arn', 'ad2704260012345'), __t.click(/^Save payment details$/)`);
   await sleep(200);
   check("an ARN without its financial year is refused", /Choose the financial year of your LUT\./.test(await text()));
   const fy = await b.eval("document.getElementById('ws-intl-lut-fy').options[1].value");
@@ -79,12 +91,38 @@ try {
   await t("(() => { const d = [...document.querySelectorAll('details details')][0]; if (!d.open) d.querySelector('summary').click(); return true; })()");
   await sleep(150);
   await t(`__t.set('ws-intl-override-currency', 'USD')`);
-  await t(`__t.set('ws-intl-account-name-usd', 'Sharma Tuition LLP (Wise)'), __t.set('ws-intl-account-usd', '8310123456'), __t.set('ws-intl-bank-details-usd', 'ACH routing 026073150')`);
+  await t(`__t.set('ws-intl-account-name-usd', 'Sharma Tuition LLP (Wise)'), __t.set('ws-intl-account-usd', 'GB82WEST12345698765433'), __t.set('ws-intl-bank-details-usd', 'ACH routing 026073150')`);
+  // An error in the per-currency set while it is collapsed: Save opens it so the message can be seen.
+  await t("(() => { document.querySelector('details details').open = false; return true; })()");
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(200);
+  check("an error in a collapsed per-currency set opens it", await b.eval(`(() => { const d = document.querySelector('details details');
+    const e = [...d.querySelectorAll('*')].find((x) => !x.children.length && /This IBAN doesn't look right/.test(x.textContent)); return d.open && !!e && e.checkVisibility(); })()`));
+  check("nothing saved with a bad per-currency IBAN", !(await sidecar()).includes("Wise"));
+  await t(`__t.set('ws-intl-account-usd', '8310123456')`);
   await t(`__t.click(/^Save payment details$/)`);
   await sleep(300);
   const side = JSON.parse(await sidecar());
   check("LUT and USD override saved", side.intl.settings.lutArn === "AD2704260012345" && side.intl.settings.lutFy === fy && side.intl.settings.byCurrency?.USD?.account === "8310123456" && !side.intl.settings.byCurrency.EUR, JSON.stringify(side.intl.settings));
   await b.shot("cur-01-settings.png");
+
+  // A save never overwrites what another tab or device saved meanwhile (§5.2): only the fields edited here are applied.
+  await t(`__t.set('ws-intl-bank', 'ICICI Bank')`);
+  const addCad = `(raw) => { const v = JSON.parse(raw); const s = v.intl.settings; s.byCurrency.CAD = { accountName: 'Wise CAD', bankName: '', swift: 'TRWICAW1XXX', account: '200110754005', bankDetails: '', payUrl: '' }; s.updatedAt = Date.now(); return JSON.stringify(v); }`;
+  await otherTabWrite("proupiqr-intl-v1:biz_primary", addCad);
+  await sleep(500);
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(300);
+  let st = JSON.parse(await sidecar()).intl.settings;
+  check("an edited form's save keeps a currency set another tab added", st.bankName === "ICICI Bank" && st.byCurrency?.CAD?.accountName === "Wise CAD" && st.byCurrency?.USD?.account === "8310123456" && st.lutArn === "AD2704260012345", JSON.stringify(st));
+  // An untouched form shows newer settings when they arrive.
+  await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); v.intl.settings.payUrl = 'https://wise.com/pay/me/sharma'; v.intl.settings.updatedAt = Date.now(); return JSON.stringify(v); }`);
+  await sleep(500);
+  check("an untouched form refreshes to settings saved elsewhere", (await value("ws-intl-pay-url")) === "https://wise.com/pay/me/sharma");
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(300);
+  st = JSON.parse(await sidecar()).intl.settings;
+  check("an unedited save changes nothing", st.payUrl === "https://wise.com/pay/me/sharma" && st.byCurrency?.CAD?.accountName === "Wise CAD");
 
   // A client billed in USD: the phone hint, and their number kept as typed.
   await tab("Clients");
@@ -92,6 +130,14 @@ try {
   check("client sheet shows billing currency and the + hint", await exists("ws-client-currency") && /start the number with \+ and the country code/.test(await dialogText()));
   await t(`__t.set('ws-c-name', 'Globex LLC'), __t.set('ws-c-phone', '+1 415 555 0100'), __t.set('ws-client-currency', 'USD'), __t.click(/^Save$/, __t.dialog())`);
   await closed();
+  // A short number abroad (8 digits with +) is accepted only for a client billed in a foreign currency (§5.4).
+  await t(`__t.click(/^\\+ Add client$/)`); await opened();
+  await t(`__t.set('ws-c-name', 'Kensington Ltd'), __t.set('ws-c-phone', '+44 20 7946'), __t.click(/^Save$/, __t.dialog())`);
+  await sleep(150);
+  check("an 8-digit + number is refused for an INR client", /Enter a 10-digit mobile number/.test(await dialogText()));
+  await t(`__t.set('ws-client-currency', 'GBP'), __t.click(/^Save$/, __t.dialog())`);
+  await closed();
+  check("…and accepted for a GBP client", /Kensington Ltd/.test(await text()));
   check("client currency stored in the sidecar only", JSON.parse(await sidecar()).intl.clients && Object.values(JSON.parse(await sidecar()).intl.clients).some((c) => c.currency === "USD") && !(await book()).includes("USD"));
 
   // A USD invoice: the picker follows the client; foreign amounts never take a decimal comma.
@@ -133,6 +179,8 @@ try {
   await closed();
   await tab("Invoices");
   await t(`__t.click(/^unpaid$/)`);
+  // A saved Hindi reminder preference and a Udyam number: neither applies to a foreign invoice.
+  await b.eval("localStorage.setItem('proupiqr-reminder-lang', 'hi'), true");
   await openRow("Globex");
   await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
   let msg = await value("ws-reminder");
@@ -144,10 +192,18 @@ try {
   await t(`__t.click(/^WhatsApp$/, __t.dialog())`);
   const wa = await b.eval("window.__opened.at(-1)");
   check("WhatsApp goes to the number as typed", wa?.startsWith("https://wa.me/14155550100?text="), wa);
+  await t(`__t.click(/^SMS$/, __t.dialog())`);
+  const sms = await b.eval("window.__opened.at(-1)");
+  check("SMS goes to the number as typed, not +91", sms?.startsWith("sms:+14155550100?body="), sms);
   await t(`__t.click(/^हिन्दी$/, __t.dialog())`);
   msg = await value("ws-reminder");
   check("Hindi reminder: bank block in Hindi, export line in English", /बैंक ट्रांसफ़र से भुगतान करें:/.test(msg) && msg.includes("SUPPLY MEANT FOR EXPORT") && /ट्रांसफ़र रेफ़रेंस/.test(msg), msg);
   await t(`__t.click(/^English$/, __t.dialog())`);
+  await esc(); await closed();
+  // The INR invoice's reminder does show the MSME line: the setup enables it, the foreign guard hides it.
+  await openRow("Rohan Mehta");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("an INR reminder shows the MSME line (Udyam set)", /MSME/.test(await dialogText()));
   await esc(); await closed();
 
   // EUR for a client without a billing currency: the default set; export unticked → no line.
@@ -173,8 +229,11 @@ try {
   await esc(); await closed();
 
   // Client rows per currency; a monthly plan in USD and its currency change.
-  page = await text();
-  check("client row shows USD balance, not ₹0", /Globex LLC[\s\S]*US\$500\.00[\s\S]*US\$500\.00 overdue/.test(page) && !/Globex LLC[^\n]*\n[^\n]*₹0/.test(page));
+  const globexRow = await clientRow("Globex LLC");
+  check("client row shows USD balance, not ₹0", /US\$500\.00[\s\S]*US\$500\.00 overdue/.test(globexRow) && !/₹0(?!\d)/.test(globexRow), globexRow);
+  const kenRow = await clientRow("Kensington Ltd");
+  check("a client billed abroad with nothing open reads —, not ₹0", /—/.test(kenRow) && !/₹/.test(kenRow), kenRow);
+  check("an INR client with nothing open still reads ₹0", /₹0(?!\d)/.test(await clientRow("Desi Exports")), await clientRow("Desi Exports"));
   await t(`__t.click(/^\\+ New invoice$/)`); await opened();
   await t(`__t.set('ws-client', 'Globex LLC'), __t.set('ws-amount', '300'), __t.set('ws-number', 'MON-1')`);
   await t(`[...document.querySelectorAll('[role=dialog] label')].find(l => l.textContent.startsWith('Repeat every month')).querySelector('input').click(), true`);
@@ -184,10 +243,23 @@ try {
   check("monthly plan shown in its currency", /Monthly billing[\s\S]*Globex LLC · US\$300\.00/.test(await text()));
   await t(`__t.click(/^Change currency$/)`); await opened();
   check("plan currency sheet warns that months keep their currency", /Months already created keep their currency\./.test(await dialogText()));
-  await t(`__t.set('ws-plan-currency', 'GBP'), __t.click(/^Change currency$/, __t.dialog())`);
+  await t(`__t.set('ws-plan-currency', 'GBP')`);
+  check("the amount in the new currency starts empty", (await value("ws-plan-amount")) === "" && /Amount \(GBP\)/.test(await dialogText()));
+  await t(`__t.click(/^Change currency$/, __t.dialog())`);
+  await sleep(150);
+  check("a currency change needs the amount in the new currency", /Enter the amount like 1,200\.50\./.test(await dialogText()) && await b.eval("!!document.querySelector('[role=dialog]')"));
+  await t(`__t.set('ws-plan-amount', '240'), __t.click(/^Change currency$/, __t.dialog())`);
   await closed();
   page = await text();
-  check("plan replaced in GBP; the created month stays USD", /Globex LLC · £300\.00/.test(page) && /Globex LLC · US\$300\.00/.test(page), page.slice(0, 1200));
+  check("plan replaced in GBP at the new amount; the created month stays USD", /Globex LLC · £240\.00/.test(page) && /Globex LLC · US\$300\.00/.test(page) && !/£300\.00/.test(page), page.slice(0, 1200));
+
+  // A plan month's currency is locked in the invoice sheet.
+  await tab("Invoices");
+  await t(`__t.click(/^all$/)`);
+  await openRow("MON-1");
+  await t(`__t.click(/^Edit$/)`); await opened();
+  check("a plan month's currency is locked, with the plan message", await b.eval("document.getElementById('ws-currency').disabled") && /This invoice comes from a monthly plan\. Change the plan's currency instead\./.test(await dialogText()));
+  await esc(); await closed();
 
   // Editing an unpaid invoice's currency keeps its number (new id).
   await tab("Invoices");
@@ -206,6 +278,26 @@ try {
   const csv = await download("__t.click(/^Export CSV$/)");
   check("CSV header gains Currency and INR credited", csv.split("\n")[0].endsWith(",Description,Currency,Amount,Paid,Balance,INR credited") && /,USD,1200\.50,1200\.50,0\.00,99840\.00/.test(csv), csv.slice(0, 400));
 
+  // A foreign payment recorded without INR credited: the rupees are added later from the payment line (§3.5).
+  await openRow("Acme GmbH");
+  await t(`__t.click(/^Record payment$/)`); await opened();
+  await t(`__t.set('ws-pay-amount', '750'), __t.set('ws-pay-ref', 'WISE-9001'), __t.click(/^Save payment$/, __t.dialog())`);
+  await closed();
+  await t(`__t.click(/^all$/)`);
+  await openRow("Acme GmbH");
+  await t(`__t.click(/^Add INR credited$/)`);
+  await sleep(100);
+  const creditForm = await b.eval(`(() => { const i = document.querySelector('[id^=ws-credit-]'); const btn = [...i.form.querySelectorAll('button')].find((x) => x.textContent === 'Add INR credited');
+    return { inputW: i.getBoundingClientRect().width, formW: i.form.getBoundingClientRect().width, filled: btn.className.includes('bg-graphite') }; })()`);
+  check("the INR credited input is narrow and its button secondary", creditForm.inputW < 200 && !creditForm.filled, JSON.stringify(creditForm));
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/)`);
+  await sleep(200);
+  check("payment line shows the ₹ added later", /£750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
+  check("INR credited stored on the foreign payment in the sidecar", Object.values(JSON.parse(await sidecar()).intl.invoices).some((i) => !i.deletedAt && i.payments.some((p) => p.reference === "WISE-9001" && p.inrCreditedPaise === 8_000_000)));
+  await tab("Overview");
+  check("INR earned this month adds it", /INR earned this month: ₹1,79,840/.test(await text()), (await text()).slice(0, 800));
+  await tab("Invoices");
+
   // Storage: the book key is exactly what older code writes; foreign data only in the sidecar.
   const bookKey = await book();
   check("book key holds no foreign data", !bookKey.includes("USD") && !bookKey.includes("HDFCINBB") && !bookKey.includes('"intl"') && (await sidecar()).includes("HDFCINBB"));
@@ -214,12 +306,19 @@ try {
   await b.eval(`(() => { window.__writes = 0; const orig = Storage.prototype.setItem; Storage.prototype.setItem = function (k, v) { if (String(k).startsWith('proupiqr-')) window.__writes++; return orig.call(this, k, v); }; return true; })()`);
   await b.eval(`new Promise((resolve) => { const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; f.onload = () => {
     const w = JSON.parse(localStorage.getItem('proupiqr-workspace-v1')); w.business.updatedAt += 1; w.business.phone = '98200 00000';
+    const rohan = Object.values(w.clients).find((c) => c.name === 'Rohan Mehta'); const at = Date.now();
+    w.invoices.inv_oldtab001 = { id: 'inv_oldtab001', number: 'INV-0003', clientId: rohan.id, issueDate: '2026-10-01', dueDate: '2026-10-08', amountPaise: 150000, description: 'old tab', payments: [], reminders: [], voided: false, createdAt: at, updatedAt: at };
     f.contentWindow.localStorage.setItem('proupiqr-workspace-v1', JSON.stringify(w)); resolve(true); }; document.body.appendChild(f); })`);
   await sleep(2000);
   const writes = await b.eval("window.__writes");
   page = await text();
   check("old-tab write keeps foreign invoices and settings", page.includes("US$") && (await sidecar()).includes("HDFCINBB") && (await sidecar()).includes('"USD"'));
   check("old-tab write causes no write loop", writes <= 4, `writes=${writes}`);
+  // The old tab couldn't see INV-0003 (a USD invoice) and issued it again for ₹: both rows say so.
+  await tab("Invoices");
+  await t(`__t.click(/^all$/)`);
+  await openRow("₹1,500");
+  check("an INR invoice sharing a foreign invoice's number shows the note", /Another invoice has this number\./.test(await text()));
 
   // Backup → erase → restore brings the foreign invoices back with their currency.
   await tab("Settings");
@@ -238,6 +337,21 @@ try {
   await tab("Invoices");
   await t(`__t.click(/^all$/)`);
   check("restore brings the USD invoice back in USD", /Globex LLC[\s\S]*US\$1,200\.50/.test(await text()) && Object.values(JSON.parse(await sidecar()).intl.invoices).some((i) => !i.deletedAt && i.currency === "USD"));
+
+  // An LUT for last year's FY: the card and an export invoice's reminder say it has expired.
+  await tab("Settings");
+  await openSettingsCard();
+  await sleep(150);
+  const lastFy = await b.eval("document.getElementById('ws-intl-lut-fy').options[2].value");
+  await t(`__t.set('ws-intl-lut-fy', '${lastFy}'), __t.click(/^Save payment details$/)`);
+  await sleep(300);
+  check("Settings card: the expired LUT notice", new RegExp(`Your LUT for FY ${lastFy} has expired\\. Add this year's ARN\\.`).test(await text()));
+  await tab("Invoices");
+  await t(`__t.click(/^unpaid$/)`);
+  await openRow("US$500.00");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("reminder: the expired LUT notice, and no export line", /has expired/.test(await dialogText()) && !(await value("ws-reminder")).includes("SUPPLY MEANT"), await value("ws-reminder"));
+  await esc(); await closed();
 
   // Phone width: rows, sheets and the Settings card never scroll sideways.
   await b.mobile(true);

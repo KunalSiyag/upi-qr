@@ -1,5 +1,5 @@
-import { useState, type ReactNode } from "react";
-import { updateIntlSettings, type PayDetailsFields, type Workspace } from "../../lib/workspace/model";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { editIntlSettings, type IntlSettings, type IntlSettingsForm, type PayDetailsFields, type Workspace } from "../../lib/workspace/model";
 import {
   FOREIGN_CURRENCIES, fyOf, looksLikeIban, LUT_ENDORSEMENT, normalizeAccount, normalizeLutArn, normalizeSwift, safePayUrl, validIban,
   type ForeignCurrency,
@@ -11,6 +11,30 @@ import { useWs, type Tr } from "./i18n";
 const EMPTY: PayDetailsFields = { accountName: "", bankName: "", swift: "", account: "", bankDetails: "", payUrl: "" };
 const FIELDS = ["accountName", "bankName", "swift", "account", "bankDetails", "payUrl"] as const;
 type Errors = Partial<Record<string, string>>;
+
+/** The form's own state: what the inputs show. */
+interface FormState {
+  on: boolean;
+  details: PayDetailsFields;
+  overrides: Partial<Record<ForeignCurrency, PayDetailsFields>>;
+  lut: boolean;
+  arn: string;
+  lutFy: string;
+}
+
+function formOf(saved: IntlSettings | undefined): FormState {
+  const details = { ...EMPTY };
+  if (saved) for (const field of FIELDS) details[field] = saved[field];
+  return { on: saved?.on ?? false, details, overrides: { ...saved?.byCurrency }, lut: saved?.exportUnderLut ?? false, arn: saved?.lutArn ?? "", lutFy: saved?.lutFy ?? "" };
+}
+
+/** What a form state saves: the LUT fields only with the LUT on and a business GSTIN. */
+function settingsOf(f: FormState, gstin: boolean): IntlSettingsForm {
+  const lutOn = f.lut && gstin;
+  return { on: f.on, ...f.details, byCurrency: f.overrides, exportUnderLut: lutOn, lutArn: lutOn ? f.arn : "", lutFy: lutOn ? f.lutFy : "" };
+}
+
+const sameForm = (a: FormState, b: FormState) => JSON.stringify(a) === JSON.stringify(b);
 
 /** "2026-27" → "2025-26". */
 function previousFy(fy: string): string {
@@ -82,20 +106,28 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
 }) {
   const { tr } = useWs();
   const saved = ws.intl?.settings;
-  const [on, setOn] = useState(saved?.on ?? false);
-  const [details, setDetails] = useState<PayDetailsFields>(() => {
-    const out = { ...EMPTY };
-    if (saved) for (const field of FIELDS) out[field] = saved[field];
-    return out;
-  });
-  const [overrides, setOverrides] = useState<Partial<Record<ForeignCurrency, PayDetailsFields>>>(() => ({ ...saved?.byCurrency }));
+  // `base` is what the form was filled from. A save applies only the difference between it and the form onto the
+  // settings as they are now (editIntlSettings), so newer settings that sync or another tab merged in after the form
+  // was filled are never overwritten by fields the user didn't touch.
+  const [base, setBase] = useState<FormState>(() => formOf(saved));
+  const [form, setForm] = useState<FormState>(base);
+  const { on, details, overrides, lut, arn, lutFy } = form;
+  const update = (patch: Partial<FormState>) => setForm((f) => ({ ...f, ...patch }));
+  const setDetails = (next: PayDetailsFields) => update({ details: next });
   const firstOverride = FOREIGN_CURRENCIES.find((c) => saved?.byCurrency?.[c]) ?? "USD";
   const [overrideCurrency, setOverrideCurrency] = useState<ForeignCurrency>(firstOverride);
-  const [lut, setLut] = useState(saved?.exportUnderLut ?? false);
-  const [arn, setArn] = useState(saved?.lutArn ?? "");
+  const overrideRef = useRef<HTMLDetailsElement>(null);
   const thisFy = fyOf(today);
-  const [lutFy, setLutFy] = useState(saved?.lutFy ?? "");
   const [errors, setErrors] = useState<Errors>({});
+  // Newer settings arrived (sync, another tab, the book loading after the card mounted): an untouched form shows them.
+  const dirty = !sameForm(form, base);
+  useEffect(() => {
+    if (dirty) return;
+    const fresh = formOf(saved);
+    setBase(fresh);
+    setForm(fresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [saved?.updatedAt]);
   const gstin = Boolean(ws.business.gstin.trim());
   const fyOptions = [...new Set([thisFy, previousFy(thisFy), ...(lutFy ? [lutFy] : [])].filter(Boolean))];
   const expired = expiredLutFy(ws, today);
@@ -115,13 +147,17 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
     setErrors(next);
     // An error in a per-currency set shows that set.
     const bad = FOREIGN_CURRENCIES.find((c) => Object.keys(next).some((k) => k.endsWith(`-${c.toLowerCase()}`)));
-    if (bad) setOverrideCurrency(bad);
+    if (bad) {
+      setOverrideCurrency(bad);
+      // The error sits inside the per-currency details: open them so it can be seen.
+      if (overrideRef.current) overrideRef.current.open = true;
+    }
     if (Object.keys(next).length) return;
-    const byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> = {};
-    for (const currency of FOREIGN_CURRENCIES) if (overrides[currency]) byCurrency[currency] = overrides[currency];
-    onChange(updateIntlSettings(ws, {
-      on, ...details, byCurrency, exportUnderLut: lutOn, lutArn: lutOn ? arn : "", lutFy: lutOn ? lutFy : "",
-    }, Date.now()), tr("Payment details saved."));
+    const after = settingsOf(form, gstin);
+    const nextWs = editIntlSettings(ws, settingsOf(base, gstin), after, Date.now());
+    // The form is now the base, so the settings this save wrote refresh it (normalized) without counting as an edit.
+    setBase(form);
+    onChange(nextWs, tr("Payment details saved."));
   }
 
   return (
@@ -139,7 +175,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
         <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-4 border-0 p-0">
           {expired && <p role="status" className="rounded-[10px] bg-[#fdf4e6] px-3 py-2 text-[13px] text-[#6b4600]">{tr("Your LUT for FY {fy} has expired. Add this year's ARN.", { fy: expired })}</p>}
           <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-ink">
-            <input id="ws-intl-on" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" checked={on} onChange={(e) => setOn(e.target.checked)} />
+            <input id="ws-intl-on" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" checked={on} onChange={(e) => update({ on: e.target.checked })} />
             {tr("Invoice clients in other currencies")}
           </label>
 
@@ -147,7 +183,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
             <DetailFields value={details} onChange={setDetails} suffix="" errors={errors} />
           </Group>
 
-          <details className="group/override border-t border-hairline pt-4" open={Boolean(saved?.byCurrency && Object.keys(saved.byCurrency).length)}>
+          <details ref={overrideRef} className="group/override border-t border-hairline pt-4" open={Boolean(saved?.byCurrency && Object.keys(saved.byCurrency).length)}>
             <summary className="flex cursor-pointer list-none items-center gap-1.5 text-[13px] font-medium text-leaf hover:underline [&::-webkit-details-marker]:hidden">
               {tr("Use different details for USD, EUR, GBP…")}
               <svg className="h-3.5 w-3.5 transition-transform duration-200 group-open/override:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
@@ -165,7 +201,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
               <DetailFields
                 key={overrideCurrency}
                 value={overrides[overrideCurrency] ?? EMPTY}
-                onChange={(next) => setOverrides((all) => ({ ...all, [overrideCurrency]: next }))}
+                onChange={(next) => setForm((f) => ({ ...f, overrides: { ...f.overrides, [overrideCurrency]: next } }))}
                 suffix={suffix}
                 errors={errors}
               />
@@ -174,20 +210,20 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
 
           <div className="border-t border-hairline pt-4">
             <label className={`flex items-start gap-2 text-sm font-medium ${gstin ? "cursor-pointer text-ink" : "text-muted"}`}>
-              <input id="ws-intl-lut" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" checked={lut && gstin} disabled={!gstin} onChange={(e) => setLut(e.target.checked)} />
+              <input id="ws-intl-lut" type="checkbox" className="mt-0.5 h-4 w-4 shrink-0 accent-[#287a57]" checked={lut && gstin} disabled={!gstin} onChange={(e) => update({ lut: e.target.checked })} />
               {tr("Export under LUT (no IGST charged)")}
             </label>
             {!gstin && <p className="mt-1 pl-6 text-xs leading-5 text-muted">{tr("Add your GSTIN above to use an LUT.")}</p>}
             <div className="mt-3 grid min-w-0 gap-3 sm:grid-cols-2">
               <div>
                 <Field label="LUT ARN" htmlFor="ws-intl-lut-arn" error={errors.lutArn}>
-                  <input id="ws-intl-lut-arn" className={`${inputClass} font-mono uppercase`} value={arn} onChange={(e) => setArn(e.target.value)} disabled={!gstin || !lut} maxLength={20} autoComplete="off" autoCapitalize="characters" spellCheck={false} />
+                  <input id="ws-intl-lut-arn" className={`${inputClass} font-mono uppercase`} value={arn} onChange={(e) => update({ arn: e.target.value })} disabled={!gstin || !lut} maxLength={20} autoComplete="off" autoCapitalize="characters" spellCheck={false} />
                 </Field>
                 <p className="mt-1 text-xs leading-5 text-muted">{tr("The 15-character ARN from your RFD-11 acknowledgement.")}</p>
               </div>
               <div>
                 <Field label={tr("Financial year of this LUT")} htmlFor="ws-intl-lut-fy" error={errors.lutFy}>
-                  <select id="ws-intl-lut-fy" className={inputClass} value={lutFy} onChange={(e) => setLutFy(e.target.value)} disabled={!gstin || !lut}>
+                  <select id="ws-intl-lut-fy" className={inputClass} value={lutFy} onChange={(e) => update({ lutFy: e.target.value })} disabled={!gstin || !lut}>
                     <option value="">—</option>
                     {fyOptions.map((fy) => <option key={fy} value={fy}>{fy}</option>)}
                   </select>
@@ -203,7 +239,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
             )}
           </div>
 
-          {Object.keys(errors).length > 0 && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{tr("Check the highlighted fields.")}</p>}
+          {Object.keys(errors).length > 0 && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{tr("Some details need fixing. See the messages above.")}</p>}
           <div className="flex items-end pt-1"><button type="submit" className={primaryButton}>{tr("Save payment details")}</button></div>
         </fieldset>
       </form>

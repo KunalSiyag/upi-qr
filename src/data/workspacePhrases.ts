@@ -583,5 +583,6 @@ export const WS_HI: Record<string, string> = {
   "Clients with monthly billing in another currency can't be removed.": "जिन ग्राहकों की मासिक बिलिंग दूसरी मुद्रा में है, उन्हें हटाया नहीं जा सकता।",
   "This plan has no month left to bill.": "इस प्लान में बिल करने के लिए कोई महीना नहीं बचा।",
   "Enter the IBAN or account number (4 to 34 letters and digits).": "IBAN या खाता नंबर डालें (4 से 34 अक्षर और अंक)।",
-  "Check the highlighted fields.": "ऊपर बताई गई फ़ील्ड जाँचें।",
+  "Some details need fixing. See the messages above.": "कुछ जानकारी ठीक करनी है। ऊपर के संदेश देखें।",
+  "This month is also billed in the plan's new currency. Delete one of the two.": "यह महीना प्लान की नई करेंसी में भी बिल हुआ है। दोनों में से एक डिलीट करें।",
 };

@@ -59,7 +59,32 @@ try {
   // Clients abroad in Hindi (docs/spec-foreign-clients.md §5.10): labels translated, currency codes and symbols stay Latin.
   const abroad = { ...ws, clients: { ...ws.clients, cli_globex01: { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: T, updatedAt: T } } };
   const intl = { settings: { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "50100123456789", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T },
-    invoices: { inv_usd00001: { ...ws.invoices.inv_00000001, id: "inv_usd00001", number: "TU-0002", clientId: "cli_globex01", amountPaise: 120000, currency: "USD" } }, recurring: {}, clients: {} };
+    invoices: { inv_usd00001: { ...ws.invoices.inv_00000001, id: "inv_usd00001", number: "TU-0002", clientId: "cli_globex01", amountPaise: 120000, currency: "USD" } },
+    // Paused, so no month is generated: it only puts a USD plan under Monthly billing.
+    recurring: { rec_usd00001: { id: "rec_usd00001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: iso(0).slice(0, 7), endMonth: "", paused: true, currency: "USD", createdAt: T, updatedAt: T } },
+    clients: {} };
+  /** The creation entry points of §5.1 in the current page: the invoice sheet's picker, the client sheet's, the plan's button. */
+  const entryPoints = async (base) => {
+    await b.go(base + "/app/", 2500);
+    await t("[...document.querySelectorAll('button')].find(b => b.textContent === '+ नया इनवॉइस').click(), true");
+    await b.waitFor("!!document.querySelector('[role=dialog]')");
+    await sleep(150);
+    const invoice = await b.eval("!!document.getElementById('ws-currency')");
+    await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await b.waitFor("!document.querySelector('[role=dialog]')");
+    await t("__t.click(/^ग्राहक/)");
+    await sleep(250);
+    const plan = await b.eval("[...document.querySelectorAll('button')].some(b => b.textContent === 'मुद्रा बदलें')");
+    const planShown = await b.eval("document.body.innerText.includes('मासिक बिलिंग') && document.body.innerText.includes('US$500.00')");
+    await t("[...document.querySelectorAll('li')].find(li => li.innerText.includes('Globex LLC') && !li.innerText.includes('US$500.00') && [...li.querySelectorAll('button')].some(x => x.textContent === 'बदलें')).querySelectorAll('button').forEach(x => { if (x.textContent === 'बदलें') x.click(); }), true");
+    await b.waitFor("!!document.querySelector('[role=dialog]')");
+    await sleep(150);
+    const client = await b.eval("!!document.getElementById('ws-client-currency')");
+    const clientSheet = await b.eval("document.querySelector('[role=dialog]').innerText.includes('Globex LLC') || document.getElementById('ws-c-name')?.value === 'Globex LLC'");
+    await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await b.waitFor("!document.querySelector('[role=dialog]')");
+    return { invoice, client, plan, planShown, clientSheet };
+  };
   const seedAbroad = async (base) => {
     await b.go(base + "/terms/", 300);
     await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(abroad))});
@@ -70,10 +95,15 @@ try {
   await b.go(BASE + "/app/", 2500);
   page = await text();
   check("Hindi overview: the foreign row in US$ (Western grouping)", /US\$1,200\.00 वसूलना है/.test(page) && page.includes("लेना बाकी"), page.slice(0, 600));
+  // INTL_UI off (§5.1, the PR 5 rollback in §10): with settings.on and foreign data in the book, no creation entry point shows.
+  const off = await entryPoints(BASE);
+  check("flag off: no currency picker in the invoice sheet, the client sheet, or on a USD plan", off.planShown && off.clientSheet && !off.invoice && !off.client && !off.plan, JSON.stringify(off));
   const INTL = process.env.INTL_BASE;
   check("the flag-on build is available (INTL_BASE)", Boolean(INTL));
   if (INTL) {
     await seedAbroad(INTL);
+    const on = await entryPoints(INTL);
+    check("flag on: the same three entry points show (the probe above can find them)", on.planShown && on.clientSheet && on.invoice && on.client && on.plan, JSON.stringify(on));
     await b.go(INTL + "/app/?tab=settings", 2500);
     await t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('विदेशी ग्राहक')); if (!d.open) d.querySelector('summary').click(); return true; })()");
     await sleep(200);
