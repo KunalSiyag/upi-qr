@@ -244,6 +244,10 @@ export function paidPaise(invoice: Invoice): number {
   return invoice.payments.reduce((sum, p) => sum + p.amountPaise, 0);
 }
 
+/** An own entry of a record map: never an Object.prototype value for an id like "constructor" or "__proto__". */
+const own = <T>(map: Record<string, T> | undefined, id: string): T | undefined =>
+  map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined;
+
 export function viewInvoice(invoice: Invoice, clients: Record<string, Client>, today: string): InvoiceView {
   const paid = paidPaise(invoice);
   const balance = Math.max(0, invoice.amountPaise - paid);
@@ -254,16 +258,13 @@ export function viewInvoice(invoice: Invoice, clients: Record<string, Client>, t
   else if (daysPastDue > 0) state = "overdue";
   else if (paid > 0) state = "partial";
   else state = "due";
-  return { invoice, client: clients[invoice.clientId], paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue, currency: currencyOf(invoice) };
+  return { invoice, client: own(clients, invoice.clientId), paidPaise: paid, balancePaise: invoice.voided ? 0 : balance, state, daysPastDue, currency: currencyOf(invoice) };
 }
 
 /** The record's currency: "INR" unless it carries a foreign one (only records in ws.intl do). */
 export function currencyOf(record: Invoice | RecurringPlan): CurrencyCode {
   return isForeignCurrency(record.currency) ? record.currency : "INR";
 }
-
-const own = <T>(map: Record<string, T> | undefined, id: string): T | undefined =>
-  map && Object.prototype.hasOwnProperty.call(map, id) ? map[id] : undefined;
 
 /** An invoice in either map (legacy first), tombstones included. */
 export function getInvoice(ws: Workspace, id: string): Invoice | undefined {
@@ -1513,13 +1514,15 @@ export function reminderMessage(
 /**
  * wa.me link; 10-digit Indian numbers get the 91 country code. With `international` (the invoice is foreign, or
  * the client is billed in a foreign currency), a number typed with "+" or "00" is used as typed, without 91 and
- * without dropping a leading 0. Every other number keeps today's rule (so an INR client's "+98765 43210" still
+ * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
  * goes to 919876543210).
  */
 export function whatsappLink(phone: string, text: string, opts?: { international?: boolean }): string {
   let digits = phone.replace(/\D/g, "");
   const typed = phone.trim();
   if (opts?.international && (typed.startsWith("+") || typed.startsWith("00"))) {
+    // A bracketed "(0)" is the trunk prefix ("+44 (0)20 ..."), never dialled from abroad; every other 0 stays.
+    digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
     if (!typed.startsWith("+")) digits = digits.slice(2);
     const base = digits.length >= 8 ? `https://wa.me/${digits}` : "https://wa.me/";
     return `${base}?text=${encodeURIComponent(text)}`;

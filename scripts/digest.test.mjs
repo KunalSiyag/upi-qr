@@ -341,6 +341,11 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   const other = upsertInvoice(fresh(), inv("inv_00000009", "B-1", "cli_rohan001", "2026-10-05", 50000), T);
   assert.equal(D.morningDigestBooks([{ id: "biz_primary", name: "Shop", ws: w }, { id: "biz_other000001", name: "Other", ws: other }], today, false).body,
     "₹25,500 + US$1,200.00 overdue, 1 due today. Start with Acme Traders — ₹25,000, 18 days late.");
+  // The cron's path (morningDigestBooks) with a foreign top item: its amount in its own currency, never ₹.
+  assert.equal(D.morningDigestBooks([{ id: "biz_primary", name: "Shop", ws: usdTop }, { id: "biz_other000001", name: "Other", ws: other }], today, true).body,
+    "₹25,500 + US$1,200.00 + €0.05 overdue, 1 due today. Start with Globex LLC (Shop) — €0.05, 30 days late.");
+  assert.equal(D.morningDigestBooks([{ id: "biz_other000001", name: "Other", ws: other }, { id: "biz_other000002", name: "Abroad", ws: only }], today, false).body,
+    "₹500 + US$1,201.00 overdue. Start with Acme Traders — US$1.00, 11 days late.");
 
   // Same days late, the US$ minor amount larger: the digest still starts with the INR client (amounts never compared).
   for (const order of [["inr", "usd"], ["usd", "inr"]]) {
@@ -391,6 +396,18 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
       assert.deepEqual(fromProjection, D.morningDigest(pw, d), d);
     }
     assert.equal(D.morningDigest(pw, today).body, "US$1,000.00 overdue. Start with Globex LLC — US$500.00, 34 days late.", "September and October, never the paid August");
+    // Every generated month paid: fx keeps the plan with an empty open list, so the cron still sees next month.
+    const allPaid = addPayment(pw, M.recurringInvoiceId("rec_usdplan001", "2026-09"), { amountPaise: 50000, date: "2026-09-04", mode: "bank", reference: "" }, T);
+    const ap = D.digestProjection(allPaid);
+    assert.deepEqual(ap.fx, { open: [], plans: [["rec_usdplan001", "Globex LLC", 50000, 1, 5, "2026-08", "", ["2026-08", "2026-09"], "USD"]] }, "plans only");
+    assert.equal(D.morningDigest(allPaid, "2026-09-10"), null, "nothing open yet");
+    for (const d of ["2026-09-10", today, "2026-11-08"]) {
+      for (const write of [D.digestProjection, D.bookProjection]) {
+        const projected = D.workspaceFromProjection(D.parseProjection(JSON.stringify(write(allPaid))));
+        assert.deepEqual(D.morningDigest(projected, d), D.morningDigest(allPaid, d), `plans-only fx ${d}`);
+      }
+    }
+    assert.equal(D.morningDigest(allPaid, "2026-11-08").body, "US$1,000.00 overdue. Start with Globex LLC — US$500.00, 33 days late.", "October and November from the plan alone");
     // A paused foreign plan is left out, as an INR one is.
     const paused = M.upsertPlan(pw, { ...M.getPlan(pw, "rec_usdplan001"), paused: true }, T);
     assert.deepEqual(D.digestProjection(paused).fx.plans, []);

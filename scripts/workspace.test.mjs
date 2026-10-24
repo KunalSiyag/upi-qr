@@ -1413,6 +1413,27 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // LUT without a business GSTIN, or for a client with a GSTIN: no export line.
     assert.ok(!M.reminderMessage(usd, { ...W.business, gstin: "" }, "overdue", undefined, "en", false, W.intl.settings).includes("LUT ARN"));
     assert.ok(!M.reminderMessage(viewOf("inv_usd00003"), W.business, "overdue", undefined, "en", false, W.intl.settings).includes("LUT ARN"));
+    // A clientId that is an Object.prototype key (crafted sync or hand-edited backup) has no client: the view's
+    // client is undefined (never a prototype value), the reminder is built, and its export note is invoiceExportNote's.
+    for (const clientId of ["constructor", "toString", "__proto__", "hasOwnProperty", "valueOf"]) {
+      const raw = clone(W);
+      raw.intl.invoices.inv_usd00001.clientId = clientId;
+      raw.invoices.inv_inr00001.clientId = clientId;
+      const pw = M.sanitizeWorkspace(raw);
+      assert.equal(pw.intl.invoices.inv_usd00001.clientId, clientId, "the sanitizer keeps the invoice");
+      const v = viewOf("inv_usd00001", pw);
+      assert.equal(v.client, undefined, `${clientId}: no client`);
+      const note = M.invoiceExportNote(pw, v.invoice);
+      assert.ok(note.includes(ARN), "the note applies (no client GSTIN)");
+      for (const tone of tones) for (const lang of ["en", "hi"]) {
+        const t = M.reminderMessage(v, pw.business, tone, undefined, lang, true, pw.intl.settings).split("\n");
+        assert.ok(t.includes(note), `${clientId} ${tone} ${lang}: the same export note`);
+        assert.ok(t[0].startsWith(lang === "hi" ? "नमस्ते जी," : "Hi there,"), t[0]);
+      }
+      const inr = viewOf("inv_inr00001", pw);
+      assert.equal(inr.client, undefined);
+      assert.ok(M.reminderMessage(inr, pw.business, "overdue").startsWith("Hi there,"), "an INR invoice too: never \"Hi Object\"");
+    }
     // Never UPI, UTR, upi:// or MSMED text on a foreign reminder, whatever is asked.
     for (const v of all.filter((x) => x.currency !== "INR")) {
       for (const tone of tones) for (const lang of ["en", "hi"]) for (const link of [undefined, "https://www.proupiqr.in/i/Tok1/"]) for (const intl of [undefined, W.intl.settings, urlOnly]) {
@@ -1435,6 +1456,12 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.whatsappLink("0065 8123 4567", "Hi", intl), "https://wa.me/6581234567?text=Hi", "the 00 prefix at that length");
     assert.equal(M.whatsappLink("+12 345 678", "Hi", intl), "https://wa.me/12345678?text=Hi", "8 digits: the shortest number kept");
     assert.equal(M.whatsappLink("+12 345 67", "Hi", intl), "https://wa.me/?text=Hi", "7 digits: dropped");
+    // A bracketed "(0)" is the trunk prefix, dropped; a significant 0 (Italy) stays.
+    assert.equal(M.whatsappLink("+44 (0)20 7946 0958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("+44 ( 0 ) 20 7946 0958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("0044(0)2079460958", "Hi", intl), "https://wa.me/442079460958?text=Hi");
+    assert.equal(M.whatsappLink("+39 06 1234 5678", "Hi", intl), "https://wa.me/390612345678?text=Hi", "Italy keeps its 0");
+    assert.equal(M.whatsappLink("+39 (06) 1234 5678", "Hi", intl), "https://wa.me/390612345678?text=Hi", "only a lone bracketed 0 goes");
     // International without a "+": today's rule (a 10-digit number is Indian).
     assert.equal(M.whatsappLink("98765 43210", "Hi", intl), "https://wa.me/919876543210?text=Hi");
     // Without the option (INR): today's output, byte for byte, including a "+" typed before an Indian number.
