@@ -91,7 +91,8 @@ export function parseStatementAmount(raw: string): number | null {
   if (!value || value === "-" || value === "0" || /^0+(\.0+)?$/.test(value)) return null;
   const match = /^(\d{1,12})(?:\.(\d{1,2}))?$/.exec(value);
   if (!match) return null;
-  return Number(match[1]) * 100 + Number((match[2] || "").padEnd(2, "0"));
+  // Joined as digit strings (at most 14 digits, a safe integer), never multiplied.
+  return Number(`${match[1]}${(match[2] || "").padEnd(2, "0")}`);
 }
 
 export function extractUtr(...texts: string[]): string {

@@ -1,4 +1,4 @@
-import { canonicalJson, newId, viewInvoice, type Workspace } from "./model.ts";
+import { canonicalJson, getInvoice, newId, viewInvoice, type Workspace } from "./model.ts";
 
 /**
  * Several businesses per payments workspace: one book (today's v1 `Workspace`)
@@ -382,7 +382,8 @@ export function paidLinkTokens(links: Record<string, { token: string }>, shelf: 
     const { bookId, subject } = parseLinkKey(key);
     const ws = shelf.books[bookId];
     if (!bookId || !synced.has(bookId) || !live.has(bookId) || !ws || subject.startsWith("stmt:")) continue;
-    const invoice = Object.prototype.hasOwnProperty.call(ws.invoices, subject) ? ws.invoices[subject] : undefined;
+    // Both maps: a live foreign invoice with a balance is never "paid" (an old tab, which can't see it, would say so).
+    const invoice = getInvoice(ws, subject);
     if (!invoice || invoice.deletedAt !== undefined || viewInvoice(invoice, ws.clients, today).balancePaise === 0) tokens.push(link.token);
   }
   return tokens;

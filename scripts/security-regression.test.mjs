@@ -380,6 +380,9 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(ts|tsx|astro|mjs)$/.test(f) && !f.endsWith(join("workspace", "books.ts")))) {
     assert.doesNotMatch(readFileSync(file, "utf8"), /byInvoice\[/, `${file} must read pay links through linkFor() (byInvoice[ indexes another business's link for the same id)`);
   }
+  for (const file of walk(join(projectRoot, "src/lib")).filter((f) => /\.(ts|tsx|mjs)$/.test(f))) {
+    assert.doesNotMatch(readFileSync(file, "utf8"), /Math\.random\(/, `${file} must use crypto.getRandomValues for ids and tokens, never Math.random`);
+  }
   assert.match(syncClient, /expectedOwner: o\.owner\(\)/, "book writes carry expectedOwner");
   assert.match(syncClient, /\{ index, expectedOwner: owner \}/, "index writes carry expectedOwner");
   assert.match(syncClient, /status === 404 \|\| response\.status === 405\) return startLegacy/, "a server without the books routes runs the primary only");
@@ -389,7 +392,7 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(store, /function putVerified\(key: string, value: string\): boolean \{\s*return put\(key, value\) && get\(key\) === value;/, "stash writes are read back");
   const switchSrc = store.split("export function switchAccountStorage")[1].split("\n}\n")[0];
   assert.match(switchSrc, /putVerified\(stashKey, value\)[\s\S]*drop\(bookKey\(id\)\)/, "an extra book leaves the shelf only after its stash copy verified");
-  assert.match(switchSrc, /putVerified\(STASH_KEY, primaryStash\)[\s\S]*putVerified\(WORKSPACE_KEY/, "the primary is stashed before it is replaced");
+  assert.match(switchSrc, /putVerified\(STASH_KEY, primaryStash\)[\s\S]*writeBookKeys\(PRIMARY_BOOK_ID, installed, true, now\)/, "the primary is stashed before it is replaced");
   assert.match(switchSrc, /stashOwner !== previousOwner && stashOwner !== newOwner\) return \{ ok: false, reason: "occupied" \}/, "a third account's stash is never overwritten");
   assert.match(switchSrc, /if \(putVerified\(bookKey\(m\.id\), m\.raw\)\) \{ restoreStash\(\); return true; \}/, "a rolled-back book's stash copy goes only after the book key verified");
   assert.match(syncClient, /if \(saved && owner && !legacy\) writeSyncMeta/, "no revision skip data from a legacy server");
@@ -404,6 +407,18 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const ui = readFileSync(join(projectRoot, "src/components/workspace/PaymentsWorkspace.tsx"), "utf8");
   assert.match(ui, /BOOKS_UI && requested !== null/, "?business= is read only while the business UI is on");
   assert.match(ui, /isBookId\(requested\) && loaded\.books\[requested\] && liveBookIds\(loaded\.index\)\.includes\(requested\)/, "?business= must be a valid, live, local id");
+  // ClientSheet (foreign-clients review round 3): the INR-only build counts the invoices it shows, and names foreign
+  // records it can't show instead of asking the user to delete invoices that aren't on screen (workspace.test simulates it).
+  assert.match(ui, /const hasInvoices = !!clientId && liveInvoices\(ws\)\.some\(\(i\) => i\.clientId === clientId\);\s*const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords\(ws, clientId\);/);
+  assert.match(ui, /\{existing && !hasInvoices && !hasHidden && \(/, "\"Remove client\" only when deleteClient would remove");
+  // The INR-only build (spec §0, second invariant): no sheet opens for a foreign invoice, the monthly-billing flash
+  // counts INR invoices only, and every book applied from storage or the server is repaired (§1.7).
+  assert.match(ui, /\{sheet\?\.kind === "invoice" && \(!sheet\.id \|\| inrInvoice\(ws, sheet\.id\)\) && \(/, "the invoice sheet never opens for a foreign id");
+  assert.match(ui, /\{sheet\?\.kind === "payment" && inrInvoice\(ws, sheet\.id\) && \(/);
+  assert.match(ui, /\{sheet\?\.kind === "remind" && inrInvoice\(ws, sheet\.id\) && \(/);
+  assert.match(ui, /createdHere = created\.filter\(\(cid\) => \{ const inv = getInvoice\(next, cid\); return inv !== undefined && currencyOf\(inv\) === "INR"; \}\)\.length;/, "foreign plan months are not counted in the flash");
+  assert.match(ui, /book\.name === OTHER_ACCOUNT_INTL \? tr\("Clients abroad \(another account\)"\) : book\.name === SET_ASIDE_INTL \? tr\("Clients abroad \(set aside\)"\)/, "set-aside foreign sections are named in the UI language");
+  assert.match(ui, /const value = repairIntl\(before \? mergeWorkspaces\(before, next\) : next, Date\.now\(\)\);\s*const saved = saveBook\(current\.index, id, value\);/, "applyBook repairs before saving");
   // The business switcher (PR 4): a listbox that never looks like a dialog, a section tab or an invoice row to the e2e selectors.
   const switcherSrc = readFileSync(join(projectRoot, "src/components/workspace/BusinessSwitcher.tsx"), "utf8");
   assert.match(switcherSrc, /role="listbox"/);
@@ -416,6 +431,83 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const linkClient = readFileSync(join(projectRoot, "src/lib/workspace/paylinkClient.ts"), "utf8");
   assert.match(linkClient, /\/api\/v1\/paylinks\/\?books=1/, "new clients list every business's links");
   assert.match(linkClient, /if \(!isBookId\(bookId\) \|\| ctx\.legacy\) return null;/, "no book link route on a legacy server");
+}
+
+// Clients abroad, PR 1 (docs/spec-foreign-clients.md §1.6, §2, §3.2, §9.2): one module for currencies with no
+// imports; no direct reads of the invoice/plan maps outside the model (so no reader forgets ws.intl); integer
+// money; only writeBookKeys writes book keys; server view builders stay INR-only until they handle foreign records.
+{
+  const { readdirSync, statSync } = await import("node:fs");
+  const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+  const rel = (f) => f.slice(projectRoot.length + 1);
+  const read = (f) => readFileSync(join(projectRoot, f), "utf8");
+  const currencySrc = read("src/lib/workspace/currency.ts");
+  const modelSrc = read("src/lib/workspace/model.ts");
+  assert.doesNotMatch(currencySrc, /^\s*import\b|\bimport\(|\brequire\(/m, "currency.ts has no imports");
+  const modelImports = [...modelSrc.matchAll(/^import[\s\S]*?from\s+"([^"]+)";/gm)].map((m) => m[1]);
+  assert.deepEqual(modelImports, ["./currency.ts"], "model.ts imports only ./currency.ts");
+  assert.doesNotMatch(modelSrc, /\bimport\(|\brequire\(/);
+
+  // Direct map access: only the model, the projection rebuild (workspaceFromProjection) and the INR sample data.
+  const mapAccess = /\.(?:invoices|recurring)\[|Object\.(?:keys|values|entries)\([^)]*\.(?:invoices|recurring)\)/;
+  for (const file of walk(join(projectRoot, "src")).filter((f) => /\.(ts|tsx|astro|mjs)$/.test(f))) {
+    const name = rel(file);
+    if (name === "src/lib/workspace/model.ts" || name === "src/lib/workspace/sample.ts") continue;
+    let text = readFileSync(file, "utf8");
+    if (name === "src/lib/workspace/digest.ts") {
+      const start = text.indexOf("export function workspaceFromProjection");
+      assert.ok(start >= 0);
+      text = text.slice(0, start) + text.slice(text.indexOf("\n}\n", start));
+    }
+    assert.doesNotMatch(text, mapAccess, `${name} must read invoices and plans through the model helpers (getInvoice, liveInvoices, allLiveInvoices, planMonths)`);
+  }
+  const generate = modelSrc.split("export function generateRecurring")[1].split("\n}\n")[0];
+  assert.doesNotMatch(generate, /next\.invoices\[/, "generateRecurring checks both maps (getInvoice), tombstones included");
+  assert.match(generate, /if \(getInvoice\(next, id\)\) continue;/);
+
+  // Integer money: no "* 100" on amounts and no "/ 100" except Math.floor/trunc(… / 100) in workspace code.
+  // The one exception (spec §9.2) is a CSS percentage, which is no amount: the aging bar's width.
+  const allowedHundred = new Map([
+    ["src/components/workspace/PaymentsWorkspace.tsx", [/style=\{\{ width: `\$\{\(b\.balancePaise \/ maxBucket\) \* 100\}%` \}\}/]],
+  ]);
+  for (const file of [...walk(join(projectRoot, "src/lib/workspace")), ...walk(join(projectRoot, "src/components/workspace"))].filter((f) => /\.(ts|tsx)$/.test(f))) {
+    const name = rel(file);
+    readFileSync(file, "utf8").split("\n").forEach((line, n) => {
+      const code = line.replace(/\/\/.*$/, "").replace(/^\s*\*.*$/, "");
+      if (!/\*\s*100\b|\/\s*100\b/.test(code)) return;
+      const cleaned = code.replace(/Math\.(?:floor|trunc)\(\s*[\w.]+\s*\/\s*100\s*\)/g, "");
+      if (!/\*\s*100\b|\/\s*100\b/.test(cleaned)) return;
+      assert.ok((allowedHundred.get(name) ?? []).some((re) => re.test(line)), `${name}:${n + 1} converts money through * 100 or / 100: ${line.trim()}`);
+    });
+  }
+  assert.doesNotMatch(currencySrc, /\*\s*100\b/, "currency.ts builds minor units from strings, never by multiplying");
+
+  // Storage: only writeBookKeys writes a book key; the sidecar is owner-tagged and joined only for its account.
+  const store = read("src/lib/workspace/localStore.ts");
+  // The only other writes put back bytes the failed switch read from those keys (old or new code wrote them).
+  const writers = store.replace(/function writeBookKeys[\s\S]*?\n}\n/, "").replaceAll("putVerified(bookKey(m.id), m.raw)", "").replace("putVerified(WORKSPACE_KEY, primaryRaw)", "");
+  assert.doesNotMatch(writers, /put(?:Verified)?\(\s*(?:bookKey\(|WORKSPACE_KEY)/, "book keys are written only through writeBookKeys");
+  assert.match(store, /canonicalJson\(withoutIntl\(pruned\)\)/, "a book key never holds intl");
+  assert.match(store, /\{ owner: get\(OWNER_KEY\), intl: pruned\.intl \}/, "sidecars record the account that wrote them");
+  assert.match(store, /if \(sidecarJoins\(side\.owner\)\) return side\.intl;/, "another account's sidecar is never joined");
+  assert.match(store, /JSON\.stringify\(\{ at: meta\.at, reason, name: meta\.name, workspace: withoutIntl\(workspace\), \.\.\.\(fromPrimary \? \{ primary: true \} : \{\}\) \}\)/, "the set-aside key older code lists never holds intl, in older code's field order");
+  assert.doesNotMatch(store, /put(?:Verified)?\(\s*`\$\{ASIDE_PREFIX\}/, "set-aside copies are written only through putAside");
+  // Sync: every comparison with the server's copy goes through sameAsServer.
+  assert.doesNotMatch(syncClient.replace(/const sameAsServer = [^\n]*\n/, ""), /[!=]==\s*lastJson|lastJson\s*[!=]==\s*canonicalJson/, "compare with the server's copy only through sameAsServer");
+  assert.match(syncClient, /const sameAsServer = \(ws: Workspace\) => canonicalJson\(serverKeepsIntl \? ws : withoutIntl\(ws\)\) === lastJson;/);
+  // Server view builders: INR-only until they render foreign records (pay page, statements, digest), and replies say intl: 1.
+  const paylinksSrc = read("src/lib/workspace/paylinks.ts");
+  assert.match(paylinksSrc, /if \(!invoice \|\| invoice\.deletedAt \|\| currencyOf\(invoice\) !== "INR"\) return null;/, "payPageView refuses foreign invoices");
+  assert.match(paylinksSrc, /if \(!client \|\| client\.deletedAt \|\| hasOpenForeign\(ws, clientId\)\) return null;/, "statementView refuses clients with open foreign invoices");
+  assert.match(read("src/lib/workspace/digest.ts"), /const open = liveInvoices\(ws\)[\s\S]*const plans = liveRecurring\(ws\)/, "the projection reads INR records only");
+  // The reply objects themselves (a comment in the GET handler also says "intl: 1").
+  assert.match(handlerOf(workspaceApi, "GET"), /return jsonResponse\(\{ workspace, rev, owner, intl: 1 \}\);/);
+  assert.match(handlerOf(workspaceApi, "PUT"), /return jsonResponse\(\{ workspace: result\.workspace, rev: result\.rev, owner, intl: 1 \}\);/);
+  // A foreign subject's link is refused as 404 not_found (until PR 3) on the primary route as on the book route.
+  assert.match(handlerOf(read("src/pages/api/v1/paylinks/index.ts"), "POST"), /if \(result\.status !== "ok"\) return jsonResponse\(\{ error: result\.message, code: result\.status \}, createStatusCode\(result\.status\)\);/);
+  assert.match(read("src/lib/workspace/booksApi.ts"), /return res\(createStatusCode\(result\.status\), \{ error: result\.message, code: result\.status \}\)/);
+  assert.equal((read("src/lib/workspace/booksApi.ts").match(/businessId: id, intl: 1/g) ?? []).length, 2, "book GET and PUT replies carry intl: 1");
+  assert.match(read("src/lib/workspace/cloud.ts"), /pruneTombstones\(repairIntl\(mergeWorkspaces\(serverCopy, clientCopy\), now\), now\)/, "the server repairs old clients' erases and deletes");
 }
 
 console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");
