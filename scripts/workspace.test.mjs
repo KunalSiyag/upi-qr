@@ -1243,6 +1243,15 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.deepEqual(aging.INR, M.agingBuckets(all));
     assert.deepEqual(aging.USD.map((b) => [b.key, b.balancePaise, b.count]), [["current", 0, 0], ["d1_15", 0, 0], ["d16_30", 577000, 3], ["d31_45", 0, 0], ["d45_plus", 0, 0]]);
     assert.deepEqual(aging.EUR.find((b) => b.key === "current").balancePaise, 99);
+    // A currency whose invoices are all paid or void gets no entry.
+    const eurPaid = M.addPayment(W, "inv_eur00001", { amountPaise: 99, date: day, mode: "bank", reference: "" }, X + 2);
+    assert.deepEqual(Object.keys(M.agingBucketsByCurrency(M.allInvoiceViews(eurPaid, day))), ["INR", "USD"], "a fully paid currency drops out");
+    const eurVoid = M.upsertInvoice(W, { ...W.intl.invoices.inv_eur00001, voided: true }, X + 2);
+    assert.deepEqual(Object.keys(M.agingBucketsByCurrency(M.allInvoiceViews(eurVoid, day))), ["INR", "USD"], "a void-only currency drops out");
+    // dueSoonDays reaches the foreign summaries: the € invoice is due in 19 days.
+    assert.deepEqual([M.summarizeForeign(all, day).EUR.dueSoonPaise, M.summarizeForeign(all, day).EUR.dueSoonCount], [0, 0]);
+    assert.deepEqual([M.summarizeForeign(all, day, 30).EUR.dueSoonPaise, M.summarizeForeign(all, day, 30).EUR.dueSoonCount], [99, 1]);
+    assert.deepEqual([M.summarizeForeign(all, day, 18).EUR.dueSoonPaise, M.summarizeForeign(all, day, 19).EUR.dueSoonPaise], [0, 99], "the window's edge");
 
     assert.deepEqual([...M.clientBalances(all)], [...legacy.clientBalances(legacy.invoiceViews(inrOnly, day))]);
     const fb = M.clientForeignBalances(all);
@@ -1284,6 +1293,17 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // Same-currency foreign ties behave the same way; mixed ties: INR, then CURRENCIES order (USD before EUR before SGD).
     const mixedTies = ["SGD", "EUR", "INR", "USD"].map((c, n) => M.viewInvoice(invoice(`inv_tie${n}0001`, `T-${n}`, "cli_acme0001", 5000, c === "INR" ? {} : { currency: c }), W.clients, day));
     assert.deepEqual(M.chaseList(mixedTies).map((v) => v.currency), ["INR", "USD", "EUR", "SGD"]);
+    // Same days late, the foreign minor amount larger: still INR first, then USD before EUR (amounts never compared).
+    const sameDay = [["inv_inr0small", 1000, "INR"], ["inv_usd00big1", 5000, "USD"], ["inv_eur00big1", 900000, "EUR"], ["inv_usd0small", 1, "USD"]]
+      .map(([id, amount, c]) => M.viewInvoice(invoice(id, id.slice(-4), "cli_acme0001", amount, c === "INR" ? {} : { currency: c }), W.clients, day));
+    for (const order of [sameDay, [...sameDay].reverse(), [sameDay[2], sameDay[1], sameDay[3], sameDay[0]]]) {
+      assert.deepEqual(M.chaseList(order).map((v) => v.invoice.id), ["inv_inr0small", "inv_usd00big1", "inv_usd0small", "inv_eur00big1"], "₹10.00 before US$50.00 before €9,000.00");
+    }
+    // The bare pairs from the review: ₹10.00 vs US$50.00, US$1.00 vs €9,000.00, either input order.
+    for (const [a, b] of [[sameDay[0], sameDay[1]], [sameDay[3], sameDay[2]]]) {
+      assert.deepEqual(M.chaseList([a, b]).map((v) => v.invoice.id), [a.invoice.id, b.invoice.id]);
+      assert.deepEqual(M.chaseList([b, a]).map((v) => v.invoice.id), [a.invoice.id, b.invoice.id]);
+    }
     // A randomized INR corpus orders exactly as the old model did.
     let seed = 7;
     const rand = (n) => (seed = (seed * 1103515245 + 12345) % 2147483648) % n;
@@ -1411,6 +1431,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.whatsappLink("00971501234567", "Hi", intl), "https://wa.me/971501234567?text=Hi");
     assert.equal(M.whatsappLink("+44 07700 900123", "Hi", intl), "https://wa.me/4407700900123?text=Hi", "used as typed, no 0 stripped");
     assert.equal(M.whatsappLink("+1 234", "Hi", intl), "https://wa.me/?text=Hi", "too short to be a number");
+    assert.equal(M.whatsappLink("+65 8123 4567", "Hi", intl), "https://wa.me/6581234567?text=Hi", "a 10-digit Singapore number");
+    assert.equal(M.whatsappLink("0065 8123 4567", "Hi", intl), "https://wa.me/6581234567?text=Hi", "the 00 prefix at that length");
+    assert.equal(M.whatsappLink("+12 345 678", "Hi", intl), "https://wa.me/12345678?text=Hi", "8 digits: the shortest number kept");
+    assert.equal(M.whatsappLink("+12 345 67", "Hi", intl), "https://wa.me/?text=Hi", "7 digits: dropped");
     // International without a "+": today's rule (a 10-digit number is Indian).
     assert.equal(M.whatsappLink("98765 43210", "Hi", intl), "https://wa.me/919876543210?text=Hi");
     // Without the option (INR): today's output, byte for byte, including a "+" typed before an Indian number.

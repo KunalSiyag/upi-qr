@@ -342,6 +342,18 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
   assert.equal(D.morningDigestBooks([{ id: "biz_primary", name: "Shop", ws: w }, { id: "biz_other000001", name: "Other", ws: other }], today, false).body,
     "₹25,500 + US$1,200.00 overdue, 1 due today. Start with Acme Traders — ₹25,000, 18 days late.");
 
+  // Same days late, the US$ minor amount larger: the digest still starts with the INR client (amounts never compared).
+  for (const order of [["inr", "usd"], ["usd", "inr"]]) {
+    let pair = fresh();
+    for (const k of order) {
+      pair = k === "inr"
+        ? upsertInvoice(pair, inv("inv_00000010", "P-1", "cli_rohan001", "2026-09-30", 1000), T) // ₹10
+        : upsertInvoice(pair, foreign("inv_usd00010", "P-2", "cli_globex01", "2026-09-30", 5000, "USD"), T); // US$50.00
+    }
+    assert.equal(D.morningDigest(pair, today).body, "₹10 + US$50.00 overdue. Start with Rohan — ₹10, 10 days late.", order.join(" then "));
+    assert.deepEqual(D.morningDigest(D.workspaceFromProjection(D.parseProjection(JSON.stringify(D.digestProjection(pair)))), today), D.morningDigest(pair, today));
+  }
+
   /* ---------- projection shape ---------- */
   const inrBook = upsertInvoice(upsertInvoice(fresh(), inv("inv_00000001", "A-1", "cli_acme0001", "2026-09-22", 2500000), T), inv("inv_00000003", "A-3", "cli_rohan001", "2026-10-10", 300000), T);
   assert.equal(JSON.stringify(D.digestProjection(inrBook)), JSON.stringify({ v: 1, open: D.digestProjection(inrBook).open, plans: [] }), "INR-only: no fx key, v1 bytes");
@@ -433,6 +445,25 @@ console.log("[digest] morning digest text, runner delivery/pruning/once-per-day,
       assert.equal(rupees, inrRupees, `trial ${trial}: ${full?.body} vs ${inrDigest?.body}`);
     }
     assert.ok(withFx > 60, `most trials exercise fx (${withFx})`);
+    // A plan whose clientId is an Object.prototype key (crafted sync or hand-edited backup) has no client on
+    // either path: generateRecurring makes nothing for it and the projection leaves it out, so they agree.
+    for (const clientId of ["constructor", "toString", "__proto__", "hasOwnProperty", "valueOf"]) {
+      for (const currency of ["INR", "USD"]) {
+        let pw = M.upsertPlan(fresh(), { id: "rec_abcdef123456", clientId: "cli_acme0001", amountPaise: 300000, description: "", dayOfMonth: 1, dueAfterDays: 0, startMonth: "2026-08", endMonth: "", paused: false, createdAt: T, updatedAt: T, ...(currency === "INR" ? {} : { currency }) }, T);
+        const raw = JSON.parse(JSON.stringify(pw));
+        (currency === "INR" ? raw.recurring : raw.intl.recurring).rec_abcdef123456.clientId = clientId;
+        pw = M.sanitizeWorkspace(raw);
+        assert.equal(M.getPlan(pw, "rec_abcdef123456").clientId, clientId, "the sanitizer keeps the plan (no data dropped)");
+        assert.deepEqual(M.generateRecurring(pw, today, T).created, [], `${clientId} ${currency}: no invoices for a prototype key`);
+        const proj = D.digestProjection(pw);
+        assert.deepEqual([proj.plans, proj.fx], [[], undefined], `${clientId} ${currency}: left out of the projection`);
+        for (const write of [D.digestProjection, D.bookProjection]) {
+          const projected = D.workspaceFromProjection(D.parseProjection(JSON.stringify(write(pw))));
+          for (const offset of [0, 25]) assert.deepEqual(D.morningDigest(projected, day(offset)), D.morningDigest(pw, day(offset)), `${clientId} ${currency} ${offset}`);
+        }
+        assert.equal(D.morningDigest(pw, today), null);
+      }
+    }
     console.log(`[digest] fx projection ≡ full digest over 120 mixed-currency books × 2 writers × 5 days; exact per-currency text; one 500 cap; bad fx → null`);
   }
 }

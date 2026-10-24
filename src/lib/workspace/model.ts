@@ -1200,7 +1200,9 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
   let next = ws;
   const todayIndex = monthIndex(today.slice(0, 7));
   for (const plan of allLiveRecurring(ws)) {
-    if (plan.paused || !next.clients[plan.clientId] || next.clients[plan.clientId].deletedAt) continue;
+    // Own keys only (as digestProjection checks): a plan whose clientId is "constructor" has no client.
+    const client = own(next.clients, plan.clientId);
+    if (plan.paused || !client || client.deletedAt) continue;
     const last = Math.min(todayIndex, plan.endMonth ? monthIndex(plan.endMonth) : todayIndex);
     const first = Math.max(monthIndex(plan.startMonth), last - MAX_BACKFILL_MONTHS + 1);
     for (let index = first; index <= last; index++) {
