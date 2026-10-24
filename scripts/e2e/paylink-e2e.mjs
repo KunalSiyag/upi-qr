@@ -94,6 +94,7 @@ try {
   check("noindex + no-store + CSP blocks scripts", (res.headers.get("x-robots-tag") || "").includes("noindex") && res.headers.get("cache-control") === "no-store" && (res.headers.get("content-security-policy") || "").includes("script-src 'none'"));
   check("no Clerk scripts on pay page", !/<script[^>]*clerk|clerk\.browser|ClerkClient/i.test(html));
   check("growth link to tracker", html.includes('href="/payment-tracker/"'));
+  check("INR footer is static text, byte for byte as before (apostrophe unescaped)", html.includes("Money goes straight to Sharma Tuition's UPI account. Pro UPI QR never holds or processes payments, and only Sharma Tuition can mark this invoice paid."));
   res = await page("/i/not-a-token/");
   check("malformed token → 404", res.status === 404);
   res = await page("/i/ZZZZZZZZZZZZZZZZZZZZZZ/");
@@ -227,6 +228,33 @@ try {
     await admin("set", { key: `ws:doc:${owner}`, value: JSON.stringify(foreignWorkspace({}, intlSettings({ accountName: "", payUrl: "" }))) });
     r = await api("POST", "/api/v1/paylinks/", user, { invoiceId: "inv_usd00001" });
     check("no international details → 409 no_intl", r.status === 409 && r.json?.code === "no_intl" && r.json?.error === "Add international payment details in Settings before sharing pay links for foreign-currency invoices.", r.text.slice(0, 200));
+  }
+
+  // An INR-only account: an older tab's list (no ?intl=1) reads each link's record alongside its claims, not before
+  // them, so it adds one pipelined KV request (whatever the number of links) and no round trip in sequence.
+  {
+    const user = "user_e2eInrOnlyLinks01";
+    const owner = ownerOf(user);
+    await admin("reset", {});
+    await admin("set", { key: `ws:doc:${owner}`, value: JSON.stringify(workspace()) });
+    await admin("set", { key: `ws:rev:${owner}`, value: "1" });
+    for (let i = 1; i <= 6; i++) {
+      const tok = `In${String(i).repeat(20)}`;
+      await admin("set", { key: `pl:tok:${tok}`, value: JSON.stringify({ owner, invoiceId: `inv_0000000${i}`, createdAt: T }) });
+      await admin("set", { hash: `pl:own:${owner}`, field: `inv_0000000${i}`, value: tok });
+    }
+    const stats = async () => (await fetch(`${KV}/__admin/stats`, { method: "POST", body: "reset" })).json();
+    const counted = async (path) => { await stats(); const at = Date.now(); const r = await api("GET", path, user); return { ...r, ms: Date.now() - at, kv: (await stats()).requests }; };
+    let older = await counted("/api/v1/paylinks/?books=1");
+    let current = await counted("/api/v1/paylinks/?books=1&intl=1");
+    check("INR-only: an older tab's list gets the same links as a current tab's", older.status === 200 && older.text === current.text && older.json.links.length === 6, `${older.text.slice(0, 120)} ≠ ${current.text.slice(0, 120)}`);
+    check("INR-only: …with at most one extra KV request for 6 links", older.kv <= current.kv + 1, `older ${older.kv} vs current ${current.kv}`);
+    // Every pay-link KV request now takes 400 ms: a record read in sequence would show as a third 400 ms step.
+    await admin("fault", { match: "pl:", count: 1000, delayMs: 400 });
+    older = await counted("/api/v1/paylinks/?books=1");
+    current = await counted("/api/v1/paylinks/?books=1&intl=1");
+    check("INR-only: …and no extra round trip in sequence", current.status === 200 && older.status === 200 && older.ms < current.ms + 200, `older ${older.ms} ms vs current ${current.ms} ms`);
+    await admin("reset", {});
   }
 
   // Management API requires sign-in.

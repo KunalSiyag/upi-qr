@@ -569,13 +569,17 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.match(foreignClaim, /if \(!validTransferRef\(reference\)\)/);
   assert.match(foreignClaim, /parseMoneyToMinor\(amountText, currency\)/);
   assert.doesNotMatch(post, /form\.get\("currency"\)/, "the claim currency never comes from the form");
+  // The claim alert carries that currency, so the lock screen never reads a US$ claim as ₹ (push-e2e checks the text).
+  const alertCall = post.slice(post.indexOf("sendClaimAlert("), post.indexOf("}).catch(", post.indexOf("sendClaimAlert(")));
+  assert.match(alertCall, /\.\.\.\(claim\.currency \? \{ currency: claim\.currency \} : \{\}\)/, "the claim alert passes the claim's currency");
   assert.ok(post.indexOf("isTrustedMutation(Astro.request)") < post.indexOf("if (foreign) {") && post.indexOf('consumeRateLimit("paylink-claim"') < post.indexOf("if (foreign) {"), "foreign claims pass the same origin check and rate limit");
   assert.match(post, /readLimitedText\(Astro\.request, 1024\)/);
   assert.match(read("src/lib/apiSecurity.ts"), /export function validTransferRef\(value: unknown\): value is string \{\n\s*return typeof value === "string" && \/\^\[A-Za-z0-9\]\[A-Za-z0-9\\\/-\]\{5,39\}\$\/\.test\(value\);/);
   // Older tabs never see or revoke links for foreign-currency invoices (§1.7).
   const listApi = handlerOf(read("src/pages/api/v1/paylinks/index.ts"), "GET");
   assert.match(listApi, /const intlClient = url\.searchParams\.get\("intl"\) === "1";/);
-  assert.match(listApi, /intlClient \? \[\] : await Promise\.all\(entries\.map\(async \(\[, token\]\) => \(await store\.get\(token\)\)\?\.intl === 1\)\)/);
+  assert.match(listApi, /const \[record, claims\] = await Promise\.all\(\[intlClient \? null : store\.get\(token\), store\.claims\(token\)\]\);\n\s*if \(record\?\.intl === 1\) return null;/);
+  assert.match(listApi, /const links = rows\.filter\(\(row\) => row !== null\);/);
   const deleteApi = read("src/pages/api/v1/paylinks/[token].ts");
   assert.match(deleteApi, /if \(record\.intl === 1 && url\.searchParams\.get\("intl"\) !== "1"\) \{\n\s*return jsonResponse\([^\n]*, 409\);/);
   assert.ok(deleteApi.indexOf("record.owner !== workspaceOwner(userId)") < deleteApi.indexOf("record.intl === 1"), "ownership is checked first (no token probing)");

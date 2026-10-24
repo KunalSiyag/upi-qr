@@ -45,6 +45,7 @@ try {
   check("statement total and overdue", html.includes("₹6,000") && /Total due/.test(html) && /overdue/.test(html));
   check("no client identity or descriptions", !/Riya|9876543210|fees/.test(html), (html.match(/Riya|fees/g) || []).join(","));
   check("UPI intent pays the total with a dues note", /am=6000\.00/.test(html) && /tn=Dues\+to\+Sharma\+Tuition/.test(html));
+  check("INR footer is static text, byte for byte as before (apostrophe unescaped)", html.includes("Money goes straight to Sharma Tuition's UPI account. Pro UPI QR never holds or processes payments, and only Sharma Tuition can mark these invoices paid."));
   let res = await fetch(`${DEV}/i/${TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.81" }, body: "utr=412345678901&amount=" });
   check("statement claim requires the amount", (await res.text()).includes("so it can be applied to your oldest dues first"));
   res = await fetch(`${DEV}/i/${TOKEN}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.81" }, body: "utr=412345678901&amount=4500" });
@@ -77,6 +78,47 @@ try {
   check("US$ only: no QR, no UPI form, a bank-transfer note instead", !html.includes("upi://") && !/<img src="data:/.test(html) && !html.includes("<form") && html.includes("After a bank transfer, send the transfer reference to Sharma Tuition."));
   res = await fetch(`${DEV}/i/${TOKEN2}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.83" }, body: "utr=612345678901&amount=750" });
   check("US$ only: a ₹ claim is refused, nothing stored", res.status === 200 && (await admin("get", { list: `pl:claims:${TOKEN2}` })).value.length === 0);
+
+  // --- US$ and € invoices, with the business's own US$ account (byCurrency), and export lines (owner decision Q3) ---
+  const TOKEN3 = "Sh7pQ2xYz9AbCdEfGhIjKl";
+  const issued = addDays(-20);
+  const fyStart = Number(issued.slice(5, 7)) >= 4 ? Number(issued.slice(0, 4)) : Number(issued.slice(0, 4)) - 1;
+  const lutFy = `${fyStart}-${String((fyStart + 1) % 100).padStart(2, "0")}`;
+  const usAccount = { accountName: "Sharma Tuition LLP", bankName: "Community Federal Savings Bank", swift: "CMFGUS33", account: "8312345678", bankDetails: "ACH routing 026073150", payUrl: "" };
+  const multiWs = (exportLut = {}) => ({
+    ...ws,
+    business: { ...ws.business, gstin: "27ABCDE1234F1Z5" },
+    clients: { ...ws.clients, cli_multi001: { id: "cli_multi001", name: "Initech GmbH", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } },
+    intl: {
+      settings: { ...intl.settings, byCurrency: { USD: usAccount }, exportUnderLut: true, lutArn: "AD2701260012345", lutFy },
+      invoices: {
+        inv_usd00041: { ...usdInv("inv_usd00041", "TU-41", "cli_multi001", 120000, addDays(5)), ...(exportLut.usd ? { exportLut: true } : {}) },
+        inv_eur00042: { ...usdInv("inv_eur00042", "TU-42", "cli_multi001", 90000, addDays(7)), currency: "EUR", ...(exportLut.eur ? { exportLut: true } : {}) },
+      },
+      recurring: {},
+      clients: {},
+    },
+  });
+  const seedMulti = async (exportLut) => {
+    await admin("reset", {});
+    await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(multiWs(exportLut)) });
+    await admin("set", { key: `ws:rev:${OWNER}`, value: "1" });
+    await admin("set", { key: `pl:tok:${TOKEN3}`, value: JSON.stringify({ owner: OWNER, invoiceId: "stmt:cli_multi001", createdAt: T }) });
+    return (await fetch(`${DEV}/i/${TOKEN3}/`)).text();
+  };
+  html = await seedMulti();
+  const sectionOf = (page, currency) => { const at = page.indexOf(`aria-label="${currency} invoices"`); return at < 0 ? "" : page.slice(at, page.indexOf("</section>", at)); };
+  const usd = sectionOf(html, "USD");
+  const eur = sectionOf(html, "EUR");
+  check("per-currency details: the US$ section shows the US$ account only", usd.includes("TU-41") && usd.includes("CMFGUS33") && usd.includes("8312345678") && usd.includes("ACH routing 026073150") && !usd.includes("HDFCINBB") && !usd.includes("Pay on"), usd.slice(0, 300));
+  check("per-currency details: the € section shows the default details and link", eur.includes("TU-42") && eur.includes("€900.00") && eur.includes("HDFCINBB") && eur.includes("GB82 WEST 1234 5698 7654 32") && eur.includes("Pay on wise.com") && !eur.includes("CMFGUS33"), eur.slice(0, 300));
+  const afterSections = html.slice(html.lastIndexOf("</section>"), html.indexOf("After a bank transfer"));
+  check("per-currency details: no shared block below the sections", afterSections.length > 0 && !/HDFCINBB|CMFGUS33|Pay on/.test(afterSections), afterSections.slice(0, 300));
+  check("no export line when no invoice is marked as an export", !html.includes("LETTER OF UNDERTAKING"));
+  html = await seedMulti({ usd: true });
+  check("one of two foreign invoices is an export: the line names it", html.includes("TU-41: SUPPLY MEANT FOR EXPORT/SUPPLY TO SEZ UNIT OR SEZ DEVELOPER FOR AUTHORISED OPERATIONS UNDER BOND OR LETTER OF UNDERTAKING WITHOUT PAYMENT OF INTEGRATED TAX (LUT ARN AD2701260012345)") && !html.includes("TU-42: SUPPLY"), (html.match(/.{30}SUPPLY MEANT.{20}/) || [""])[0]);
+  html = await seedMulti({ usd: true, eur: true });
+  check("every foreign invoice is an export: the endorsement without invoice numbers", html.includes(">SUPPLY MEANT FOR EXPORT/SUPPLY TO SEZ UNIT OR SEZ DEVELOPER FOR AUTHORISED OPERATIONS UNDER BOND OR LETTER OF UNDERTAKING WITHOUT PAYMENT OF INTEGRATED TAX (LUT ARN AD2701260012345)<") && !/TU-4\d(, TU-4\d)?: SUPPLY/.test(html), (html.match(/.{30}SUPPLY MEANT.{20}/) || [""])[0]);
 
   // --- Workspace UI (static build + stubs) ---
   const b = await startBrowser();

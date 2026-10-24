@@ -41,14 +41,14 @@ export const GET: APIRoute = async ({ locals, url }) => {
     const byInvoice = await store.list(owner);
     const used = Object.keys(byInvoice).length;
     const entries = Object.entries(byInvoice).filter(([key]) => allBooks || !key.includes("/"));
-    // Only an older client's request reads the records (one per link) to find the foreign-currency ones.
-    const isIntl = intlClient ? [] : await Promise.all(entries.map(async ([, token]) => (await store.get(token))?.intl === 1));
-    const links = await Promise.all(entries.filter((_, i) => !isIntl[i]).map(async ([invoiceId, token]) => ({
-      invoiceId,
-      token,
-      claims: await store.claims(token),
-      ...(allBooks ? { businessId: parseLinkKey(invoiceId).bookId } : {}),
-    })));
+    // Only an older client's request reads the records (one per link) to find the foreign-currency ones. Each
+    // record is read at the same time as its claims, never before them, so it adds no round trip in sequence.
+    const rows = await Promise.all(entries.map(async ([invoiceId, token]) => {
+      const [record, claims] = await Promise.all([intlClient ? null : store.get(token), store.claims(token)]);
+      if (record?.intl === 1) return null;
+      return { invoiceId, token, claims, ...(allBooks ? { businessId: parseLinkKey(invoiceId).bookId } : {}) };
+    }));
+    const links = rows.filter((row) => row !== null);
     const plan = await planFor(owner);
     // `used` is account-wide (the active-link limit is per account), even when only primary links are listed.
     return jsonResponse({ links, plan: { id: plan.id, activePaylinks: plan.activePaylinks, used, statementLinks: plan.statementLinks, ...(allBooks ? { businesses: plan.businesses } : {}) } });

@@ -338,9 +338,11 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
         </div>
 
         <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
-          {sections.length > 0
-            ? `Money goes straight to ${view.merchantName}'s UPI, bank or payment account. Pro UPI QR never holds or processes payments, and only ${view.merchantName} can mark these invoices paid.`
-            : `Money goes straight to ${view.merchantName}'s UPI account. Pro UPI QR never holds or processes payments, and only ${view.merchantName} can mark ${statement ? "these invoices" : "this invoice"} paid.`}
+          {sections.length > 0 ? (
+            <Fragment>Money goes straight to {view.merchantName}'s UPI, bank or payment account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark these invoices paid.</Fragment>
+          ) : (
+            <Fragment>Money goes straight to {view.merchantName}'s UPI account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark {statement ? "these invoices" : "this invoice"} paid.</Fragment>
+          )}
         </div>
       </div>
       )}
