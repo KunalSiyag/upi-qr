@@ -10,7 +10,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createECDH, generateKeyPairSync } from "node:crypto";
 import { connect } from "node:net";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, readFileSync, renameSync, rmSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -20,8 +20,13 @@ const STATIC_DIR = join(ROOT, ".vercel", "output", "static");
 const SUITES = [
   "waitlist-e2e", "workspace-e2e", "bridge-e2e", "sync-e2e", "paylink-ui-e2e",
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
-  "books-server-e2e", "books-client-e2e", "books-e2e",
+  "books-server-e2e", "books-client-e2e", "books-e2e", "currency-e2e",
 ];
+// Suites that need the clients-abroad UI on (INTL_UI, docs/spec-foreign-clients.md §5.1). The runner builds a
+// separate flag-on copy of the static site for them (PROUPIQR_E2E_INTL_UI=1) and serves it at INTL_BASE; the
+// normal build in .vercel/output stays exactly as it was.
+const INTL_SUITES = ["currency-e2e"];
+const INTL_STATIC_DIR = join(ROOT, ".vercel", "e2e-intl-static");
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");
 // --prod runs the server-backed suites against the real production bundle (scripts/e2e/prod-server.mjs).
@@ -76,9 +81,40 @@ function stopAll() {
 }
 process.on("SIGINT", () => { stopAll(); process.exit(130); });
 
+/**
+ * Builds the flag-on static site into INTL_STATIC_DIR without touching the normal build: the adapter always writes
+ * .vercel/output, so the normal output is moved aside first and put back afterwards (also on failure).
+ */
+function buildIntlStatic() {
+  const output = join(ROOT, ".vercel", "output");
+  const kept = join(ROOT, ".vercel", "output.e2e-keep");
+  rmSync(kept, { recursive: true, force: true });
+  if (existsSync(output)) renameSync(output, kept);
+  try {
+    const result = spawnSync(join(ROOT, "node_modules", ".bin", "astro"), ["build", "--outDir", join(ROOT, ".vercel", "e2e-intl-dist")], {
+      cwd: ROOT, encoding: "utf8", timeout: 600_000, env: { ...process.env, PROUPIQR_E2E_INTL_UI: "1" },
+    });
+    if (result.status !== 0) throw new Error(`flag-on build failed:\n${`${result.stdout}${result.stderr}`.slice(-2000)}`);
+    rmSync(INTL_STATIC_DIR, { recursive: true, force: true });
+    renameSync(join(output, "static"), INTL_STATIC_DIR);
+  } finally {
+    rmSync(output, { recursive: true, force: true });
+    rmSync(join(ROOT, ".vercel", "e2e-intl-dist"), { recursive: true, force: true });
+    if (existsSync(kept)) renameSync(kept, output);
+  }
+}
+
 let failed = 0;
 let passed = 0;
 try {
+  const selected = [...SUITES].filter((s) => (only.length ? only.includes(s) : true) && !PROD);
+  if (selected.some((s) => INTL_SUITES.includes(s))) {
+    buildIntlStatic();
+    const intlPort = await freePort(4401);
+    start("python3", ["-m", "http.server", String(intlPort), "--directory", INTL_STATIC_DIR]);
+    process.env.INTL_BASE = `http://localhost:${intlPort}`;
+    await waitFor(`${process.env.INTL_BASE}/app/`);
+  }
   start("node", [join(HERE, "fake-upstash.mjs")]);
   start("python3", ["-m", "http.server", "4400", "--directory", STATIC_DIR]);
   const serverEnv = {
