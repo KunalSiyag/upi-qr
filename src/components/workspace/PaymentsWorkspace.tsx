@@ -16,6 +16,7 @@ import {
 } from "../../lib/workspace/localStore";
 import { createShelfSync, READ_ONLY, type BookSyncStatus, type ShelfSyncState, type SyncState } from "../../lib/workspace/sync";
 import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks, paylinkUrl, type LinkContext, type PaylinkList } from "../../lib/workspace/paylinkClient";
+import { pendingClaimCounts } from "../../lib/workspace/paylinks";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
 import { InvoiceSheet, PaymentSheet, ReminderSheet } from "./Sheets";
@@ -25,7 +26,7 @@ import { NotificationsPanel } from "./NotificationsPanel";
 import { InstallHint, useInstallPrompt } from "./InstallApp";
 import { addSampleData, hasSampleData, isSampleId, removeSampleData } from "../../lib/workspace/sample";
 import {
-  addBook, bookRank, deleteBook, emptyIndex, isBookId, isTombstoned, linkFor, liveBookIds, newBookId, paidLinkTokens as paidTokensOf, parseLinkKey, pendingClaimCounts, PRIMARY_BOOK_ID,
+  addBook, bookRank, deleteBook, emptyIndex, isBookId, isTombstoned, linkFor, liveBookIds, newBookId, paidLinkTokens as paidTokensOf, parseLinkKey, PRIMARY_BOOK_ID,
   type BookIndex, type Shelf,
 } from "../../lib/workspace/books";
 import { BusinessSwitcher, UsageLine, type SwitcherBook, type SwitcherUsage } from "./BusinessSwitcher";

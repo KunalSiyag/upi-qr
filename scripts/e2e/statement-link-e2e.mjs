@@ -76,8 +76,21 @@ try {
   check("US$ only: never 'Paid ✓' or 'Nothing is due right now'", !html.includes("Paid ✓") && !html.includes("Nothing is due right now") && html.includes("US$750.50 due"));
   check("US$ only: the header counts the US$ line", /Statement · 1 unpaid invoice</.test(html));
   check("US$ only: no QR, no UPI form, a bank-transfer note instead", !html.includes("upi://") && !/<img src="data:/.test(html) && !html.includes("<form") && html.includes("After a bank transfer, send the transfer reference to Sharma Tuition."));
+  check("US$ only: the footer names the UPI, bank or payment account", html.includes("Money goes straight to Sharma Tuition's UPI, bank or payment account. Pro UPI QR never holds or processes payments, and only Sharma Tuition can mark these invoices paid."));
   res = await fetch(`${DEV}/i/${TOKEN2}/`, { method: "POST", redirect: "manual", headers: { "Content-Type": "application/x-www-form-urlencoded", Origin: DEV, "X-Real-IP": "198.51.100.83" }, body: "utr=612345678901&amount=750" });
+  const refused = await res.text();
   check("US$ only: a ₹ claim is refused, nothing stored", res.status === 200 && (await admin("get", { list: `pl:claims:${TOKEN2}` })).value.length === 0);
+  check("US$ only: the refusal says why", /<p role="alert"[^>]*>After a bank transfer, send the transfer reference to Sharma Tuition\.<\/p>/.test(refused), (refused.match(/.{20}role="alert".{120}/) || [""])[0]);
+
+  // A freelancer who bills only abroad (§4.2): no UPI ID at all, foreign details only. Nothing on the page is about UPI.
+  await admin("reset", {});
+  await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify({ ...mixedWs, business: { ...mixedWs.business, upiId: "" } }) });
+  await admin("set", { key: `ws:rev:${OWNER}`, value: "1" });
+  await admin("set", { key: `pl:tok:${TOKEN2}`, value: JSON.stringify({ owner: OWNER, invoiceId: "stmt:cli_globex01", createdAt: T }) });
+  html = await (await fetch(`${DEV}/i/${TOKEN2}/`)).text();
+  check("no UPI ID, US$ only: the US$ section and bank details", html.includes("US$750.50 due") && html.includes("TU-32") && html.includes("HDFCINBB"), html.slice(0, 200));
+  check("no UPI ID, US$ only: no 'hasn't added a UPI ID', no Rupee heading, no UPI intent", !html.includes("hasn't added a UPI ID") && !html.includes("hasn&#39;t added a UPI ID") && !html.includes("Rupee invoices") && !html.includes("upi://") && !html.includes("<form"));
+  check("no UPI ID, US$ only: the footer names the UPI, bank or payment account", html.includes("Sharma Tuition's UPI, bank or payment account."));
 
   // --- US$ and € invoices, with the business's own US$ account (byCurrency), and export lines (owner decision Q3) ---
   const TOKEN3 = "Sh7pQ2xYz9AbCdEfGhIjKl";

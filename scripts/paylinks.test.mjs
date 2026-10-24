@@ -469,6 +469,10 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
       { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: null, totalMinor: 0, overdueMinor: 0 }] } },
       { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: [], totalMinor: -1, overdueMinor: 0 }] } },
       { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [{ currency: "USD", lines: [], totalMinor: 1.5, overdueMinor: 0 }] } },
+      // A section that isn't an object is a bad shape (null), never a TypeError (review round 3).
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [null] } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: ["USD"] } },
+      { kind: "statement2", view: { ...P.statementView(mixed, client.id, "2026-10-10"), foreign: [[]] } },
       { kind: "receipt", view: {} },
     ]) assert.equal(P.parseSnapshot(JSON.stringify(bad)), null, JSON.stringify(bad).slice(0, 80));
   }
@@ -602,7 +606,7 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
   // The switcher badge counts only claims this build can show (review round 1): a claim on a foreign link carries
   // currency and has no claim card until PR 4, so it is left out; INR invoice and statement claims count as before.
   {
-    const { pendingClaimCounts } = await import("../src/lib/workspace/books.ts");
+    const { pendingClaimCounts } = await import("../src/lib/workspace/paylinks.ts");
     const inrClaim = { utr: "412345678901", amountPaise: 100, at: 1 };
     const usdClaim = { utr: "WISE123456", amountPaise: 50000, at: 2, currency: "USD" };
     assert.deepEqual(pendingClaimCounts({

@@ -281,6 +281,8 @@ try {
     await b.go(`${DEV}/i/${FTOKEN}/`, 2500);
     await b.shot("pl-03-foreign-mobile.png");
     check("foreign page fits a phone (no horizontal scroll)", await b.eval("document.documentElement.scrollWidth <= window.innerWidth"));
+    // The pattern must also reject (review round 3): without a valid pattern, checkValidity() is true for any value set from script.
+    check("the reference pattern rejects a space or a leading dash in the browser", await b.eval("(() => { const i = document.getElementById('ref'); return ['ab cdefgh', '-abcdefg'].every((v) => { i.value = v; return i.validity.patternMismatch && !i.checkValidity(); }); })()"));
     check("the reference pattern accepts a UETR in the browser", await b.eval("(() => { const i = document.getElementById('ref'); i.value = 'eb6305c9-1f7f-49de-aed0-16487c27b42d'; return i.checkValidity(); })()"));
     await b.eval("document.getElementById('amount').value = '1200'; document.querySelector('form').submit(); true");
     await b.waitFor("location.search === '?claimed=1'", 8000);
