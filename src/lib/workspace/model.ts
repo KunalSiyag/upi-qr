@@ -1273,6 +1273,15 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
 const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
 
 /**
+ * A client's live plan in another currency that bills `month` (a paused plan counts: it backfills when resumed).
+ * A new plan in `currency` starting that month would bill the month twice, once per currency (review round 1, PR 5).
+ */
+export function otherCurrencyPlanFor(ws: Workspace, clientId: string, month: string, currency: CurrencyCode): RecurringPlan | undefined {
+  return allLiveRecurring(ws).find((plan) => plan.clientId === clientId && currencyOf(plan) !== currency
+    && plan.startMonth <= month && (!plan.endMonth || plan.endMonth >= month));
+}
+
+/**
  * Moves an invoice to another currency: tombstones `id` and creates a copy with a new id, the same number and
  * fields, in `currency`. Only while it has no payments, and never for a plan month (null): a plan month's id is
  * recurringInvoiceId(plan, month), and once its tombstone is pruned generateRecurring would bill that month again.

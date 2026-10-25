@@ -51,6 +51,8 @@ try {
   await sleep(200);
   let page = await text();
   check("monthly billing listed under Clients", /Monthly billing[\s\S]*Riya Kapoor · ₹3,000[\s\S]*Day 1 of each month · Monthly tuition/.test(page));
+  // An INR-only book (pickers off) never shows the currency-switch note (spec §5.1, Q9; review round 1, PR 5).
+  check("INR-only: no Monthly billing currency note", !(await b.eval("!!document.querySelector('[data-monthly-note]')")) && !/another currency/.test(page));
   await t("__t.click(/^Pause$/)");
   await sleep(200);
   check("pause shown", /paused/.test(await text()) && Object.values((await local()).recurring)[0].paused === true);

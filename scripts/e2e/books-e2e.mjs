@@ -776,11 +776,15 @@ try {
   await sleep(1200);
   check("F2: an old-tab write of Book Two's key keeps its sidecar", (await storage(`proupiqr-intl-v1:${B}`) ?? "").includes("inv_usd00002") && /US\$1,200\.00/.test(await text()) && !(await storage(`proupiqr-book-v1:${B}`)).includes("USD"));
   check("F2: the first business's sidecar is untouched", (await storage("proupiqr-intl-v1:biz_primary") ?? "").includes("inv_usd00001") && !(await storage("proupiqr-intl-v1:biz_primary")).includes("Book Two"));
-  // The Clients abroad Settings card follows each business's read-only state.
-  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree } });
+  // The Clients abroad Settings card follows each business's read-only state. Third Shop has the pickers on and a
+  // monthly plan, so only its read-only state hides the Monthly billing note (review round 1, PR 5).
+  await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: three6 },
+    sidecars: { [C]: { settings: details("Third Shop LLP"), invoices: {}, recurring: {}, clients: {} } } });
   await b.go(BASE + `/app/?tab=settings&business=${C}`, 3000);
   await b.waitFor("!!document.querySelector('[data-read-only]')", 8000);
   check("F3: the Clients abroad fieldset is disabled in a read-only business", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && d.querySelector('fieldset').disabled && document.getElementById('ws-intl-account-name').matches(':disabled'); })()"));
+  await b.go(BASE + `/app/?tab=clients&business=${C}`, 2500);
+  check("F3: a read-only business lists its monthly billing without the currency-switch note", (await h1()) === "Third Shop" && /Monthly billing/.test(await text()) && !(await b.eval("!!document.querySelector('[data-monthly-note]')")));
   await b.go(BASE + "/app/?tab=settings", 2500);
   check("F3: …and enabled in the first business", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.querySelector('fieldset').disabled; })()"));
 

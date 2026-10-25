@@ -48,7 +48,7 @@ function checkDetails(d: PayDetailsFields, tr: Tr, suffix: string, errors: Error
   const account = normalizeAccount(d.account);
   if (d.account.trim() && looksLikeIban(account) && !validIban(account)) errors[`account${suffix}`] = tr("This IBAN doesn't look right. Check it against your bank's details.");
   else if (d.account.trim() && !account) errors[`account${suffix}`] = tr("Enter the IBAN or account number (4 to 34 letters and digits).");
-  if (d.payUrl.trim() && !safePayUrl(d.payUrl.trim())) errors[`payUrl${suffix}`] = tr("Enter an https link from PayPal, Wise or Stripe.");
+  if (d.payUrl.trim() && !safePayUrl(d.payUrl.trim())) errors[`payUrl${suffix}`] = tr("Enter an https link from PayPal, Wise, Stripe or Razorpay.");
 }
 
 /**
@@ -79,10 +79,10 @@ function DetailFields({ value, onChange, suffix, errors, currency }: { value: Pa
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <Field label={named(tr("PayPal, Wise or Stripe payment link (optional)"))} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
+        <Field label={named(tr("PayPal, Wise, Stripe or Razorpay payment link (optional)"))} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
           <input id={`ws-intl-pay-url${suffix}`} type="url" className={inputClass} value={value.payUrl} onChange={set("payUrl")} maxLength={300} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="https://paypal.me/yourname" />
         </Field>
-        <p className="mt-1 text-xs leading-5 text-muted">{tr("Use a link from paypal.me, paypal.com, wise.com or buy.stripe.com.")}</p>
+        <p className="mt-1 text-xs leading-5 text-muted">{tr("Use a link from paypal.me, paypal.com, wise.com, buy.stripe.com or rzp.io.")}</p>
       </div>
     </div>
   );
@@ -171,7 +171,8 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
     const nextWs = editIntlSettings(ws, settingsOf(base, gstin), after, Date.now());
     // The form is now the base, so the settings this save wrote refresh it (normalized) without counting as an edit.
     setBase(form);
-    onChange(nextWs, tr("Payment details saved."));
+    // Nothing edited (editIntlSettings wrote nothing): never claim a save that didn't happen (review round 1, PR 5).
+    onChange(nextWs, nextWs === ws ? tr("No changes to save.") : tr("Payment details saved."));
   }
 
   return (

@@ -133,6 +133,13 @@ try {
   // INTL_UI is on (PR 5, docs/spec-foreign-clients.md §5.1): an INR-only book sees one new thing, the collapsed
   // "Clients abroad" card. No currency picker, no plan note, and nothing is written for it.
   check("INR-only: the Clients abroad card is there, collapsed", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.open && !d.closest('li'); })()"));
+  // Opening it and saving without an edit writes nothing and never says "saved" (review round 1, PR 5).
+  await t(`[...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')).open = true, true`);
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(250);
+  page = await text();
+  check("INR-only: an unedited save says nothing changed", /No changes to save\./.test(page) && !/Payment details saved\./.test(page), page.slice(0, 200));
+  await t(`[...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')).open = false, true`);
   await t(`__t.click(/^\\+ New invoice$/)`);
   await b.waitFor("!!document.querySelector('[role=dialog]')");
   check("INR-only: no currency picker in the new-invoice sheet", !(await b.eval("!!document.getElementById('ws-currency') || !!document.getElementById('ws-currency-fixed')")) && /Amount \(₹\)/.test(await b.eval("document.querySelector('[role=dialog]').innerText")));

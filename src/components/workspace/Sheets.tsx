@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
+  nextInvoiceNumber, otherCurrencyPlanFor, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
@@ -80,6 +80,11 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   // offers nothing. A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
   const lutOn = settings?.exportUnderLut === true && Boolean(ws.business.gstin.trim());
   const showExport = foreign && lutOn && !matched?.gstin.trim();
+  // A new monthly billing in one currency for a client whose plan in another currency already bills this month would
+  // bill the month twice (review round 1, PR 5). Only reachable with the pickers on, so INR-only sheets never show it.
+  const overlap = showPicker && !existing && repeat && matched && isIsoDate(issueDate)
+    ? otherCurrencyPlanFor(ws, matched.id, issueDate.slice(0, 7), currency)
+    : undefined;
 
   function pickClient(name: string) {
     setClientName(name);
@@ -269,6 +274,11 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
                   <input id="ws-until" type="month" className={inputClass} value={untilMonth} onChange={(e) => setUntilMonth(e.target.value)} />
                 </Field>
               </div>
+            )}
+            {overlap && (
+              <p data-plan-overlap="" role="status" className="mt-2 text-xs font-medium text-[#a8321d]">
+                {tr("{name} already has monthly billing in {currency} for {month}. Pick a date in a later month so that month isn't billed twice.", { name: matched!.name, currency: currencyOf(overlap), month: issueDate.slice(0, 7) })}
+              </p>
             )}
           </div>
         )}

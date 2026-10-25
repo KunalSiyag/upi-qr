@@ -74,7 +74,7 @@ try {
   let page = await text();
   check("invalid SWIFT rejected", /Enter a valid SWIFT\/BIC code \(8 or 11 letters and digits\)\./.test(page));
   check("bad IBAN check digits rejected", /This IBAN doesn't look right/.test(page));
-  check("non-https or unknown pay link rejected", /Enter an https link from PayPal, Wise or Stripe\./.test(page));
+  check("non-https or unknown pay link rejected", /Enter an https link from PayPal, Wise, Stripe or Razorpay\./.test(page));
   check("a save with errors focuses the first invalid field", (await focused()) === "ws-intl-swift", await focused());
   check("nothing saved while invalid", !(await sidecar()));
   await t(`__t.set('ws-intl-bank', 'HDFC Bank'), __t.set('ws-intl-swift', 'hdfc in bb'), __t.set('ws-intl-account', 'GB82 WEST 1234 5698 7654 32'), __t.set('ws-intl-bank-details', 'Branch: Fort, Mumbai'), __t.set('ws-intl-pay-url', 'https://paypal.me/sharma')`);
@@ -136,7 +136,7 @@ try {
   // two fields called "Account name".
   const fieldNames = await b.eval("['ws-intl-account-name', 'ws-intl-account-name-usd', 'ws-intl-swift-usd', 'ws-intl-pay-url-usd'].map((id) => document.querySelector('label[for=' + id + ']')?.textContent)");
   check("per-currency fields are named with their currency", fieldNames[0] === "Account name" && fieldNames[1] === "Account name (USD)" && fieldNames[2] === "SWIFT / BIC (USD)"
-    && fieldNames[3] === "PayPal, Wise or Stripe payment link (optional) (USD)", JSON.stringify(fieldNames));
+    && fieldNames[3] === "PayPal, Wise, Stripe or Razorpay payment link (optional) (USD)", JSON.stringify(fieldNames));
   check("an LUT for this financial year is not reported as expired", fy === await b.eval("document.getElementById('ws-intl-lut-fy').options[1].value") && !/has expired/.test(await text()));
   await b.shot("cur-01-settings.png");
 
@@ -367,6 +367,19 @@ try {
   await tab("Clients");
   check("monthly plan shown in its currency", /Monthly billing[\s\S]*Globex LLC · US\$300\.00/.test(await text()));
   check("no plan offers a currency change (a currency is fixed at creation)", !(await b.eval("[...document.querySelectorAll('button')].some((x) => /Change currency/.test(x.textContent))")));
+  check("the Monthly billing note says how to switch without billing a month twice", await b.eval("document.querySelector('section[aria-labelledby=monthly-title] [data-monthly-note]')?.textContent === 'To bill in another currency, stop the monthly billing after this month, then start a new one in that currency dated next month.'"));
+  // Repeat in another currency for a month Globex's US$ plan already bills: the sheet warns; in US$ it doesn't (review round 1, PR 5).
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Globex LLC'), __t.set('ws-amount', '25000'), __t.set('ws-number', 'MON-X')`);
+  await t(`[...document.querySelectorAll('[role=dialog] label')].find(l => l.textContent.startsWith('Repeat every month')).querySelector('input').click(), true`);
+  await sleep(100);
+  check("a same-currency monthly billing shows no overlap warning", !(await b.eval("!!document.querySelector('[data-plan-overlap]')")));
+  await t(`__t.set('ws-currency', 'INR')`);
+  await sleep(100);
+  const thisMonth = await b.eval("document.getElementById('ws-issue').value.slice(0, 7)");
+  check("a monthly billing in ₹ for a month the US$ plan bills is flagged", await b.eval(`document.querySelector('[data-plan-overlap]')?.textContent === "Globex LLC already has monthly billing in USD for ${thisMonth}. Pick a date in a later month so that month isn't billed twice."`), await b.eval("document.querySelector('[data-plan-overlap]')?.textContent || ''"));
+  await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await closed();
 
   // A client whose only record is a foreign monthly plan (its invoice deleted): removable once the plan is deleted
   // (review round 1; "Stop after this month" leaves the plan live).

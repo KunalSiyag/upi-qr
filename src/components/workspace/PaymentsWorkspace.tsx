@@ -1178,7 +1178,7 @@ function Workspace() {
                   </ul>
                   {/* A plan's currency is fixed when it is created (owner decision 2026-10-25): say how to bill in another one. */}
                   {INTL_UI && intlPickers(ws) && !readOnly && (
-                    <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing and start a new one in that currency.")}</p>
+                    <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing after this month, then start a new one in that currency dated next month.")}</p>
                   )}
                 </section>
               )}
