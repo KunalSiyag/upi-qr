@@ -47,5 +47,13 @@ for (const [en, hi] of Object.entries(WS_HI)) {
   assert.equal(placeholders(hi), placeholders(en), `placeholder mismatch: ${en}`);
   assert.ok(hi.trim().length > 0, `empty Hindi for ${en}`);
 }
+// A message that tells the user to change a field names it by the field's Hindi label, letter for letter (review round 5,
+// PR 5: "बिल करने का आखिरी महीना" for the "बिल का आख़िरी महीना (वैकल्पिक)" field). Likewise "stop" a plan is never the
+// bare Pause label ("रोकें"): a Hindi user told to stop it pressed Pause.
+const untilLabel = WS_HI["Last month to bill (optional)"].replace(/ \(.*\)$/, "");
+for (const [en, hi] of Object.entries(WS_HI)) {
+  if (/the last month to bill/i.test(en)) assert.ok(hi.includes(untilLabel), `Hindi names the last-month field by its label: ${en}`);
+  if (/\bstop (it|the monthly billing)\b/i.test(en)) assert.ok(!/(उसे|मासिक बिलिंग)( अभी| \{prev\} में)? रोकें/.test(hi.replace(/इस महीने के बाद रोकें/g, "")), `Hindi "stop" isn't the Pause label: ${en}`);
+}
 assert.ok(keys.size > 300, `expected the extractor to find the UI strings (found ${keys.size})`);
 console.log(`[workspace-i18n] ${keys.size} UI strings covered in Hindi with matching placeholders`);

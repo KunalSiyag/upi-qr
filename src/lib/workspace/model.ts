@@ -1270,7 +1270,90 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
   return { ws: next, created };
 }
 
-const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
+/** The month after `month` ("2026-12" → "2027-01"). */
+export const monthAfter = (month: string): string => monthFromIndex(monthIndex(month) + 1);
+
+/** What another currency's monthly billing of a client already covers (otherCurrencyBilling). */
+export interface OtherCurrencyBilling {
+  /** The plan: a live one, or a deleted one whose invoices stay. */
+  id: string;
+  currency: CurrencyCode;
+  /** The first month it bills, or has billed, from the new plan's first month on (inside the new plan's months). */
+  first: string;
+  /** The last month it bills or has billed; "" while it is live with no end month ("Stop after this month" ends it). */
+  last: string;
+  /**
+   * The first month new billing can start in if this one is stopped this month (Stop sets endMonth to today's month),
+   * with no month billed twice and none billed in neither currency: the month after the last month it will have
+   * billed, or its own first month when stopping leaves nothing billed (a future plan whose first invoice was deleted,
+   * review round 6). Only meaningful when `last` is "".
+   */
+  startIfStopped: string;
+  /**
+   * True when every shared month is an invoice the plan already made and the plan bills none of them any more (it was
+   * stopped before its first month, or deleted): the sheet then names the invoice, not "monthly billing" (review round 4).
+   */
+  invoicesOnly: boolean;
+  /**
+   * The invoices it already made for the new plan's months, ordered by the month they bill: the sheet names them (one
+   * by its number, several by count and months), since deleting only one of several doesn't clear the overlap (review
+   * round 5).
+   */
+  shared: string[];
+}
+
+/** The month a plan invoice bills: the month in its id (generateRecurring and the sheet derive the id from it). */
+export function planInvoiceMonth(invoice: Invoice): string {
+  const prefix = recurringInvoiceId(invoice.recurringId ?? "", "0000-00").slice(0, -6);
+  const tail = invoice.id.startsWith(prefix) ? invoice.id.slice(prefix.length) : "";
+  return /^\d{6}$/.test(tail) ? `${tail.slice(0, 4)}-${tail.slice(4)}` : invoice.issueDate.slice(0, 7);
+}
+
+/**
+ * Monthly billing of a client in another currency that bills any month a new plan in `currency` would bill, from
+ * `fromMonth` to `toMonth` ("" = no end): both would bill each shared month, once per currency (review rounds 1-3,
+ * PR 5). A plan covers the months it still bills (startMonth to endMonth, open-ended without one; none when it was
+ * stopped before its first month) and the months it already billed (its live invoices, also those of a deleted plan):
+ * the invoice sheet creates a plan's first invoice at once, even for a future month, so a plan stopped before its start
+ * month still bills that month (review round 3). A cancelled (voided) invoice counts too: Restore brings it back with
+ * one tap and generateRecurring never bills its month again; only deleting it frees the month (review round 4). A
+ * paused plan counts (it backfills when resumed).
+ * `todayMonth` is the month "Stop after this month" would end a plan in.
+ */
+export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode, todayMonth: string): OtherCurrencyBilling | undefined {
+  const to = toMonth || "9999-12";
+  const groups = new Map<string, { currency: CurrencyCode; made: { month: string; id: string }[]; plan?: RecurringPlan }>();
+  for (const plan of allLiveRecurring(ws)) {
+    if (plan.clientId === clientId && currencyOf(plan) !== currency) groups.set(plan.id, { currency: currencyOf(plan), made: [], plan });
+  }
+  for (const invoice of allLiveInvoices(ws)) {
+    if (!invoice.recurringId || invoice.clientId !== clientId || currencyOf(invoice) === currency) continue;
+    const group = groups.get(invoice.recurringId) ?? { currency: currencyOf(invoice), made: [] };
+    group.made.push({ month: planInvoiceMonth(invoice), id: invoice.id });
+    groups.set(invoice.recurringId, group);
+  }
+  const later = (a: string, b: string) => (a > b ? a : b);
+  for (const [id, { currency: other, made, plan }] of groups) {
+    made.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : a.id < b.id ? -1 : 1));
+    const billed = made.map((m) => m.month);
+    // The months the plan still bills; none when it was stopped before its first month.
+    const runs = plan && (!plan.endMonth || plan.endMonth >= plan.startMonth) ? { start: plan.startMonth, end: plan.endMonth || "9999-12" } : undefined;
+    const inRange = made.filter(({ month }) => month >= fromMonth && month <= to);
+    const candidates = inRange.map((m) => m.month);
+    const fromRun = Boolean(runs && later(runs.start, fromMonth) <= (runs.end < to ? runs.end : to));
+    if (runs && fromRun) candidates.push(later(runs.start, fromMonth));
+    if (!candidates.length) continue;
+    const lastBilled = billed.length ? billed[billed.length - 1] : "";
+    const last = runs && !plan?.endMonth ? "" : later(lastBilled, runs ? runs.end : "");
+    // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed. When
+    // that is nothing, new billing that starts after the plan's first month would leave the months between billed in
+    // neither currency, so the gap-free start is that first month.
+    const lastIfStopped = later(lastBilled, plan && plan.startMonth <= todayMonth ? todayMonth : "");
+    const startIfStopped = lastIfStopped ? monthAfter(lastIfStopped) : plan?.startMonth ?? fromMonth;
+    return { id, currency: other, first: candidates.sort()[0], last, startIfStopped, invoicesOnly: !fromRun, shared: inRange.map((m) => m.id) };
+  }
+  return undefined;
+}
 
 /**
  * Moves an invoice to another currency: tombstones `id` and creates a copy with a new id, the same number and

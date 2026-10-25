@@ -108,10 +108,6 @@ function mcpWithoutRedirects() {
   };
 }
 
-// The clients-abroad UI flag (INTL_UI in src/lib/workspace/localStore.ts) can be switched on for local e2e builds
-// only (scripts/e2e/run.mjs sets PROUPIQR_E2E_INTL_UI=1). Never on Vercel, whatever the environment says.
-const E2E_INTL_UI = process.env.PROUPIQR_E2E_INTL_UI === "1" && !process.env.VERCEL && !process.env.CI;
-
 export default defineConfig({
   site: "https://www.proupiqr.in",
   trailingSlash: "always",
@@ -128,7 +124,6 @@ export default defineConfig({
     inlineStylesheets: "auto"
   },
   vite: {
-    define: { __PROUPIQR_E2E_INTL_UI__: JSON.stringify(E2E_INTL_UI) },
     plugins: [stripDeprecatedEsbuildOptions()]
   }
 });

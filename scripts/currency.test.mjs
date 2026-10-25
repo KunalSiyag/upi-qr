@@ -168,6 +168,26 @@ assert.equal(safePayUrl("https://wise.com/pay/business/acme"), "https://wise.com
 assert.equal(safePayUrl("https://buy.stripe.com/test_eVa5nPg1j1wmfXq5kr"), "https://buy.stripe.com/test_eVa5nPg1j1wmfXq5kr");
 assert.equal(safePayUrl("https://rzp.io/i/nxrHnLJ"), "https://rzp.io/i/nxrHnLJ");
 assert.equal(safePayUrl("HTTPS://PAYPAL.ME/Name"), "https://paypal.me/Name");
+// The advertised list is the accepted list (review round 1, PR 5): the Settings hint names every host (www. aside),
+// and every place that names the providers names each one the allowlist accepts.
+{
+  const { readFileSync } = await import("node:fs");
+  const read = (p) => readFileSync(new URL(`../${p}`, import.meta.url), "utf8");
+  const card = read("src/components/workspace/IntlSettingsCard.tsx");
+  const hint = card.match(/tr\("(Use a link from [^"]+)"\)/)?.[1] ?? "";
+  for (const host of PAY_URL_HOSTS.filter((h) => !h.startsWith("www."))) assert.ok(hint.includes(host), `the Settings hint names ${host}`);
+  const providers = { "paypal.me": "PayPal", "paypal.com": "PayPal", "wise.com": "Wise", "buy.stripe.com": "Stripe", "rzp.io": "Razorpay" };
+  for (const host of PAY_URL_HOSTS.filter((h) => !h.startsWith("www."))) assert.ok(providers[host], `${host} has a provider name here`);
+  const sources = ["src/components/workspace/IntlSettingsCard.tsx", "src/pages/pricing.astro", "src/pages/payment-tracker.astro", "src/data/changelog.ts"];
+  for (const file of sources) {
+    const text = read(file);
+    // Every "PayPal, Wise…" list in the file names all the providers.
+    for (const list of text.match(/PayPal, Wise[^.;)"]*/g) ?? []) {
+      for (const name of new Set(Object.values(providers))) assert.ok(list.includes(name), `${file}: "${list}" names ${name}`);
+    }
+    assert.ok(/PayPal, Wise/.test(text), `${file} lists the providers`);
+  }
+}
 for (const bad of [
   "http://paypal.me/name", "javascript:alert(1)", "https://user@paypal.me/name", "https://user:pw@paypal.me/name", "https://paypal.me.evil.com/x",
   "https://evil.com/?paypal.me", "https://paypal.me:8443/name", "https://evil.paypal.me/x", "https://paypal.me./name", "//paypal.me/name",

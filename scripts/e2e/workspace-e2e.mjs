@@ -130,8 +130,27 @@ try {
   writeFileSync(backupPath, JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(snapshot) }));
   await t(`__t.click(/^Settings$/)`);
   await sleep(200);
-  // INTL_UI is off in this build (docs/spec-foreign-clients.md §5.1): no Clients abroad card, nothing new to create.
-  check("no Clients abroad card while INTL_UI is off", !/Clients abroad/.test(await text()) && !(await b.eval("!!document.getElementById('ws-intl-on')")));
+  // INTL_UI is on (PR 5, docs/spec-foreign-clients.md §5.1): an INR-only book sees one new thing, the collapsed
+  // "Clients abroad" card. No currency picker, no plan note, and nothing is written for it.
+  check("INR-only: the Clients abroad card is there, collapsed", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.open && !d.closest('li'); })()"));
+  // Opening it and saving without an edit writes nothing and never says "saved" (review round 1, PR 5).
+  await t(`[...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')).open = true, true`);
+  // Review round 4 (PR 5): the card's title is an h2 like the other Settings cards', so its h3 sits under it.
+  const outline = await b.eval("[...document.querySelectorAll('main h1, main h2, main h3')].filter((h) => h.getClientRects().length).map((h) => h.tagName + ': ' + h.textContent.trim())");
+  const abroadAt = outline.indexOf("H2: Clients abroad");
+  check("Settings outline: an h2 'Clients abroad' right above its h3", abroadAt > 0 && outline[abroadAt + 1] === "H3: Details for all foreign currencies"
+    && await b.eval("(() => { const h = [...document.querySelectorAll('summary > h2')].find((x) => x.textContent === 'Clients abroad'); return !!h && h.parentElement.firstElementChild === h; })()"), JSON.stringify(outline));
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(250);
+  page = await text();
+  check("INR-only: an unedited save says nothing changed", /No changes to save\./.test(page) && !/Payment details saved\./.test(page), page.slice(0, 200));
+  await t(`[...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')).open = false, true`);
+  await t(`__t.click(/^\\+ New invoice$/)`);
+  await b.waitFor("!!document.querySelector('[role=dialog]')");
+  check("INR-only: no currency picker in the new-invoice sheet", !(await b.eval("!!document.getElementById('ws-currency') || !!document.getElementById('ws-currency-fixed')")) && /Amount \(₹\)/.test(await b.eval("document.querySelector('[role=dialog]').innerText")));
+  await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await b.waitFor("!document.querySelector('[role=dialog]')");
+  check("INR-only: no clients-abroad data stored", (await b.eval("Object.keys(localStorage).filter(k => k.startsWith('proupiqr-intl-v1')).length")) === 0 && !(await b.eval("localStorage.getItem('proupiqr-workspace-v1')")).includes('"intl"'));
   await t(`__t.click(/^Erase workspace on this device/)`);
   await t(`__t.click(/^Erase$/)`);
   await sleep(200);

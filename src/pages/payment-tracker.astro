@@ -28,6 +28,7 @@ const features = [
   ["MSME mode", "Registered on Udyam? Overdue invoices show when the 45-day MSMED deadline passed. Pro adds the Section 16 interest due and your payment rights to reminders."],
   ["Morning reminders", "With a free account, a 9 am notification lists who to chase that day — overdue first, with the top client and amount."],
   ["Pay links", "With a free account, share a link that shows the live amount due, a UPI button, and a QR. Clients can send their UTR back."],
+  ["Clients abroad", "Invoice in the client's currency (USD, EUR, GBP, AED, AUD, CAD or SGD), share your bank details or PayPal, Wise, Stripe or Razorpay link instead of UPI, and record the rupees your bank credited. Totals stay separate per currency."],
   ["Several businesses", `A Pro account keeps up to ${PLANS.pro.businesses} businesses after the first payment, each with its own UPI ID, invoice numbers and pay links. Free keeps ${PLANS.free.businesses}.`],
   ["Sync & backup", "Optional free account syncs phone and laptop. Or stay offline and download a backup or CSV for your accountant."],
 ];
@@ -52,6 +53,10 @@ const faqs = [
   {
     question: "Can I track invoices made elsewhere, like in Tally, Vyapar, or Excel?",
     answer: "Yes. Add the invoice number, amount, and due date by hand. The tracker only needs what is owed and when — not the full invoice.",
+  },
+  {
+    question: "Can I track invoices for clients outside India?",
+    answer: "Yes. Turn on Clients abroad in Settings and pick the client's currency when you create the invoice; it stays fixed for that invoice. Reminders and pay links show your bank details, or your PayPal, Wise, Stripe or Razorpay link, instead of a UPI ID, and amounts are never converted or added to your rupee totals. If you export services under an LUT and have a GSTIN, the export note with your LUT ARN can be added to reminders and pay pages of invoices you mark as exports.",
   },
   {
     question: "Is a 45-day overdue invoice special?",

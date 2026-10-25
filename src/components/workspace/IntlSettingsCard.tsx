@@ -48,7 +48,7 @@ function checkDetails(d: PayDetailsFields, tr: Tr, suffix: string, errors: Error
   const account = normalizeAccount(d.account);
   if (d.account.trim() && looksLikeIban(account) && !validIban(account)) errors[`account${suffix}`] = tr("This IBAN doesn't look right. Check it against your bank's details.");
   else if (d.account.trim() && !account) errors[`account${suffix}`] = tr("Enter the IBAN or account number (4 to 34 letters and digits).");
-  if (d.payUrl.trim() && !safePayUrl(d.payUrl.trim())) errors[`payUrl${suffix}`] = tr("Enter an https link from PayPal, Wise or Stripe.");
+  if (d.payUrl.trim() && !safePayUrl(d.payUrl.trim())) errors[`payUrl${suffix}`] = tr("Enter an https link from PayPal, Wise, Stripe or Razorpay.");
 }
 
 /**
@@ -79,10 +79,10 @@ function DetailFields({ value, onChange, suffix, errors, currency }: { value: Pa
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <Field label={named(tr("PayPal, Wise or Stripe payment link (optional)"))} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
+        <Field label={named(tr("PayPal, Wise, Stripe or Razorpay payment link (optional)"))} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
           <input id={`ws-intl-pay-url${suffix}`} type="url" className={inputClass} value={value.payUrl} onChange={set("payUrl")} maxLength={300} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="https://paypal.me/yourname" />
         </Field>
-        <p className="mt-1 text-xs leading-5 text-muted">{tr("Use a link from paypal.me, paypal.com, wise.com or buy.stripe.com.")}</p>
+        <p className="mt-1 text-xs leading-5 text-muted">{tr("Use a link from paypal.me, paypal.com, wise.com, buy.stripe.com or rzp.io.")}</p>
       </div>
     </div>
   );
@@ -171,17 +171,19 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
     const nextWs = editIntlSettings(ws, settingsOf(base, gstin), after, Date.now());
     // The form is now the base, so the settings this save wrote refresh it (normalized) without counting as an edit.
     setBase(form);
-    onChange(nextWs, tr("Payment details saved."));
+    // Nothing edited (editIntlSettings wrote nothing): never claim a save that didn't happen (review round 1, PR 5).
+    onChange(nextWs, nextWs === ws ? tr("No changes to save.") : tr("Payment details saved."));
   }
 
   return (
     <details className={`group ${card}`} open={Boolean(saved)}>
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-[12px] p-5 [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0">
-          <span className={`block ${cardTitle}`}>{tr("Clients abroad")}</span>
-          <span className={`mt-0.5 block ${cardNote}`}>{tr("Invoice clients outside India in their currency. Reminders and pay links show your bank details instead of UPI.")}</span>
-        </span>
-        <svg className="mt-1 h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+      {/* The title is an h2 like every other Settings card's, so heading navigation reaches the card and its h3 isn't
+          read as part of the card above (review round 4, PR 5). A summary takes headings and phrasing content only (no
+          div or span wrapper around a heading), so a grid places the title, the note and the chevron. */}
+      <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-[12px] p-5 [&::-webkit-details-marker]:hidden">
+        <h2 className={`min-w-0 ${cardTitle}`}>{tr("Clients abroad")}</h2>
+        <span className={`col-start-1 mt-0.5 block min-w-0 ${cardNote}`}>{tr("Invoice clients outside India in their currency. Reminders and pay links show your bank details instead of UPI.")}</span>
+        <svg className="col-start-2 row-span-2 row-start-1 mt-1 h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
         </svg>
       </summary>
