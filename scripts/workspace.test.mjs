@@ -406,8 +406,8 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.ok(!("intl" in M.eraseWorkspace(x, X + 10)), "erasing an INR-only book writes no intl");
     assert.ok(!("intl" in M.mergeWorkspaces(x, x)) && !("intl" in M.pruneTombstones(x, X)) && !("intl" in M.restoreFrom(x, x, X)));
   }
-  // generateRecurring on an INR-only book writes what the deployed code writes (updatedAt === createdAt, no settled
-  // +1: that is for foreign months only).
+  // generateRecurring on an INR-only book writes what the deployed code writes, byte for byte (the export mark carry
+  // is for foreign plans only).
   {
     const planned = upsertPlan(inrBook, { id: "rec_inrbyte01", clientId: "cli_acme0001", amountPaise: 250000, description: "Fees", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
     const now = M.generateRecurring(M.sanitizeWorkspace(clone(planned)), "2026-10-10", X + 300);
@@ -848,157 +848,6 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       const plain = M.replaceInvoiceCurrency(M.upsertInvoice(W, { ...unmarked, updatedAt: X + 5 }, X + 5), "inv_usd00001", "GBP", X + 10);
       assert.ok(!("exportLut" in plain.ws.intl.invoices[plain.id]), "no mark is invented");
     }
-    // Review round 4: the copy's id is derived from the old id (replacementInvoiceId), so a stale write that brings
-    // the old invoice back is found: deleted again without a payment, shown as a pair with one.
-    {
-      assert.equal(moved.id, M.replacementInvoiceId("inv_usd00001", "EUR"));
-      const st3 = (book) => M.allLiveInvoices(book).filter((i) => i.number === "ST-0003").map((i) => [i.id, M.currencyOf(i)]).sort();
-      const again = M.replaceInvoiceCurrency(W, "inv_usd00001", "EUR", X + 11);
-      assert.deepEqual(st3(M.repairIntl(M.mergeWorkspaces(moved.ws, again.ws), X + 12)), [[moved.id, "EUR"]], "the same move on two devices makes one invoice");
-      // A reminder logged on the old id by a copy that hadn't seen the move.
-      const reminded = M.mergeWorkspaces(moved.ws, M.logReminder(W, "inv_usd00001", "whatsapp", X + 20));
-      assert.equal(reminded.intl.invoices.inv_usd00001.deletedAt, undefined, "(the stale reminder brought the old one back)");
-      assert.deepEqual([...M.invoicesMovedTwice(reminded)].sort(), ["inv_usd00001", moved.id].sort(), "flagged before the repair");
-      const repaired = M.repairIntl(reminded, X + 21);
-      assert.deepEqual([repaired.intl.invoices.inv_usd00001.deletedAt, repaired.intl.invoices.inv_usd00001.updatedAt], [X + 21, X + 21], "deleted again at updatedAt + 1");
-      assert.equal(M.repairIntl(repaired, X + 22), repaired, "one pass is the fixed point");
-      assert.deepEqual(st3(repaired), [[moved.id, "EUR"]]);
-      assert.equal(M.invoicesMovedTwice(repaired).size, 0);
-      // A backup from before the move, restored after it.
-      assert.deepEqual(st3(M.repairIntl(M.restoreFrom(moved.ws, W, X + 30), X + 30)), [[moved.id, "EUR"]], "a restore doesn't bring the old one back");
-      // The copy deleted by the user since: a stale write that brings the old one back leaves it live (review round 5:
-      // a deleted copy means the user resolved the pair or deleted the invoice; they can delete this one too).
-      const gone = M.mergeWorkspaces(M.deleteInvoice(moved.ws, moved.id, X + 31), M.logReminder(W, "inv_usd00001", "sms", X + 32));
-      assert.deepEqual(st3(M.repairIntl(gone, X + 33)), [["inv_usd00001", "USD"]], "a deleted copy never deletes the old one");
-      assert.equal(M.invoicesMovedTwice(M.repairIntl(gone, X + 33)).size, 0);
-      // A payment recorded on the old id by a stale copy is kept: both stay, both flagged.
-      const paid = M.repairIntl(M.mergeWorkspaces(moved.ws, M.addPayment(W, "inv_usd00001", { amountPaise: 1000, date: "2026-10-02", mode: "bank", reference: "" }, X + 40)), X + 41);
-      assert.deepEqual(st3(paid), [["inv_usd00001", "USD"], [moved.id, "EUR"]].sort());
-      assert.deepEqual([...M.invoicesMovedTwice(paid)].sort(), ["inv_usd00001", moved.id].sort());
-      // ₹ → US$, then a pre-intl tab records the client's UPI payment on the ₹ invoice.
-      const toUsd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
-      const oldTab = legacy.addPayment(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(M.withoutIntl(W)))), "inv_inr00001", { amountPaise: 450000, date: "2026-10-03", mode: "upi", reference: "" }, X + 60);
-      const upi = M.repairIntl(M.mergeWorkspaces(toUsd.ws, oldTab), X + 61);
-      assert.equal(upi.invoices.inv_inr00001.payments.length, 1, "the ₹ payment is kept");
-      assert.deepEqual([...M.invoicesMovedTwice(upi)].sort(), ["inv_inr00001", toUsd.id].sort(), "the paid ₹ invoice and its open US$ copy are shown");
-      // Two devices moving one invoice to two currencies.
-      const gbp = M.replaceInvoiceCurrency(W, "inv_usd00001", "GBP", X + 70);
-      assert.deepEqual([...M.invoicesMovedTwice(M.repairIntl(M.mergeWorkspaces(moved.ws, gbp.ws), X + 71))].sort(), [moved.id, gbp.id].sort());
-      // A live copy (with a payment from the other device) is never overwritten by the same move again.
-      const copyPaid = M.addPayment(moved.ws, moved.id, { amountPaise: 2000, date: "2026-10-04", mode: "bank", reference: "" }, X + 80);
-      const revived = M.upsertInvoice(copyPaid, M.withoutTombstone(M.getInvoice(copyPaid, "inv_usd00001")), X + 81);
-      const re = M.replaceInvoiceCurrency(revived, "inv_usd00001", "EUR", X + 82);
-      assert.equal(re.id, moved.id);
-      assert.equal(M.getInvoice(re.ws, moved.id).payments.length, 1, "the copy's payment stays");
-      assert.ok(M.getInvoice(re.ws, "inv_usd00001").deletedAt);
-      // Review round 6: moving the old one again (Edit on it, next to its live copy) puts the sheet's edits on the live
-      // copy, at now; an edit that changes nothing leaves the copy as it is.
-      {
-        const edited = M.replaceInvoiceCurrency(reminded, "inv_usd00001", "EUR", X + 90, (copy) => ({ ...copy, description: "Edited" }));
-        assert.equal(edited.id, moved.id);
-        assert.deepEqual([M.getInvoice(edited.ws, moved.id).description, M.getInvoice(edited.ws, moved.id).updatedAt], ["Edited", X + 90], "the edit reaches the live copy");
-        assert.ok(M.getInvoice(edited.ws, "inv_usd00001").deletedAt);
-        const same = M.replaceInvoiceCurrency(reminded, "inv_usd00001", "EUR", X + 90, (copy) => ({ ...copy }));
-        assert.equal(M.getInvoice(same.ws, moved.id), M.getInvoice(reminded, moved.id), "an edit that changes nothing doesn't rewrite it");
-      }
-      assert.equal(M.invoicesMovedTwice(W).size, 0, "nothing moved, nothing flagged");
-
-      // Review round 5. A void recorded on the old id by a stale copy is kept, like a payment: both stay, both flagged.
-      {
-        const voided = M.repairIntl(M.mergeWorkspaces(moved.ws, M.upsertInvoice(W, { ...W.intl.invoices.inv_usd00001, voided: true }, X + 40)), X + 41);
-        assert.deepEqual([Boolean(voided.intl.invoices.inv_usd00001.deletedAt), voided.intl.invoices.inv_usd00001.voided], [false, true], "the void is kept");
-        assert.deepEqual([...M.invoicesMovedTwice(voided)].sort(), ["inv_usd00001", moved.id].sort());
-      }
-      // The user keeps the ₹ invoice a stale tab paid and deletes its US$ copy; undoing that payment later doesn't
-      // delete the kept invoice.
-      {
-        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
-        const stale = legacy.addPayment(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(M.withoutIntl(W)))), "inv_inr00001", { amountPaise: 450000, date: "2026-10-03", mode: "upi", reference: "" }, X + 60);
-        let kept = M.repairIntl(M.deleteInvoice(M.repairIntl(M.mergeWorkspaces(usd.ws, stale), X + 61), usd.id, X + 62), X + 63);
-        assert.equal(M.invoicesMovedTwice(kept).size, 0, "resolved");
-        kept = M.repairIntl(M.removePayment(kept, "inv_inr00001", kept.invoices.inv_inr00001.payments[0].id, X + 64), X + 65);
-        assert.ok(!kept.invoices.inv_inr00001.deletedAt, "the kept ₹ invoice stays after its payment is undone");
-      }
-      // A backup from before the move restores the old invoice once its copy is gone: deleted by the user, or erased.
-      {
-        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
-        const restoredAfter = (book) => M.repairIntl(M.restoreFrom(book, W, X + 70), X + 70);
-        assert.ok(!restoredAfter(M.deleteInvoice(usd.ws, usd.id, X + 60)).invoices.inv_inr00001.deletedAt, "copy deleted, then restore: the ₹ invoice is back");
-        const erased = restoredAfter(M.eraseWorkspace(usd.ws, X + 60));
-        assert.ok(!erased.invoices.inv_inr00001.deletedAt, "Erase, then restore of a pre-move backup: the ₹ invoice is back");
-        assert.ok(M.getInvoice(erased, usd.id).deletedAt, "and the copy stays erased");
-      }
-      // A chain of moves: the old invoice is deleted again while any later copy is live, never after the last is deleted.
-      {
-        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
-        const eur = M.replaceInvoiceCurrency(usd.ws, usd.id, "EUR", X + 51);
-        assert.equal(M.movedCopyOf(eur.ws, W.invoices.inv_inr00001).id, eur.id, "followed through the deleted US$ copy");
-        const stale = M.mergeWorkspaces(eur.ws, M.logReminder(W, "inv_inr00001", "whatsapp", X + 60));
-        assert.ok(M.repairIntl(stale, X + 61).invoices.inv_inr00001.deletedAt, "₹ → US$ → €: a stale ₹ write is deleted again");
-        const allGone = M.mergeWorkspaces(M.deleteInvoice(eur.ws, eur.id, X + 55), M.logReminder(W, "inv_inr00001", "whatsapp", X + 60));
-        assert.ok(!M.repairIntl(allGone, X + 61).invoices.inv_inr00001.deletedAt, "…and left alone once the € copy was deleted");
-      }
-      // Two devices make the same move; one records the client's payment on the copy before the other's move syncs.
-      // The bare copy is written at a time derived from the old invoice, so the same move again never overwrites it.
-      {
-        const sheetMove = (book, now, amount) => M.replaceInvoiceCurrency(book, "inv_inr00001", "USD", now, (copy) => ({ ...copy, amountPaise: amount, description: "Design" }));
-        const bare = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100);
-        assert.equal(M.getInvoice(bare.ws, bare.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 1, "the bare copy's time comes from the old invoice");
-        const paidX = M.addPayment(bare.ws, bare.id, { amountPaise: 100_000, date: "2026-10-20", mode: "bank", reference: "FIRA-778", inrCreditedPaise: 8_350_000 }, X + 200);
-        const y = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 300);
-        assert.equal(y.id, bare.id);
-        for (const merged of [M.mergeWorkspaces(paidX, y.ws), M.mergeWorkspaces(y.ws, paidX)]) {
-          const copy = M.getInvoice(M.repairIntl(merged, X + 400), bare.id);
-          assert.deepEqual([copy.payments.length, copy.payments[0]?.inrCreditedPaise, Boolean(copy.deletedAt)], [1, 8_350_000, false], "the payment and its INR credited survive");
-        }
-        // Review round 6: the sheet's edits are an ordinary edit at `now`, so a later amount typed on another device
-        // wins as any later edit does, even over a reminder logged in between on the first device.
-        const x = sheetMove(W, X + 100, 110_000);
-        assert.deepEqual([M.getInvoice(x.ws, x.id).updatedAt, M.getInvoice(x.ws, x.id).amountPaise, M.getInvoice(x.ws, x.id).description], [X + 100, 110_000, "Design"], "the edit is in the copy, at now");
-        const reminded = M.logReminder(x.ws, x.id, "whatsapp", X + 105);
-        const later = sheetMove(W, X + 200, 120_000);
-        for (const merged of [M.mergeWorkspaces(reminded, later.ws), M.mergeWorkspaces(later.ws, reminded)]) {
-          assert.equal(M.getInvoice(M.repairIntl(merged, X + 300), x.id).amountPaise, 120_000, "the later amount survives");
-        }
-        assert.equal(M.getInvoice(sheetMove(W, X - 50, 110_000).ws, x.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 2, "an edit is never older than the bare copy");
-        // An edit that changes nothing leaves the bare copy at its derived time.
-        assert.equal(M.getInvoice(M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100, (copy) => ({ ...copy })).ws, x.id).updatedAt, X + 1);
-      }
-      // Review round 6: two devices move one US$ invoice to ₹ offline, each typing its own amount. The ₹ copy lives in
-      // the legacy map, whose merge breaks ties by argument order (the server and the client merge in opposite orders),
-      // so the copies must never tie: through the real sync and the client's merge, in both push orders, every copy
-      // ends with the same bytes.
-      {
-        const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
-        const toInr = (now, amount) => M.replaceInvoiceCurrency(W, "inv_usd00001", "INR", now, (copy) => ({ ...copy, amountPaise: amount })).ws;
-        for (const first of ["a", "b"]) {
-          const store = memoryCloudStore();
-          await syncWorkspace(store, "ws:doc:o", W, X + 10);
-          const devices = { a: toInr(X + 1_000, 8_000_000), b: toInr(X + 2_000, 8_500_000) };
-          const order = first === "a" ? ["a", "b", "a", "b"] : ["b", "a", "b", "a"];
-          for (const [i, d] of order.entries()) {
-            const reply = await syncWorkspace(store, "ws:doc:o", devices[d], X + 3_000 + i);
-            devices[d] = M.repairIntl(M.mergeWorkspaces(devices[d], reply.workspace), X + 3_000 + i);
-          }
-          const server = M.canonicalJson((await syncWorkspace(store, "ws:doc:o", devices.a, X + 4_000)).workspace);
-          assert.equal(M.canonicalJson(devices.a), server, `${first} first: device A converged`);
-          assert.equal(M.canonicalJson(devices.b), server, `${first} first: device B converged`);
-          assert.equal(M.sanitizeWorkspace(JSON.parse(server)).invoices[M.replacementInvoiceId("inv_usd00001", "INR")].amountPaise, 8_500_000, "the later amount");
-        }
-      }
-      {
-        const x = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100, (copy) => ({ ...copy, amountPaise: 100_000, description: "Design" }));
-        // The edit can't change the copy's id or currency.
-        const forced = M.replaceInvoiceCurrency(W, "inv_inr00001", "EUR", X + 100, (copy) => ({ ...copy, id: "inv_other", currency: "GBP" }));
-        assert.deepEqual([forced.id, M.getInvoice(forced.ws, forced.id).currency, M.getInvoice(forced.ws, "inv_other")], [M.replacementInvoiceId("inv_inr00001", "EUR"), "EUR", undefined]);
-        // A copy the user deleted is written again past its tombstone, so the new move wins every merge.
-        // (The old one came back through a stale reminder at X + 150, older than the copy's deletion at X + 500.)
-        const userDeleted = M.deleteInvoice(M.mergeWorkspaces(x.ws, M.logReminder(W, "inv_inr00001", "sms", X + 150)), x.id, X + 500);
-        assert.ok(!M.repairIntl(userDeleted, X + 501).invoices.inv_inr00001.deletedAt);
-        const again = M.replaceInvoiceCurrency(userDeleted, "inv_inr00001", "USD", X + 600);
-        assert.ok(!M.getInvoice(M.mergeWorkspaces(again.ws, userDeleted), x.id).deletedAt, "moved again after the copy was deleted");
-      }
-    }
     // Prune after a currency change: nothing comes back.
     const later = M.pruneTombstones(moved.ws, X + 10 + 91 * DAY);
     assert.equal(M.getInvoice(later, "inv_usd00001"), undefined);
@@ -1025,37 +874,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(again.ws.intl.invoices[recurringInvoiceId(plan.id, "2026-09")].payments.length, 1);
     const tomb = M.deleteInvoice(paid, recurringInvoiceId(plan.id, "2026-10"), X + 23);
     assert.equal(M.generateRecurring(tomb, "2026-10-10", X + 24).created.length, 0);
-    // Review round 5: a deleted foreign plan month keeps its tombstone while generateRecurring could still bill the
-    // month (monthsBilledTwice asks the user to delete one), so prune-then-generate never bills it again.
-    for (const days of [91, 200, 330]) {
-      const later = M.pruneTombstones(tomb, X + 23 + days * DAY);
-      const day = new Date(X + 23 + days * DAY).toISOString().slice(0, 10);
-      assert.ok(M.getInvoice(later, recurringInvoiceId(plan.id, "2026-10"))?.deletedAt, `kept after ${days} days`);
-      assert.ok(!M.generateRecurring(later, day, X + 24 + days * DAY).created.includes(recurringInvoiceId(plan.id, "2026-10")), `not billed again after ${days} days`);
-    }
-    assert.equal(M.getInvoice(M.pruneTombstones(tomb, X + 23 + 500 * DAY), recurringInvoiceId(plan.id, "2026-10")), undefined, "pruned once the month is past the backfill window");
-    // Review round 6: exactly at the window's edge. In September and October 2027 (October 2026 is 11 and 12 months
-    // back) the month can still be billed somewhere in the world, so the tombstone stays; in November it can't.
-    for (const at of ["2027-09-20", "2027-10-20", "2027-11-20"]) {
-      const t = Date.parse(`${at}T12:00:00Z`);
-      const later = M.pruneTombstones(tomb, t);
-      const kept = Boolean(M.getInvoice(later, recurringInvoiceId(plan.id, "2026-10"))?.deletedAt);
-      assert.equal(kept, at !== "2027-11-20", `${at}: the tombstone ${at === "2027-11-20" ? "is pruned" : "stays"}`);
-      assert.ok(!M.generateRecurring(later, at, t).created.includes(recurringInvoiceId(plan.id, "2026-10")), `${at}: never billed again`);
-    }
     assert.equal(M.replaceInvoiceCurrency(g.ws, recurringInvoiceId(plan.id, "2026-10"), "EUR", X + 25), null, "a plan month can't change currency");
     // A plan's currency change ends the old plan after its last month and starts a new one; nothing regenerates.
-    // The amount is given in the new currency: a plan's minor units never carry across currencies.
-    for (const bad of [0, -1, 1.5, NaN, 100_000_000_001]) assert.equal(M.replacePlanCurrency(g.ws, plan.id, "EUR", X + 26, bad), null, `amount ${bad} is refused`);
-    const re = M.replacePlanCurrency(g.ws, plan.id, "EUR", X + 26, 46000);
+    const re = M.replacePlanCurrency(g.ws, plan.id, "EUR", X + 26);
     assert.equal(re.ws.intl.recurring[plan.id].endMonth, "2026-10");
-    assert.deepEqual([re.ws.intl.recurring[re.id].startMonth, re.ws.intl.recurring[re.id].currency, re.ws.intl.recurring[re.id].amountPaise], ["2026-11", "EUR", 46000]);
+    assert.deepEqual([re.ws.intl.recurring[re.id].startMonth, re.ws.intl.recurring[re.id].currency, re.ws.intl.recurring[re.id].amountPaise], ["2026-11", "EUR", 50000]);
     assert.notEqual(re.id, plan.id);
     assert.equal(M.generateRecurring(re.ws, "2026-10-31", X + 27).created.length, 0);
     const nov = M.generateRecurring(re.ws, "2026-11-10", X + 28);
-    assert.deepEqual(nov.created.map((id) => [nov.ws.intl.invoices[id].currency, nov.ws.intl.invoices[id].amountPaise]), [["EUR", 46000]]);
-    const toInrPlan = M.replacePlanCurrency(P, plan.id, "INR", X + 29, 4_200_000);
-    assert.equal(toInrPlan.ws.recurring[toInrPlan.id].amountPaise, 4_200_000);
+    assert.deepEqual(nov.created.map((id) => nov.ws.intl.invoices[id].currency), ["EUR"]);
+    const toInrPlan = M.replacePlanCurrency(P, plan.id, "INR", X + 29);
     assert.ok(toInrPlan.ws.recurring[toInrPlan.id] && !("currency" in toInrPlan.ws.recurring[toInrPlan.id]));
     assert.equal(toInrPlan.ws.intl.recurring[plan.id].deletedAt, X + 29, "a plan with no month yet is replaced whole");
     // An old copy can't see the foreign plan, so it never generates an INR twin of its months.
@@ -1281,10 +1109,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     w = M.upsertPlan(w, { id: "rec_usd00002", clientId: "cli_abroad01", amountPaise: 100, description: "", dayOfMonth: 1, dueAfterDays: 7, startMonth: "2026-08", endMonth: "2026-09", paused: false, currency: "USD", createdAt: X, updatedAt: X }, X);
     const generated = M.generateRecurring(w, "2026-10-10", X).ws;
     assert.deepEqual(M.planMonths(generated, M.getPlan(generated, "rec_usd00002")), ["2026-08", "2026-09"]);
-    assert.equal(M.replacePlanCurrency(generated, "rec_usd00002", "EUR", X + 3, 90), null, "an ended, fully billed plan is never replaced by one that starts after its end");
+    assert.equal(M.replacePlanCurrency(generated, "rec_usd00002", "EUR", X + 3), null, "an ended, fully billed plan is never replaced by one that starts after its end");
     const open = M.upsertPlan(w, { ...M.getPlan(w, "rec_usd00002"), endMonth: "2026-12" }, X + 1);
     const g2 = M.generateRecurring(open, "2026-10-10", X + 1).ws;
-    const r = M.replacePlanCurrency(g2, "rec_usd00002", "EUR", X + 3, 90);
+    const r = M.replacePlanCurrency(g2, "rec_usd00002", "EUR", X + 3);
     assert.ok(r);
     const replacement = M.getPlan(r.ws, r.id);
     assert.deepEqual([replacement.startMonth, replacement.endMonth, replacement.currency], ["2026-11", "2026-12", "EUR"]);
@@ -1840,414 +1668,27 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     const inrPlan = M.upsertPlan(w, { id: "rec_inrplan1", clientId: "cli_export01", amountPaise: 500000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: "2026-11", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
     const inrGen = M.generateRecurring(inrPlan, "2026-11-02", X + 33);
     assert.ok(!("exportLut" in M.getInvoice(inrGen.ws, rid("rec_inrplan1", "2026-11"))));
-  }
-
-  // The export mark never depends on which copy generated a month last (§6). A PR 3 copy (production before PR 4: open
-  // tabs, offline PWAs) generates the same month id without the mark; repairIntl gives an unedited generated month the
-  // mark it carries, on every device and the server, and leaves an edited month (an untick) alone.
-  {
-    const pr3 = await import("./fixtures/pr3-model.ts");
-    const rid = M.recurringInvoiceId;
-    const load = (Model, w) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(w)));
-    const monthOf = (w, plan, month) => M.getInvoice(w, rid(plan, month));
-    const usdPlan = (id, startMonth, extra = {}) => ({ id, clientId: "cli_export02", amountPaise: 120000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth, endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X, ...extra });
-    const sheetMonth = (plan, month, exportLut, at = X) => ({ id: rid(plan, month), number: `EX-${plan}-${month}`, clientId: "cli_export02", issueDate: `${month}-01`, dueDate: `${month}-16`, amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, recurringId: plan, currency: "USD", ...(exportLut ? { exportLut: true } : {}), createdAt: at, updatedAt: at });
-    let w = M.upsertClient(remote, { ...client, id: "cli_export02", name: "Export Two" }, X);
-    w = M.upsertPlan(w, usdPlan("rec_export02", "2026-10"), X);
-    w = M.upsertInvoice(w, sheetMonth("rec_export02", "2026-10", true), X);
-    const laptop = M.generateRecurring(w, "2026-11-02", X + 40).ws; // PR 4 at 09:00
-    const phone = pr3.generateRecurring(load(pr3, w), "2026-11-02", X + 41).ws; // PR 3 an hour later
-    assert.equal(monthOf(load(M, phone), "rec_export02", "2026-11").exportLut, undefined, "the PR 3 copy generates November without the mark");
-    const ab = M.repairIntl(M.mergeWorkspaces(laptop, load(M, phone)), X + 42);
-    const ba = M.repairIntl(M.mergeWorkspaces(load(M, phone), laptop), X + 42);
-    assert.equal(monthOf(ab, "rec_export02", "2026-11").exportLut, true, "the merged November keeps the mark");
-    assert.equal(monthOf(ab, "rec_export02", "2026-11").updatedAt, X + 42, "the repair writes at updatedAt + 1, so every build's merge keeps it");
-    // A PR 3 copy (open tab, or the server after a rollback) merges the repaired month back and keeps the mark, in both
-    // orders: before the + 1 the two tied on updatedAt, the unmarked copy won the tie-break, and sync re-sent forever.
-    for (const merged3 of [pr3.mergeWorkspaces(load(pr3, ab), load(pr3, phone)), pr3.mergeWorkspaces(load(pr3, phone), load(pr3, ab))]) {
-      assert.equal(monthOf(merged3, "rec_export02", "2026-11").exportLut, true, "a PR 3 merge keeps the repaired mark");
-      assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(ab, load(M, merged3)), X + 43)), M.canonicalJson(ab), "and PR 4 takes it back unchanged");
-    }
-    assert.equal(M.canonicalJson(ab), M.canonicalJson(ba), "both merge orders repair to the same bytes");
-    assert.equal(M.repairIntl(ab, X + 99), ab, "a repaired book needs no second repair");
-    assert.match(M.invoiceExportNote(ab, monthOf(ab, "rec_export02", "2026-11")), /LUT ARN AD2704260012345/);
-    // A chain of PR 3 months is repaired in order: December carries November's restored mark.
-    const phoneDec = pr3.generateRecurring(load(pr3, phone), "2026-12-02", X + 50).ws;
-    const chain = M.repairIntl(M.mergeWorkspaces(laptop, load(M, phoneDec)), X + 51);
-    assert.deepEqual(["2026-11", "2026-12"].map((m) => monthOf(chain, "rec_export02", m).exportLut), [true, true]);
-    // The server copy repairs to the same thing a PR 3 push leaves it with.
-    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(chain, load(M, phoneDec)), X + 52)), M.canonicalJson(chain));
-    // An untick is an edit: kept, and later unedited months follow it.
-    const { exportLut: _x, ...plainNov } = monthOf(ab, "rec_export02", "2026-11");
-    const unticked = M.upsertInvoice(ab, plainNov, X + 60);
-    assert.equal(M.repairIntl(unticked, X + 61), unticked, "an unticked month stays unticked");
-    const decAfter = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(unticked, "2026-12-02", X + 62).ws, load(M, pr3.generateRecurring(load(pr3, unticked), "2026-12-02", X + 63).ws)), X + 64);
-    assert.ok(!monthOf(decAfter, "rec_export02", "2026-12").exportLut, "December follows the unticked November");
-    // A month with a reminder or payment is never touched (the client may have it already).
-    const reminded = M.upsertInvoice(load(M, phone), { ...monthOf(load(M, phone), "rec_export02", "2026-11"), reminders: [{ at: X + 41, channel: "copy" }], updatedAt: X + 41 }, X + 41);
-    const remindedNov = monthOf(reminded, "rec_export02", "2026-11");
-    assert.equal(remindedNov.createdAt, remindedNov.updatedAt);
-    assert.ok(!monthOf(M.repairIntl(reminded, X + 65), "rec_export02", "2026-11").exportLut, "a reminded month keeps what was sent");
-
-    // A deleted month is skipped: December carries October's mark past a deleted November.
-    const novGone = M.deleteInvoice(M.upsertInvoice(laptop, plainNov, X + 70), rid("rec_export02", "2026-11"), X + 71);
-    assert.equal(monthOf(M.generateRecurring(novGone, "2026-12-02", X + 72).ws, "rec_export02", "2026-12").exportLut, true);
-
-    // Across a currency change (US$ → €): the new plan's first month carries the old plan's last mark.
-    const toEur = M.replacePlanCurrency(laptop, "rec_export02", "EUR", X + 80, 110_000);
-    const eurDec = M.generateRecurring(toEur.ws, "2026-12-02", X + 81).ws;
-    assert.equal(monthOf(eurDec, toEur.id, "2026-12").exportLut, true, "the first € month keeps the export mark");
-    assert.equal(monthOf(M.generateRecurring(eurDec, "2027-01-02", X + 82).ws, toEur.id, "2027-01").exportLut, true);
-    const eurPhone = pr3.generateRecurring(load(pr3, toEur.ws), "2026-12-02", X + 83).ws;
-    assert.equal(monthOf(M.repairIntl(M.mergeWorkspaces(eurDec, load(M, eurPhone)), X + 84), toEur.id, "2026-12").exportLut, true, "…also when a PR 3 copy generated it later");
-    // From an unmarked old plan, or from INR, the first month is unmarked (the user ticks it).
-    let inrBook = M.upsertPlan(laptop, { ...usdPlan("rec_inrexp01", "2026-10"), currency: undefined, amountPaise: 9_000_000 }, X);
-    inrBook = M.generateRecurring(inrBook, "2026-10-02", X + 85).ws;
-    const fromInr = M.replacePlanCurrency(inrBook, "rec_inrexp01", "USD", X + 85, 100_000);
-    assert.ok(!monthOf(M.generateRecurring(fromInr.ws, "2026-11-02", X + 86).ws, fromInr.id, "2026-11").exportLut, "₹ → US$: the first month is unmarked");
-    const unmarkedOld = M.replacePlanCurrency(unticked, "rec_export02", "EUR", X + 86, 110_000);
-    assert.ok(!monthOf(M.generateRecurring(unmarkedOld.ws, "2026-12-02", X + 87).ws, unmarkedOld.id, "2026-12").exportLut);
-    // A plan's first month made by the invoice sheet with the box unticked is the user's choice, never repaired.
-    const ended = M.upsertPlan(laptop, { ...M.getPlan(laptop, "rec_export02"), endMonth: "2026-11" }, X + 90);
-    let fresh = M.upsertPlan(ended, usdPlan("rec_export03", "2026-12", { createdAt: X + 91, updatedAt: X + 91 }), X + 91);
-    fresh = M.upsertInvoice(fresh, sheetMonth("rec_export03", "2026-12", false, X + 91), X + 91);
-    assert.equal(M.repairIntl(fresh, X + 92), fresh, "a sheet-made first month keeps its unticked box");
-
-    // A month already issued never changes its mark later: this build writes generated months settled
-    // (updatedAt = createdAt + 1), and a PR 3 month is settled once, at the first repair. Deleting or re-ticking an
-    // earlier month then leaves later months as they are (the untick "stops it from then on" holds).
+    // A deleted month is skipped: the next month carries the latest live month's mark.
+    const novGone = M.deleteInvoice(nov.ws, rid("rec_export01", "2026-11"), X + 34);
+    const decAfterGone = M.generateRecurring(novGone, "2026-12-02", X + 35);
+    assert.equal(M.getInvoice(decAfterGone.ws, rid("rec_export01", "2026-12")).exportLut, true, "December carries October's mark past a deleted November");
+    // A generated month is an ordinary write (updatedAt === createdAt), and nothing re-derives a mark later: re-ticking
+    // an earlier month never changes a month already created.
+    const decInv = M.getInvoice(dec.ws, rid("rec_export01", "2026-12"));
+    assert.equal(decInv.updatedAt, decInv.createdAt);
+    const reTicked = M.upsertInvoice(dec.ws, { ...M.getInvoice(dec.ws, rid("rec_export01", "2026-11")), exportLut: true }, X + 36);
+    assert.equal(M.repairIntl(reTicked, X + 37), reTicked, "re-ticking November marks nothing already created");
+    assert.ok(!("exportLut" in M.getInvoice(reTicked, rid("rec_export01", "2026-12"))));
+    // A month an older build (PR 3, production before PR 4) generated without the mark keeps it off: no repair, the
+    // user ticks it on that month (owner decision, 2026-10-25).
     {
-      const novPr4 = monthOf(laptop, "rec_export02", "2026-11");
-      assert.equal(novPr4.updatedAt, novPr4.createdAt + 1, "a generated foreign month is written settled");
-      const off = M.upsertInvoice(laptop, (({ exportLut: _m, ...rest }) => rest)(novPr4), X + 100);
-      const later = M.generateRecurring(off, "2027-01-02", X + 101).ws;
-      assert.deepEqual(["2026-12", "2027-01"].map((m) => Boolean(monthOf(later, "rec_export02", m).exportLut)), [false, false]);
-      const novDeleted = M.deleteInvoice(later, rid("rec_export02", "2026-11"), X + 102);
-      assert.equal(M.repairIntl(novDeleted, X + 103), novDeleted, "deleting the unticked month marks nothing later");
-      const reTicked = M.upsertInvoice(later, { ...monthOf(later, "rec_export02", "2026-11"), exportLut: true }, X + 104);
-      assert.equal(M.repairIntl(reTicked, X + 105), reTicked, "re-ticking it marks nothing already issued");
-      // A PR 3 month after the untick is settled unmarked once, then stays so.
-      const pr3Dec = load(M, pr3.generateRecurring(load(pr3, off), "2026-12-02", X + 106).ws);
-      const settled = M.repairIntl(pr3Dec, X + 107);
-      assert.deepEqual([Boolean(monthOf(settled, "rec_export02", "2026-12").exportLut), monthOf(settled, "rec_export02", "2026-12").updatedAt], [false, X + 107], "settled unmarked at updatedAt + 1");
-      const gone = M.deleteInvoice(settled, rid("rec_export02", "2026-11"), X + 108);
-      assert.equal(M.repairIntl(gone, X + 109), gone, "a settled month is never re-derived");
-    }
-
-    // Candidates are settled in month order whatever the key order: one pass, same bytes on every device.
-    {
-      const base = load(M, phoneDec);
-      const keys = Object.keys(base.intl.invoices).sort().reverse();
-      const reversed = { ...base, intl: { ...base.intl, invoices: Object.fromEntries(keys.map((k) => [k, base.intl.invoices[k]])) } };
-      const once = M.repairIntl(reversed, X + 110);
-      assert.deepEqual(["2026-11", "2026-12"].map((m) => monthOf(once, "rec_export02", m).exportLut), [true, true], "December reads November's settled mark");
-      assert.equal(M.canonicalJson(once), M.canonicalJson(M.repairIntl(base, X + 110)));
-      assert.equal(M.repairIntl(once, X + 111), once, "one pass is the fixed point");
-    }
-
-    // The carry across a currency change follows the replaced plan only, never another client's plan.
-    {
-      let two = M.upsertClient(laptop, { ...client, id: "cli_export04", name: "Other abroad" }, X);
-      two = M.upsertPlan(two, usdPlan("rec_export04", "2026-10", { clientId: "cli_export04" }), X);
-      two = M.upsertInvoice(two, { ...sheetMonth("rec_export04", "2026-10", false), clientId: "cli_export04" }, X);
-      const moved = M.replacePlanCurrency(two, "rec_export04", "EUR", X + 112, 100_000);
-      assert.ok(!monthOf(M.generateRecurring(moved.ws, "2026-11-02", X + 113).ws, moved.id, "2026-11").exportLut, "another client's marked plan never lends its mark");
-      // US$ (marked) → ₹ (a month billed) → US$: the ₹ month is the latest, and an INR month is unmarked.
-      const toInr = M.replacePlanCurrency(laptop, "rec_export02", "INR", X + 114, 9_000_000);
-      const inrDec = M.generateRecurring(toInr.ws, "2026-12-02", X + 115).ws;
-      const toUsd = M.replacePlanCurrency(inrDec, toInr.id, "USD", X + 116, 120_000);
-      assert.ok(!monthOf(M.generateRecurring(toUsd.ws, "2027-01-02", X + 117).ws, toUsd.id, "2027-01").exportLut, "US$ → ₹ → US$: unmarked");
-      // Same day (the ₹ plan had no month and was deleted): the chain reaches back to the marked US$ month.
-      const sameDay = M.replacePlanCurrency(toInr.ws, toInr.id, "USD", X + 118, 120_000);
-      assert.equal(monthOf(M.generateRecurring(sameDay.ws, "2026-12-02", X + 119).ws, sameDay.id, "2026-12").exportLut, true, "US$ → ₹ → US$ the same day keeps the mark");
-      // A deleted month of the replaced plan is never the source: the latest live one is.
-      let src = M.upsertInvoice(laptop, (({ exportLut: _m, ...rest }) => rest)(monthOf(laptop, "rec_export02", "2026-10")), X + 120);
-      src = M.deleteInvoice(src, rid("rec_export02", "2026-11"), X + 121);
-      const fromDeleted = M.replacePlanCurrency(src, "rec_export02", "EUR", X + 122, 110_000);
-      assert.equal(M.getPlan(fromDeleted.ws, fromDeleted.id).startMonth, "2026-12");
-      assert.ok(!monthOf(M.generateRecurring(fromDeleted.ws, "2026-12-02", X + 123).ws, fromDeleted.id, "2026-12").exportLut, "the marked, deleted November is skipped");
-    }
-  }
-
-  // A currency change on device A while device B (pre-intl code) is offline: both bill November (risk 22). The two
-  // can't converge (new plan id), so the old plan's month past its endMonth is flagged for the user to delete.
-  {
-    const legacy = await import("./fixtures/legacy-model.ts");
-    const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
-    let w = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), { ...client, id: "cli_plan0001" }, X);
-    w = M.upsertPlan(w, { id: "rec_plan0001", clientId: "cli_plan0001", amountPaise: 5_000_000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
-    w = M.generateRecurring(w, "2026-10-25", X).ws;
-    assert.equal(M.monthsBilledTwice(w).size, 0);
-    const a = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 40, 60_000).ws;
-    const b = legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(w)));
-    const aNov = M.generateRecurring(a, "2026-11-06", X + 41).ws;
-    const bNov = legacy.generateRecurring(b, "2026-11-06", X + 41).ws;
-    const merged = M.mergeWorkspaces(aNov, bNov);
-    const nov = M.allLiveInvoices(merged).filter((i) => i.issueDate.startsWith("2026-11"));
-    assert.deepEqual(nov.map((i) => M.currencyOf(i)).sort(), ["INR", "USD"], "November exists twice");
-    const oldNov = M.recurringInvoiceId("rec_plan0001", "2026-11");
-    assert.deepEqual([...M.monthsBilledTwice(merged)], [oldNov], "only the old plan's month past its end is flagged");
-    assert.equal(M.monthsBilledTwice(M.deleteInvoice(merged, oldNov, X + 42)).size, 0, "deleting it clears the note");
-    // An INR-only book never flags anything (no intl), even with a month past a stopped plan's end.
-    const stopped = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-09" }, X + 43);
-    assert.equal(M.monthsBilledTwice(stopped).size, 0);
-    // Each filter: a paid month, another client's plan, a same-currency plan, a plan that starts later or ended earlier.
-    const paidNov = M.addPayment(merged, oldNov, { amountPaise: 5_000_000, date: "2026-11-06", mode: "upi", reference: "" }, X + 44);
-    // A paid month is never flagged; the unpaid month billed next to it is (review round 4: the client paid the ₹
-    // month, so the US$ one is the one to delete, not chase).
-    assert.deepEqual([...M.monthsBilledTwice(paidNov)], [M.recurringInvoiceId(M.allLiveRecurring(merged).find((p) => M.currencyOf(p) === "USD").id, "2026-11")], "a paid month is never flagged");
-    assert.equal(M.monthsBilledTwice(M.addPayment(paidNov, [...M.monthsBilledTwice(paidNov)][0], { amountPaise: 60_000, date: "2026-11-07", mode: "bank", reference: "" }, X + 44)).size, 0, "both paid: nothing to delete");
-    const newPlan = M.getPlan(merged, M.allLiveRecurring(merged).find((p) => M.currencyOf(p) === "USD").id);
-    const swap = (patch) => M.upsertPlan(merged, { ...newPlan, ...patch }, X + 45);
-    const otherClient = M.upsertClient(merged, { ...client, id: "cli_plan0002", name: "Other" }, X);
-    assert.equal(M.monthsBilledTwice(M.upsertPlan(otherClient, { ...newPlan, clientId: "cli_plan0002" }, X + 45)).size, 0, "another client's plan never flags it");
-    // A replacement whose range doesn't reach the month and that has no month for it never flags it. With a live
-    // month there anyway (review round 4), the month is billed twice: both are outside their plans, both shown.
-    const noMonth = (book) => M.deleteInvoice(book, M.recurringInvoiceId(newPlan.id, "2026-11"), X + 45);
-    assert.equal(M.monthsBilledTwice(noMonth(swap({ startMonth: "2026-12" }))).size, 0, "a plan that starts after the month");
-    assert.equal(M.monthsBilledTwice(noMonth(swap({ endMonth: "2026-10" }))).size, 0, "a plan that ended before the month");
-    assert.deepEqual([...M.monthsBilledTwice(swap({ startMonth: "2026-12" }))].sort(), [oldNov, M.recurringInvoiceId(newPlan.id, "2026-11")].sort());
-    // Only a replacement flags it: another plan of the same client that no currency change created never does, in
-    // any currency. (The US$ replacement and its month gone; a second ₹ plan and an unrelated US$ plan from August on.)
-    assert.equal(newPlan.id, M.replacementPlanId("rec_plan0001", "USD"), "a currency change derives the new plan's id");
-    let unrelated = M.deleteInvoice(M.upsertPlan(merged, { ...newPlan, deletedAt: X + 46 }, X + 46), M.recurringInvoiceId(newPlan.id, "2026-11"), X + 46);
-    unrelated = M.upsertPlan(unrelated, { ...M.getPlan(merged, "rec_plan0001"), id: "rec_plan0003", endMonth: "", createdAt: X + 46 }, X + 46);
-    unrelated = M.upsertPlan(unrelated, { ...newPlan, id: "rec_plan0004", startMonth: "2026-08", deletedAt: undefined }, X + 47);
-    assert.equal(M.monthsBilledTwice(unrelated).size, 0, "plans that replaced nothing never flag it");
-    const restoredPlan = M.upsertPlan(unrelated, { ...newPlan, deletedAt: undefined }, X + 48);
-    assert.equal(M.monthsBilledTwice(M.upsertInvoice(restoredPlan, M.withoutTombstone(M.getInvoice(restoredPlan, M.recurringInvoiceId(newPlan.id, "2026-11"))), X + 48)).size, 1, "(control: the replacement flags it)");
-    // Deleting the replacement's month instead (either of the two, as the note says) clears it too: a month the user
-    // deleted is not billed, although the plan's range covers it.
-    assert.equal(M.monthsBilledTwice(M.deleteInvoice(merged, M.recurringInvoiceId(newPlan.id, "2026-11"), X + 49)).size, 0, "deleting the other one clears the note");
-
-    // The month is the one the id was generated for: a last month re-dated into the next month is not flagged.
-    {
-      let r = M.generateRecurring(w, "2026-10-25", X).ws;
-      const oct = M.recurringInvoiceId("rec_plan0001", "2026-10");
-      r = M.upsertInvoice(r, { ...M.getInvoice(r, oct), issueDate: "2026-11-01", dueDate: "2026-11-16" }, X + 47);
-      const changed = M.replacePlanCurrency(r, "rec_plan0001", "USD", X + 48, 60_000);
-      assert.equal(M.getPlan(changed.ws, "rec_plan0001").endMonth, "2026-10");
-      const usdNov = M.generateRecurring(changed.ws, "2026-11-28", X + 49).ws;
-      assert.equal(M.monthsBilledTwice(usdNov).size, 0, "October's only invoice, re-dated, is never flagged");
-    }
-
-    // A plan a currency change deleted (it had no month yet) covers no month: ₹ → US$, then US$ → € before November.
-    // A copy that saw only the first change bills November in US$; the € plan bills it too: the US$ month is flagged.
-    {
-      const usd = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 50, 60_000);
-      const stale = load(M, usd.ws);
-      const eur = M.replacePlanCurrency(usd.ws, usd.id, "EUR", X + 51, 55_000);
-      assert.ok(M.getPlan(eur.ws, usd.id).deletedAt && !M.getPlan(eur.ws, usd.id).endMonth, "the US$ plan is deleted, not ended");
-      const twice = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(eur.ws, "2026-11-06", X + 52).ws, M.generateRecurring(stale, "2026-11-06", X + 53).ws), X + 54);
-      const novs = M.allLiveInvoices(twice).filter((i) => i.issueDate.startsWith("2026-11")).map((i) => M.currencyOf(i)).sort();
-      assert.deepEqual(novs, ["EUR", "USD"]);
-      assert.deepEqual([...M.monthsBilledTwice(twice)], [M.recurringInvoiceId(usd.id, "2026-11")], "the deleted plan's month is flagged");
-      // The same from a PR 3 copy.
       const pr3 = await import("./fixtures/pr3-model.ts");
-      const fromPr3 = M.mergeWorkspaces(M.generateRecurring(eur.ws, "2026-11-06", X + 52).ws, load(M, pr3.generateRecurring(load(pr3, usd.ws), "2026-11-06", X + 53).ws));
-      assert.deepEqual([...M.monthsBilledTwice(M.repairIntl(fromPr3, X + 54))], [M.recurringInvoiceId(usd.id, "2026-11")]);
-    }
-
-    // A change undone or chained (₹ → US$ → ₹, US$ → € → US$): the plan that bills the month now may be in the old
-    // plan's own currency. "Replaced" follows the chain of currency changes, not the currency.
-    {
-      const rid = M.recurringInvoiceId;
-      const months = (book, month) => M.allLiveInvoices(book).filter((i) => i.recurringId && i.id.endsWith(month.replace("-", ""))).map((i) => i.id).sort();
-      // Same day: the US$ plan has no month yet, so it is deleted and the ₹ plan starts in November.
-      const usd = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 60, 60_000);
-      const back = M.replacePlanCurrency(usd.ws, usd.id, "INR", X + 61, 5_000_000);
-      assert.equal(back.id, M.replacementPlanId(usd.id, "INR"));
-      assert.deepEqual([M.getPlan(back.ws, "rec_plan0001").endMonth, Boolean(M.getPlan(back.ws, usd.id).deletedAt), M.getPlan(back.ws, back.id).startMonth], ["2026-10", true, "2026-11"]);
-      const stale = legacy.generateRecurring(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(w))), "2026-12-06", X + 62).ws;
-      const both = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(back.ws, "2026-12-06", X + 63).ws, load(M, stale)), X + 64);
-      assert.deepEqual(months(both, "2026-11"), [rid(back.id, "2026-11"), rid("rec_plan0001", "2026-11")].sort(), "November billed by both ₹ plans");
-      assert.deepEqual([...M.monthsBilledTwice(both)].sort(), [rid("rec_plan0001", "2026-11"), rid("rec_plan0001", "2026-12")], "₹ → US$ → ₹: the stale ₹ months are flagged");
-      // With a US$ month between: ₹ to October, US$ November, ₹ from December.
-      const usdNov = M.generateRecurring(usd.ws, "2026-11-06", X + 65).ws;
-      const back2 = M.replacePlanCurrency(usdNov, usd.id, "INR", X + 66, 5_000_000);
-      assert.equal(M.getPlan(back2.ws, back2.id).startMonth, "2026-12");
-      const both2 = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(back2.ws, "2026-12-06", X + 67).ws, load(M, stale)), X + 68);
-      assert.deepEqual([...M.monthsBilledTwice(both2)].sort(), [rid("rec_plan0001", "2026-11"), rid("rec_plan0001", "2026-12")], "…and with a month between, December too");
-      // US$ → € → US$ against a PR 3 copy that saw none of it.
-      const pr3 = await import("./fixtures/pr3-model.ts");
-      let f = M.upsertPlan(w, { id: "rec_usdloop1", clientId: "cli_plan0001", amountPaise: 60_000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-09", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X }, X);
-      f = M.generateRecurring(f, "2026-10-25", X + 1).ws;
-      const eur = M.replacePlanCurrency(f, "rec_usdloop1", "EUR", X + 70, 55_000);
-      const usdAgain = M.replacePlanCurrency(eur.ws, eur.id, "USD", X + 71, 61_000);
-      const pr3Copy = pr3.generateRecurring(load(pr3, f), "2026-11-06", X + 72).ws;
-      const loop = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(usdAgain.ws, "2026-11-06", X + 73).ws, load(M, pr3Copy)), X + 74);
-      assert.ok([...M.monthsBilledTwice(loop)].includes(rid("rec_usdloop1", "2026-11")), "US$ → € → US$: the stale US$ month is flagged");
-      assert.ok(![...M.monthsBilledTwice(loop)].includes(rid(usdAgain.id, "2026-11")), "the current plan's month never is");
-      // Two devices making the same change offline make one plan, not two.
-      const again = M.replacePlanCurrency(load(M, w), "rec_plan0001", "USD", X + 75, 61_000);
-      assert.equal(again.id, usd.id);
-      assert.equal(M.allLiveRecurring(M.mergeWorkspaces(usd.ws, again.ws)).filter((p) => M.currencyOf(p) === "USD").length, 1);
-    }
-
-    // A stale copy edits the old plan after the change (a pause, resume or description from an older tab): its whole
-    // record wins last-writer-wins and brings back endMonth "". repairIntl ends it again from its replacement.
-    {
-      const rid = M.recurringInvoiceId;
-      const changed = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 80, 60_000);
-      const usdNov = M.generateRecurring(changed.ws, "2026-11-06", X + 81).ws;
-      let stale = legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(w)));
-      stale = legacy.upsertPlan(stale, { ...stale.recurring.rec_plan0001, description: "Retainer (edited)" }, X + 90);
-      stale = legacy.generateRecurring(stale, "2026-11-06", X + 91).ws;
-      const merged = M.mergeWorkspaces(usdNov, load(M, stale));
-      assert.equal(merged.recurring.rec_plan0001.endMonth, "", "(the stale edit brought the empty endMonth back)");
-      assert.equal(M.planEnd(merged, merged.recurring.rec_plan0001), "2026-10", "the end is read from the replacement");
-      assert.deepEqual([...M.monthsBilledTwice(merged)], [rid("rec_plan0001", "2026-11")], "flagged even before the repair");
-      const repaired = M.repairIntl(merged, X + 92);
-      assert.deepEqual([repaired.recurring.rec_plan0001.endMonth, repaired.recurring.rec_plan0001.updatedAt, repaired.recurring.rec_plan0001.description], ["2026-10", X + 91, "Retainer (edited)"], "ended again at updatedAt + 1, the edit kept");
-      assert.equal(M.repairIntl(repaired, X + 93), repaired, "one pass is the fixed point");
-      assert.deepEqual([...M.monthsBilledTwice(repaired)], [rid("rec_plan0001", "2026-11")]);
-      const dec = M.generateRecurring(repaired, "2027-01-06", X + 94).ws;
-      assert.ok(!M.getInvoice(dec, rid("rec_plan0001", "2026-12")) && M.getInvoice(dec, rid(changed.id, "2026-12")), "the old plan bills no more months");
-      assert.ok(!M.getInvoice(M.generateRecurring(merged, "2026-12-06", X + 94).ws, rid("rec_plan0001", "2026-12")), "…even before the repair");
-      // The legacy copy merges the repaired plan back and stops billing too.
-      const legacyAfter = legacy.mergeWorkspaces(stale, legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(repaired))));
-      assert.equal(legacyAfter.recurring.rec_plan0001.endMonth, "2026-10");
-      assert.ok(!legacy.generateRecurring(legacyAfter, "2026-12-06", X + 95).ws.invoices[rid("rec_plan0001", "2026-12")]);
-      // A plan replaced as a whole (no month yet) and undeleted by a stale edit is deleted again.
-      let fresh = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), id: "rec_plan0009", startMonth: "2026-12", createdAt: X, updatedAt: X }, X);
-      const whole = M.replacePlanCurrency(fresh, "rec_plan0009", "USD", X + 96, 60_000);
-      assert.ok(M.getPlan(whole.ws, "rec_plan0009").deletedAt);
-      const undeleted = M.mergeWorkspaces(whole.ws, M.upsertPlan(fresh, { ...M.getPlan(fresh, "rec_plan0009"), paused: true }, X + 97));
-      assert.ok(!M.getPlan(undeleted, "rec_plan0009").deletedAt, "(the stale pause undeleted it)");
-      const redeleted = M.repairIntl(undeleted, X + 98).recurring.rec_plan0009;
-      assert.deepEqual([redeleted.deletedAt, redeleted.updatedAt], [X + 98, X + 98], "deleted again at updatedAt + 1");
-      assert.equal(M.planCanChangeCurrency(undeleted, M.getPlan(undeleted, "rec_plan0009")), false);
-    }
-
-    // Review round 4: the same change made on two devices from different months. Both write one plan
-    // (replacementPlanId) and the later write's startMonth wins, so a month the first device billed under the new plan
-    // falls before its start, while the old plan (ended later by the second device) bills it too.
-    {
-      const rid = M.recurringInvoiceId;
-      const one = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 100, 60_000);
-      const d1 = M.generateRecurring(one.ws, "2026-11-06", X + 101).ws;
-      const two = M.replacePlanCurrency(M.generateRecurring(w, "2026-11-06", X + 102).ws, "rec_plan0001", "USD", X + 103, 60_000);
-      assert.equal(two.id, one.id, "(the same change gives the same plan)");
-      for (const merged of [M.mergeWorkspaces(d1, two.ws), M.mergeWorkspaces(two.ws, d1)]) {
-        const book = M.repairIntl(merged, X + 104);
-        assert.deepEqual([M.getPlan(book, one.id).startMonth, M.planEnd(book, M.getPlan(book, "rec_plan0001"))], ["2026-12", "2026-11"], "(the later change's start wins)");
-        const nov = M.allLiveInvoices(book).filter((i) => i.issueDate.startsWith("2026-11")).map((i) => [i.id, M.currencyOf(i)]).sort();
-        assert.deepEqual(nov, [[rid(one.id, "2026-11"), "USD"], [rid("rec_plan0001", "2026-11"), "INR"]].sort(), "November is billed in ₹ and US$");
-        assert.deepEqual([...M.monthsBilledTwice(book)], [rid(one.id, "2026-11")], "the month before its own plan's start is flagged");
-        const dec = M.repairIntl(M.generateRecurring(book, "2026-12-06", X + 105).ws, X + 105);
-        assert.ok(M.getInvoice(dec, rid(one.id, "2026-12")) && !M.getInvoice(dec, rid("rec_plan0001", "2026-12")), "December is billed once");
-        assert.deepEqual([...M.monthsBilledTwice(dec)], [rid(one.id, "2026-11")], "November stays flagged");
-        assert.equal(M.monthsBilledTwice(M.deleteInvoice(dec, rid(one.id, "2026-11"), X + 106)).size, 0, "deleting it clears the note");
-        // The stray month paid: the other, unpaid one is shown instead.
-        const paid = M.addPayment(dec, rid(one.id, "2026-11"), { amountPaise: 60_000, date: "2026-11-10", mode: "bank", reference: "" }, X + 107);
-        assert.deepEqual([...M.monthsBilledTwice(paid)], [rid("rec_plan0001", "2026-11")], "the stray month was paid: the ₹ month is flagged");
-      }
-    }
-
-    // Two devices changing one plan to two currencies make two replacements that both bill every month: all their
-    // months are flagged until one plan is deleted, then only that plan's months are.
-    {
-      const rid = M.recurringInvoiceId;
-      const usd = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 110, 60_000);
-      const eur = M.replacePlanCurrency(w, "rec_plan0001", "EUR", X + 111, 55_000);
-      const book = M.repairIntl(M.generateRecurring(M.repairIntl(M.mergeWorkspaces(usd.ws, eur.ws), X + 112), "2026-12-06", X + 113).ws, X + 113);
-      const all = [rid(usd.id, "2026-11"), rid(usd.id, "2026-12"), rid(eur.id, "2026-11"), rid(eur.id, "2026-12")].sort();
-      assert.deepEqual([...M.monthsBilledTwice(book)].sort(), all, "siblings: every shared month is flagged");
-      const dropped = M.upsertPlan(book, { ...M.getPlan(book, eur.id), deletedAt: X + 114 }, X + 114);
-      assert.deepEqual([...M.monthsBilledTwice(dropped)].sort(), [rid(eur.id, "2026-11"), rid(eur.id, "2026-12")], "the deleted plan's months are the ones to delete");
-      assert.equal(M.monthsBilledTwice(M.repairIntl(M.generateRecurring(w, "2026-12-06", X + 115).ws, X + 115)).size, 0, "no change, nothing flagged");
-    }
-
-    // planEnd takes the earlier of the plan's own endMonth and the month before its replacement starts: a plan made
-    // with "Last month to bill" set, changed in October, comes back from a stale copy with its original endMonth.
-    {
-      const rid = M.recurringInvoiceId;
-      const until = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2027-03" }, X + 120);
-      const changed = M.replacePlanCurrency(until, "rec_plan0001", "USD", X + 121, 60_000);
-      assert.equal(M.getPlan(changed.ws, "rec_plan0001").endMonth, "2026-10");
-      const stale = M.upsertPlan(until, { ...M.getPlan(until, "rec_plan0001"), description: "Retainer (edited)" }, X + 122);
-      const merged = M.mergeWorkspaces(changed.ws, stale);
-      assert.equal(merged.recurring.rec_plan0001.endMonth, "2027-03", "(the stale edit brought the original end back)");
-      assert.equal(M.planEnd(merged, merged.recurring.rec_plan0001), "2026-10");
-      const repaired = M.repairIntl(merged, X + 123);
-      assert.equal(repaired.recurring.rec_plan0001.endMonth, "2026-10", "ended again at the change");
-      const nov = M.generateRecurring(repaired, "2026-11-06", X + 124).ws;
-      assert.ok(!M.getInvoice(nov, rid("rec_plan0001", "2026-11")) && M.getInvoice(nov, rid(changed.id, "2026-11")), "November is billed only in US$");
-    }
-
-    // "Change currency" is offered only while a month is left to bill.
-    const replaced = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 55, 60_000);
-    assert.equal(M.planCanChangeCurrency(replaced.ws, M.getPlan(replaced.ws, "rec_plan0001")), false, "the old plan of a change has none");
-    assert.equal(M.replacePlanCurrency(replaced.ws, "rec_plan0001", "EUR", X + 56, 1), null);
-    assert.equal(M.planCanChangeCurrency(replaced.ws, M.getPlan(replaced.ws, replaced.id)), true);
-    const stoppedNow = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-10" }, X + 57);
-    assert.equal(M.planCanChangeCurrency(stoppedNow, M.getPlan(stoppedNow, "rec_plan0001")), false, "stopped after its last created month");
-    assert.equal(M.planCanChangeCurrency(w, M.getPlan(w, "rec_plan0001")), true);
-    // Review round 6: the boundary. Months to October; ending in November leaves one to bill, ending in October none.
-    const untilNov = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-11" }, X + 58);
-    assert.equal(M.planCanChangeCurrency(untilNov, M.getPlan(untilNov, "rec_plan0001")), true, "one month left");
-
-    // Review round 6: a stray month is flagged as soon as it exists, while the plan that covers it hasn't billed it
-    // yet (it will): device A changed the plan to US$ in October, and a pre-intl copy billed ₹ November first.
-    {
-      const a = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 60, 60_000).ws;
-      const bNov = legacy.generateRecurring(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(w))), "2026-11-06", X + 61).ws;
-      const early = M.repairIntl(M.mergeWorkspaces(a, bNov), X + 62);
-      assert.equal(M.getInvoice(early, M.recurringInvoiceId(M.replacementPlanId("rec_plan0001", "USD"), "2026-11")), undefined, "(US$ November not billed yet)");
-      assert.deepEqual([...M.monthsBilledTwice(early)], [M.recurringInvoiceId("rec_plan0001", "2026-11")], "flagged before its sibling exists");
-    }
-
-    // Review round 6: a month a family note asked to delete stays deleted after its tombstone would have aged out.
-    {
-      const rid = M.recurringInvoiceId;
-      const at = (iso) => Date.parse(`${iso}T12:00:00Z`);
-      const usdPlan = { id: "rec_usdfam01", clientId: "cli_plan0001", amountPaise: 120_000, description: "Retainer", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X };
-      const u = M.generateRecurring(M.upsertPlan(w, usdPlan, X), "2026-10-10", at("2026-10-10")).ws;
-      const later = (book, deleted, iso) => {
-        const t = at(iso);
-        return M.generateRecurring(M.pruneTombstones(M.repairIntl(book, t), t), iso, t).ws;
-      };
-      // ₹ side: device A changed the US$ plan to ₹ (R starts November); device B, stale, billed US$ November and the
-      // client paid it. R's ₹ November (legacy map) is the month to delete.
-      {
-        const A = M.replacePlanCurrency(u, "rec_usdfam01", "INR", at("2026-10-11"), 10_000_000);
-        let B = M.generateRecurring(u, "2026-11-06", at("2026-11-06")).ws;
-        B = M.addPayment(B, rid("rec_usdfam01", "2026-11"), { amountPaise: 120_000, date: "2026-11-08", mode: "bank", reference: "" }, at("2026-11-08"));
-        let book = M.generateRecurring(M.repairIntl(M.mergeWorkspaces(A.ws, B), at("2026-11-09")), "2026-11-09", at("2026-11-09")).ws;
-        assert.deepEqual([...M.monthsBilledTwice(book)], [rid(A.id, "2026-11")], "(the unpaid ₹ month is flagged)");
-        book = M.deleteInvoice(book, rid(A.id, "2026-11"), at("2026-11-10"));
-        for (const iso of ["2027-02-15", "2027-06-15", "2027-10-15"]) {
-          const next = later(book, rid(A.id, "2026-11"), iso);
-          assert.ok(M.getInvoice(next, rid(A.id, "2026-11"))?.deletedAt, `${iso}: ₹ November stays deleted`);
-          assert.equal(M.monthsBilledTwice(next).size, 0, `${iso}: nothing flagged again`);
-        }
-      }
-      // Foreign side, ended plan: device B changed the plan to ₹ in October, billed ₹ November and the client paid it;
-      // device A billed US$ November and then made the same change, later, so the old plan ends in November. US$
-      // November is in the ended plan's own range; once today is more than a year past it, it must still not return.
-      {
-        let B = M.replacePlanCurrency(u, "rec_usdfam01", "INR", at("2026-10-11"), 10_000_000).ws;
-        B = M.generateRecurring(B, "2026-11-06", at("2026-11-06")).ws;
-        const R = M.replacementPlanId("rec_usdfam01", "INR");
-        B = M.addPayment(B, rid(R, "2026-11"), { amountPaise: 10_000_000, date: "2026-11-08", mode: "upi", reference: "" }, at("2026-11-08"));
-        const A = M.replacePlanCurrency(M.generateRecurring(u, "2026-11-06", at("2026-11-06")).ws, "rec_usdfam01", "INR", at("2026-11-20"), 10_000_000).ws;
-        let book = M.repairIntl(M.mergeWorkspaces(A, B), at("2026-11-21"));
-        assert.equal(M.planEnd(book, M.getPlan(book, "rec_usdfam01")), "2026-11", "(the later change wins: the old plan ends in November)");
-        assert.deepEqual([...M.monthsBilledTwice(book)], [rid("rec_usdfam01", "2026-11")], "(US$ November is flagged)");
-        book = M.deleteInvoice(book, rid("rec_usdfam01", "2026-11"), at("2026-11-22"));
-        for (const iso of ["2027-11-15", "2027-12-15", "2028-06-15"]) {
-          const next = later(book, rid("rec_usdfam01", "2026-11"), iso);
-          assert.ok(M.getInvoice(next, rid("rec_usdfam01", "2026-11"))?.deletedAt, `${iso}: US$ November stays deleted`);
-          assert.equal(M.monthsBilledTwice(next).size, 0, `${iso}: nothing flagged again`);
-        }
-      }
-      // An INR plan no currency change touched keeps the deployed 90-day rule in the legacy map, byte for byte.
-      {
-        const plain = M.deleteInvoice(u, rid("rec_plan0001", "2026-09"), at("2026-10-12"));
-        const t = at("2027-01-20");
-        assert.equal(M.pruneTombstones(plain, t).invoices[rid("rec_plan0001", "2026-09")], undefined, "pruned after 90 days");
-        assert.equal(M.canonicalJson(M.withoutIntl(M.pruneTombstones(plain, t))), M.canonicalJson(legacy.pruneTombstones(M.withoutIntl(plain), t)));
-      }
+      const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
+      const old = load(M, pr3.generateRecurring(load(pr3, w), "2026-11-02", X + 38).ws);
+      assert.ok(!("exportLut" in M.getInvoice(old, rid("rec_export01", "2026-11"))), "(the PR 3 copy generates November unmarked)");
+      assert.equal(M.repairIntl(old, X + 39), old, "repairIntl leaves it as it is");
+      const merged = M.mergeWorkspaces(nov.ws, old);
+      assert.equal(M.repairIntl(merged, X + 40), merged, "a merge of both copies needs no repair either (the later write wins)");
     }
   }
 
@@ -2269,35 +1710,6 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.withoutTombstone(live), live, "a live record is returned as is");
   }
 
-  // Review round 6: move detection stays cheap for an INR-heavy book that turned on clients abroad. repairIntl and
-  // invoicesMovedTwice run on every load, merge, sync and edit; with 5,000 ₹ invoices they cost ~16x a merge of the same
-  // book before the derived ids were cached (40 ms), ~2x after. Best of 7 against a merge timed alike, so a busy
-  // machine slows both.
-  {
-    const invoices = {};
-    for (let i = 0; i < 5000; i++) {
-      const id = `inv_perf${String(i).padStart(8, "0")}`;
-      invoices[id] = { id, number: `INV-${i}`, clientId: "cli_perf0001", issueDate: "2026-09-01", dueDate: "2026-09-15", amountPaise: 100000, description: "", payments: [], reminders: [], voided: false, createdAt: X, updatedAt: X };
-    }
-    const inr = { ...M.upsertClient(M.emptyWorkspace(), { ...client, id: "cli_perf0001" }, X), invoices };
-    const book = { ...inr, intl: { settings: { ...M.emptyIntlSettings(X), on: true }, invoices: {}, recurring: {}, clients: {} } };
-    const best = (fn) => {
-      fn();
-      let fastest = Infinity;
-      for (let k = 0; k < 7; k++) {
-        const t0 = performance.now();
-        fn();
-        fastest = Math.min(fastest, performance.now() - t0);
-      }
-      return fastest;
-    };
-    const merge = best(() => M.mergeWorkspaces(inr, inr));
-    for (const [name, fn] of [["repairIntl", () => M.repairIntl(book, X)], ["invoicesMovedTwice", () => M.invoicesMovedTwice(book)]]) {
-      const ms = best(fn);
-      assert.ok(ms < 5 * merge + 1, `${name}: ${ms.toFixed(2)} ms for 5,000 invoices (a merge takes ${merge.toFixed(2)} ms)`);
-    }
-  }
-
   // WhatsApp and SMS dial the same number for a client abroad: the bracketed trunk prefix is dropped for both.
   assert.equal(M.internationalDigits("+44 (0)20 7946 0958"), "442079460958");
   assert.equal(M.internationalDigits("0044(0)2079460958"), "442079460958");
@@ -2306,6 +1718,53 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   for (const phone of ["+44 (0)20 7946 0958", "0044(0)2079460958", "+1 415 555 0100"]) {
     assert.equal(M.whatsappLink(phone, "x", { international: true }), `https://wa.me/${M.internationalDigits(phone)}?text=x`);
   }
+}
+
+/* ---------- A currency is fixed at creation (owner decision, 2026-10-25): the model is origin/main's ---------- */
+// No UI changes the currency of an existing invoice or plan, so PR 4 adds no repair, link or prune rule for one.
+// scripts/fixtures/pr3-model.ts is the deployed model (main before PR 4, verbatim): every function PR 4 doesn't touch
+// keeps its exact source, and its results are byte-identical.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const pr3 = await import("./fixtures/pr3-model.ts");
+  for (const name of ["pruneTombstones", "repairIntl", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
+    "restoreFrom", "eraseWorkspace", "deleteInvoice", "deleteClient", "upsertInvoice", "upsertPlan", "planMonths", "nextInvoiceNumber"]) {
+    assert.equal(M[name].toString(), pr3[name].toString(), `${name} is the deployed code`);
+  }
+  for (const gone of ["replacementInvoiceId", "replacementPlanId", "movedCopyOf", "invoicesMovedTwice", "monthsBilledTwice", "planEnd", "planCanChangeCurrency"]) {
+    assert.equal(M[gone], undefined, `${gone} is not exported`);
+  }
+  const X = Date.UTC(2026, 7, 1);
+  const DAY = 86_400_000;
+  const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
+  const cli = (id, name) => ({ id, name, phone: "", email: "", gstin: "", createdAt: X, updatedAt: X });
+  const plan = (id, clientId, extra = {}) => ({ id, clientId, amountPaise: 250000, description: "Fees", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X, ...extra });
+  let w = M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X);
+  w = M.upsertClient(M.upsertClient(w, cli("cli_inr00001", "Ravi"), X), cli("cli_usd00001", "Globex"), X);
+  w = M.upsertPlan(w, plan("rec_inr00001", "cli_inr00001"), X);
+  w = M.upsertPlan(w, plan("rec_inr00002", "cli_inr00001", { startMonth: "2026-06", endMonth: "2026-09" }), X);
+  w = M.upsertPlan(w, plan("rec_usd00001", "cli_usd00001", { amountPaise: 120000, currency: "USD" }), X);
+  w = M.updateIntlSettings(w, { on: true }, X);
+  // generateRecurring: INR months, and foreign months with no marked month before them, are what the deployed code writes.
+  for (const today of ["2026-08-10", "2026-10-10", "2027-03-10"]) {
+    const now = M.generateRecurring(load(M, w), today, X + 5);
+    const old = pr3.generateRecurring(load(pr3, w), today, X + 5);
+    assert.deepEqual(now.created, old.created, `${today}: the same months`);
+    assert.equal(M.canonicalJson(now.ws), pr3.canonicalJson(old.ws), `${today}: byte-identical`);
+  }
+  // pruneTombstones: deleted INR and foreign plan months go after 90 days, as deployed (no billing-window rule).
+  const generated = M.generateRecurring(w, "2026-10-10", X + 5).ws;
+  let deleted = M.deleteInvoice(generated, M.recurringInvoiceId("rec_inr00001", "2026-09"), X + 10);
+  deleted = M.deleteInvoice(deleted, M.recurringInvoiceId("rec_usd00001", "2026-09"), X + 10);
+  for (const days of [30, 91, 400]) {
+    const t = X + 10 + days * DAY;
+    assert.equal(M.canonicalJson(M.pruneTombstones(load(M, deleted), t)), pr3.canonicalJson(pr3.pruneTombstones(load(pr3, deleted), t)), `prune after ${days} days`);
+  }
+  assert.equal(M.getInvoice(M.pruneTombstones(deleted, X + 10 + 91 * DAY), M.recurringInvoiceId("rec_usd00001", "2026-09")), undefined, "a foreign plan month's tombstone is pruned like any other");
+  // repairIntl over a merge of two copies: the same bytes.
+  const other = M.logReminder(generated, M.recurringInvoiceId("rec_inr00001", "2026-10"), "whatsapp", X + 20);
+  assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(load(M, deleted), load(M, other)), X + 21)),
+    pr3.canonicalJson(pr3.repairIntl(pr3.mergeWorkspaces(load(pr3, deleted), load(pr3, other)), X + 21)));
 }
 
 console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");

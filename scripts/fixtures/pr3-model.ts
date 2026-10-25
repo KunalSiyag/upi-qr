@@ -1,6 +1,7 @@
 // src/lib/workspace/model.ts at the PR 3 merge (18d91e8, production before PR 4), verbatim except the currency import
-// path: the model of open tabs and offline PWAs from before PR 4. It generates foreign plan months without the export
-// mark carry-forward, so tests can check what PR 4 repairs after merging its copy (docs/spec-foreign-clients.md §6).
+// path: the model of open tabs and offline PWAs from before PR 4. workspace.test.mjs checks that PR 4 keeps its code
+// and bytes (a currency is fixed at creation, so PR 4 adds no repair), and that a month it generated without the
+// export mark carry-forward is left as it is (docs/spec-foreign-clients.md §5.3, §6).
 /**
  * Payments workspace domain model — pure functions, no DOM, no storage.
  *

@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  movedCopyOf, nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, replaceInvoiceCurrency, setClientCurrency,
+  nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
 import { CURRENCIES, formatMoney, fyOf, isForeignCurrency, minorToDecimal, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
 import { INTL_UI } from "../../lib/workspace/localStore";
-import { dangerText, Field, inputClass, primaryButton, secondaryButton, Sheet } from "./ui";
+import { Field, inputClass, labelClass, primaryButton, secondaryButton, Sheet } from "./ui";
 import { useWs } from "./i18n";
 
 const TERMS = [
@@ -64,54 +64,29 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   const [repeat, setRepeat] = useState(false);
   const [untilMonth, setUntilMonth] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
-  // The invoice's own currency is the source of truth; a picked client's billing currency only pre-fills a new one.
-  const [currency, setCurrency] = useState<CurrencyCode>(existing ? currencyOf(existing) : "INR");
-  const [currencyTouched, setCurrencyTouched] = useState(false);
-  // Whether the amount on screen was typed in this sheet (an existing invoice's is prefilled in its own currency).
-  const [amountTyped, setAmountTyped] = useState(false);
   const [exportLut, setExportLut] = useState(existing ? existing.exportLut === true : true);
-  const foreign = isForeignCurrency(currency);
   // INTL_UI at the use site (not only inside intlPickers) so a flag-off build drops the picker code.
   const showPicker = INTL_UI && intlPickers(ws);
-  const lockedByPayment = Boolean(existing?.payments.length);
-  const lockedByPlan = Boolean(existing?.recurringId);
-  const ownCurrency = existing ? currencyOf(existing) : undefined;
-  const ownAmount = existing ? minorToDecimal(existing.amountPaise) : "";
-  // A payment recorded in another tab or device while a new currency was picked here: the currency can't change any
-  // more, so the picker goes back to the invoice's own (with its amount, unless one was typed) and the other edits
-  // can still be saved (review round 6).
-  useEffect(() => {
-    if (!ownCurrency || !(lockedByPayment || lockedByPlan) || currency === ownCurrency) return;
-    setCurrency(ownCurrency);
-    if (!amountTyped) setAmount(ownAmount);
-  }, [lockedByPayment, lockedByPlan, ownCurrency, currency, amountTyped, ownAmount]);
-  // The amount was cleared for a new currency: say so, next to the field and to screen readers.
-  const reenterAmount = Boolean(ownCurrency && currency !== ownCurrency && !amountTyped && !amount.trim());
-  // A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
   const matched = clients.find((c) => c.name.trim().toLowerCase() === clientName.trim().toLowerCase());
+  // The currency is chosen once, when the invoice is created, and never changes afterwards (owner decision,
+  // 2026-10-25): to bill in another currency the user deletes the invoice and creates a new one. A new invoice follows
+  // the matched client's billing currency until the user picks one in the select.
+  const [picked, setPicked] = useState<CurrencyCode | null>(null);
+  const currency: CurrencyCode = existing
+    ? currencyOf(existing)
+    : picked ?? (showPicker && matched ? clientCurrency(ws, matched.id) : "INR");
+  const foreign = isForeignCurrency(currency);
+  // A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
   const showExport = foreign && settings?.exportUnderLut === true && !matched?.gstin.trim();
 
   function pickClient(name: string) {
     setClientName(name);
     const match = clients.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
     if (match && !phone) setPhone(match.phone);
-    // Until the user picks a currency it follows the typed name: a client's billing currency while the name matches
-    // one, INR once it no longer does (typing past "Globex" to a new client never keeps Globex's US$). Only while no
-    // amount is entered: an amount is never re-denominated (US$1,200 is not ₹1,200) (review round 5).
-    if (!existing && !currencyTouched && showPicker && !amount.trim()) setCurrency(match ? clientCurrency(ws, match.id) : "INR");
   }
 
   function submit(event: FormEvent) {
     event.preventDefault();
-    // Moved to another currency in another tab or device while this sheet was open: the edits can't go onto the old
-    // id (repairIntl deletes it again next to its live copy), and the amount on screen is in the old currency. Checked
-    // first: the copy holds this number, so the number check would otherwise answer with a misleading message.
-    const stored = existing ? getInvoice(ws, existing.id) : undefined;
-    const movedTo = stored?.deletedAt ? movedCopyOf(ws, stored) : undefined;
-    if (movedTo) {
-      setErrors({ form: tr("This invoice was changed to {currency} in another tab or device, so these changes weren't saved. Close this and edit it again.", { currency: currencyOf(movedTo) }) });
-      return;
-    }
     const amountPaise = parseMoneyToMinor(amount, currency);
     const next: Record<string, string> = {};
     if (!clientName.trim()) next.client = tr("Who is this invoice for?");
@@ -176,17 +151,8 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
       description: description.trim().slice(0, 300),
     };
     if (existing) {
-      // Deleted in another tab or device while this sheet was open (and not moved, above): saving brings it back with
-      // the edits.
-      if (stored?.deletedAt) ws2 = upsertInvoice(ws2, withoutTombstone(stored), now);
-      // A currency change gets a new id (the record's currency never changes under its id); the number stays. The
-      // edits go into the move itself, so the copy is written once, at a time every device derives alike.
-      if (currencyOf(existing) !== currency) {
-        const moved = replaceInvoiceCurrency(ws2, existing.id, currency, now, (copy) => money({ ...copy, ...edits }));
-        if (moved) onSave(moved.ws, moved.id);
-        else setErrors({ form: tr("Currency can't be changed after a payment is recorded.") });
-        return;
-      }
+      // Spread over the stored record, so fields this sheet doesn't edit are kept; one another tab or device deleted
+      // while this sheet was open comes back with the edits. The currency stays the invoice's own.
       const base = withoutTombstone(getInvoice(ws2, existing.id) ?? existing);
       onSave(upsertInvoice(ws2, money({ ...base, ...edits }), now), existing.id);
       return;
@@ -218,34 +184,27 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             <input id="ws-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" maxLength={20} placeholder={foreign ? "+1 415 555 0100" : "98765 43210"} />
           </Field>
           {showPicker ? (
-            <div>
-              <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
-                <Field label={foreign ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-amount" error={errors.amount}>
-                  <input id="ws-amount" className={inputClass} value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTyped(true); }} inputMode="decimal" placeholder={foreign ? "1,200.50" : "1500"}
-                    aria-describedby={existing ? "ws-amount-hint" : undefined} />
-                </Field>
+            <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
+              <Field label={foreign ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-amount" error={errors.amount}>
+                <input id="ws-amount" className={inputClass} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={foreign ? "1,200.50" : "1500"}
+                  aria-describedby={existing ? "ws-currency-note" : undefined} />
+              </Field>
+              {existing ? (
+                // Fixed at creation: shown as text, never a control (owner decision, 2026-10-25).
+                <div>
+                  <p className={labelClass}>{tr("Currency")}</p>
+                  <p id="ws-currency-fixed" className="rounded-[10px] border border-transparent bg-fog px-3 py-2 text-sm text-ink">{CURRENCY_OPTION[currency]}</p>
+                </div>
+              ) : (
                 <Field label={tr("Currency")} htmlFor="ws-currency">
-                  <select id="ws-currency" className={inputClass} value={currency} disabled={lockedByPayment || lockedByPlan}
-                    onChange={(e) => {
-                      setCurrency(e.target.value as CurrencyCode);
-                      setCurrencyTouched(true);
-                      // An existing invoice's amount is in its own currency (₹90,000 is not US$90,000): enter it again,
-                      // or get it back on switching back to that currency.
-                      if (existing && !amountTyped) setAmount(e.target.value === ownCurrency ? ownAmount : "");
-                    }}>
+                  <select id="ws-currency" className={inputClass} value={currency} onChange={(e) => setPicked(e.target.value as CurrencyCode)}>
                     {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
                   </select>
                 </Field>
-                {(lockedByPayment || lockedByPlan) && (
-                  <p className="col-span-2 -mt-1 text-xs leading-5 text-muted">
-                    {lockedByPayment ? tr("Currency can't be changed after a payment is recorded.") : tr("This invoice comes from a monthly plan. Change the plan's currency instead.")}
-                  </p>
-                )}
-              </div>
-              {/* Always in the page (empty until needed), so screen readers announce the text when it appears. */}
+              )}
               {existing && (
-                <p id="ws-amount-hint" aria-live="polite" className="text-xs leading-5 text-muted">
-                  {reenterAmount && <span className="mt-1 block">{tr("Enter the amount in {currency}.", { currency })}</span>}
+                <p id="ws-currency-note" className="col-span-2 -mt-1 text-xs leading-5 text-muted">
+                  {tr("The currency can't be changed. To bill in another currency, delete this invoice and create a new one.")}
                 </p>
               )}
             </div>
@@ -301,7 +260,6 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             )}
           </div>
         )}
-        {errors.form && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{errors.form}</p>}
         <div className="flex gap-2 pt-1">
           <button type="submit" className={`${primaryButton} flex-1`}>{existing ? tr("Save changes") : tr("Add invoice")}</button>
           <button type="button" onClick={onClose} className={secondaryButton}>{tr("Cancel")}</button>

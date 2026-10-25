@@ -63,7 +63,10 @@ try {
     // Paused, so no month is generated: it only puts a USD plan under Monthly billing.
     recurring: { rec_usd00001: { id: "rec_usd00001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: iso(0).slice(0, 7), endMonth: "", paused: true, currency: "USD", createdAt: T, updatedAt: T } },
     clients: {} };
-  /** The creation entry points of §5.1 in the current page: the invoice sheet's picker, the client sheet's, the plan's button. */
+  /**
+   * The creation entry points of §5.1 in the current page: the invoice sheet's picker and the client sheet's. `plan` is
+   * a plan "Change currency" button, which no build has (a currency is fixed at creation, owner decision 2026-10-25).
+   */
   const entryPoints = async (base) => {
     await b.go(base + "/app/", 2500);
     await t("[...document.querySelectorAll('button')].find(b => b.textContent === '+ नया इनवॉइस').click(), true");
@@ -103,7 +106,7 @@ try {
   if (INTL) {
     await seedAbroad(INTL);
     const on = await entryPoints(INTL);
-    check("flag on: the same three entry points show (the probe above can find them)", on.planShown && on.clientSheet && on.invoice && on.client && on.plan, JSON.stringify(on));
+    check("flag on: both entry points show (the probe above can find them), and no plan currency change", on.planShown && on.clientSheet && on.invoice && on.client && !on.plan, JSON.stringify(on));
     await b.go(INTL + "/app/?tab=settings", 2500);
     await t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('विदेशी ग्राहक')); if (!d.open) d.querySelector('summary').click(); return true; })()");
     await sleep(200);
@@ -117,6 +120,20 @@ try {
     await t("document.getElementById('ws-currency').value = 'USD', document.getElementById('ws-currency').dispatchEvent(new Event('change', { bubbles: true })), true");
     await sleep(100);
     check("Hindi invoice sheet: राशि (USD)", (await b.eval("document.querySelector('[role=dialog]').innerText")).includes("राशि (USD)"));
+    await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+    await b.waitFor("!document.querySelector('[role=dialog]')");
+    // An existing invoice: its currency as text, with the note in Hindi, and no select.
+    await b.go(INTL + "/app/?tab=invoices", 2500);
+    await t("(() => { const r = [...document.querySelectorAll('li [aria-expanded]')].find(x => x.textContent.includes('TU-0002')); if (r.getAttribute('aria-expanded') !== 'true') r.click(); return true; })()");
+    await sleep(150);
+    await t("[...document.querySelectorAll('li button')].find(x => x.textContent === 'बदलें' && x.closest('li').textContent.includes('TU-0002')).click(), true");
+    await b.waitFor("!!document.querySelector('[role=dialog]')");
+    await sleep(150);
+    const fixed = await b.eval("({ select: !!document.getElementById('ws-currency'), text: document.getElementById('ws-currency-fixed')?.textContent, note: document.getElementById('ws-currency-note')?.textContent.trim() })");
+    check("Hindi edit sheet: the currency as text with the Hindi note, no select", !fixed.select && fixed.text === "USD (US$)"
+      && fixed.note === "मुद्रा बदली नहीं जा सकती। दूसरी मुद्रा में बिल करने के लिए यह इनवॉइस डिलीट करें और नया बनाएँ।", JSON.stringify(fixed));
+    await b.shot("hi-invoice-fixed-currency.png");
+    await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
   }
   check("no console errors (excluding blocked Clerk)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {

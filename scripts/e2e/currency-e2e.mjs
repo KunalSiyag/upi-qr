@@ -1,9 +1,7 @@
 // Clients abroad in /app/ (docs/spec-foreign-clients.md §5, §9.3), against the runner's flag-on build (INTL_UI on,
 // served at INTL_BASE). Static: no server, sync stays signed out.
-import { spawnSync } from "node:child_process";
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { fileURLToPath } from "node:url";
 import { checker, helpers, OUT, sleep, startBrowser } from "./cdp-lib.mjs";
 
 const BASE = process.env.INTL_BASE || process.env.BASE || "http://localhost:4401";
@@ -44,13 +42,6 @@ const setIntlOn = async (on) => {
   if ((await b.eval("document.getElementById('ws-intl-on').checked")) !== on) await t("document.getElementById('ws-intl-on').click(), true");
   await t(`__t.click(/^Save payment details$/)`);
   await sleep(300);
-};
-/** Runs `body` in Node with the workspace model as `M` (ids and records derived exactly as the app derives them); it prints JSON. */
-const MODEL = fileURLToPath(new URL("../../src/lib/workspace/model.ts", import.meta.url));
-const model = (body) => {
-  const r = spawnSync("node", ["--experimental-strip-types", "--no-warnings", "--input-type=module", "-e", `import * as M from ${JSON.stringify(MODEL)}; ${body}`], { encoding: "utf8" });
-  if (r.status) throw new Error(r.stderr.slice(0, 400));
-  return JSON.parse(r.stdout);
 };
 const focused = () => b.eval("document.activeElement?.id || document.activeElement?.tagName || ''");
 const openSettingsCard = () => t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); if (!d.open) d.querySelector('summary').click(); return true; })()");
@@ -214,16 +205,11 @@ try {
   await t(`__t.set('ws-client', 'Globex LLC')`);
   await sleep(100);
   check("…and back to the client's currency when it matches again", (await value("ws-currency")) === "USD");
-  // Review round 5: an amount already typed is never re-denominated by the client name changing under it.
-  await t(`__t.set('ws-amount', '1200'), __t.set('ws-client', 'Globex LLC Inc')`);
+  // Once the user picks a currency in the select, the client name no longer changes it.
+  await t(`__t.set('ws-currency', 'EUR'), __t.set('ws-client', 'Globex'), __t.set('ws-client', 'Globex LLC')`);
   await sleep(100);
-  check("with an amount typed, finishing the name keeps its currency (US$, not ₹)", (await value("ws-currency")) === "USD" && /Amount \(USD\)/.test(await dialogText()));
-  await t(`__t.set('ws-amount', ''), __t.set('ws-client', 'Glob'), __t.set('ws-amount', '50000'), __t.set('ws-client', 'Globex LLC')`);
-  await sleep(100);
-  check("…and a ₹ amount stays ₹ when the name then matches a US$ client", (await value("ws-currency")) === "INR" && /Amount \(₹\)/.test(await dialogText()));
-  await t(`__t.set('ws-amount', ''), __t.set('ws-client', 'Globex'), __t.set('ws-client', 'Globex LLC')`);
-  await sleep(100);
-  check("an empty amount follows the client again", (await value("ws-currency")) === "USD");
+  check("after the user picks a currency, the client name no longer changes it", (await value("ws-currency")) === "EUR" && /Amount \(EUR\)/.test(await dialogText()));
+  await t(`__t.set('ws-currency', 'USD')`);
   check("export choice shown and on by default", await b.eval("document.getElementById('ws-export-lut')?.checked === true"));
   await t(`__t.set('ws-amount', '12,50'), __t.click(/^Add invoice$/, __t.dialog())`);
   check("a decimal comma is refused for USD", /Enter the amount like 1,200\.50\./.test(await dialogText()));
@@ -339,44 +325,32 @@ try {
   await closed();
   await tab("Clients");
   check("monthly plan shown in its currency", /Monthly billing[\s\S]*Globex LLC · US\$300\.00/.test(await text()));
-  await t(`__t.click(/^Change currency$/)`); await opened();
-  check("plan currency sheet warns that months keep their currency", /Months already created keep their currency\./.test(await dialogText()));
-  await t(`__t.set('ws-plan-currency', 'GBP')`);
-  check("the amount in the new currency starts empty", (await value("ws-plan-amount")) === "" && /Amount \(GBP\)/.test(await dialogText()));
-  await t(`__t.click(/^Change currency$/, __t.dialog())`);
-  await sleep(150);
-  check("a currency change needs the amount in the new currency", /Enter the amount like 1,200\.50\./.test(await dialogText()) && await b.eval("!!document.querySelector('[role=dialog]')"));
-  await t(`__t.set('ws-plan-amount', '240'), __t.click(/^Change currency$/, __t.dialog())`);
-  await closed();
-  page = await text();
-  check("plan replaced in GBP at the new amount; the created month stays USD", /Globex LLC · £240\.00/.test(page) && /Globex LLC · US\$300\.00/.test(page) && !/£300\.00/.test(page), page.slice(0, 1200));
-  check("after the change, focus is on the new plan's Change currency, not the page", await b.eval("document.activeElement?.hasAttribute('data-plan-currency') && /£240\\.00/.test(document.activeElement.closest('[data-plan-row]')?.textContent || '')"), await focused());
-  const planActions = await b.eval(`Object.fromEntries([...document.querySelectorAll('[aria-labelledby=monthly-title] li')].map((li) => [li.querySelector('p').textContent.includes('£') ? 'gbp' : 'usd', [...li.querySelectorAll('button')].some((x) => x.textContent === 'Change currency')]))`);
-  check("only the new plan offers Change currency (the old one has no month left)", planActions.gbp === true && planActions.usd === false, JSON.stringify(planActions));
+  check("no plan offers a currency change (a currency is fixed at creation)", !(await b.eval("[...document.querySelectorAll('button')].some((x) => /Change currency/.test(x.textContent))")));
 
-  // A plan month's currency is locked in the invoice sheet.
+  // An existing invoice (a plan month, an unpaid one, a paid one): the currency is text with the note, never a select.
+  const NOTE = "The currency can't be changed. To bill in another currency, delete this invoice and create a new one.";
+  const fixedCurrency = () => b.eval("({ select: !!document.getElementById('ws-currency'), text: document.getElementById('ws-currency-fixed')?.textContent ?? null, note: document.getElementById('ws-currency-note')?.textContent.trim() ?? null, describedBy: document.getElementById('ws-amount')?.getAttribute('aria-describedby') })");
   await tab("Invoices");
   await t(`__t.click(/^all$/)`);
-  await openRow("MON-1");
-  await t(`__t.click(/^Edit$/)`); await opened();
-  check("a plan month's currency is locked, with the plan message", await b.eval("document.getElementById('ws-currency').disabled") && /This invoice comes from a monthly plan\. Change the plan's currency instead\./.test(await dialogText()));
-  await esc(); await closed();
-
-  // Editing an unpaid invoice's currency keeps its number (new id).
-  await tab("Invoices");
-  await openRow("Acme GmbH");
-  await t(`__t.click(/^Edit$/)`); await opened();
-  check("the edit sheet shows the amount in euros", (await value("ws-amount")) === "750.00");
-  await t(`__t.set('ws-currency', 'GBP')`);
-  check("changing the currency clears the prefilled amount (€750 is not £750)", (await value("ws-amount")) === "" && /Amount \(GBP\)/.test(await dialogText()));
-  await t(`__t.set('ws-amount', '750'), __t.click(/^Save changes$/, __t.dialog())`);
-  await closed();
-  check("currency change keeps the number", /Acme GmbH[\s\S]*£750\.00/.test(await text()) && JSON.parse(await sidecar()).intl.invoices && Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => i.number === "INV-0004" && !i.deletedAt).map((i) => i.currency).join() === "GBP");
-  await t(`__t.click(/^all$/)`);
-  await openRow("US$1,200.50");
-  await t(`__t.click(/^Edit$/)`); await opened();
-  check("a paid invoice's currency is locked", await b.eval("document.getElementById('ws-currency').disabled") && /Currency can't be changed after a payment is recorded\./.test(await dialogText()));
-  await esc(); await closed();
+  for (const [needle, shown] of [["MON-1", "USD (US$)"], ["Acme GmbH", "EUR (€)"], ["US$1,200.50", "USD (US$)"]]) {
+    await openRow(needle);
+    await t(`__t.click(/^Edit$/)`); await opened();
+    const f = await fixedCurrency();
+    check(`${needle}: the currency is read-only text with the note`, !f.select && f.text === shown && f.note === NOTE && f.describedBy === "ws-currency-note", JSON.stringify(f));
+    if (needle === "Acme GmbH") {
+      check("the edit sheet shows the amount in euros", (await value("ws-amount")) === "750.00" && /Amount \(EUR\)/.test(await dialogText()));
+      await b.shot("cur-04-fixed-currency.png");
+      // Saving an edit keeps the invoice, its id and its currency.
+      const before = Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => i.number === "INV-0004" && !i.deletedAt);
+      await t(`__t.set('ws-desc', 'Design sprint'), __t.click(/^Save changes$/, __t.dialog())`);
+      await closed();
+      const after = Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => i.number === "INV-0004");
+      check("an edit keeps the id and the currency", before.length === 1 && after.length === 1 && after[0].id === before[0].id && after[0].currency === "EUR" && after[0].amountPaise === 75000
+        && after[0].description === "Design sprint" && !after[0].deletedAt, JSON.stringify(after));
+      continue;
+    }
+    await esc(); await closed();
+  }
 
   // CSV: per-currency columns appended.
   const csv = await download("__t.click(/^Export CSV$/)");
@@ -410,7 +384,7 @@ try {
   check("the INR credited input is narrow and its button secondary", creditForm.inputW < 200 && !creditForm.filled, JSON.stringify(creditForm));
   await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/)`);
   await sleep(200);
-  check("payment line shows the ₹ added later", /£750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
+  check("payment line shows the ₹ added later", /€750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
   check("after the save, focus is on that payment's Undo, not the page", await b.eval("document.activeElement?.hasAttribute('data-credit-undo')"));
   check("INR credited stored on the foreign payment in the sidecar", Object.values(JSON.parse(await sidecar()).intl.invoices).some((i) => !i.deletedAt && i.payments.some((p) => p.reference === "WISE-9001" && p.inrCreditedPaise === 8_000_000)));
   await tab("Overview");
@@ -481,7 +455,7 @@ try {
   await t(`__t.click(/^unpaid$/)`); await sleep(150);
 
   // An edit saved after another tab deleted the record (sheet still open) brings it back with the edits: a foreign
-  // invoice with a currency change, an INR invoice, and a client (review round 4; the sheets use withoutTombstone).
+  // invoice (in its own currency), an INR invoice, and a client (review round 4; the sheets use withoutTombstone).
   {
     const live = async (number) => Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => i.number === number);
     await t(`__t.click(/^\\+ New invoice$/)`); await opened();
@@ -494,11 +468,11 @@ try {
     await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); const i = v.intl.invoices['${tombId}']; const now = Date.now(); i.deletedAt = now; i.updatedAt = now; return JSON.stringify(v); }`);
     await sleep(400);
     check("deleted in another tab: the invoice sheet stays open", await b.eval("!!document.querySelector('[role=dialog]')") && !(await live("TOMB-1")).some((i) => !i.deletedAt));
-    await t(`__t.set('ws-currency', 'CAD'), __t.set('ws-amount', '150'), __t.click(/^Save changes$/, __t.dialog())`);
+    await t(`__t.set('ws-amount', '150'), __t.click(/^Save changes$/, __t.dialog())`);
     await closed();
     const tomb = await live("TOMB-1");
-    check("a foreign invoice deleted in another tab comes back with the edits and its currency change", tomb.filter((i) => !i.deletedAt).map((i) => `${i.currency} ${i.amountPaise}`).join() === "CAD 15000"
-      && Boolean(tomb.find((i) => i.id === tombId)?.deletedAt) && /TOMB-1[\s\S]*CA\$150\.00/.test(await text()), JSON.stringify(tomb.map((i) => [i.id, i.currency, i.amountPaise, i.deletedAt])));
+    check("a foreign invoice deleted in another tab comes back with the edits, in its own currency", tomb.length === 1 && tomb[0].id === tombId && !tomb[0].deletedAt
+      && `${tomb[0].currency} ${tomb[0].amountPaise}` === "USD 15000" && /TOMB-1[\s\S]*US\$150\.00/.test(await text()), JSON.stringify(tomb.map((i) => [i.id, i.currency, i.amountPaise, i.deletedAt])));
 
     await t(`__t.click(/^\\+ New invoice$/)`); await opened();
     await t(`__t.set('ws-client', 'Tomb Rupee'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '2000'), __t.set('ws-number', 'TOMB-2'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
@@ -521,100 +495,6 @@ try {
     await t(`__t.set('ws-c-name', 'Tomb Rupee Kumar'), __t.click(/^Save$/, __t.dialog())`); await closed();
     const cl = JSON.parse(await book()).clients[clientId];
     check("a client deleted in another tab comes back with the edits", cl && !cl.deletedAt && cl.name === "Tomb Rupee Kumar", JSON.stringify(cl));
-
-    // Review round 5: an edit saved after another tab moved the invoice to another currency is refused with a
-    // message (the old id would be deleted again next to its copy, and the amount on screen is in the old currency).
-    await tab("Invoices");
-    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
-    await t(`__t.set('ws-client', 'Tomb Traders'), __t.set('ws-currency', 'USD'), __t.set('ws-amount', '90'), __t.set('ws-number', 'TOMB-3'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
-    await closed();
-    const movedId = (await live("TOMB-3")).find((i) => !i.deletedAt)?.id;
-    const copyId = model(`console.log(JSON.stringify(M.replacementInvoiceId(${JSON.stringify(movedId)}, "EUR")))`);
-    await t(`__t.click(/^all$/)`);
-    await openRow("TOMB-3");
-    await t(`__t.click(/^Edit$/)`); await opened();
-    await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); const i = v.intl.invoices['${movedId}']; const now = Date.now();
-      v.intl.invoices['${copyId}'] = { ...i, id: '${copyId}', currency: 'EUR', amountPaise: 8000, updatedAt: now }; i.deletedAt = now; i.updatedAt = now; return JSON.stringify(v); }`);
-    await sleep(400);
-    await t(`__t.set('ws-desc', 'edited here'), __t.click(/^Save changes$/, __t.dialog())`);
-    await sleep(200);
-    check("moved in another tab: the save is refused with a message, the sheet stays open", /This invoice was changed to EUR in another tab or device, so these changes weren't saved\./.test(await dialogText()));
-    const tomb3 = await live("TOMB-3");
-    check("…and nothing is revived or edited", tomb3.filter((i) => !i.deletedAt).map((i) => `${i.currency} ${i.amountPaise} ${i.description}`).join() === "EUR 8000 ", JSON.stringify(tomb3.map((i) => [i.currency, i.deletedAt, i.description])));
-    await esc(); await closed();
-
-    // Review round 6: a currency change clears the prefilled amount and says so (also to screen readers); switching
-    // back to the invoice's own currency brings the amount back.
-    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
-    await t(`__t.set('ws-client', 'Tomb Rupee Kumar'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '5000'), __t.set('ws-number', 'TOMB-4'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
-    await closed();
-    const tomb4 = Object.values(JSON.parse(await book()).invoices).find((i) => i.number === "TOMB-4")?.id;
-    await openRow("TOMB-4");
-    await t(`__t.click(/^Edit$/)`); await opened();
-    const hint = () => b.eval("document.getElementById('ws-amount-hint')?.innerText.trim() ?? null");
-    check("no amount hint before a currency change", (await hint()) === "" && (await b.eval("document.getElementById('ws-amount').getAttribute('aria-describedby')")) === "ws-amount-hint"
-      && (await b.eval("document.getElementById('ws-amount-hint').getAttribute('aria-live')")) === "polite");
-    await t(`__t.set('ws-currency', 'USD')`);
-    check("a new currency clears the amount, with a hint", (await value("ws-amount")) === "" && (await hint()) === "Enter the amount in USD.");
-    await t(`__t.set('ws-currency', 'INR')`);
-    check("switching back restores the amount, and the hint goes", (await value("ws-amount")) === "5000.00" && (await hint()) === "" && /Amount \(₹\)/.test(await dialogText()));
-    // A payment recorded in another tab after a new currency was picked: the picker goes back to ₹ with the amount,
-    // locked, and the other edits still save.
-    await t(`__t.set('ws-currency', 'EUR')`);
-    await otherTabWrite("proupiqr-workspace-v1", `(raw) => { const v = JSON.parse(raw); const i = v.invoices['${tomb4}']; const now = Date.now();
-      i.payments.push({ id: 'pay_e2etab0001', amountPaise: 100000, date: '${await iso(0)}', mode: 'upi', reference: '', createdAt: now }); i.updatedAt = now; return JSON.stringify(v); }`);
-    await sleep(400);
-    check("a payment from another tab puts the currency back, locked", (await value("ws-currency")) === "INR" && (await b.eval("document.getElementById('ws-currency').disabled"))
-      && (await value("ws-amount")) === "5000.00" && /Currency can't be changed after a payment is recorded\./.test(await dialogText()));
-    await t(`__t.set('ws-desc', 'saved after the payment'), __t.click(/^Save changes$/, __t.dialog())`);
-    await closed();
-    const saved4 = JSON.parse(await book()).invoices[tomb4];
-    check("…and the other edits save, with the payment", saved4 && !saved4.deletedAt && saved4.description === "saved after the payment" && saved4.payments.length === 1 && saved4.amountPaise === 500000, JSON.stringify(saved4));
-
-    // The double-billing notes (review round 5): a ₹ invoice a stale tab paid next to its US$ copy (both show "also
-    // exists in another currency", and not the number note), and a plan month a stale copy billed after a currency
-    // change (only that month shows "billed twice"). Records built with the model, written as another tab would.
-    const seed = model(`
-      const today = new Date(); const iso = (d) => d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
-      const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 15); const month = iso(today).slice(0, 7);
-      const T = Date.now() - 60000;
-      let w = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Seed", upiId: "seed@okaxis" }, T), { id: "cli_e2eseed1", name: "Seeded Twice Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T }, T);
-      w = M.upsertInvoice(w, { id: "inv_e2emv001", number: "MV-1", clientId: "cli_e2eseed1", issueDate: iso(today), dueDate: iso(today), amountPaise: 900000, description: "", payments: [], reminders: [], voided: false, createdAt: T, updatedAt: T }, T);
-      const moved = M.replaceInvoiceCurrency(w, "inv_e2emv001", "USD", T + 1, (c) => ({ ...c, amountPaise: 11000 }));
-      w = M.addPayment(M.upsertInvoice(moved.ws, M.withoutTombstone(M.getInvoice(w, "inv_e2emv001")), T + 2), "inv_e2emv001", { amountPaise: 100000, date: iso(today), mode: "upi", reference: "" }, T + 3);
-      w = M.upsertPlan(w, { id: "rec_e2eplan1", clientId: "cli_e2eseed1", amountPaise: 500000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: iso(lastMonth).slice(0, 7), endMonth: "", paused: false, createdAt: T, updatedAt: T }, T);
-      w = M.generateRecurring(w, iso(lastMonth), T + 4).ws;
-      const re = M.replacePlanCurrency(w, "rec_e2eplan1", "USD", T + 5, 6000);
-      w = M.generateRecurring(re.ws, iso(today), T + 6).ws;
-      const stray = M.recurringInvoiceId("rec_e2eplan1", month);
-      w = M.upsertInvoice(w, { id: stray, number: "BT-STRAY", clientId: "cli_e2eseed1", issueDate: month + "-01", dueDate: month + "-16", amountPaise: 500000, description: "", payments: [], reminders: [], voided: false, recurringId: "rec_e2eplan1", createdAt: T + 7, updatedAt: T + 7 }, T + 7);
-      w = M.repairIntl(w, T + 8);
-      let n = 0;
-      for (const map of [w.invoices, w.intl.invoices]) for (const i of Object.values(map)) if (!["MV-1", "BT-STRAY"].includes(i.number)) i.number = "BT-" + (++n);
-      const usdMonth = M.recurringInvoiceId(re.id, month);
-      console.log(JSON.stringify({ w, stray, copy: moved.id, usdMonth, usdNumber: M.getInvoice(w, usdMonth).number, flagged: [...M.monthsBilledTwice(w)], moved: [...M.invoicesMovedTwice(w)] }));
-    `);
-    check("(seed: the model flags the stray month and the moved pair)", seed.flagged.join() === seed.stray && seed.moved.length === 2, JSON.stringify([seed.flagged, seed.moved]));
-    await otherTabWrite("proupiqr-workspace-v1", `(raw) => { const v = JSON.parse(raw); const s = ${JSON.stringify({ clients: seed.w.clients, invoices: seed.w.invoices, recurring: seed.w.recurring })};
-      Object.assign(v.clients, s.clients); Object.assign(v.invoices, s.invoices); Object.assign(v.recurring, s.recurring); return JSON.stringify(v); }`);
-    await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); const s = ${JSON.stringify(seed.w.intl)};
-      Object.assign(v.intl.invoices, s.invoices); Object.assign(v.intl.recurring, s.recurring); return JSON.stringify(v); }`);
-    await sleep(600);
-    await t(`__t.click(/^all$/)`);
-    /** Opens the one row whose text includes every needle and returns its li's text (the notes sit in the opened row). */
-    const rowNote = async (...needles) => { await sleep(100); return b.eval(`(() => { const rows = [...document.querySelectorAll('li [aria-expanded]')]; const r = rows.find((x) => ${JSON.stringify(needles)}.every((n) => x.textContent.includes(n)));
-      if (!r) return 'no row'; for (const o of rows) if (o !== r && o.getAttribute('aria-expanded') === 'true') o.click(); if (r.getAttribute('aria-expanded') !== 'true') r.click(); return new Promise((ok) => setTimeout(() => ok(r.closest('li').innerText), 150)); })()`); };
-    const MOVED = /This invoice also exists in another currency after a currency change\. Keep one and delete the other\./;
-    const TWICE = /This month is billed twice: a plan linked to this one by a currency change bills it too\. Delete one of the two\./;
-    let note = await rowNote("MV-1", "US$");
-    check("moved pair: the US$ copy shows the 'other currency' note and not the number note", MOVED.test(note) && !/Another invoice has this number\./.test(note), note);
-    note = await rowNote("MV-1", "₹");
-    check("moved pair: the paid ₹ invoice shows it too", MOVED.test(note) && !/Another invoice has this number\./.test(note), note);
-    note = await rowNote("BT-STRAY");
-    check("billed twice: the stray month shows the note", TWICE.test(note) && !MOVED.test(note), note);
-    note = await rowNote(seed.usdNumber, "US$");
-    check("billed twice: the plan's own month doesn't", !TWICE.test(note), note);
-    await b.shot("cur-twice-notes.png");
 
     // A bad "INR credited" value is reported under that field, not as a sheet-level line.
     await tab("Invoices");
@@ -666,27 +546,27 @@ try {
   check("390px: a client billed abroad keeps a 22-character name whole", nameFit && nameFit.scroll <= nameFit.client, JSON.stringify(nameFit));
   check("390px: their balances sit on a row under the name", nameFit?.under === true, JSON.stringify(nameFit));
   await b.shot("cur-m-clients-long.png");
-  // 390px (review round 5): a plan's currency change hands focus to the new plan's row; an invalid Clients abroad
-  // save brings the first invalid field into view and focuses it.
-  await b.eval(`[...document.querySelectorAll('[data-plan-currency]')].find((x) => /£240\\.00/.test(x.closest('[data-plan-row]').textContent)).click(), true`); await opened();
-  await t(`__t.set('ws-plan-currency', 'EUR'), __t.set('ws-plan-amount', '220'), __t.click(/^Change currency$/, __t.dialog())`);
-  await closed();
-  await sleep(150);
-  check("390px: after a plan's currency change, focus is on the new plan's row", await b.eval("document.activeElement?.hasAttribute('data-plan-currency') && /€220\\.00/.test(document.activeElement.closest('[data-plan-row]')?.textContent || '')"), await focused());
+  // 390px (review round 5): an invalid Clients abroad save brings the first invalid field into view and focuses it.
   await tab("Settings");
   await openSettingsCard();
   await sleep(150);
   await t(`__t.set('ws-intl-swift', 'AB')`);
   await b.eval("__t.btn(/^Save payment details$/).scrollIntoView({ block: 'center' }), __t.btn(/^Save payment details$/).click(), true");
-  await sleep(250);
-  const inView = await b.eval("(() => { const r = document.getElementById('ws-intl-swift').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()");
+  // The page scrolls smoothly (html { scroll-behavior: smooth }), so wait for the scroll to land rather than a fixed time.
+  const inView = await b.waitFor("(() => { const r = document.getElementById('ws-intl-swift').getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; })()", 3000);
   check("390px: an invalid save focuses the first invalid field and brings it into view", (await focused()) === "ws-intl-swift" && inView, `${await focused()} ${inView}`);
   await t(`__t.set('ws-intl-swift', 'HDFCINBB')`);
   await tab("Invoices");
   await openRow("Globex");
   await t(`__t.click(/^Edit$/)`); await opened();
   check("no horizontal scroll at 390px: invoice sheet", await noScroll());
+  const fixedBox = await b.eval("(() => { const a = document.getElementById('ws-amount').getBoundingClientRect(), c = document.getElementById('ws-currency-fixed').getBoundingClientRect(); return { sameRow: Math.abs(a.top - c.top) < 2, sameHeight: Math.abs(a.height - c.height) < 2 }; })()");
+  check("390px: the read-only currency sits next to the amount, at the input's height", fixedBox.sameRow && fixedBox.sameHeight, JSON.stringify(fixedBox));
   await b.shot("cur-m-sheet.png");
+  await esc(); await closed();
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  check("no horizontal scroll at 390px: new invoice sheet with the currency select", await noScroll() && await exists("ws-currency"));
+  await b.shot("cur-m-new-sheet.png");
   await esc(); await closed();
   await b.mobile(false);
 

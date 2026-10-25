@@ -539,6 +539,21 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.doesNotMatch(card, /role="dialog"|aria-expanded|aria-current|type="file"|<li\b/);
   // No new control whose whole text is one the e2e suites click by exact text.
   for (const label of ["Save", "Save settings", "Remind", "Delete", "Record payment", "Add invoice", "Save payment"]) assert.ok(!card.includes(`{tr("${label}")}`), label);
+  // A currency is chosen once, when an invoice or plan is created (owner decision, 2026-10-25): no UI code changes an
+  // existing record's currency. replaceInvoiceCurrency / replacePlanCurrency stay in the model (PR 1, deployed) with no
+  // caller under src/components or src/pages.
+  {
+    const { readdirSync, statSync } = await import("node:fs");
+    const walk = (dir) => readdirSync(dir).flatMap((f) => { const p = join(dir, f); return statSync(p).isDirectory() ? walk(p) : [p]; });
+    for (const file of [...walk(join(projectRoot, "src/components")), ...walk(join(projectRoot, "src/pages"))]) {
+      assert.doesNotMatch(readFileSync(file, "utf8"), /replaceInvoiceCurrency|replacePlanCurrency/, `${file}: no UI path changes an existing record's currency`);
+    }
+    // The invoice sheet: the currency select only for a new invoice; an existing one shows its currency as text.
+    assert.match(sheetsSrc, /\{existing \? \([\s\S]{0,400}id="ws-currency-fixed"[\s\S]{0,400}\) : \([\s\S]{0,200}<select id="ws-currency"/, "the currency select renders only for a new invoice");
+    assert.equal(sheetsSrc.match(/id="ws-currency"/g)?.length, 1, "one currency select, in the new-invoice branch");
+    assert.match(sheetsSrc, /const currency: CurrencyCode = existing\s*\? currencyOf\(existing\)/, "an existing invoice keeps its own currency");
+    assert.doesNotMatch(ui, /PlanCurrencySheet|data-plan-currency|kind: "plan"/, "no plan currency change");
+  }
   assert.match(read("src/components/workspace/StatementSheet.tsx"), /const views = useMemo\(\(\) => invoiceViews\(ws, today\), \[ws, today\]\);/, "statement import keeps INR views for good");
   assert.match(read("src/lib/workspace/statement.ts"), /const open = views\.filter\(\(v\) => v\.currency === "INR" && v\.balancePaise > 0 && v\.state !== "void"\);/, "a bank credit never matches a foreign invoice");
   const modelSrc = read("src/lib/workspace/model.ts");

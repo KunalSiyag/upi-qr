@@ -931,31 +931,10 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
     recurring: Object.fromEntries(Object.entries(ws.recurring).filter(([, r]) => keep(r))),
   };
   if (!ws.intl) return pruned;
-  // A plan month's tombstone stays while generateRecurring could still bill that month: a month the user deleted, as
-  // monthsBilledTwice asks after a currency change, would otherwise come back as a new unpaid invoice with a new number
-  // (review rounds 5 and 6). generateRecurring bills a live plan's newest MAX_BACKFILL_MONTHS up to today or the
-  // plan's end, whichever is earlier (one month more here for time zones), so that window is measured from the
-  // plan's own last month: an ended plan (every plan a currency change replaced) keeps its window. A deleted or pruned
-  // plan bills nothing, and its months fall back to today's window. Foreign plan months always; INR plan months only
-  // when their plan is in a currency-change family, so an INR month a family note asked to delete stays deleted too.
-  // Every other legacy record keeps the deployed rule, byte for byte (§1.8): old code prunes them the same way.
-  const nowIndex = monthIndex(new Date(now).toISOString().slice(0, 7));
-  const plans = [...Object.values(ws.recurring), ...Object.values(ws.intl.recurring)];
-  const families = changeFamilies(plans, (id) => getPlan(ws, id), "replaces", (from, to) => from.clientId === to.clientId);
-  const billable = (invoice: Invoice, legacy: boolean) => {
-    if (!invoice.recurringId || (legacy && !families.has(invoice.recurringId))) return false;
-    const plan = getPlan(ws, invoice.recurringId);
-    const month = plan ? planMonthOf(plan, invoice) : (/M(\d{4})(\d{2})$/.exec(invoice.id)?.slice(1).join("-") ?? "");
-    if (!month) return false;
-    const end = plan && !plan.deletedAt ? planEnd(ws, plan) : "";
-    const last = end ? Math.min(nowIndex, monthIndex(end)) : nowIndex;
-    return monthIndex(month) >= last - MAX_BACKFILL_MONTHS;
-  };
-  if (families.size) pruned.invoices = Object.fromEntries(Object.entries(ws.invoices).filter(([, i]) => keep(i) || billable(i, true)));
   // Pruning the last foreign tombstone returns the exact INR-only bytes.
   return withIntl(pruned, {
     ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
-    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i) || billable(i, false))),
+    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i))),
     recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
     clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
   });
@@ -1222,190 +1201,17 @@ export function planMonths(ws: Workspace, plan: RecurringPlan): string[] {
   return months.sort();
 }
 
-/** The month a plan month's id was generated for ("YYYY-MM"), or "" when `invoice` isn't one of `plan`'s months. */
-function planMonthOf(plan: RecurringPlan, invoice: Invoice): string {
-  const month = `${invoice.id.slice(-6, -2)}-${invoice.id.slice(-2)}`;
-  return invoice.recurringId === plan.id && invoice.id === recurringInvoiceId(plan.id, month) ? month : "";
-}
-
-const MAX_REPLACEMENT_HOPS = 16;
-const monthBefore = (month: string) => monthFromIndex(monthIndex(month) - 1);
-
-const HEX = "0123456789abcdef";
-const fnvFinal = (h: number): string => {
-  h ^= h >>> 16;
-  h = Math.imul(h, 0x85ebca6b);
-  h ^= h >>> 13;
-  h = Math.imul(h, 0xc2b2ae35);
-  h ^= h >>> 16;
-  let out = "";
-  for (let shift = 28; shift >= 0; shift -= 4) out += HEX[(h >>> shift) & 15];
-  return out;
-};
-
-/**
- * The 20 hex characters derived from `${kind} ${id} ${currency}` for every currency, in CURRENCIES order (three 32-bit
- * FNV-1a lanes, murmur3 finaliser): the same on every device and server. The lanes are run over the shared prefix once.
- */
-function hashAll(kind: string, id: string, currencies: readonly string[] = CURRENCIES): string[] {
-  const prefix = `${kind} ${id} `;
-  let a = 0x811c9dc5, b = 0x2f6b7a1d, c = 0x9e3779b9;
-  for (let i = 0; i < prefix.length; i++) {
-    const k = prefix.charCodeAt(i);
-    a = Math.imul(a ^ k, 0x01000193);
-    b = Math.imul(b ^ k, 0x01000193);
-    c = Math.imul(c ^ k, 0x01000193);
-  }
-  return currencies.map((currency) => {
-    let [x, y, z] = [a, b, c];
-    for (let i = 0; i < currency.length; i++) {
-      const k = currency.charCodeAt(i);
-      x = Math.imul(x ^ k, 0x01000193);
-      y = Math.imul(y ^ k, 0x01000193);
-      z = Math.imul(z ^ k, 0x01000193);
-    }
-    return (fnvFinal(x) + fnvFinal(y) + fnvFinal(z)).slice(0, 20);
-  });
-}
-
-/**
- * Derived ids are pure, and repairIntl, invoicesMovedTwice and monthsBilledTwice look up every record's on each load,
- * merge and edit, so they are kept per id (all currencies at once, the finished id strings, keyed by the record's own
- * id string so neither lookup hashes a new string). Bounded: cleared when full (review round 6: a book with 5,000 INR
- * invoices and a clients-abroad section paid ~40 ms per call).
- */
-const DERIVED_CACHE_MAX = 40_000;
-const derivedCache = { moves: new Map<string, string[]>(), replaces: new Map<string, string[]>() };
-/** The ids changes of `id` to each currency create, in CURRENCIES order. */
-function derivedIds(kind: "moves" | "replaces", id: string): readonly string[] {
-  const cache = derivedCache[kind];
-  let all = cache.get(id);
-  if (!all) {
-    if (cache.size >= DERIVED_CACHE_MAX) cache.clear();
-    const prefix = kind === "moves" ? "inv_" : "rec_";
-    all = hashAll(kind, id).map((hex) => prefix + hex);
-    cache.set(id, all);
-  }
-  return all;
-}
-
-function derivedId(kind: "moves" | "replaces", id: string, currency: CurrencyCode): string {
-  const index = CURRENCIES.indexOf(currency);
-  return index >= 0 ? derivedIds(kind, id)[index] : (kind === "moves" ? "inv_" : "rec_") + hashAll(kind, id, [currency])[0];
-}
-
-/**
- * The id of the plan a currency change of `planId` to `currency` creates. Derived, never random, so "this plan
- * replaced that one" lives in ids no copy rewrites: an older copy that edits the old plan (bringing back its empty
- * endMonth or its liveness) can't lose the link, and two devices making the same change offline make one plan, not
- * two. The target currency is part of it, so an INR and a foreign replacement never share an id across the two maps.
- */
-export function replacementPlanId(planId: string, currency: CurrencyCode): string {
-  return derivedId("replaces", planId, currency);
-}
-
-/** The plans currency changes of `plan` created, tombstones included (at most one per currency). Empty without intl. */
-function replacementsOf(ws: Workspace, plan: RecurringPlan): RecurringPlan[] {
-  // A replacement is in another currency than its plan, so one of the two is foreign: no intl, no replacement.
-  if (!ws.intl) return [];
-  const out: RecurringPlan[] = [];
-  for (const currency of CURRENCIES) {
-    if (currency === currencyOf(plan)) continue;
-    const next = getPlan(ws, replacementPlanId(plan.id, currency));
-    if (next && next.clientId === plan.clientId && currencyOf(next) === currency) out.push(next);
-  }
-  return out;
-}
-
-/** The plan `plan` replaced in a currency change (tombstones included), or undefined. */
-function replacedPlanOf(ws: Workspace, plan: RecurringPlan): RecurringPlan | undefined {
-  if (!ws.intl) return undefined;
-  const currency = currencyOf(plan);
-  for (const map of [ws.recurring, ws.intl.recurring]) {
-    for (const other of Object.values(map)) {
-      if (other.id !== plan.id && other.clientId === plan.clientId && replacementPlanId(other.id, currency) === plan.id) return other;
-    }
-  }
-  return undefined;
-}
-
-/**
- * The last month a plan bills ("" = no end): its endMonth, or the month before a replacement from a currency change
- * starts, whichever is earlier. Read from the replacement too, so a stale copy that brought back the old plan's empty
- * endMonth never makes it bill next to its replacement. Before the plan's startMonth for a plan replaced as a whole.
- */
-export function planEnd(ws: Workspace, plan: RecurringPlan): string {
-  let end = plan.endMonth;
-  for (const next of replacementsOf(ws, plan)) {
-    const before = monthBefore(next.startMonth);
-    if (!end || before < end) end = before;
-  }
-  return end;
-}
-
-/** Whether `plan` bills `month` now: live, and the month inside its own range (startMonth to planEnd). */
-function planCovers(ws: Workspace, plan: RecurringPlan, month: string): boolean {
-  const end = planEnd(ws, plan);
-  return !plan.deletedAt && plan.startMonth <= month && (!end || month <= end);
-}
-
-/**
- * Records linked by currency changes, grouped: derivedIds(kind, id) are the ids changes of `id` create (`kind`
- * "moves" for invoices, replacementInvoiceId; "replaces" for plans, replacementPlanId), so a link is read from the ids alone (no copy can rewrite it). Returns the family of every linked record
- * (record id → a representative id of its family); a record no change touched is left out. Tombstones count, so a
- * family survives one of its records being deleted.
- */
-function changeFamilies<T extends { id: string; currency?: CurrencyCode }>(
-  records: T[], get: (id: string) => T | undefined, kind: "moves" | "replaces", linked: (from: T, to: T) => boolean,
-): Map<string, string> {
-  const parent = new Map<string, string>();
-  const find = (id: string): string => {
-    let root = id;
-    while (parent.get(root) !== root) root = parent.get(root) as string;
-    for (let at = id; at !== root;) { const up = parent.get(at) as string; parent.set(at, root); at = up; }
-    return root;
-  };
-  for (const record of records) {
-    const derived = derivedIds(kind, record.id);
-    for (let i = 0; i < CURRENCIES.length; i++) {
-      const currency = CURRENCIES[i];
-      if (currency === currencyOf(record)) continue;
-      const next = get(derived[i]);
-      if (!next || currencyOf(next) !== currency || !linked(record, next)) continue;
-      if (!parent.has(record.id)) parent.set(record.id, record.id);
-      if (!parent.has(next.id)) parent.set(next.id, next.id);
-      const [a, b] = [find(record.id), find(next.id)];
-      if (a !== b) parent.set(b, a);
-    }
-  }
-  const out = new Map<string, string>();
-  for (const id of parent.keys()) out.set(id, find(id));
-  return out;
-}
-
 /**
  * The export mark (§6) a foreign plan's month gets: the mark of the plan's latest earlier live month, so a plan
  * started with "Export of services" ticked keeps the LUT line every month, and unticking it on a month stops it from
- * then on. A plan with no earlier live month (one a currency change created) takes the mark of the latest live month
- * before `month` of the plan it replaced, following the chain of currency changes back (replacedPlanOf); an INR
- * month counts as unmarked. No such month → false: the user ticks it on that month. Reads only the book, so
- * generateRecurring and repairExportMarks agree on every device.
+ * then on. No earlier live month → false. Only the plan's own months count (a plan's currency is fixed at creation),
+ * and nothing is repaired afterwards: a month an older build generated without the mark keeps it off, and the user
+ * ticks it on that month.
  */
 function carriedExportMark(ws: Workspace, plan: RecurringPlan, month: string): boolean {
   for (let back = monthIndex(month) - 1; back >= monthIndex(plan.startMonth); back--) {
     const earlier = getInvoice(ws, recurringInvoiceId(plan.id, monthFromIndex(back)));
-    if (!earlier || earlier.deletedAt) continue;
-    return earlier.exportLut === true;
-  }
-  let from = replacedPlanOf(ws, plan);
-  for (let hops = 0; from && hops < MAX_REPLACEMENT_HOPS; hops++, from = replacedPlanOf(ws, from)) {
-    const months = planMonths(ws, from);
-    for (let i = months.length - 1; i >= 0; i--) {
-      if (months[i] >= month) continue;
-      const earlier = getInvoice(ws, recurringInvoiceId(from.id, months[i]));
-      if (!earlier || earlier.deletedAt) continue;
-      return earlier.exportLut === true;
-    }
+    if (earlier && !earlier.deletedAt) return earlier.exportLut === true;
   }
   return false;
 }
@@ -1423,8 +1229,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
     // Own keys only (as digestProjection checks): a plan whose clientId is "constructor" has no client.
     const client = own(next.clients, plan.clientId);
     if (plan.paused || !client || client.deletedAt) continue;
-    const end = planEnd(next, plan);
-    const last = Math.min(todayIndex, end ? monthIndex(end) : todayIndex);
+    const last = Math.min(todayIndex, plan.endMonth ? monthIndex(plan.endMonth) : todayIndex);
     const first = Math.max(monthIndex(plan.startMonth), last - MAX_BACKFILL_MONTHS + 1);
     for (let index = first; index <= last; index++) {
       const month = monthFromIndex(index);
@@ -1433,10 +1238,6 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
       const id = recurringInvoiceId(plan.id, month);
       // Either map, tombstones included: a foreign plan's months live in ws.intl.invoices.
       if (getInvoice(next, id)) continue;
-      const foreign = isForeignCurrency(plan.currency);
-      const exportLut = foreign && carriedExportMark(next, plan, month);
-      // A foreign month is written settled (updatedAt = createdAt + 1): its mark was carried here, so repairExportMarks
-      // never re-derives it later (only a month an older build generated, createdAt === updatedAt, is repaired).
       next = upsertInvoice(next, {
         id,
         number: nextInvoiceNumber(next),
@@ -1449,10 +1250,10 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
         reminders: [],
         voided: false,
         recurringId: plan.id,
-        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency, ...(exportLut ? { exportLut: true } : {}) } : {}),
+        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency, ...(carriedExportMark(next, plan, month) ? { exportLut: true } : {}) } : {}),
         createdAt: now,
-        updatedAt: foreign ? now + 1 : now,
-      }, foreign ? now + 1 : now);
+        updatedAt: now,
+      }, now);
       created.push(id);
     }
   }
@@ -1462,197 +1263,42 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
 const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
 
 /**
- * The id of the invoice a currency change of `invoiceId` to `currency` creates. Derived, never random (as
- * replacementPlanId), so the link between the old invoice and its copy lives in ids: when a stale write (a reminder or
- * payment from an older tab, a restored backup) brings the old one back, repairIntl and invoicesMovedTwice find the
- * copy, and two devices making the same change make one invoice.
+ * Moves an invoice to another currency: tombstones `id` and creates a copy with a new id, the same number and
+ * fields, in `currency`. Only while it has no payments, and never for a plan month (null): a plan month's id is
+ * recurringInvoiceId(plan, month), and once its tombstone is pruned generateRecurring would bill that month again.
  */
-export function replacementInvoiceId(invoiceId: string, currency: CurrencyCode): string {
-  return derivedId("moves", invoiceId, currency);
-}
-
-/**
- * Moves an invoice to another currency: tombstones `id` and creates a copy (replacementInvoiceId), the same number
- * and fields, in `currency`; `edit` (the invoice sheet's changes) shapes the copy, never its id or currency. Only
- * while it has no payments, and never for a plan month (null): a plan month's id is recurringInvoiceId(plan, month),
- * and once its tombstone is pruned generateRecurring would bill that month again.
- * The bare copy is written at a time derived from the records (the old invoice's updatedAt + 1, past a deleted
- * copy's), never the clock: two devices making the same change write the same bytes at the same time, so anything
- * one of them recorded on it since (a payment, the INR credited) is newer and wins the merge (review round 5). The
- * edit, when it changes the copy, is an ordinary edit at `now` (review round 6): a later amount typed on another
- * device wins as any later edit does, and two devices' different edits never tie at one derived time (the legacy
- * map's merge breaks ties by argument order, so an INR copy would never converge). A live copy from the same change
- * on another device is kept as it is (its payments too), never overwritten; the edit is applied to it.
- */
-export function replaceInvoiceCurrency(
-  ws: Workspace, id: string, currency: CurrencyCode, now: number, edit?: (copy: Invoice) => Invoice,
-): { ws: Workspace; id: string } | null {
+export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
   const invoice = getInvoice(ws, id);
   if (!invoice || invoice.deletedAt || invoice.payments.length || invoice.recurringId) return null;
   if (currencyOf(invoice) === currency) return { ws, id };
-  const copyId = replacementInvoiceId(id, currency);
-  const pin = (record: Invoice): Invoice => {
-    const { currency: _c, exportLut, ...rest } = record;
-    return { ...rest, id: copyId, ...(isForeignCurrency(currency) ? { currency, ...(exportLut === true ? { exportLut: true as const } : {}) } : {}) };
-  };
-  const existing = getInvoice(ws, copyId);
-  if (existing && !existing.deletedAt && currencyOf(existing) === currency) {
-    const moved = deleteInvoice(ws, id, now);
-    const edited = edit ? pin(edit(existing)) : existing;
-    return { ws: canonicalOf(edited) === canonicalOf(existing) ? moved : upsertInvoice(moved, edited, now), id: copyId };
-  }
-  const { currency: _from, exportLut: _export, deletedAt: _gone, ...rest } = invoice;
+  const { currency: _from, exportLut: _export, ...rest } = invoice;
   // The export mark moves with a foreign copy (US$ → €: still an export under the LUT); an INR copy never has one.
-  const base: Invoice = { ...rest, id: copyId, ...(isForeignCurrency(currency) && invoice.exportLut === true ? { exportLut: true } : {}) };
-  const at = Math.max(invoice.updatedAt, existing?.updatedAt ?? 0) + 1;
-  const bare = pin(base);
-  const edited = edit ? pin(edit(bare)) : bare;
-  const changed = canonicalOf(edited) !== canonicalOf(bare);
-  return { ws: upsertInvoice(deleteInvoice(ws, id, now), edited, changed ? Math.max(now, at + 1) : at), id: copyId };
-}
-
-/**
- * The live invoice a currency change moved `invoice` to: its copy (replacementInvoiceId), or, when that copy was
- * moved on in turn, the live copy further down the chain. A copy the user deleted ends the chain: the user resolved
- * the pair, or deleted the invoice, so nothing counts as moved (review round 5). Plan months never move.
- */
-export function movedCopyOf(ws: Workspace, invoice: Invoice): Invoice | undefined {
-  return movedCopyIn(ws, invoice, invoiceIds(ws));
-}
-
-/** Every invoice id in both maps, tombstones included: a set probe is far cheaper than two own-key lookups. */
-function invoiceIds(ws: Workspace): Set<string> {
-  return new Set(ws.intl ? [...Object.keys(ws.invoices), ...Object.keys(ws.intl.invoices)] : Object.keys(ws.invoices));
-}
-
-function movedCopyIn(ws: Workspace, invoice: Invoice, ids: Set<string>): Invoice | undefined {
-  if (!ws.intl || invoice.recurringId) return undefined;
-  let seen: Set<string> | undefined;
-  let frontier = [invoice];
-  for (let hops = 0; frontier.length && hops < MAX_REPLACEMENT_HOPS; hops++) {
-    const next: Invoice[] = [];
-    for (const from of frontier) {
-      const derived = derivedIds("moves", from.id);
-      for (let i = 0; i < CURRENCIES.length; i++) {
-        const currency = CURRENCIES[i];
-        if (!ids.has(derived[i]) || currency === currencyOf(from)) continue;
-        const copy = getInvoice(ws, derived[i]);
-        seen ??= new Set([invoice.id]);
-        if (!copy || copy.recurringId || currencyOf(copy) !== currency || seen.has(copy.id)) continue;
-        if (!copy.deletedAt) return copy;
-        seen.add(copy.id);
-        next.push(copy);
-      }
-    }
-    frontier = next;
-  }
-  return undefined;
-}
-
-/** Invoices linked by currency changes (replacementInvoiceId), tombstones included: id → family. Plan months never move. */
-function invoiceFamilies(ws: Workspace): Map<string, string> {
-  if (!ws.intl) return new Map();
-  const records = [...Object.values(ws.invoices), ...Object.values(ws.intl.invoices)].filter((invoice) => !invoice.recurringId);
-  const ids = invoiceIds(ws);
-  return changeFamilies(records, (id) => (ids.has(id) ? getInvoice(ws, id) : undefined), "moves", () => true);
-}
-
-/**
- * Live invoices that a currency change moved and that are live again next to their copy (§1.7): the old one came back
- * with a payment or a void an older copy recorded on it (repairIntl deletes it again otherwise), or two devices moved
- * one invoice to two currencies. Every live invoice of such a family is returned, for the user to keep one. Empty
- * for an INR-only book.
- */
-export function invoicesMovedTwice(ws: Workspace): Set<string> {
-  const out = new Set<string>();
-  const families = invoiceFamilies(ws);
-  if (!families.size) return out;
-  const live = new Map<string, string[]>();
-  for (const [id, family] of families) {
-    const invoice = getInvoice(ws, id);
-    if (invoice && !invoice.deletedAt) live.set(family, [...(live.get(family) ?? []), id]);
-  }
-  for (const ids of live.values()) if (ids.length > 1) for (const id of ids) out.add(id);
-  return out;
-}
-
-/**
- * Whether a plan has a month left to bill, so its currency can change: live, and not ended with all its months
- * created (a plan a currency change already ended, or one stopped after its last created month, has none).
- */
-export function planCanChangeCurrency(ws: Workspace, plan: RecurringPlan): boolean {
-  if (plan.deletedAt) return false;
-  const end = planEnd(ws, plan);
-  if (end && end < plan.startMonth) return false;
-  const months = planMonths(ws, plan);
-  const last = months[months.length - 1];
-  return !(last && end && monthAfter(last) > end);
+  const copy: Invoice = {
+    ...rest, id: newId("inv"), ...(isForeignCurrency(currency) ? { currency, ...(invoice.exportLut === true ? { exportLut: true } : {}) } : {}),
+  };
+  return { ws: upsertInvoice(deleteInvoice(ws, id, now), copy, now), id: copy.id };
 }
 
 /**
  * A plan's currency change: `planId` ends after its last generated month and a new plan (new id, same client,
- * day, due days and description) in `currency`, billing `amountMinor` (minor units of `currency`), starts the month
- * after. The old amount never carries over: ₹50,000 is not US$50,000. Existing months keep their ids and currency,
- * so nothing regenerates. A plan with no month yet is replaced as a whole. Null for an invalid amount.
+ * day, due days, description and amount) in `currency` starts the month after. Existing months keep their ids
+ * and currency, so nothing regenerates. A plan with no month yet is replaced as a whole.
  */
-export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number, amountMinor: Minor): { ws: Workspace; id: string } | null {
+export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
   const plan = getPlan(ws, planId);
-  if (!plan || !planCanChangeCurrency(ws, plan)) return null;
+  if (!plan || plan.deletedAt) return null;
   if (currencyOf(plan) === currency) return { ws, id: planId };
-  if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > MAX_MINOR) return null;
   const months = planMonths(ws, plan);
   const last = months[months.length - 1];
+  // An ended plan whose months are all billed has no month left to bill in another currency.
+  if (last && plan.endMonth && monthAfter(last) > plan.endMonth) return null;
   const { currency: _from, ...rest } = plan;
   const replacement: RecurringPlan = {
-    ...rest, id: replacementPlanId(plan.id, currency), amountPaise: amountMinor, startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
+    ...rest, id: newId("rec"), startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
     ...(isForeignCurrency(currency) ? { currency } : {}),
   };
   const ended = last ? { ...plan, endMonth: last } : { ...plan, deletedAt: now };
   return { ws: upsertPlan(upsertPlan(ws, ended, now), replacement, now), id: replacement.id };
-}
-
-/**
- * Plan months billed twice after a currency change (§1.7, risk 22). The plans one plan's currency changes link
- * (replacementPlanId, in any direction and through further changes) form a family, and a month should be billed by
- * one of them. It is billed twice when two of them have a live month for it, or one has and another covers it with
- * no month yet (it will bill it). That happens when a copy that hadn't seen a change (an offline device, an older tab)
- * billed the old plan after its end; when two devices made the same change from different months (one plan, and the
- * later write's startMonth wins, so a month the other device billed under it falls before its start); or when two
- * devices changed one plan to two currencies (two live replacements). The months can't converge (other ids), so they
- * are shown for the user to delete one: the unpaid months outside their own plan's range (deleted plan, before its
- * start, after planEnd), else, when there is none (siblings, or the stray month was paid), the unpaid ones. Empty for
- * an INR-only book. planEnd is read from the replacement, so a stale edit that cleared endMonth doesn't hide it, and
- * the month is the one the id was generated for, never the editable issue date.
- */
-export function monthsBilledTwice(ws: Workspace): Set<string> {
-  const out = new Set<string>();
-  if (!ws.intl) return out;
-  const plans = [...Object.values(ws.recurring), ...Object.values(ws.intl.recurring)];
-  const families = changeFamilies(plans, (id) => getPlan(ws, id), "replaces", (from, to) => from.clientId === to.clientId);
-  if (!families.size) return out;
-  const members = new Map<string, RecurringPlan[]>();
-  for (const plan of plans) {
-    const family = families.get(plan.id);
-    if (family) members.set(family, [...(members.get(family) ?? []), plan]);
-  }
-  const groups = new Map<string, { invoice: Invoice; inRange: boolean }[]>();
-  for (const invoice of allLiveInvoices(ws)) {
-    const family = invoice.recurringId ? families.get(invoice.recurringId) : undefined;
-    const plan = family ? getPlan(ws, invoice.recurringId as string) : undefined;
-    const month = plan ? planMonthOf(plan, invoice) : "";
-    if (!plan || !month) continue;
-    const key = `${family} ${month}`;
-    groups.set(key, [...(groups.get(key) ?? []), { invoice, inRange: planCovers(ws, plan, month) }]);
-  }
-  for (const [key, billed] of groups) {
-    const [family, month] = key.split(" ");
-    const pending = (members.get(family) ?? []).filter((plan) => planCovers(ws, plan, month) && !getInvoice(ws, recurringInvoiceId(plan.id, month)));
-    if (billed.length + pending.length < 2) continue;
-    const unpaid = billed.filter((entry) => !entry.invoice.payments.length);
-    const stray = unpaid.filter((entry) => !entry.inRange);
-    for (const entry of stray.length ? stray : unpaid) out.add(entry.invoice.id);
-  }
-  return out;
 }
 
 // ---------------------------------------------------------------------------
@@ -1713,11 +1359,8 @@ function detectLegacyErase(ws: Workspace): number | null {
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
  * (which that tab couldn't see) is revived. An erased client's foreign records older than the erase are tombstoned
- * first, so only a record written after the erase revives it. Then an invoice a currency change moved is deleted
- * again if a stale write brought it back (repairMovedInvoices), a plan a currency change replaced is ended again
- * if an older copy wrote it back (repairReplacedPlans), and last, plan months an older build generated get their
- * export mark settled (repairExportMarks). Returns `ws` itself when nothing needs repair. Every repaired record is
- * written at its own updatedAt + 1, so the repair wins in older builds' merges too and copies converge. The result never depends on the clock
+ * first, so only a record written after the erase revives it. Returns `ws` itself
+ * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
 export function repairIntl(ws: Workspace, _now: number): Workspace {
@@ -1741,102 +1384,7 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
     // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.
     clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt, client.deletedAt) + 1 } };
   }
-  if (clients) next = { ...next, clients };
-  return repairExportMarks(repairReplacedPlans(repairMovedInvoices(next)));
-}
-
-/**
- * Deletes again an invoice a currency change moved, when a stale write brought it back next to its copy (a reminder
- * or edit from an older tab or offline device, a restored backup from before the move): it is live, and its copy
- * (movedCopyOf, following later moves) is live. A copy the user deleted leaves it alone: the user kept this one, or a
- * restore brought it back on purpose (review round 5). Only while it has no payment and isn't void: a
- * payment or void recorded on it is kept, and invoicesMovedTwice shows the pair instead. Written at updatedAt + 1
- * (deletedAt the same), never the clock, so every build's last-writer-wins merge keeps it and copies converge; it
- * only reads ids, so one pass is the fixed point. `ws` itself when nothing changes.
- */
-function repairMovedInvoices(ws: Workspace): Workspace {
-  const intl = ws.intl;
-  if (!intl) return ws;
-  const ids = invoiceIds(ws);
-  const fix = (map: Record<string, Invoice>): Record<string, Invoice> | null => {
-    let out: Record<string, Invoice> | null = null;
-    for (const invoice of Object.values(map)) {
-      if (invoice.deletedAt || invoice.recurringId || invoice.payments.length || invoice.voided) continue;
-      if (!movedCopyIn(ws, invoice, ids)) continue;
-      const at = invoice.updatedAt + 1;
-      out ??= { ...map };
-      out[invoice.id] = { ...invoice, updatedAt: at, deletedAt: at };
-    }
-    return out;
-  };
-  const invoices = fix(ws.invoices);
-  const foreign = fix(intl.invoices);
-  if (!invoices && !foreign) return ws;
-  return { ...ws, ...(invoices ? { invoices } : {}), intl: { ...intl, ...(foreign ? { invoices: foreign } : {}) } };
-}
-
-/**
- * Ends again a plan a currency change replaced, when a copy that hadn't seen the change wrote it back (a pause,
- * resume or edit from an older tab or offline PWA brings back `endMonth: ""`, or undeletes a plan replaced as a
- * whole): endMonth becomes planEnd (the month before the replacement starts), or the plan is deleted again when that
- * is before its start. updatedAt + 1, never the clock, so every build's last-writer-wins merge keeps the repair and
- * every device and the server repair to the same bytes; it only reads replacements, so one pass is the fixed point.
- * Months the stale copy billed stay, for monthsBilledTwice to show. `ws` itself when nothing changes.
- */
-function repairReplacedPlans(ws: Workspace): Workspace {
-  const intl = ws.intl;
-  if (!intl) return ws;
-  const fix = (map: Record<string, RecurringPlan>): Record<string, RecurringPlan> | null => {
-    let out: Record<string, RecurringPlan> | null = null;
-    for (const plan of Object.values(map)) {
-      if (plan.deletedAt) continue;
-      const end = planEnd(ws, plan);
-      if (end === plan.endMonth) continue;
-      const at = plan.updatedAt + 1;
-      out ??= { ...map };
-      out[plan.id] = end < plan.startMonth ? { ...plan, updatedAt: at, deletedAt: at } : { ...plan, endMonth: end, updatedAt: at };
-    }
-    return out;
-  };
-  const recurring = fix(ws.recurring);
-  const foreign = fix(intl.recurring);
-  if (!recurring && !foreign) return ws;
-  return { ...ws, ...(recurring ? { recurring } : {}), intl: { ...intl, ...(foreign ? { recurring: foreign } : {}) } };
-}
-
-/**
- * Settles the export mark (§6) of a foreign plan month an older build generated. Copies of the app from before the
- * carry (PR 3, open tabs and offline PWAs) generate the same month id without the mark, and the later copy wins the
- * merge, so without this the LUT line would depend on which device generated the month last, and every later month
- * would carry the loss. Such a month is unedited, written once (createdAt === updatedAt; this build writes its own
- * generated months settled, updatedAt = createdAt + 1), not created together with its plan by the invoice sheet, and
- * has no payment, reminder or void. It gets the mark carriedExportMark gives it now, and updatedAt + 1 (never the
- * clock): the settled copy wins every build's merge, and the month is never re-derived later, so deleting or
- * re-ticking an earlier month never changes a month already issued. Month by month in order, so one pass is the
- * fixed point and every device and the server settle to the same bytes. `ws` itself when nothing changes.
- */
-function repairExportMarks(ws: Workspace): Workspace {
-  const intl = ws.intl;
-  if (!intl) return ws;
-  const candidates: { month: string; invoice: Invoice; plan: RecurringPlan }[] = [];
-  for (const invoice of Object.values(intl.invoices)) {
-    if (invoice.exportLut || invoice.deletedAt || invoice.voided || !invoice.recurringId || invoice.createdAt !== invoice.updatedAt
-      || invoice.payments.length || invoice.reminders.length) continue;
-    const plan = own(intl.recurring, invoice.recurringId);
-    const month = plan ? planMonthOf(plan, invoice) : "";
-    if (!plan || !month || invoice.createdAt === plan.createdAt) continue;
-    candidates.push({ month, invoice, plan });
-  }
-  if (!candidates.length) return ws;
-  candidates.sort((a, b) => (a.month === b.month ? (a.invoice.id < b.invoice.id ? -1 : 1) : a.month < b.month ? -1 : 1));
-  const invoices: Record<string, Invoice> = { ...intl.invoices };
-  let view = ws;
-  for (const { month, invoice, plan } of candidates) {
-    const mark = carriedExportMark(view, plan, month);
-    invoices[invoice.id] = { ...invoice, ...(mark ? { exportLut: true as const } : {}), updatedAt: invoice.updatedAt + 1 };
-    view = { ...ws, intl: { ...intl, invoices } };
-  }
-  return view;
+  return clients ? { ...next, clients } : next;
 }
 
 // ---------------------------------------------------------------------------
@@ -2069,12 +1617,6 @@ export function reminderMessage(
 }
 
 /**
- * wa.me link; 10-digit Indian numbers get the 91 country code. With `international` (the invoice is foreign, or
- * the client is billed in a foreign currency), a number typed with "+" or "00" is used as typed, without 91 and
- * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
- * goes to 919876543210).
- */
-/**
  * A number typed with "+" or "00" (a client abroad), as dialled from another country: country code and number, with
  * the bracketed trunk prefix dropped ("+44 (0)20 7946 0958" → 442079460958; every other 0 stays). "" when the number
  * isn't typed that way. WhatsApp and SMS both use it, so both go to the same number.
@@ -2086,6 +1628,12 @@ export function internationalDigits(phone: string): string {
   return typed.startsWith("+") ? digits : digits.slice(2);
 }
 
+/**
+ * wa.me link; 10-digit Indian numbers get the 91 country code. With `international` (the invoice is foreign, or
+ * the client is billed in a foreign currency), a number typed with "+" or "00" is used as typed, without 91 and
+ * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
+ * goes to 919876543210).
+ */
 export function whatsappLink(phone: string, text: string, opts?: { international?: boolean }): string {
   let digits = phone.replace(/\D/g, "");
   const typed = phone.trim();
