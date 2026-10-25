@@ -34,7 +34,7 @@ const otherTabWrite = (key, js) => b.eval(`new Promise((resolve) => { const f = 
 /** The Clients list row (li) whose text includes `name`. */
 const clientRow = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.innerText || ''`);
 /** The balance cell (right column) of a Clients list row. */
-const clientBalance = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.querySelector('.text-right')?.innerText.trim() ?? null`);
+const clientBalance = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.querySelector('[data-client-balances], .text-right')?.innerText.trim() ?? null`);
 const setIntlOn = async (on) => {
   await tab("Settings");
   await openSettingsCard();
@@ -445,6 +445,14 @@ try {
   check("reminder: the expired LUT notice, and no export line", /has expired/.test(await dialogText()) && !(await value("ws-reminder")).includes("SUPPLY MEANT"), await value("ws-reminder"));
   await esc(); await closed();
 
+  // The Invoices badge counts every overdue invoice, foreign ones too (only the KPI cells stay ₹).
+  await t(`__t.click(/^overdue$/)`); await sleep(200);
+  const overdueCount = await b.eval("[...document.querySelectorAll('li [aria-expanded]')].filter((r) => /\\bOverdue\\b/.test(r.innerText)).length");
+  const foreignOverdue = await b.eval("[...document.querySelectorAll('li [aria-expanded]')].some((r) => /\\bOverdue\\b/.test(r.innerText) && /US\\$/.test(r.innerText))");
+  const badge = await b.eval("[...document.querySelectorAll('nav[aria-label=\"Workspace sections\"] button')].find((x) => /^Invoices/.test(x.textContent.trim()))?.querySelector('span.ml-auto')?.textContent ?? '0'");
+  check("the Invoices badge equals the rows marked Overdue, a US$ one included", foreignOverdue && Number(badge) === overdueCount, `badge ${badge}, rows ${overdueCount}`);
+  await t(`__t.click(/^unpaid$/)`); await sleep(150);
+
   // Phone width: rows, sheets and the Settings card never scroll sideways.
   await b.mobile(true);
   await sleep(300);
@@ -456,6 +464,17 @@ try {
     check(`no horizontal scroll at 390px: ${name}`, await noScroll(), String(await b.eval("document.documentElement.scrollWidth")));
     await b.shot(`cur-m-${name.toLowerCase()}.png`);
   }
+  // A client billed abroad keeps their name readable at 390px: the balances go on a row under it.
+  await tab("Clients");
+  await b.eval(`document.querySelector('button[aria-label="Edit Globex LLC"]').click()`); await opened();
+  await t(`__t.set('ws-c-name', 'Globex Trading Company'), __t.click(/^Save$/, __t.dialog())`); await closed();
+  await sleep(200);
+  const nameFit = await b.eval(`(() => { const n = [...document.querySelectorAll('li button span.truncate')].find((x) => x.textContent === 'Globex Trading Company');
+    const bal = n?.closest('li')?.querySelector('[data-client-balances]'); if (!n || !bal) return null; n.scrollIntoView({ block: 'center' });
+    return { scroll: n.scrollWidth, client: n.clientWidth, under: bal.getBoundingClientRect().top >= n.getBoundingClientRect().bottom - 1 }; })()`);
+  check("390px: a client billed abroad keeps a 22-character name whole", nameFit && nameFit.scroll <= nameFit.client, JSON.stringify(nameFit));
+  check("390px: their balances sit on a row under the name", nameFit?.under === true, JSON.stringify(nameFit));
+  await b.shot("cur-m-clients-long.png");
   await tab("Invoices");
   await openRow("Globex");
   await t(`__t.click(/^Edit$/)`); await opened();

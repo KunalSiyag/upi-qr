@@ -4,7 +4,7 @@ import {
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
   getPlan, inrEarned, monthsBilledTwice, parseRupeesToPaise, planCanChangeCurrency, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
-  daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
+  daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam, withoutTombstone,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
 import { CURRENCIES, formatMoney, isForeignCurrency, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
@@ -455,6 +455,8 @@ function Workspace() {
   const views = useMemo(() => allInvoiceViews(ws, today), [ws, today]);
   const summary = useMemo(() => summarize(views, today), [views, today]);
   const foreignSummary = useMemo(() => summarizeForeign(views, today), [views, today]);
+  // The Invoices badge counts every overdue invoice, as the table and Chase today do; only the KPI cells stay ₹ (§5.6).
+  const overdueBadge = summary.overdueCount + Object.values(foreignSummary).reduce((n, s) => n + (s?.overdueCount ?? 0), 0);
   const earned = useMemo(() => inrEarned(views, today.slice(0, 7)), [views, today]);
   const hasForeign = useMemo(() => views.some((v) => v.currency !== "INR"), [views]);
   const buckets = useMemo(() => agingBuckets(views), [views]);
@@ -788,7 +790,7 @@ function Workspace() {
             >
               <span className={tab === t.id ? "text-ink" : "text-muted"}><Icon name={t.id} /></span>
               {tr(t.label)}
-              {t.id === "invoices" && summary.overdueCount > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{summary.overdueCount}</span>}
+              {t.id === "invoices" && overdueBadge > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{overdueBadge}</span>}
             </button>
           ))}
         </div>
@@ -1157,7 +1159,7 @@ function Workspace() {
                       const owes = (bal?.balancePaise ?? 0) > 0 || fx.length > 0;
                       return (
                         <li key={c.id} className="px-4 py-3">
-                          <div className={`grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1 ${hasForeign ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_4rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"}`}>
+                          <div className={`grid ${fx.length ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_auto]"} items-center gap-x-4 gap-y-1 ${hasForeign ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_4rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"}`}>
                             <div className="flex min-w-0 items-center gap-2.5">
                               <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fog text-xs font-semibold text-charcoal">{c.name.trim().charAt(0).toUpperCase()}</span>
                               <button type="button" onClick={() => openClientInvoices(c.id)} className="min-w-0 text-left">
@@ -1167,18 +1169,23 @@ function Workspace() {
                               </button>
                             </div>
                             <span className="hidden truncate text-[13px] tabular-nums text-charcoal md:block">{c.phone || tr("No number")}</span>
-                            <div className="text-right">
-                              {(bal?.balancePaise ?? 0) > 0 || fx.length === 0
-                                ? <p className="text-sm font-semibold tabular-nums text-ink">{!bal && fx.length === 0 && foreignOnly(c.id) ? "—" : formatPaise(bal?.balancePaise ?? 0)}</p>
-                                : null}
-                              {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
-                              {fx.map(([currency, b]) => (
-                                <div key={currency}>
-                                  <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink">{formatMoney(b.balancePaise, currency)}</p>
-                                  {b.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(b.overduePaise, currency) })}</p> : null}
-                                </div>
-                              ))}
-                            </div>
+                            {fx.length === 0 ? (
+                              <div className="text-right">
+                                <p className="text-sm font-semibold tabular-nums text-ink">{!bal && foreignOnly(c.id) ? "—" : formatPaise(bal?.balancePaise ?? 0)}</p>
+                                {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
+                              </div>
+                            ) : (
+                              // Several currencies: below md a full-width row under the name, one line per currency, so
+                              // the name keeps its width; from md the balance column as before.
+                              <div data-client-balances="" className="col-span-2 row-start-2 space-y-0.5 pl-[2.375rem] md:col-span-1 md:row-start-auto md:space-y-0 md:pl-0 md:text-right">
+                                {[...((bal?.balancePaise ?? 0) > 0 ? [["INR", bal!.balancePaise, bal!.overduePaise] as const] : []), ...fx.map(([currency, b]) => [currency, b.balancePaise, b.overduePaise] as const)].map(([currency, balance, overdue]) => (
+                                  <div key={currency} className="flex flex-wrap items-baseline gap-x-1.5 md:block">
+                                    <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink">{formatMoney(balance, currency)}</p>
+                                    {overdue ? <><span aria-hidden="true" className="text-xs text-muted md:hidden">·</span><p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency) })}</p></> : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             {readOnly ? <span /> : <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className={`${ghostButton} justify-self-end`} aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>}
                           </div>
                           {owes || statementLinks.has(c.id) ? (
@@ -1643,7 +1650,7 @@ function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOn
             <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{money(view.paidPaise)}</dd></div>
           </dl>
           {duplicate && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("Another invoice has this number.")}</p>}
-          {billedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This month is also billed in the plan's new currency. Delete one of the two.")}</p>}
+          {billedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This month is also billed by the plan that replaced this one when its currency changed. Delete one of the two.")}</p>}
           {invoice.description && <p className="mt-3 text-[13px] text-charcoal">{invoice.description}</p>}
           {invoice.payments.length > 0 && (
             <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
@@ -1789,9 +1796,9 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         if (gstin && !/^[0-9]{2}[A-Z0-9]{13}$/i.test(gstin.trim())) return setError(tr("GSTIN should be 15 characters, starting with a 2-digit state code."));
         const now = Date.now();
         const id = existing?.id ?? newId("cli");
-        // Spread, so fields this form doesn't edit are kept.
+        // Spread, so fields this form doesn't edit are kept; a client deleted elsewhere meanwhile comes back.
         let next = upsertClient(ws, {
-          ...existing, id, name: name.trim().slice(0, 80), phone: phone.trim(), email: email.trim().slice(0, 120),
+          ...(existing ? withoutTombstone(existing) : {}), id, name: name.trim().slice(0, 80), phone: phone.trim(), email: email.trim().slice(0, 120),
           gstin: gstin.trim().toUpperCase(), createdAt: existing?.createdAt ?? now, updatedAt: now,
         }, now);
         if (showCurrency && picked !== null && picked !== liveCurrency) next = setClientCurrency(next, id, picked, now);

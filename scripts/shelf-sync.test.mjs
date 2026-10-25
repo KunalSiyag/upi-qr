@@ -880,4 +880,50 @@ const three = book("Book Three", "three@okaxis", 120000);
   console.log("[shelf-sync] clients abroad: one pull after the upgrade, fx marker, cloud-only hold, no loop against a stripping server");
 }
 
+/* ---------- a PR 3 server (rollback) and a PR 4 copy converge on a repaired export mark ---------- */
+// repairIntl settles a month a PR 3 copy generated without the export mark (§6). It writes the repair at
+// updatedAt + 1: at the same updatedAt PR 3's merge kept the unmarked copy, the two never matched, and sync re-sent
+// every 200 ms until the shared workspace-write limit ran out.
+{
+  installBrowser();
+  const M = await import("../src/lib/workspace/model.ts");
+  const pr3 = await import("./fixtures/pr3-model.ts");
+  const load = (Model, w) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(w)));
+  const rid = M.recurringInvoiceId;
+  let w = M.upsertClient(book("Shop", "shop@okaxis"), { ...client, id: "cli_abroad01", name: "Kensington" }, T);
+  w = M.upsertPlan(w, { id: "rec_usdplan1", clientId: "cli_abroad01", amountPaise: 120000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: T, updatedAt: T }, T);
+  w = M.upsertInvoice(w, { id: rid("rec_usdplan1", "2026-08"), number: "INV-0002", clientId: "cli_abroad01", issueDate: "2026-08-01", dueDate: "2026-08-16", amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, recurringId: "rec_usdplan1", currency: "USD", exportLut: true, createdAt: T, updatedAt: T }, T);
+  const fromPr3 = load(M, pr3.generateRecurring(load(pr3, w), "2026-09-02", T + 5000).ws);
+  for (const pr3Server of [true, false]) {
+    const srv = fakeServer();
+    const stored = { json: canonicalJson(pr3Server ? fromPr3 : M.repairIntl(fromPr3, T)), rev: 1 };
+    let puts = 0;
+    srv.override = (method, url, body) => {
+      if (url !== SYNC_URL || method !== "PUT") return undefined;
+      puts++;
+      // PR 3's syncWorkspace: merge, its own repairIntl (no export-mark repair), prune; or this build's.
+      const Model = pr3Server ? pr3 : M;
+      const merged = Model.pruneTombstones(Model.repairIntl(Model.mergeWorkspaces(Model.sanitizeWorkspace(JSON.parse(stored.json)), Model.sanitizeWorkspace(body.workspace)), Date.now()), Date.now());
+      const json = canonicalJson(merged);
+      if (json !== stored.json) Object.assign(stored, { json, rev: stored.rev + 1 });
+      return reply(200, { workspace: merged, rev: stored.rev, owner: OWNER_A, intl: 1 });
+    };
+    // A PR 4 device with the PR 3 copy (pr3Server) or a PR 3-made copy pushing to a PR 4 server.
+    let local = pr3Server ? M.repairIntl(fromPr3, T) : fromPr3;
+    const engine = createBookSync(PRIMARY_BOOK_ID, {
+      owner: () => OWNER_A, get: () => local, onStatus: () => {},
+      apply: (next) => { local = M.repairIntl(M.mergeWorkspaces(local, next), Date.now()); return true; },
+    });
+    await engine.push();
+    await new Promise((r) => setTimeout(r, 700));
+    assert.equal(await engine.flush(), true, "flush reports synced");
+    engine.stop();
+    assert.ok(puts <= 2, `converges within one round trip (${puts} PUTs)`);
+    const sep = JSON.parse(stored.json).intl.invoices[rid("rec_usdplan1", "2026-09")];
+    assert.equal(sep.exportLut, true, "the stored month keeps the repaired mark");
+    assert.equal(canonicalJson(local), stored.json, "device and server hold the same bytes");
+  }
+  console.log("[shelf-sync] a repaired export mark converges with a PR 3 server and a PR 3-made copy");
+}
+
 console.log("[shelf-sync] legacy fallback, rev/hash skip, 404/410/409/402, stash and set-aside: all checks passed");

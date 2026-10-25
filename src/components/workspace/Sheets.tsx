@@ -2,7 +2,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
   nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, replaceInvoiceCurrency, setClientCurrency,
-  suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
+  suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
 import { CURRENCIES, formatMoney, fyOf, isForeignCurrency, minorToDecimal, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
@@ -152,6 +152,9 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
       description: description.trim().slice(0, 300),
     };
     if (existing) {
+      // Deleted in another tab or device while this sheet was open: saving brings it back with the edits.
+      const stored = getInvoice(ws2, existing.id);
+      if (stored?.deletedAt) ws2 = upsertInvoice(ws2, withoutTombstone(stored), now);
       // A currency change gets a new id (the record's currency never changes under its id); the number stays.
       let id = existing.id;
       if (currencyOf(existing) !== currency) {
@@ -160,7 +163,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
         ws2 = moved.ws;
         id = moved.id;
       }
-      const base = getInvoice(ws2, id) ?? existing;
+      const base = withoutTombstone(getInvoice(ws2, id) ?? existing);
       onSave(upsertInvoice(ws2, money({ ...base, ...edits }), now), id);
       return;
     }
