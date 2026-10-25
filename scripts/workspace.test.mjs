@@ -1191,9 +1191,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // Not an erase: every INR record deleted one by one while the business keeps its name.
     const allDeleted = M.repairIntl(M.updateBusiness(gone, { phone: "" }, E), E + 10);
     assert.equal(allDeleted.intl.settings.account, "GB82WEST12345698765432", "deleting every INR record is never an erase");
-    // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first.
-    // (Without the client-currency entry: that one has no client, and repairIntl tombstones it for that reason alone.)
-    const unnamed = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: { ...gone.intl, clients: {} } });
+    // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first. Its
+    // billing-currency entry has no client and is left alone too.
+    const unnamed = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: gone.intl });
+    assert.ok(unnamed.intl.clients.cli_abroad01 && !unnamed.intl.clients.cli_abroad01.deletedAt);
     assert.equal(M.repairIntl(unnamed, E), unnamed);
   }
 }
@@ -1561,8 +1562,9 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   assert.equal(M.canonicalJson(M.pruneTombstones(M.sanitizeWorkspace(back), X + 5 + 91 * 86_400_000)), bytes);
   // An older tab deletes the client (it can't see the entry, and no invoice blocks it). Review round 2: repairIntl
   // never tombstones the entry (a client merely missing from a copy looked the same, and the tombstone beat the live
-  // entry everywhere). The entry stays; clientCurrency reads INR while the client is gone, and pruneTombstones drops
-  // the entry with the client's tombstone, so the book is that tab's INR bytes again.
+  // entry everywhere). The entry stays; clientCurrency reads INR while the client is gone. Review round 3:
+  // pruneTombstones keeps it after the client's tombstone goes, exactly as PR 1–3 do, so every build agrees on the
+  // bytes (a server-only drop made a PR 3 tab push every 200 ms forever). It costs one ~40-byte entry.
   {
     const legacy = await import("./fixtures/legacy-model.ts");
     const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
@@ -1575,7 +1577,14 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(usd, joined), 0)), M.canonicalJson(M.repairIntl(M.mergeWorkspaces(joined, usd), 0)), "both orders agree");
     assert.ok(M.pruneTombstones(joined, X + 7 + 89 * 86_400_000).intl.clients[client.id], "kept while the client's tombstone is kept");
     const later = X + 7 + 91 * 86_400_000;
-    assert.equal(M.canonicalJson(M.pruneTombstones(joined, later)), legacy.canonicalJson(legacy.pruneTombstones(oldTab, later)), "INR-only bytes once pruned");
+    const prunedLater = M.pruneTombstones(joined, later);
+    assert.equal(M.canonicalJson(M.withoutIntl(prunedLater)), legacy.canonicalJson(legacy.pruneTombstones(oldTab, later)), "the book key holds that tab's INR bytes");
+    assert.deepEqual(prunedLater.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 }, "the orphaned entry is kept, as PR 1–3 keep it");
+    assert.equal(M.clientCurrency(prunedLater, client.id), "INR", "and reads INR without its client");
+    {
+      const pr3 = await import("./fixtures/pr3-model.ts");
+      assert.equal(M.canonicalJson(prunedLater), pr3.canonicalJson(pr3.pruneTombstones(pr3.sanitizeWorkspace(clone(joined)), later)), "PR 3's prune gives the same bytes");
+    }
     // A client revived by a foreign record written after the delete gets its currency back.
     const usdInvoice = { id: "inv_usdrev01", number: "INV-0091", clientId: client.id, issueDate: "2026-10-01", dueDate: "2026-10-16", amountPaise: 120000,
       description: "", payments: [], reminders: [], voided: false, currency: "USD", createdAt: X + 6, updatedAt: X + 6 };
@@ -1825,13 +1834,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
 {
   const M = await import("../src/lib/workspace/model.ts");
   const pr3 = await import("./fixtures/pr3-model.ts");
-  // pruneTombstones is the deployed code plus one rule (review round 2): a live billing-currency entry is dropped with
-  // its pruned client (an older tab can delete the client without seeing it). Nothing about changed currencies.
-  const orphanRule = "filter(([id, c]) => keep(c) && (c.deletedAt || own(pruned.clients, id) || c.updatedAt > cutoff))";
-  const pruneSource = M.pruneTombstones.toString().replace(/\n *\/\/[^\n]*/g, "");
-  assert.ok(pruneSource.includes(orphanRule));
-  assert.equal(pruneSource.replace(orphanRule, "filter(([, c]) => keep(c))"), pr3.pruneTombstones.toString().replace(/\n *\/\/[^\n]*/g, ""), "pruneTombstones is the deployed code plus the orphan rule");
-  for (const name of ["repairIntl", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
+  // pruneTombstones is the deployed code (review round 3): what it keeps decides the bytes every build compares with
+  // the server's copy, so a rule only PR 4 applies (round 2 dropped an orphaned billing-currency entry) makes PR 1–3
+  // tabs and PWAs push again every 200 ms, forever, and a PR 3 and a PR 4 tab rewrite each other's sidecar.
+  for (const name of ["pruneTombstones", "repairIntl", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
     "restoreFrom", "eraseWorkspace", "deleteInvoice", "deleteClient", "upsertInvoice", "upsertPlan", "planMonths", "nextInvoiceNumber"]) {
     assert.equal(M[name].toString(), pr3[name].toString(), `${name} is the deployed code`);
   }
@@ -1865,6 +1871,23 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.canonicalJson(M.pruneTombstones(load(M, deleted), t)), pr3.canonicalJson(pr3.pruneTombstones(load(pr3, deleted), t)), `prune after ${days} days`);
   }
   assert.equal(M.getInvoice(M.pruneTombstones(deleted, X + 10 + 91 * DAY), M.recurringInvoiceId("rec_usd00001", "2026-09")), undefined, "a foreign plan month's tombstone is pruned like any other");
+  // The billing-currency entries (review round 3): live with a live client, live with a deleted client, live with no
+  // client at all (its tombstone pruned), and tombstoned, young and old. PR 3's prune gives byte-identical output.
+  {
+    let c = M.upsertClient(M.upsertClient(w, cli("cli_gone0001", "Deleted"), X), cli("cli_gone0002", "Pruned"), X);
+    for (const id of ["cli_usd00001", "cli_gone0001", "cli_gone0002", "cli_inr00001"]) c = M.setClientCurrency(c, id, "EUR", X + 1);
+    c = M.deleteClient(c, "cli_gone0001", X + 2);
+    // An older tab's delete (it can't see the entry, so the entry stays live).
+    c = M.upsertClient(c, { ...cli("cli_gone0002", "Pruned"), deletedAt: X - 200 * DAY }, X + 2);
+    c = M.setClientCurrency(c, "cli_inr00001", "INR", X + 3);
+    c = { ...c, intl: { ...c.intl, clients: { ...c.intl.clients, cli_nobody01: { currency: "GBP", updatedAt: X - 300 * DAY }, cli_nobody02: { currency: "USD", updatedAt: X - 300 * DAY, deletedAt: X - 300 * DAY } } } };
+    for (const days of [0, 30, 91, 400]) {
+      const t = X + 3 + days * DAY;
+      const ours = M.pruneTombstones(load(M, c), t);
+      assert.equal(M.canonicalJson(ours), pr3.canonicalJson(pr3.pruneTombstones(load(pr3, c), t)), `billing currencies, prune after ${days} days`);
+      assert.ok(ours.intl.clients.cli_nobody01 && ours.intl.clients.cli_gone0002, `${days} days: a live entry without its client is kept`);
+    }
+  }
   // repairIntl over a merge of two copies: the same bytes.
   const other = M.logReminder(generated, M.recurringInvoiceId("rec_inr00001", "2026-10"), "whatsapp", X + 20);
   assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(load(M, deleted), load(M, other)), X + 21)),

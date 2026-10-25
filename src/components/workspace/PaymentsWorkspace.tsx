@@ -165,7 +165,7 @@ function Workspace() {
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   // The monthly-billing row asking "Delete for good?" (foreign plans only).
   const [confirmPlan, setConfirmPlan] = useState<string | null>(null);
-  // "Keep" hands focus back to that plan's Delete button (the confirm takes it on open), never to <body>.
+  // "Keep" hands focus back to that plan's Delete button (Keep takes it when the confirm opens), never to <body>.
   const planFocus = useRef<string | null>(null);
   useEffect(() => {
     const id = planFocus.current;
@@ -1149,11 +1149,12 @@ function Workspace() {
                               {deletable && (confirmPlan === plan.id ? (
                                 <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                                   {tr("Delete for good?")}
-                                  <button type="button" data-plan-delete-confirm="" autoFocus className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
+                                  <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
                                     onClick={() => { setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay.")); }}>
                                     {tr("Delete")}
                                   </button>
-                                  <button type="button" onClick={() => { planFocus.current = plan.id; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
+                                  {/* Focus goes to the safe choice: a held Enter on Delete must never confirm the delete (review round 3). */}
+                                  <button type="button" data-plan-delete-keep="" autoFocus onClick={() => { planFocus.current = plan.id; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
                                 </span>
                               ) : (
                                 <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete")}</button>
@@ -1174,7 +1175,7 @@ function Workspace() {
                 <p className={`${card} p-10 text-center text-sm text-muted`}>{tr("Clients are added automatically when you create an invoice.")}</p>
               ) : (
                 <div className={`${card} overflow-hidden`}>
-                  <div aria-hidden="true" className={`hidden ${hasForeign ? "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_4rem]" : "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"} gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid`}>
+                  <div aria-hidden="true" className={`hidden ${hasForeign ? "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_10.5rem_4rem]" : "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"} gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid`}>
                     <span>{tr("Client")}</span><span>{tr("WhatsApp number")}</span><span className="text-right">{tr("Balance")}</span><span />
                   </div>
                   <ul className="divide-y divide-hairline">
@@ -1186,7 +1187,7 @@ function Workspace() {
                       const owes = (bal?.balancePaise ?? 0) > 0 || fx.length > 0;
                       return (
                         <li key={c.id} className="px-4 py-3">
-                          <div className={`grid ${fx.length ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_auto]"} items-center gap-x-4 gap-y-1 ${hasForeign ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_4rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"}`}>
+                          <div className={`grid ${fx.length ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_auto]"} items-center gap-x-4 gap-y-1 ${hasForeign ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_10.5rem_4rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"}`}>
                             <div className="flex min-w-0 items-center gap-2.5">
                               <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fog text-xs font-semibold text-charcoal">{c.name.trim().charAt(0).toUpperCase()}</span>
                               <button type="button" onClick={() => openClientInvoices(c.id)} className="min-w-0 text-left">
@@ -1210,7 +1211,8 @@ function Workspace() {
                                   // leaves a separator dangling at a line end.
                                   <div key={currency}>
                                     <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink">{formatMoney(balance, currency)}</p>
-                                    {overdue ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency) })}</p> : null}
+                                    {/* No-break spaces inside the amount ("AED 12,360,678.00"): a line can only break before the word "overdue". */}
+                                    {overdue ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency).replace(/ /g, "\u00a0") })}</p> : null}
                                   </div>
                                 ))}
                               </div>
@@ -1716,10 +1718,11 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
                       closeCredit(p.id, "open");
                     }}>
                       <label htmlFor={`ws-credit-${p.id}`} className="sr-only">{tr("INR credited (₹, optional)")}</label>
-                      <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus />
-                      <button type="submit" className={rowButton}>{p.inrCreditedPaise ? tr("Save") : tr("Add INR credited")}</button>
+                      <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus
+                        aria-invalid={creditError ? true : undefined} aria-describedby={creditError ? `ws-credit-${p.id}-error` : undefined} />
+                      <button type="submit" className={rowButton}>{p.inrCreditedPaise ? tr("Save INR credited") : tr("Add INR credited")}</button>
                       <button type="button" onClick={() => closeCredit(p.id, "open")} className={ghostButton}>{tr("Cancel")}</button>
-                      {creditError && <p role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
+                      {creditError && <p id={`ws-credit-${p.id}-error`} role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
                     </form>
                   )}
                 </li>

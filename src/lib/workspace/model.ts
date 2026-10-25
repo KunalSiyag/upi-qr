@@ -936,11 +936,7 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
     ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
     invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i))),
     recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
-    // A live billing-currency entry goes with its client: once the client's tombstone is pruned (an older tab can
-    // delete a client without seeing the entry), the entry is dropped, never tombstoned. A dropped entry is an absence,
-    // so it can't beat a live entry elsewhere, and a client merely missing from a stale copy (a sidecar joined with an
-    // older book key) never loses its currency: the entry must also be older than the cutoff.
-    clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([id, c]) => keep(c) && (c.deletedAt || own(pruned.clients, id) || c.updatedAt > cutoff))),
+    clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
   });
 }
 
@@ -1432,7 +1428,8 @@ export function intlPayable(settings: IntlSettings | undefined, currency: Foreig
 /**
  * The client's default billing currency: its live intl.clients entry while the client itself is live, else "INR". It
  * only pre-fills the invoice sheet. An entry whose client an older tab deleted stays as it is (a revived client gets
- * its currency back) until pruneTombstones drops it with the client.
+ * its currency back), and pruneTombstones keeps it, as PR 1–3 do: dropping it on one build only would make that build's
+ * copy differ from theirs forever (review round 3).
  */
 export function clientCurrency(ws: Workspace, clientId: string): CurrencyCode {
   const entry = own(ws.intl?.clients, clientId);

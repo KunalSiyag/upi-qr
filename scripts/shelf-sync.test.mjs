@@ -880,4 +880,35 @@ const three = book("Book Three", "three@okaxis", 120000);
   console.log("[shelf-sync] clients abroad: one pull after the upgrade, fx marker, cloud-only hold, no loop against a stripping server");
 }
 
+/* ---------- review round 3: a PR 3 tab against this server, with an orphaned billing-currency entry ---------- */
+// A client set to USD, deleted by a pre-PR 1 tab (which can't see the entry, so it stays live), its tombstone since
+// pruned everywhere. PR 1–3 keep such an entry for good; if this server's prune dropped it, the PR 3 tab's copy would
+// never match a reply and it would PUT every 200 ms, forever (and use up the shared write limit for every device).
+// The engine is createBookSync, unchanged since PR 3 apart from the shelf's intlLocal state; the tab's model is PR 3's.
+{
+  installBrowser();
+  const pr3 = await import("./fixtures/pr3-model.ts");
+  const DAY = 86_400_000;
+  const old = Date.now() - 120 * DAY;
+  const srv = fakeServer();
+  const orphaned = (ws) => pr3.sanitizeWorkspace({ ...ws, intl: { invoices: {}, recurring: {}, clients: { cli_gone0002: { currency: "USD", updatedAt: old } } } });
+  for (const launch of [1, 2]) {
+    let memory = orphaned(launch === 1 ? book("Shop", "shop@okaxis") : (await srv.doc(PRIMARY_BOOK_ID)).workspace);
+    const before = srv.count((c) => c.method === "PUT");
+    const engine = createBookSync(PRIMARY_BOOK_ID, {
+      owner: () => OWNER_A, get: () => memory,
+      apply: (ws) => { memory = pr3.repairIntl(pr3.mergeWorkspaces(memory, ws), Date.now()); return true; },
+      onStatus: () => {},
+    });
+    await engine.push();
+    await new Promise((r) => setTimeout(r, 700));
+    engine.stop();
+    assert.equal(srv.count((c) => c.method === "PUT") - before, 1, `launch ${launch}: one PUT, no loop`);
+    const stored = (await srv.doc(PRIMARY_BOOK_ID)).workspace;
+    assert.deepEqual(stored.intl?.clients?.cli_gone0002, { currency: "USD", updatedAt: old }, `launch ${launch}: the server keeps the entry, as PR 3 does`);
+    assert.equal(canonicalJson(stored), pr3.canonicalJson(memory), `launch ${launch}: the PR 3 tab and the server agree`);
+  }
+  console.log("[shelf-sync] a PR 3 tab with an orphaned billing-currency entry: one PUT per launch, no loop");
+}
+
 console.log("[shelf-sync] legacy fallback, rev/hash skip, 404/410/409/402, stash and set-aside: all checks passed");

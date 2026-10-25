@@ -209,7 +209,8 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
               <div className="max-w-[12rem]">
                 <label htmlFor="ws-intl-override-currency" className={labelClass}>{tr("Currency")}</label>
                 <select id="ws-intl-override-currency" className={inputClass} value={overrideCurrency} onChange={(e) => setOverrideCurrency(e.target.value as ForeignCurrency)}>
-                  {FOREIGN_CURRENCIES.map((c) => <option key={c} value={c}>{c}{overrides[c] && FIELDS.some((f) => overrides[c]![f].trim()) ? " ✓" : ""}</option>)}
+                  {/* Words, not a bare "✓": option text is all a screen reader gets (review round 3). */}
+                  {FOREIGN_CURRENCIES.map((c) => <option key={c} value={c}>{overrides[c] && FIELDS.some((f) => overrides[c]![f].trim()) ? tr("{currency} (details saved)", { currency: c }) : c}</option>)}
                 </select>
               </div>
               <DetailFields

@@ -82,6 +82,11 @@ try {
   await t(`__t.click(/^Save payment details$/)`);
   await b.waitFor("/Payment details saved\\./.test(document.body.innerText)", 4000);
   check("valid details saved", /Payment details saved\./.test(await text()) && (await sidecar()).includes("HDFCINBB") && (await sidecar()).includes('"on":true'));
+  // §5.2 (review round 3): once settings exist the card opens by itself; the per-currency set stays closed without byCurrency.
+  const detailsOpen = () => b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return { card: !!d?.open, perCurrency: !!d?.querySelector('details')?.open }; })()");
+  await b.go(BASE + "/app/?tab=settings", 2500);
+  let opens = await detailsOpen();
+  check("after a reload, saved settings open the card; no per-currency details keep that set closed", opens.card && !opens.perCurrency, JSON.stringify(opens));
 
   // LUT needs a GSTIN, an ARN and its financial year; the preview is the statutory line.
   await t(`__t.set('ws-s-gstin', '27AAAPL1234C1Z5'), __t.set('ws-s-udyam', 'UDYAM-MH-12-1234567'), __t.click(/^Save settings$/)`);
@@ -118,6 +123,11 @@ try {
   await sleep(300);
   const side = JSON.parse(await sidecar());
   check("LUT and USD override saved", side.intl.settings.lutArn === "AD2704260012345" && side.intl.settings.lutFy === fy && side.intl.settings.byCurrency?.USD?.account === "8310123456" && !side.intl.settings.byCurrency.EUR, JSON.stringify(side.intl.settings));
+  await b.go(BASE + "/app/?tab=settings", 2500);
+  opens = await detailsOpen();
+  check("after a reload, a saved per-currency set opens by itself", opens.card && opens.perCurrency, JSON.stringify(opens));
+  const optionTexts = await b.eval("[...document.getElementById('ws-intl-override-currency').options].map((o) => o.textContent).join('|')");
+  check("a currency with saved details says so in words (no bare ✓)", optionTexts === "USD (details saved)|EUR|GBP|AED|AUD|CAD|SGD", optionTexts);
   // Review round 2: the per-currency set's fields carry the currency in their names, so a screen reader never hears
   // two fields called "Account name".
   const fieldNames = await b.eval("['ws-intl-account-name', 'ws-intl-account-name-usd', 'ws-intl-swift-usd', 'ws-intl-pay-url-usd'].map((id) => document.querySelector('label[for=' + id + ']')?.textContent)");
@@ -298,6 +308,15 @@ try {
   await t(`__t.set('ws-amount', '750'), __t.set('ws-issue', '${await iso(-20)}'), __t.set('ws-due', '${await iso(-5)}')`);
   await t(`document.getElementById('ws-export-lut').click(), __t.click(/^Add invoice$/, __t.dialog())`);
   await closed();
+  // §5.3 (review round 3): a client created from a foreign invoice keeps its currency as their default.
+  const acmeId = Object.values(JSON.parse(await book()).clients).find((c) => c.name === "Acme GmbH")?.id;
+  const acmeEntry = JSON.parse(await sidecar()).intl.clients?.[acmeId];
+  check("a client created from a EUR invoice gets EUR as their billing currency", acmeEntry?.currency === "EUR" && !acmeEntry.deletedAt, JSON.stringify({ acmeId, acmeEntry }));
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Acme GmbH')`);
+  await sleep(100);
+  check("…and their next invoice starts in EUR", (await value("ws-currency")) === "EUR", await value("ws-currency"));
+  await esc(); await closed();
   await openRow("Acme GmbH");
   await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
   msg = await value("ws-reminder");
@@ -365,11 +384,21 @@ try {
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
     await sleep(100);
     check("deleting a plan asks first", /Delete for good\?/.test(await b.eval(`${planRow("Plan Only Co")}.innerText`)));
-    // Review round 2: keyboard focus follows the confirm, and Keep hands it back to Delete (never <body>).
-    check("the confirm takes focus", await b.eval("document.activeElement?.hasAttribute('data-plan-delete-confirm')"));
+    // Review round 2: keyboard focus follows the confirm, and Keep hands it back to Delete (never <body>). Review round 3:
+    // focus lands on Keep, the safe choice, so a held Enter can't delete the plan.
+    check("the confirm takes focus on Keep", await b.eval("document.activeElement?.hasAttribute('data-plan-delete-keep')"));
     await t(`__t.click(/^Keep$/, ${planRow("Plan Only Co")})`);
     await sleep(100);
     check("Keep returns focus to that plan's Delete", await b.eval(`document.activeElement === ${planRow("Plan Only Co")}?.querySelector('[data-plan-delete]')`));
+    // Holding Enter on Delete: the press opens the confirm, the auto-repeat lands on Keep. The plan stays.
+    const enter = (type, autoRepeat = false) => b.send("Input.dispatchKeyEvent", { type, key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, autoRepeat, ...(type === "keyDown" ? { text: "\r" } : {}) });
+    await enter("keyDown"); await sleep(80);
+    const afterPress = await b.eval("document.activeElement?.hasAttribute('data-plan-delete-keep')");
+    await enter("keyDown", true); await sleep(80); await enter("keyUp"); await sleep(200);
+    const heldPlan = Object.values(JSON.parse(await sidecar()).intl.recurring).filter((p) => p.amountPaise === 8000);
+    check("a held Enter on Delete never deletes the plan", afterPress && heldPlan.length === 1 && !heldPlan[0].deletedAt && !/Monthly billing deleted/.test(await text()), JSON.stringify({ afterPress, heldPlan }));
+    if (await b.eval(`!!${planRow("Plan Only Co")}?.querySelector('[data-plan-delete-confirm]')`)) await t(`__t.click(/^Keep$/, ${planRow("Plan Only Co")})`);
+    await sleep(100);
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
     await sleep(100);
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete-confirm]').click(), true`);
@@ -439,6 +468,11 @@ try {
   const creditForm = await b.eval(`(() => { const i = document.querySelector('[id^=ws-credit-]'); const btn = [...i.form.querySelectorAll('button')].find((x) => x.textContent === 'Add INR credited');
     return { inputW: i.getBoundingClientRect().width, formW: i.form.getBoundingClientRect().width, filled: btn.className.includes('bg-graphite') }; })()`);
   check("the INR credited input is narrow and its button secondary", creditForm.inputW < 200 && !creditForm.filled, JSON.stringify(creditForm));
+  // Review round 3: a bad figure marks the input invalid and points it at the message, as the payment sheet does.
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, 'abc'), __t.click(/^Add INR credited$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await sleep(100);
+  const creditErr = await b.eval("(() => { const i = document.querySelector('[id^=ws-credit-]'); const d = i?.getAttribute('aria-describedby'); return { invalid: i?.getAttribute('aria-invalid'), message: d ? document.getElementById(d)?.textContent : null }; })()");
+  check("the inline INR credited error is linked to its input", creditErr.invalid === "true" && creditErr.message === "Enter an amount like 1500 or 1500.50.", JSON.stringify(creditErr));
   await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/)`);
   await sleep(200);
   check("payment line shows the ₹ added later", /€750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
@@ -449,12 +483,12 @@ try {
   await t(`__t.click(/^Change$/)`);
   await sleep(100);
   check("Change opens the form filled with the saved figure", (await b.eval("document.querySelector('[id^=ws-credit-]')?.value")) === "80000.00" && await b.eval("document.activeElement?.id?.startsWith('ws-credit-')"));
-  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '8,000'), __t.click(/^Save$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '8,000'), __t.click(/^Save INR credited$/, document.querySelector('[id^=ws-credit-]').form)`);
   await sleep(200);
   check("a second save overwrites the figure", /WISE-9001 · ₹8,000 credited/.test(await text()) && (await creditedOf())?.inrCreditedPaise === 800_000);
   await t(`__t.click(/^Change$/)`);
   await sleep(100);
-  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, ''), __t.click(/^Save$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, ''), __t.click(/^Save INR credited$/, document.querySelector('[id^=ws-credit-]').form)`);
   await sleep(200);
   const removedCredit = await creditedOf();
   check("an emptied figure is removed (no key, never 0)", removedCredit && !("inrCreditedPaise" in removedCredit) && !!(await t("!!__t.btn(/^Add INR credited$/)")), JSON.stringify(removedCredit));

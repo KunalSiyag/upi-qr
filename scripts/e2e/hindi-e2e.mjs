@@ -62,7 +62,8 @@ try {
     invoices: { inv_usd00001: { ...ws.invoices.inv_00000001, id: "inv_usd00001", number: "TU-0002", clientId: "cli_globex01", amountPaise: 120000, currency: "USD" } },
     // Paused, so no month is generated: it only puts a USD plan under Monthly billing.
     recurring: { rec_usd00001: { id: "rec_usd00001", clientId: "cli_globex01", amountPaise: 50000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: iso(0).slice(0, 7), endMonth: "", paused: true, currency: "USD", createdAt: T, updatedAt: T } },
-    clients: {} };
+    // Globex is billed in US$: the client sheet's "liveCurrency !== INR" arm must stay behind the flag too.
+    clients: { cli_globex01: { currency: "USD", updatedAt: T } } };
   /**
    * The creation entry points of §5.1 in the current page: the invoice sheet's picker and the client sheet's. `plan` is
    * a plan "Change currency" button, which no build has (a currency is fixed at creation, owner decision 2026-10-25).

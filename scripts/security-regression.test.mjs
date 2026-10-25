@@ -539,6 +539,20 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   assert.doesNotMatch(card, /role="dialog"|aria-expanded|aria-current|type="file"|<li\b/);
   // No new control whose whole text is one the e2e suites click by exact text.
   for (const label of ["Save", "Save settings", "Remind", "Delete", "Record payment", "Add invoice", "Save payment"]) assert.ok(!card.includes(`{tr("${label}")}`), label);
+  // The same rule for the workspace and its sheets (spec §5.9, review round 3): only the controls that were there before
+  // clients abroad, plus the accepted foreign-plan "Delete" and its confirm (§10 PR 4 notes).
+  {
+    const labels = /tr\("(Save|Save settings|Remind|Delete|Record payment|Add invoice|Save payment)"\)/g;
+    const allowed = {
+      "src/components/workspace/PaymentsWorkspace.tsx": { Delete: 4, "Record payment": 1, Remind: 2, Save: 2, "Save settings": 1 },
+      "src/components/workspace/Sheets.tsx": { "Add invoice": 1, "Save payment": 1 },
+    };
+    for (const [file, want] of Object.entries(allowed)) {
+      const got = {};
+      for (const m of read(file).matchAll(labels)) got[m[1]] = (got[m[1]] ?? 0) + 1;
+      assert.deepEqual(got, want, `${file}: no new control whose whole text is one the e2e suites click by exact text`);
+    }
+  }
   // A currency is chosen once, when an invoice or plan is created (owner decision, 2026-10-25): no UI code changes an
   // existing record's currency. replaceInvoiceCurrency / replacePlanCurrency stay in the model (PR 1, deployed) with no
   // caller under src/components or src/pages.
