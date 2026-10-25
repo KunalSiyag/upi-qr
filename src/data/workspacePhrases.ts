@@ -584,6 +584,8 @@ export const WS_HI: Record<string, string> = {
   "Foreign-currency invoices are saved on this device only right now. They sync again after the next update.": "विदेशी मुद्रा वाले इनवॉइस अभी सिर्फ़ इस डिवाइस पर सेव हैं। अगले अपडेट के बाद फिर सिंक होंगे।",
   "Clients with monthly billing in another currency can't be removed — delete the monthly billing first (Clients → Monthly billing).": "जिन ग्राहकों की मासिक बिलिंग दूसरी मुद्रा में है, उन्हें हटाया नहीं जा सकता — पहले मासिक बिलिंग डिलीट करें (ग्राहक → मासिक बिलिंग)।",
   "Monthly billing deleted. Existing invoices stay.": "मासिक बिलिंग डिलीट हो गई। बने हुए इनवॉइस बने रहेंगे।",
+  "Delete monthly billing": "मासिक बिलिंग डिलीट करें",
+  "Delete billing": "बिलिंग डिलीट करें",
   "Enter the IBAN or account number (4 to 34 letters and digits).": "IBAN या खाता नंबर डालें (4 से 34 अक्षर और अंक)।",
   "Some details need fixing. See the messages above.": "कुछ जानकारी ठीक करनी है। ऊपर के संदेश देखें।",
 };

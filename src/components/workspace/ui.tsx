@@ -116,7 +116,8 @@ export function Field({ label, htmlFor, error, children }: { label: ReactNode; h
     <div>
       <label htmlFor={htmlFor} className={labelClass}>{label}</label>
       {children}
-      {error && <p className={`mt-1 text-xs font-medium ${dangerText}`} role="alert" data-field-error>{error}</p>}
+      {/* `${htmlFor}-error`, so the input can point aria-describedby at its message. */}
+      {error && <p id={`${htmlFor}-error`} className={`mt-1 text-xs font-medium ${dangerText}`} role="alert" data-field-error>{error}</p>}
     </div>
   );
 }

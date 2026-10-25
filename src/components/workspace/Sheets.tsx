@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
   nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, setClientCurrency,
@@ -294,6 +294,7 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
   const [reference, setReference] = useState(initialReference ?? "");
   const [credited, setCredited] = useState("");
   const [creditedError, setCreditedError] = useState("");
+  const creditedRef = useRef<HTMLInputElement>(null);
   const [error, setError] = useState("");
 
   function submit(event: FormEvent) {
@@ -305,7 +306,11 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
     // INR credited is always rupees, whatever the invoice's currency.
     const creditedPaise = foreign && credited.trim() ? parseRupeesToPaise(credited) : null;
     // Under its own field: the sheet has two amounts, and this one is in rupees.
-    if (foreign && credited.trim() && !creditedPaise) return setCreditedError(tr("Enter an amount like 1500 or 1500.50."));
+    if (foreign && credited.trim() && !creditedPaise) {
+      setCreditedError(tr("Enter an amount like 1500 or 1500.50."));
+      creditedRef.current?.focus();
+      return;
+    }
     onSave(addPayment(ws, invoiceId, { amountPaise, date, mode, reference: reference.trim().slice(0, 60), ...(creditedPaise ? { inrCreditedPaise: creditedPaise } : {}) }, Date.now()));
   }
 
@@ -333,9 +338,10 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
           {foreign && (
             <div className="sm:col-span-2">
               <Field label={tr("INR credited (₹, optional)")} htmlFor="ws-pay-inr" error={creditedError}>
-                <input id="ws-pay-inr" className={inputClass} value={credited} onChange={(e) => { setCredited(e.target.value); setCreditedError(""); setError(""); }} inputMode="decimal" placeholder="99840" aria-invalid={creditedError ? true : undefined} />
+                <input ref={creditedRef} id="ws-pay-inr" className={inputClass} value={credited} onChange={(e) => { setCredited(e.target.value); setCreditedError(""); setError(""); }} inputMode="decimal" placeholder="99840"
+                  aria-invalid={creditedError ? true : undefined} aria-describedby={creditedError ? "ws-pay-inr-error ws-pay-inr-hint" : "ws-pay-inr-hint"} />
               </Field>
-              <p className="mt-1 text-xs leading-5 text-muted">{tr("The rupees your bank credited, as on the FIRA/FIRC. Keep it for your records.")}</p>
+              <p id="ws-pay-inr-hint" className="mt-1 text-xs leading-5 text-muted">{tr("The rupees your bank credited, as on the FIRA/FIRC. Keep it for your records.")}</p>
             </div>
           )}
         </div>

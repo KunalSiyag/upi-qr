@@ -118,9 +118,13 @@ try {
     const e = [...d.querySelectorAll('*')].find((x) => !x.children.length && /This IBAN doesn't look right/.test(x.textContent)); return d.open && !!e && e.checkVisibility(); })()`));
   check("nothing saved with a bad per-currency IBAN", !(await sidecar()).includes("Wise"));
   check("…and focus goes to that field inside the opened set", (await focused()) === "ws-intl-account-usd", await focused());
+  // Review round 4: "(details saved)" reads what is stored, never the typed but unsaved set.
+  const usdOption = () => b.eval("document.querySelector('#ws-intl-override-currency option[value=USD]').textContent");
+  check("typed but unsaved USD details: the option still reads plain USD", (await usdOption()) === "USD", await usdOption());
   await t(`__t.set('ws-intl-account-usd', '8310123456')`);
   await t(`__t.click(/^Save payment details$/)`);
   await sleep(300);
+  check("…and says saved once the save went through", (await usdOption()) === "USD (details saved)", await usdOption());
   const side = JSON.parse(await sidecar());
   check("LUT and USD override saved", side.intl.settings.lutArn === "AD2704260012345" && side.intl.settings.lutFy === fy && side.intl.settings.byCurrency?.USD?.account === "8310123456" && !side.intl.settings.byCurrency.EUR, JSON.stringify(side.intl.settings));
   await b.go(BASE + "/app/?tab=settings", 2500);
@@ -377,13 +381,17 @@ try {
     await t(`__t.click(/^Delete$/)`);
     await sleep(200);
     await tab("Clients");
-    check("a foreign plan row offers Delete", await b.eval(`!!${planRow("Plan Only Co")}?.querySelector('[data-plan-delete]')`));
+    check("a foreign plan row offers Delete monthly billing", (await b.eval(`${planRow("Plan Only Co")}?.querySelector('[data-plan-delete]')?.textContent`)) === "Delete monthly billing");
     await t(`document.querySelector('button[aria-label="Edit Plan Only Co"]').click(), true`); await opened();
     check("a client with only a foreign plan can't be removed, and is told how", /delete the monthly billing first/.test(await dialogText()) && !(await b.eval("!!__t.btn(/^Remove client$/, __t.dialog())")), await dialogText());
     await esc(); await closed();
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
     await sleep(100);
     check("deleting a plan asks first", /Delete for good\?/.test(await b.eval(`${planRow("Plan Only Co")}.innerText`)));
+    // Review round 4 (spec §5.9): no button whose whole text is "Delete" (cdp-lib clicks the first such button).
+    const planButtons = await b.eval(`({ open: ${planRow("Plan Only Co")}.querySelector('[data-plan-delete]')?.textContent ?? null, confirm: ${planRow("Plan Only Co")}.querySelector('[data-plan-delete-confirm]')?.textContent,
+      bare: [...document.querySelectorAll('section[aria-labelledby=monthly-title] button')].some((x) => x.textContent.trim() === 'Delete') })`);
+    check("the plan's delete buttons say what they delete", planButtons.confirm === "Delete billing" && !planButtons.bare, JSON.stringify(planButtons));
     // Review round 2: keyboard focus follows the confirm, and Keep hands it back to Delete (never <body>). Review round 3:
     // focus lands on Keep, the safe choice, so a held Enter can't delete the plan.
     check("the confirm takes focus on Keep", await b.eval("document.activeElement?.hasAttribute('data-plan-delete-keep')"));
@@ -681,8 +689,12 @@ try {
     await t(`__t.click(/^Record payment$/)`); await opened();
     await t(`__t.set('ws-pay-ref', 'WISE-REF-123456'), __t.set('ws-pay-inr', 'abc'), __t.click(/^Save payment$/, __t.dialog())`);
     await sleep(150);
-    const credErr = await b.eval("({ under: document.getElementById('ws-pay-inr')?.parentElement?.querySelector('[role=alert]')?.textContent || '', alerts: document.querySelectorAll('[role=dialog] [role=alert]').length, invalid: document.getElementById('ws-pay-inr')?.getAttribute('aria-invalid') })");
+    const credErr = await b.eval(`({ under: document.getElementById('ws-pay-inr')?.parentElement?.querySelector('[role=alert]')?.textContent || '', alerts: document.querySelectorAll('[role=dialog] [role=alert]').length, invalid: document.getElementById('ws-pay-inr')?.getAttribute('aria-invalid'),
+      described: (document.getElementById('ws-pay-inr')?.getAttribute('aria-describedby') || '').split(' ').map((id) => document.getElementById(id)?.textContent ?? '?'), focus: document.activeElement?.id })`);
     check("a bad INR credited value shows its error under that field", credErr.under === "Enter an amount like 1500 or 1500.50." && credErr.alerts === 1 && credErr.invalid === "true", JSON.stringify(credErr));
+    // Review round 4: the field points at its error and its hint, and takes focus.
+    check("…the INR credited field is described by its error and hint, and focused", credErr.focus === "ws-pay-inr" && credErr.described.length === 2
+      && credErr.described[0] === "Enter an amount like 1500 or 1500.50." && /^The rupees your bank credited/.test(credErr.described[1]), JSON.stringify(credErr));
     await b.shot("cur-credited-error.png");
     await t(`__t.set('ws-pay-inr', ''), __t.click(/^Save payment$/, __t.dialog())`);
     await closed();
@@ -692,6 +704,45 @@ try {
     check("desktop: the payment line keeps its actions on the same line", wideLine === true, String(wideLine));
     await b.shot("cur-payment-line.png");
   }
+
+  // Review round 4 (§3.8, §5.4): an INR invoice to a client billed in GBP still sends to their + number as typed.
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Kensington Ltd')`);
+  await sleep(100);
+  await t(`__t.set('ws-currency', 'INR'), __t.set('ws-amount', '900'), __t.set('ws-number', 'KEN-1'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
+  await closed();
+  await t(`__t.click(/^all$/)`);
+  await openRow("KEN-1");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("an INR reminder to a GBP client is in rupees", /₹900/.test(await value("ws-reminder")), await value("ws-reminder"));
+  await t(`__t.click(/^WhatsApp$/, __t.dialog())`);
+  const kenWa = await b.eval("window.__opened.at(-1)");
+  check("INR invoice, GBP client: WhatsApp goes to the + number as typed", kenWa?.startsWith("https://wa.me/44207946?text="), kenWa);
+  await t(`__t.click(/^SMS$/, __t.dialog())`);
+  const kenSms = await b.eval("window.__opened.at(-1)");
+  check("INR invoice, GBP client: SMS goes to +44, never +91", kenSms?.startsWith("sms:+44207946?body="), kenSms);
+  await esc(); await closed();
+
+  // Review round 4 (§5.7): the Amount cell names the currency when the symbol doesn't (US$ → "· USD"; AED already does).
+  const amountCell = () => b.eval(`(() => { const r = [...document.querySelectorAll('li [aria-expanded=true]')][0]?.closest('li'); const dt = [...(r?.querySelectorAll('dt') ?? [])].find((x) => x.textContent === 'Amount');
+    return dt?.nextElementSibling?.textContent.replace(/\\u00a0/g, ' ') ?? null; })()`); // en-GB puts a no-break space after AED
+  await openRow("US$1,200.50");
+  check("USD invoice: the Amount cell reads US$1,200.50 · USD", (await amountCell()) === "US$1,200.50 · USD", await amountCell());
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Dubai Traders'), __t.set('ws-currency', 'AED'), __t.set('ws-amount', '1200'), __t.set('ws-number', 'AED-1'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
+  await closed();
+  await openRow("AED-1");
+  check("AED invoice: the Amount cell reads AED 1,200.00 with no repeated code", (await amountCell()) === "AED 1,200.00", await amountCell());
+  await openRow("Rohan Mehta");
+  check("INR invoice: the Amount cell has no currency code", (await amountCell()) === "₹10,000", await amountCell());
+
+  // Review round 4: the client sheet's + hint is tied to the phone field.
+  await tab("Clients");
+  await t(`__t.click(/^\\+ Add client$/)`); await opened();
+  const phoneHint = await b.eval("(() => { const d = document.getElementById('ws-c-phone').getAttribute('aria-describedby'); return d ? document.getElementById(d)?.textContent : null; })()");
+  check("client sheet: the phone field is described by its + hint", phoneHint === "For clients abroad, start the number with + and the country code.", phoneHint);
+  await esc(); await closed();
+  await tab("Invoices");
 
   // Phone width: rows, sheets and the Settings card never scroll sideways.
   await b.mobile(true);

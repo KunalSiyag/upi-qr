@@ -1151,13 +1151,14 @@ function Workspace() {
                                   {tr("Delete for good?")}
                                   <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
                                     onClick={() => { setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay.")); }}>
-                                    {tr("Delete")}
+                                    {/* Never a bare "Delete": e2e clicks the first button with that whole text (spec §5.9, review round 4). */}
+                                    {tr("Delete billing")}
                                   </button>
                                   {/* Focus goes to the safe choice: a held Enter on Delete must never confirm the delete (review round 3). */}
                                   <button type="button" data-plan-delete-keep="" autoFocus onClick={() => { planFocus.current = plan.id; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
                                 </span>
                               ) : (
-                                <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete")}</button>
+                                <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete monthly billing")}</button>
                               ))}
                             </div>
                           )}
@@ -1842,8 +1843,8 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         onSave(next, existing ? tr("Client updated.") : tr("Client added."));
       }}>
         <Field label={tr("Name")} htmlFor="ws-c-name"><input id="ws-c-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
-        <Field label={tr("WhatsApp number")} htmlFor="ws-c-phone"><input id="ws-c-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} /></Field>
-        {showCurrency && <p className="-mt-1.5 text-xs leading-5 text-muted">{tr("For clients abroad, start the number with + and the country code.")}</p>}
+        <Field label={tr("WhatsApp number")} htmlFor="ws-c-phone"><input id="ws-c-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} aria-describedby={showCurrency ? "ws-c-phone-hint" : undefined} /></Field>
+        {showCurrency && <p id="ws-c-phone-hint" className="-mt-1.5 text-xs leading-5 text-muted">{tr("For clients abroad, start the number with + and the country code.")}</p>}
         <Field label={tr("Email (optional)")} htmlFor="ws-c-email"><input id="ws-c-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} /></Field>
         <Field label={tr("GSTIN (optional)")} htmlFor="ws-c-gstin"><input id="ws-c-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} autoCapitalize="characters" /></Field>
         {showCurrency && (
