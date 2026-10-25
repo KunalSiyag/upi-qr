@@ -55,6 +55,11 @@ export interface ShelfSyncState extends SyncState {
   books: Record<string, BookSyncStatus>;
   legacy: boolean;
   plan: { id: PlanId; businesses: number } | null;
+  /**
+   * A book holds foreign-currency data the server's last reply didn't keep (a server without intl: 1, after a
+   * rollback): it stays on this device and syncs again after the next update (docs/spec-foreign-clients.md §2.6).
+   */
+  intlLocal?: boolean;
 }
 
 interface ClerkLike {
@@ -337,7 +342,8 @@ export function createShelfSync(opts: ShelfSyncOptions) {
       else if (statuses[PRIMARY_BOOK_ID] === "signed_out") status = "signed_out";
       else { status = "synced"; message = notice; }
     }
-    opts.onState({ status, lastSyncedAt, message, books: { ...statuses }, legacy, plan });
+    const intlLocal = [...session].some(([id, s]) => !s.keepsIntl && Boolean(opts.getBook(id)?.intl));
+    opts.onState({ status, lastSyncedAt, message, books: { ...statuses }, legacy, plan, ...(intlLocal ? { intlLocal } : {}) });
   }
 
   function engineFor(id: string): BookEngine {

@@ -1,15 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
-  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, invoiceViews,
-  liveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, currencyOf, getInvoice, repairIntl,
+  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, deletePlan, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
+  allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
+  inrEarned, paiseToDecimal, parseRupeesToPaise, repairIntl, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
-  daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
+  daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam, withoutTombstone,
   type InvoiceView, type Workspace,
 } from "../../lib/workspace/model";
+import { CURRENCIES, formatMoney, isForeignCurrency, type CurrencyCode } from "../../lib/workspace/currency";
 import { PLANS, TRIAL_BUSINESSES } from "../../lib/workspace/entitlements";
 import { MSMED_INTEREST_PCT } from "../../data/rbiRates";
 import {
-  asideBackupJson, backupJson, BOOKS_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
+  asideBackupJson, backupJson, BOOKS_UI, INTL_UI, cachedPlanLimit, discardAside, discardStash, listAside, loadActiveBook, loadBook, loadShelf, loadStash, onShelfChange, ownerChangedElsewhere,
   readOnlyBookIds, resetBook as resetStoredBook, restoreBackup, savePlanLimit, storedOwner,
   OTHER_ACCOUNT_INTL, SET_ASIDE_INTL, recordReceiptInto, removeBookStorage, retireBook, saveActiveBook, saveBook, saveIndex, sweepStrayBooks, takePendingDocument, trackDocumentInto,
   type AsideBook, type PendingDocument, type RestoreDone, type RestoreResult, type StashedAccount,
@@ -19,7 +21,8 @@ import { createPaylinkFor, createStatementLinkFor, deletePaylink, fetchPaylinks,
 import { pendingClaimCounts } from "../../lib/workspace/paylinks";
 import { trackProductEvent } from "../../lib/productEvents";
 import { isValidVpa } from "../../lib/upi-uri";
-import { InvoiceSheet, PaymentSheet, ReminderSheet } from "./Sheets";
+import { CURRENCY_OPTION, intlPickers, InvoiceSheet, PaymentSheet, phoneOk, ReminderSheet } from "./Sheets";
+import { IntlSettingsCard } from "./IntlSettingsCard";
 import { PlanPanel } from "./PlanPanel";
 import { StatementSheet } from "./StatementSheet";
 import { NotificationsPanel } from "./NotificationsPanel";
@@ -160,6 +163,21 @@ function Workspace() {
   const syncRef = useRef<ReturnType<typeof createShelfSync> | null>(null);
   const [paylinks, setPaylinks] = useState<PaylinkList | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
+  // The monthly-billing row asking "Delete for good?" (foreign plans only).
+  const [confirmPlan, setConfirmPlan] = useState<string | null>(null);
+  // Focus after the confirm closes, never <body>: "Keep" hands it back to that plan's Delete button (Keep takes it when
+  // the confirm opens); "Delete billing" moves it to the next plan's first button, else to "+ Add client" (the row, and
+  // the whole section with the last plan, unmount). The first selector that matches wins.
+  const planFocus = useRef<string[] | null>(null);
+  useEffect(() => {
+    const targets = planFocus.current;
+    if (!targets || confirmPlan !== null) return;
+    planFocus.current = null;
+    for (const selector of targets) {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) { el.focus(); return; }
+    }
+  });
   const [upsell, setUpsell] = useState<null | "paylinks" | "businesses" | "business_paylink">(null);
   const [addOpen, setAddOpen] = useState(false);
   /** A generator document waiting for "Which business is this for?" (§7.5). */
@@ -334,8 +352,7 @@ function Workspace() {
       const { ws: next, created } = generateRecurring(book, today, now);
       if (!created.length) continue;
       updates[id] = next;
-      // Foreign plan months are generated too, but this build shows only INR rows, so only those are announced.
-      if (id === active) createdHere = created.filter((cid) => { const inv = getInvoice(next, cid); return inv !== undefined && currencyOf(inv) === "INR"; }).length;
+      if (id === active) createdHere = created.length;
     }
     if (!Object.keys(updates).length) return;
     setShelf((s) => {
@@ -447,11 +464,37 @@ function Workspace() {
   }, [flash]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
-  const views = useMemo(() => invoiceViews(ws, today), [ws, today]);
+  // Every invoice, INR and foreign (docs/spec-foreign-clients.md §5): ₹ figures (summary, aging, client ₹ balances)
+  // are over INR views only; foreign amounts are per currency and always formatted in their own currency.
+  const views = useMemo(() => allInvoiceViews(ws, today), [ws, today]);
   const summary = useMemo(() => summarize(views, today), [views, today]);
+  const foreignSummary = useMemo(() => summarizeForeign(views, today), [views, today]);
+  // The Invoices badge counts every overdue invoice, as the table and Chase today do; only the KPI cells stay ₹ (§5.6).
+  const overdueBadge = summary.overdueCount + Object.values(foreignSummary).reduce((n, s) => n + (s?.overdueCount ?? 0), 0);
+  const earned = useMemo(() => inrEarned(views, today.slice(0, 7)), [views, today]);
+  const hasForeign = useMemo(() => views.some((v) => v.currency !== "INR"), [views]);
   const buckets = useMemo(() => agingBuckets(views), [views]);
   const chase = useMemo(() => chaseList(views).slice(0, 6), [views]);
   const balances = useMemo(() => clientBalances(views), [views]);
+  const foreignBalances = useMemo(() => clientForeignBalances(views), [views]);
+  /** Clients billed only abroad (foreign invoices or a foreign billing currency, no INR invoice): never "₹0" (§5.7). */
+  const foreignOnly = useMemo(() => {
+    const inr = new Set<string>();
+    const fx = new Set<string>();
+    for (const v of views) (v.currency === "INR" ? inr : fx).add(v.invoice.clientId);
+    return (clientId: string) => !inr.has(clientId) && (fx.has(clientId) || clientCurrency(ws, clientId) !== "INR");
+  }, [views, ws]);
+  /**
+   * Numbers held by both an INR and a foreign invoice: an older tab can't see foreign invoices and can issue a number
+   * one already has (§1.7). Two INR invoices sharing a number (two offline devices) is not flagged: an INR-only book
+   * renders exactly as before (Q9).
+   */
+  const duplicateNumbers = useMemo(() => {
+    const inr = new Set<string>();
+    const foreign = new Set<string>();
+    for (const v of views) (v.currency === "INR" ? inr : foreign).add(v.invoice.number.trim().toLowerCase());
+    return new Set([...foreign].filter((key) => inr.has(key)));
+  }, [views]);
   const clients = useMemo(() => liveClients(ws), [ws]);
   // This screen shows one business, so it only ever reads that business's links (§4.4): entries are filtered by the
   // book in their key ("<bookId>/<subject>", bare = the primary) and looked up with linkFor. Other businesses' links are
@@ -534,7 +577,7 @@ function Workspace() {
   const remindLink = sheet?.kind === "remind" ? linkFor(paylinks?.byInvoice, active, sheet.id) : undefined;
   /** The backup and the sync nudge cover every business on this device. */
   const liveBooks = useMemo(() => liveBookIds(shelf.index).flatMap((id) => (shelf.books[id] ? [shelf.books[id]] : [])), [shelf]);
-  const allInvoiceCount = useMemo(() => liveBooks.reduce((n, book) => n + liveInvoices(book).length, 0), [liveBooks]);
+  const allInvoiceCount = useMemo(() => liveBooks.reduce((n, book) => n + allLiveInvoices(book).length, 0), [liveBooks]);
 
   // ---- Several businesses (docs/spec-multi-business.md §7). Everything below renders only while BOOKS_UI is on.
 
@@ -759,7 +802,7 @@ function Workspace() {
             >
               <span className={tab === t.id ? "text-ink" : "text-muted"}><Icon name={t.id} /></span>
               {tr(t.label)}
-              {t.id === "invoices" && summary.overdueCount > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{summary.overdueCount}</span>}
+              {t.id === "invoices" && overdueBadge > 0 && <span className="ml-auto rounded-[6px] bg-[#fdeeec] px-1.5 text-[11px] font-semibold tabular-nums text-[#a8321d]">{overdueBadge}</span>}
             </button>
           ))}
         </div>
@@ -790,6 +833,8 @@ function Workspace() {
             <><Icon name="lock" className="h-3.5 w-3.5" />{tr("Saved only in this browser — no account needed.")} <button type="button" className="font-medium text-leaf hover:underline" onClick={() => setTab("settings")}>{tr("Back up or sync across devices")}</button></>
           )}
         </p>
+        {/* §2.6: a server that doesn't keep the foreign section (a rollback); the INR part keeps syncing. */}
+        {sync.intlLocal && <p role="status" className="mt-2 text-[13px] text-[#8a5a00]">{tr("Foreign-currency invoices are saved on this device only right now. They sync again after the next update.")}</p>}
         {saveFailed && <p role="alert" className={`mt-3 rounded-[10px] bg-[#fdeeec] px-4 py-2.5 text-[13px] font-medium ${dangerText}`}>{tr("This browser blocked saving. Your changes will be lost when you close the tab — download a backup from Settings.")}</p>}
 
         {flash && (
@@ -863,6 +908,8 @@ function Workspace() {
                       <div className="min-w-0 text-sm">
                         <p className="font-medium text-ink">{tr("{name} says they paid {amount} on their statement", { name: ws.clients[clientId]?.name ?? tr("Client"), amount: claim.amountPaise ? formatPaise(claim.amountPaise) : tr("an amount") })}</p>
                         <p className="text-[13px] text-muted">UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                        {/* A statement claim is the UPI / ₹ part only: never spread over foreign-currency invoices (§3.4). */}
+                        {foreignBalances.has(clientId) && <p className="text-[13px] text-muted">{tr("Applied to ₹ invoices only.")}</p>}
                       </div>
                       <div className="flex gap-2">
                         {!readOnly && claim.amountPaise && (balances.get(clientId)?.balancePaise ?? 0) > 0 && (
@@ -880,8 +927,11 @@ function Workspace() {
                   {pendingClaims.map(({ invoiceId, token, claim, view }) => (
                     <li key={`${token}-${claim.utr}`} className="flex flex-wrap items-center justify-between gap-3 px-4 py-3">
                       <div className="min-w-0 text-sm">
-                        <p className="font-medium text-ink">{tr("{name} says they paid {amount}", { name: view.client?.name ?? tr("Client"), amount: formatPaise(claim.amountPaise ?? view.balancePaise) })}</p>
-                        <p className="text-[13px] text-muted">{view.invoice.number} · UTR <span className="font-mono">{claim.utr}</span> · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
+                        {/* The amount is in the invoice's currency (the workspace knows the invoice, §4.5). */}
+                        <p className="font-medium text-ink">{tr("{name} says they paid {amount}", { name: view.client?.name ?? tr("Client"), amount: formatMoney(claim.amountPaise ?? view.balancePaise, view.currency) })}</p>
+                        <p className="text-[13px] text-muted">{view.invoice.number} · {view.currency === "INR"
+                          ? <>UTR <span className="font-mono">{claim.utr}</span></>
+                          : <span className="tabular-nums">{tr("Reference …{last4}", { last4: claim.utr.slice(-4) })}</span>} · {new Date(claim.at).toLocaleString(dateLocale, { day: "numeric", month: "short", hour: "numeric", minute: "2-digit" })}</p>
                       </div>
                       <div className="flex gap-2">
                         {!readOnly && view.balancePaise > 0 && (
@@ -927,6 +977,7 @@ function Workspace() {
                 <Stat label={tr("Due in 7 days")} value={formatPaise(summary.dueSoonPaise)} note={tr(summary.dueSoonCount === 1 ? "{n} invoice" : "{n} invoices", { n: summary.dueSoonCount })} dot={summary.dueSoonPaise ? "bg-[#e8a33d]" : undefined} className="border-r border-hairline" />
                 <Stat label={tr("Collected this month")} value={formatPaise(summary.collectedThisMonthPaise)} dot={summary.collectedThisMonthPaise ? "bg-[#1f7a52]" : undefined} />
               </section>
+              {hasForeign && <ForeignSummary summaries={foreignSummary} earned={earned} />}
 
               <GatewaySavings ws={ws} today={today} isPro={isPro} />
               <GettingStarted ws={ws} businessReady={liveBooks.some((book) => Boolean(book.business.name && book.business.upiId))} signedIn={signedIn} onAction={(step) => {
@@ -946,12 +997,14 @@ function Workspace() {
                   ) : (
                     <ul className="divide-y divide-hairline">
                       {chase.map((v) => (
-                        <li key={v.invoice.id} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 sm:grid-cols-[minmax(0,1fr)_7rem_auto]">
+                        <li key={v.invoice.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 ${hasForeign ? "sm:grid-cols-[minmax(0,1fr)_9rem_auto]" : "sm:grid-cols-[minmax(0,1fr)_7rem_auto]"}`}>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")} <span className="font-normal text-muted">· {v.invoice.number}</span></p>
-                            <p className="text-[13px] text-muted"><span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
+                            {/* With foreign amounts (wider) the number moves to the due line at every width, so the
+                                name line's truncation never hides it. */}
+                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")}{!hasForeign && <> <span className="font-normal text-muted">· {v.invoice.number}</span></>}</p>
+                            <p className="text-[13px] text-muted">{hasForeign && <span data-chase-number>{v.invoice.number} · </span>}<span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
                           </div>
-                          <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatPaise(v.balancePaise)}</p>
+                          <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatMoney(v.balancePaise, v.currency)}</p>
                           <div className="col-span-2 flex gap-2 sm:col-span-1 sm:justify-end">
                             <button type="button" onClick={() => setSheet({ kind: "remind", id: v.invoice.id })} className={rowButton}><Icon name="whatsapp" className="h-3.5 w-3.5 text-[#1da851]" />{tr("Remind")}</button>
                             {!readOnly && <button type="button" onClick={() => setSheet({ kind: "payment", id: v.invoice.id })} className={rowButton}>{tr("Got paid")}</button>}
@@ -975,6 +1028,7 @@ function Workspace() {
                       </div>
                     ))}
                   </div>
+                  {hasForeign && <p className="mt-3 text-xs leading-5 text-muted">{tr("Foreign-currency invoices aren't included.")}</p>}
                   <p className="mt-4 border-t border-hairline pt-3 text-xs leading-5 text-muted">{tr("If you are a Udyam-registered micro or small enterprise, business buyers owe you interest on dues unpaid after 45 days (MSMED Act, 2006 §15–16).")}</p>
                   {buckets[4].balancePaise > 0 && (
                     <a href="/msmed-interest-calculator/" className="mt-2 inline-block text-[13px] font-medium text-leaf hover:underline">{tr("Calculate MSMED interest on 45+ day dues →")}</a>
@@ -1017,7 +1071,7 @@ function Workspace() {
                 </div>
               ) : (
                 <div className={`${card} overflow-hidden`}>
-                  <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem] gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid">
+                  <div aria-hidden="true" className={`hidden ${hasForeign ? "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_6.5rem]" : "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem]"} gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid`}>
                     <span>{tr("Client")}</span><span>{tr("Invoice")}</span><span className="text-right">{tr("Amount")}</span><span>{tr("Status")}</span>
                   </div>
                   <ul className="divide-y divide-hairline">
@@ -1027,6 +1081,8 @@ function Workspace() {
                       <InvoiceRow
                         key={v.invoice.id}
                         view={v}
+                        wide={hasForeign}
+                        duplicate={duplicateNumbers.has(v.invoice.number.trim().toLowerCase())}
                         msme={msmeFor(v)}
                         signedIn={signedIn}
                         readOnly={readOnly}
@@ -1040,6 +1096,16 @@ function Workspace() {
                         onVoid={() => { setWs(upsertInvoice(ws, { ...v.invoice, voided: !v.invoice.voided }, Date.now())); }}
                         onDelete={() => { setWs(deleteInvoice(ws, v.invoice.id, Date.now())); setFlash(tr("{number} deleted.", { number: v.invoice.number })); }}
                         onUndoPayment={(paymentId) => setWs(removePayment(ws, v.invoice.id, paymentId, Date.now()))}
+                        onCredit={(paymentId, paise) => {
+                          // INR credited is added or corrected later from the payment row: an upsert of that foreign
+                          // invoice (§3.5). null removes the figure (the key is dropped; 0 is never stored).
+                          const payments = v.invoice.payments.map((p) => {
+                            if (p.id !== paymentId) return p;
+                            const { inrCreditedPaise: _old, ...rest } = p;
+                            return paise === null ? rest : { ...rest, inrCreditedPaise: paise };
+                          });
+                          setWs(upsertInvoice(ws, { ...v.invoice, payments }, Date.now()));
+                        }}
                       />
                       );
                     })}
@@ -1054,31 +1120,56 @@ function Workspace() {
 
           {tab === "clients" && (
             <div className="space-y-4">
-              {liveRecurring(ws).length > 0 && (
+              {allLiveRecurring(ws).length > 0 && (
                 <section className={card} aria-labelledby="monthly-title">
                   <h2 id="monthly-title" className={`${cardTitle} border-b border-hairline px-4 py-3.5`}>{tr("Monthly billing")}</h2>
                   <ul className="divide-y divide-hairline">
-                    {liveRecurring(ws).map((plan) => {
+                    {allLiveRecurring(ws).map((plan) => {
                       const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
+                      // A foreign plan can be deleted (its invoices stay): while it is live its client can't be removed.
+                      const deletable = currencyOf(plan) !== "INR";
                       return (
-                        <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                        <li key={plan.id} data-plan-row={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                           <div className="min-w-0">
-                            <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatPaise(plan.amountPaise)}</span></p>
+                            <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatMoney(plan.amountPaise, currencyOf(plan))}</span></p>
                             <p className="text-[13px] text-muted">
                               {tr("Day {d} of each month", { d: plan.dayOfMonth })}{plan.description ? ` · ${plan.description}` : ""}
                               {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
                             </p>
                           </div>
-                          {!ended && !readOnly && (
-                            <div className="flex gap-2">
-                              <button type="button" className={rowButton}
-                                onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
-                                {plan.paused ? tr("Resume") : tr("Pause")}
-                              </button>
-                              <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
-                                onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
-                                {tr("Stop after this month")}
-                              </button>
+                          {(!ended || deletable) && !readOnly && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              {!ended && (
+                                <>
+                                  <button type="button" className={rowButton}
+                                    onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
+                                    {plan.paused ? tr("Resume") : tr("Pause")}
+                                  </button>
+                                  <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
+                                    onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
+                                    {tr("Stop after this month")}
+                                  </button>
+                                </>
+                              )}
+                              {deletable && (confirmPlan === plan.id ? (
+                                <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
+                                  {tr("Delete for good?")}
+                                  <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
+                                    onClick={() => {
+                                      const plans = allLiveRecurring(ws).map((p) => p.id);
+                                      const at = plans.indexOf(plan.id);
+                                      planFocus.current = [...plans.slice(at + 1), ...plans.slice(0, at).reverse()].map((id) => `[data-plan-row="${CSS.escape(id)}"] button`).concat("[data-add-client]");
+                                      setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay."));
+                                    }}>
+                                    {/* Never a bare "Delete": e2e clicks the first button with that whole text (spec §5.9, review round 4). */}
+                                    {tr("Delete billing")}
+                                  </button>
+                                  {/* Focus goes to the safe choice: a held Enter on Delete must never confirm the delete (review round 3). */}
+                                  <button type="button" data-plan-delete-keep="" autoFocus onClick={() => { planFocus.current = [`[data-plan-delete="${CSS.escape(plan.id)}"]`]; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
+                                </span>
+                              ) : (
+                                <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete monthly billing")}</button>
+                              ))}
                             </div>
                           )}
                         </li>
@@ -1089,37 +1180,57 @@ function Workspace() {
               )}
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[13px] text-muted">{tr(clients.length === 1 ? "{n} client" : "{n} clients", { n: clients.length })}</p>
-                {!readOnly && <button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>}
+                {!readOnly && <button type="button" data-add-client="" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>}
               </div>
               {clients.length === 0 ? (
                 <p className={`${card} p-10 text-center text-sm text-muted`}>{tr("Clients are added automatically when you create an invoice.")}</p>
               ) : (
                 <div className={`${card} overflow-hidden`}>
-                  <div aria-hidden="true" className="hidden grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem] gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid">
+                  <div aria-hidden="true" className={`hidden ${hasForeign ? "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_10.5rem_4rem]" : "grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"} gap-4 border-b border-hairline bg-[#fafbfc] px-4 py-2 text-xs font-medium text-muted md:grid`}>
                     <span>{tr("Client")}</span><span>{tr("WhatsApp number")}</span><span className="text-right">{tr("Balance")}</span><span />
                   </div>
                   <ul className="divide-y divide-hairline">
                     {clients.map((c) => {
                       const bal = balances.get(c.id);
+                      // Per foreign currency (§5.7): a client who owes only US$ never reads "₹0".
+                      const fx = Object.entries(foreignBalances.get(c.id) ?? {}) as [CurrencyCode, { balancePaise: number; overduePaise: number; open: number }][];
+                      const open = (bal?.open ?? 0) + fx.reduce((n, [, b]) => n + b.open, 0);
+                      const owes = (bal?.balancePaise ?? 0) > 0 || fx.length > 0;
                       return (
                         <li key={c.id} className="px-4 py-3">
-                          <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-1 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]">
+                          <div className={`grid ${fx.length ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[minmax(0,1fr)_auto_auto]"} items-center gap-x-4 gap-y-1 ${hasForeign ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_10.5rem_4rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_4rem]"}`}>
                             <div className="flex min-w-0 items-center gap-2.5">
                               <span aria-hidden="true" className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-fog text-xs font-semibold text-charcoal">{c.name.trim().charAt(0).toUpperCase()}</span>
                               <button type="button" onClick={() => openClientInvoices(c.id)} className="min-w-0 text-left">
                                 <span className="block truncate text-sm font-medium text-ink hover:underline">{c.name}</span>
-                                <span className="block text-[13px] text-muted md:hidden">{c.phone || tr("No number")}{bal ? tr(" · {n} open", { n: bal.open }) : ""}</span>
-                                <span className="hidden text-[13px] text-muted md:block">{bal ? tr("{n} open", { n: bal.open }).trim() : "—"}</span>
+                                <span className="block text-[13px] text-muted md:hidden">{c.phone || tr("No number")}{open ? tr(" · {n} open", { n: open }) : ""}</span>
+                                <span className="hidden text-[13px] text-muted md:block">{open ? tr("{n} open", { n: open }).trim() : "—"}</span>
                               </button>
                             </div>
                             <span className="hidden truncate text-[13px] tabular-nums text-charcoal md:block">{c.phone || tr("No number")}</span>
-                            <div className="text-right">
-                              <p className="text-sm font-semibold tabular-nums text-ink">{formatPaise(bal?.balancePaise ?? 0)}</p>
-                              {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
-                            </div>
+                            {fx.length === 0 ? (
+                              <div className="text-right">
+                                <p className="text-sm font-semibold tabular-nums text-ink">{!bal && foreignOnly(c.id) ? "—" : formatPaise(bal?.balancePaise ?? 0)}</p>
+                                {bal?.overduePaise ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatPaise(bal.overduePaise) })}</p> : null}
+                              </div>
+                            ) : (
+                              // Several currencies: below md a full-width row under the name, one line per currency, so
+                              // the name keeps its width; from md the balance column as before.
+                              <div data-client-balances="" className="col-span-2 row-start-2 space-y-0.5 pl-[2.375rem] md:col-span-1 md:row-start-auto md:space-y-0 md:pl-0 md:text-right">
+                                {[...((bal?.balancePaise ?? 0) > 0 ? [["INR", bal!.balancePaise, bal!.overduePaise] as const] : []), ...fx.map(([currency, b]) => [currency, b.balancePaise, b.overduePaise] as const)].map(([currency, balance, overdue]) => (
+                                  // The overdue amount sits under its balance (as in the ₹-only column): a long amount never
+                                  // leaves a separator dangling at a line end.
+                                  <div key={currency}>
+                                    <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink">{formatMoney(balance, currency)}</p>
+                                    {/* No-break spaces inside the amount ("AED 12,360,678.00"): a line can only break before the word "overdue". */}
+                                    {overdue ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency).replace(/ /g, "\u00a0") })}</p> : null}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                             {readOnly ? <span /> : <button type="button" onClick={() => setSheet({ kind: "client", id: c.id })} className={`${ghostButton} justify-self-end`} aria-label={tr("Edit {name}", { name: c.name })}>{tr("Edit")}</button>}
                           </div>
-                          {(bal?.balancePaise ?? 0) > 0 || statementLinks.has(c.id) ? (
+                          {owes || statementLinks.has(c.id) ? (
                             <div className="mt-2 text-[13px] md:pl-[2.375rem]">
                               {statementLinks.has(c.id) ? (
                                 <div className="flex flex-wrap items-center gap-2 rounded-[10px] bg-fog p-2">
@@ -1131,7 +1242,7 @@ function Workspace() {
                               ) : readOnly ? null : !signedIn ? (
                                 <span className="text-muted">{tr("Statement links need a free account + Pro.")}</span>
                               ) : isPro ? (
-                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : tr("Share statement link — all dues + one UPI button")}</button>
+                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : (bal?.balancePaise ?? 0) > 0 ? tr("Share statement link — all dues + one UPI button") : tr("Share statement link — all dues + bank details")}</button>
                               ) : (
                                 <a href="/app/?tab=settings&upgrade=monthly" className="inline-flex items-center gap-1.5 text-charcoal hover:text-ink"><Icon name="link" className="h-3.5 w-3.5" />{tr("Statement link for all dues")} · <span className="font-medium text-leaf">Pro</span></a>
                               )}
@@ -1212,7 +1323,7 @@ function Workspace() {
         </div>
       </div>
 
-      {sheet?.kind === "invoice" && (!sheet.id || inrInvoice(ws, sheet.id)) && (
+      {sheet?.kind === "invoice" && (!sheet.id || getInvoice(ws, sheet.id)) && (
         <InvoiceSheet ws={ws} today={today} invoiceId={sheet.id} onClose={closeSheet} onSave={(next, id) => {
           const isNew = !sheet.id;
           const taken = setWs(next, sheet.bookId);
@@ -1222,7 +1333,7 @@ function Workspace() {
           if (isNew) trackProductEvent("invoice_tracked", "workspace");
         }} />
       )}
-      {sheet?.kind === "payment" && inrInvoice(ws, sheet.id) && (
+      {sheet?.kind === "payment" && getInvoice(ws, sheet.id) && (
         <PaymentSheet ws={ws} today={today} invoiceId={sheet.id} initialAmountPaise={sheet.amountPaise} initialReference={sheet.reference} onClose={closeSheet} onSave={(next) => {
           const claimToken = sheet.claimToken;
           const taken = setWs(next, sheet.bookId);
@@ -1233,7 +1344,7 @@ function Workspace() {
           if (claimToken) void deletePaylink(claimToken, "claims").then(() => refreshLinks());
         }} />
       )}
-      {sheet?.kind === "remind" && inrInvoice(ws, sheet.id) && (
+      {sheet?.kind === "remind" && getInvoice(ws, sheet.id) && (
         <ReminderSheet ws={ws} today={today} invoiceId={sheet.id} msmeTools={entitlement.msmeTools} payLink={remindLink ? paylinkUrl(remindLink.token) : undefined} onClose={closeSheet} onSent={(next) => {
           // The message is sent either way; the reminder log is kept only where the business takes edits.
           if (!readOnlyRef.current) setWs(next, sheet.bookId);
@@ -1415,7 +1526,7 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
     setHidden(Date.now() - dismissedAt < NUDGE_SNOOZE_MS);
     setInApp(IN_APP_BROWSER.test(navigator.userAgent));
   }, []);
-  const real = books.flatMap((ws) => liveInvoices(ws)).filter((i) => !isSampleId(i.id));
+  const real = books.flatMap((ws) => allLiveInvoices(ws)).filter((i) => !isSampleId(i.id));
   const atRisk = real.length >= 2 || real.some((i) => i.payments.length > 0) || (inApp && real.length > 0);
   if (hidden || !atRisk) return null;
   const dismiss = () => {
@@ -1439,15 +1550,6 @@ function SyncNudge({ books, today, backup }: { books: Workspace[]; today: string
       </div>
     </section>
   );
-}
-
-/**
- * An INR invoice to open a sheet on. Until the UI is currency-aware (docs/spec-foreign-clients.md PR 4),
- * sheets never open on a foreign-currency invoice.
- */
-function inrInvoice(ws: Workspace, id: string): boolean {
-  const invoice = getInvoice(ws, id);
-  return Boolean(invoice && currencyOf(invoice) === "INR");
 }
 
 /** UPI payments recorded this month on real (non-sample) INR invoices, in paise. */
@@ -1518,8 +1620,12 @@ function Stat({ label, value, note, tone, dot, className = "" }: { label: string
   );
 }
 
-function InvoiceRow({ view, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment }: {
+function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment, onCredit }: {
   view: InvoiceView;
+  /** The list holds foreign amounts ("AED 12,345,678.00"): a wider amount column. */
+  wide: boolean;
+  /** Another live invoice has the same number (§1.7). */
+  duplicate: boolean;
   /** A read-only business (after a downgrade): no edits, payments or new links. */
   readOnly: boolean;
   /** Set when a Udyam-registered business's invoice is past its MSMED deadline; interest is null without MSME tools. */
@@ -1535,40 +1641,101 @@ function InvoiceRow({ view, msme, signedIn, readOnly, payLink, linkBusy, onCreat
   onVoid: () => void;
   onDelete: () => void;
   onUndoPayment: (paymentId: string) => void;
+  /** Records, corrects or (null) removes the rupees credited for a payment of a foreign-currency invoice. */
+  onCredit: (paymentId: string, inrCreditedPaise: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
+  const [crediting, setCrediting] = useState<string | null>(null);
+  const [credit, setCredit] = useState("");
+  const [creditError, setCreditError] = useState("");
+  // Where focus goes when the INR credited form in the row closes: back to its trigger ("Add INR credited" or "Change",
+  // after Cancel, Escape or a save). Never left on <body>.
+  const creditFocus = useRef<{ paymentId: string; to: "open" | "undo" } | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = creditFocus.current;
+    if (crediting !== null || !target) return;
+    creditFocus.current = null;
+    rowRef.current?.querySelector<HTMLElement>(`[data-credit-${target.to}="${target.paymentId}"]`)?.focus();
+  });
+  const closeCredit = (paymentId: string, to: "open" | "undo") => { creditFocus.current = { paymentId, to }; setCrediting(null); };
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
   const { tr, dateLocale } = useWs();
   const { invoice } = view;
+  const currency = view.currency;
+  const foreign = currency !== "INR";
+  const money = (minor: number) => formatMoney(minor, currency);
   return (
     <li className={open ? "bg-[#fafbfc]" : undefined}>
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors duration-150 hover:bg-[#fafbfc] md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem]">
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className={`grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1 px-4 py-3 text-left transition-colors duration-150 hover:bg-[#fafbfc] ${wide ? "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_9.5rem_6.5rem]" : "md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)_8rem_6.5rem]"}`}>
         <div className="min-w-0">
           <p className="truncate text-sm font-medium text-ink">{view.client?.name ?? tr("Unknown client")}</p>
           <p className="truncate text-[13px] text-muted md:hidden">{invoice.number} · {dueText(view, tr, dateLocale)}{invoice.recurringId ? tr(" · Monthly") : ""}</p>
         </div>
         <p className="hidden min-w-0 truncate text-[13px] text-charcoal md:block"><span className="font-mono text-[12px] text-ink">{invoice.number}</span> · {dueText(view, tr, dateLocale)}{invoice.recurringId ? tr(" · Monthly") : ""}</p>
         <div className="text-right md:contents">
-          <p className="text-sm font-semibold tabular-nums text-ink md:text-right">{formatPaise(view.state === "paid" || view.state === "void" ? invoice.amountPaise : view.balancePaise)}</p>
+          <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink md:text-right">{money(view.state === "paid" || view.state === "void" ? invoice.amountPaise : view.balancePaise)}</p>
           <div className="md:justify-self-start"><StatusBadge state={view.state} /></div>
         </div>
       </button>
       {open && (
-        <div className="ws-row-detail border-t border-hairline px-4 pb-4 pt-3 text-sm">
+        <div ref={rowRef} className="ws-row-detail border-t border-hairline px-4 pb-4 pt-3 text-sm">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
             <div><dt className="text-muted">{tr("Invoice date")}</dt><dd className="text-ink">{shortDate(invoice.issueDate, dateLocale)}</dd></div>
             <div><dt className="text-muted">{tr("Due")}</dt><dd className="text-ink">{shortDate(invoice.dueDate, dateLocale)}</dd></div>
-            <div><dt className="text-muted">{tr("Amount")}</dt><dd className="tabular-nums text-ink">{formatPaise(invoice.amountPaise)}</dd></div>
-            <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{formatPaise(view.paidPaise)}</dd></div>
+            <div><dt className="text-muted">{tr("Amount")}</dt><dd className="tabular-nums text-ink">{money(invoice.amountPaise)}{foreign && !money(0).startsWith(currency) && <span className="whitespace-nowrap text-muted"> · {currency}</span>}</dd></div>
+            <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{money(view.paidPaise)}</dd></div>
           </dl>
+          {duplicate && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("Another invoice has this number.")}</p>}
           {invoice.description && <p className="mt-3 text-[13px] text-charcoal">{invoice.description}</p>}
           {invoice.payments.length > 0 && (
             <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
               {invoice.payments.map((p) => (
-                <li key={p.id} className="flex items-center justify-between gap-2 px-3 py-1.5">
-                  <span className="text-charcoal"><span className="font-medium tabular-nums text-ink">{formatPaise(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}</span>
-                  {!readOnly && <button type="button" onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
+                <li key={p.id} className="px-3 py-1.5">
+                  {/* "Add INR credited" (or "Change") next to Undo leaves the payment text half a phone row: below sm the
+                      actions wrap under it. */}
+                  <div className={foreign && !readOnly ? "flex flex-wrap items-center justify-between gap-2 gap-y-1 sm:flex-nowrap" : "flex items-center justify-between gap-2"}>
+                    <span className="min-w-0 break-words text-charcoal">
+                      <span className="font-medium tabular-nums text-ink">{money(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}
+                      {foreign && p.inrCreditedPaise ? <> · <span className="tabular-nums">{tr("{amount} credited", { amount: formatPaise(p.inrCreditedPaise) })}</span></> : null}
+                    </span>
+                    <span className={`${foreign && !readOnly ? "ml-auto " : ""}flex shrink-0 items-center gap-3`}>
+                      {/* Spec §3.5: the figure stays editable from the payment row, so a typo can be corrected. */}
+                      {foreign && !readOnly && crediting !== p.id && (
+                        <button type="button" data-credit-open={p.id} aria-label={p.inrCreditedPaise ? tr("Change INR credited") : undefined}
+                          onClick={() => { setCrediting(p.id); setCredit(p.inrCreditedPaise ? paiseToDecimal(p.inrCreditedPaise) : ""); setCreditError(""); }}
+                          className="font-medium text-leaf hover:underline">{p.inrCreditedPaise ? tr("Change") : tr("Add INR credited")}</button>
+                      )}
+                      {!readOnly && <button type="button" data-credit-undo={p.id} onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
+                    </span>
+                  </div>
+                  {crediting === p.id && (
+                    <form noValidate className="mt-1.5 flex flex-wrap items-center gap-2" onKeyDown={(e) => {
+                      if (e.key !== "Escape") return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeCredit(p.id, "open");
+                    }} onSubmit={(e) => {
+                      e.preventDefault();
+                      // Emptying the field of a saved figure removes it; a new figure must be a valid amount.
+                      if (p.inrCreditedPaise && !credit.trim()) {
+                        onCredit(p.id, null);
+                        return closeCredit(p.id, "open");
+                      }
+                      const paise = parseRupeesToPaise(credit);
+                      if (!paise) return setCreditError(tr("Enter an amount like 1500 or 1500.50."));
+                      onCredit(p.id, paise);
+                      closeCredit(p.id, "open");
+                    }}>
+                      <label htmlFor={`ws-credit-${p.id}`} className="sr-only">{tr("INR credited (₹, optional)")}</label>
+                      <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus
+                        aria-invalid={creditError ? true : undefined} aria-describedby={creditError ? `ws-credit-${p.id}-error` : undefined} />
+                      <button type="submit" className={rowButton}>{p.inrCreditedPaise ? tr("Save INR credited") : tr("Add INR credited")}</button>
+                      <button type="button" onClick={() => closeCredit(p.id, "open")} className={ghostButton}>{tr("Cancel")}</button>
+                      {creditError && <p id={`ws-credit-${p.id}-error`} role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
+                    </form>
+                  )}
                 </li>
               ))}
             </ul>
@@ -1591,7 +1758,7 @@ function InvoiceRow({ view, msme, signedIn, readOnly, payLink, linkBusy, onCreat
                   <button type="button" className={`${ghostButton} hover:text-[#a8321d]`} onClick={onRevokeLink}>{tr("Turn off")}</button>
                 </div>
               ) : signedIn ? (
-                <button type="button" disabled={linkBusy} onClick={onCreateLink} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy ? tr("Creating pay link…") : tr("Create pay link — client sees amount + UPI button")}</button>
+                <button type="button" disabled={linkBusy} onClick={onCreateLink} className="inline-flex items-center gap-1.5 text-[13px] font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy ? tr("Creating pay link…") : foreign ? tr("Create pay link — client sees amount + bank details") : tr("Create pay link — client sees amount + UPI button")}</button>
               ) : (
                 <p className="text-[13px] text-muted">{tr("Pay links need a free account.")} <a className="font-medium text-leaf hover:underline" href={"/sign-up/?redirect_url=" + encodeURIComponent("/app/?tab=invoices")}>{tr("Create one")}</a></p>
               )}
@@ -1653,42 +1820,89 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   const [phone, setPhone] = useState(existing?.phone ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [gstin, setGstin] = useState(existing?.gstin ?? "");
+  // The client's billing currency as it is now: sync or another tab may change it while this sheet is open. The field
+  // shows that live value until the user picks one, and Save writes the currency only when the user picked it, so a
+  // name or phone edit never overwrites (or brings back) a currency set elsewhere.
+  const liveCurrency = clientId ? clientCurrency(ws, clientId) : "INR";
+  const [picked, setPicked] = useState<CurrencyCode | null>(null);
+  const currency = picked ?? liveCurrency;
   const [error, setError] = useState("");
   const { tr } = useWs();
-  // deleteClient refuses while a live INR invoice, or any live foreign invoice or plan, references the client.
-  // This build shows INR records only (foreign-clients spec §0, second invariant), so a client held only by foreign
-  // records gets a message naming that cause, never "delete their invoices" for invoices it can't show.
-  const hasInvoices = !!clientId && liveInvoices(ws).some((i) => i.clientId === clientId);
-  const hasHidden = !!clientId && !hasInvoices && clientHasForeignRecords(ws, clientId);
+  // The billing-currency field and its phone hint show under the same rule as the invoice sheet's picker (§5.4).
+  const showCurrency = INTL_UI && (intlPickers(ws) || liveCurrency !== "INR");
+  const international = isForeignCurrency(currency);
+  // deleteClient refuses while a live invoice in either map, or a live foreign plan, references the client.
+  const hasInvoices = !!clientId && allLiveInvoices(ws).some((i) => i.clientId === clientId);
+  const hasPlan = !!clientId && !hasInvoices && clientHasForeignRecords(ws, clientId);
 
   return (
     <Sheet title={existing ? tr("Edit {name}", { name: existing.name }) : tr("Add client")} onClose={onClose}>
       <form noValidate className="space-y-3" onSubmit={(e) => {
         e.preventDefault();
         if (!name.trim()) return setError(tr("Name is required."));
-        if (phone && phone.replace(/\D/g, "").length < 10) return setError(tr("Enter a 10-digit mobile number, or leave it blank."));
+        if (phone && !phoneOk(phone, international)) return setError(tr("Enter a 10-digit mobile number, or leave it blank."));
         if (gstin && !/^[0-9]{2}[A-Z0-9]{13}$/i.test(gstin.trim())) return setError(tr("GSTIN should be 15 characters, starting with a 2-digit state code."));
         const now = Date.now();
-        onSave(upsertClient(ws, {
-          id: existing?.id ?? newId("cli"), name: name.trim().slice(0, 80), phone: phone.trim(), email: email.trim().slice(0, 120),
+        const id = existing?.id ?? newId("cli");
+        // Spread, so fields this form doesn't edit are kept; a client deleted elsewhere meanwhile comes back.
+        let next = upsertClient(ws, {
+          ...(existing ? withoutTombstone(existing) : {}), id, name: name.trim().slice(0, 80), phone: phone.trim(), email: email.trim().slice(0, 120),
           gstin: gstin.trim().toUpperCase(), createdAt: existing?.createdAt ?? now, updatedAt: now,
-        }, now), existing ? tr("Client updated.") : tr("Client added."));
+        }, now);
+        if (showCurrency && picked !== null && picked !== liveCurrency) next = setClientCurrency(next, id, picked, now);
+        onSave(next, existing ? tr("Client updated.") : tr("Client added."));
       }}>
         <Field label={tr("Name")} htmlFor="ws-c-name"><input id="ws-c-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
-        <Field label={tr("WhatsApp number")} htmlFor="ws-c-phone"><input id="ws-c-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} /></Field>
+        <Field label={tr("WhatsApp number")} htmlFor="ws-c-phone"><input id="ws-c-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" maxLength={20} aria-describedby={showCurrency ? "ws-c-phone-hint" : undefined} /></Field>
+        {showCurrency && <p id="ws-c-phone-hint" className="-mt-1.5 text-xs leading-5 text-muted">{tr("For clients abroad, start the number with + and the country code.")}</p>}
         <Field label={tr("Email (optional)")} htmlFor="ws-c-email"><input id="ws-c-email" type="email" className={inputClass} value={email} onChange={(e) => setEmail(e.target.value)} maxLength={120} /></Field>
         <Field label={tr("GSTIN (optional)")} htmlFor="ws-c-gstin"><input id="ws-c-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} autoCapitalize="characters" /></Field>
+        {showCurrency && (
+          <Field label={tr("Billing currency")} htmlFor="ws-client-currency">
+            <select id="ws-client-currency" className={inputClass} value={currency} onChange={(e) => setPicked(e.target.value as CurrencyCode)}>
+              {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
+            </select>
+          </Field>
+        )}
         {error && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{error}</p>}
         <div className="flex flex-wrap gap-2 pt-1">
           <button type="submit" className={`${primaryButton} flex-1`}>{tr("Save")}</button>
-          {existing && !hasInvoices && !hasHidden && (
+          {existing && !hasInvoices && !hasPlan && (
             <button type="button" onClick={() => onSave(deleteClient(ws, existing.id, Date.now()), tr("{name} removed.", { name: existing.name }))} className={`${ghostButton} ${dangerText}`}>{tr("Remove client")}</button>
           )}
         </div>
         {existing && hasInvoices && <p className="text-xs text-muted">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
-        {existing && hasHidden && <p className="text-xs text-muted">{tr("This client has foreign-currency invoices this version can't show yet, so it can't be removed. Reload the page to update.")}</p>}
+        {existing && hasPlan && <p className="text-xs text-muted">{tr("Clients with monthly billing in another currency can't be removed — delete the monthly billing first (Clients → Monthly billing).")}</p>}
       </form>
     </Sheet>
+  );
+}
+
+/**
+ * Clients abroad on the overview (§5.6): one plain line per foreign currency under the ₹ strip, and the rupees the
+ * bank credited this month as recorded. No buttons, nothing to expand.
+ */
+function ForeignSummary({ summaries, earned }: { summaries: ReturnType<typeof summarizeForeign>; earned: ReturnType<typeof inrEarned> }) {
+  const { tr } = useWs();
+  const lines = (Object.entries(summaries) as [CurrencyCode, NonNullable<ReturnType<typeof summarizeForeign>[keyof ReturnType<typeof summarizeForeign>]>][])
+    .filter(([, s]) => s.outstandingPaise > 0);
+  if (!lines.length && earned.creditedPaise <= 0) return null;
+  return (
+    <section aria-label={tr("Clients abroad")} className={`${card} divide-y divide-hairline px-4 text-[13px] text-charcoal`}>
+      {lines.map(([currency, s]) => (
+        // Below sm the overdue amount takes its own line, so a wrapped line never starts with the separator.
+        <p key={currency} className="py-2 tabular-nums sm:flex sm:flex-wrap sm:gap-x-1.5">
+          <span className="block font-medium text-ink sm:inline">{tr("{amount} to collect", { amount: formatMoney(s.outstandingPaise, currency) })}</span>
+          {s.overduePaise > 0 && <span className="block text-[#a8321d] sm:inline"><span aria-hidden="true" className="hidden sm:inline">· </span>{tr("{amount} overdue", { amount: formatMoney(s.overduePaise, currency) })}</span>}
+        </p>
+      ))}
+      {earned.creditedPaise > 0 && (
+        <p className="py-2 tabular-nums">
+          {tr("INR earned this month: {amount}", { amount: formatPaise(earned.creditedPaise) })}
+          {earned.missing > 0 && <span className="text-muted"> {tr(earned.missing === 1 ? "({n} payment without INR credited)" : "({n} payments without INR credited)", { n: earned.missing })}</span>}
+        </p>
+      )}
+    </section>
   );
 }
 
@@ -1775,6 +1989,11 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, readOnlyIds, today, re
         )}
       </section>
 
+      {/* Also on a flag-off build once the book holds foreign data (synced, or a PR 5 rollback, §10): the reminder, LUT
+          and pay-link messages on that data point here, and live foreign pay links show these details. An INR-only book
+          has no intl key, so its Settings stay as they are. */}
+      {(INTL_UI || ws.intl) && <IntlSettingsCard ws={ws} today={today} readOnly={readOnly} onChange={onChange} />}
+
       <section className={`${card} p-5`}>
         <h2 className={cardTitle}>{tr("Your data")}</h2>
         <p className={`mt-0.5 ${cardNote}`}>{tr("Everything lives in this browser. Clearing site data or switching phones loses it unless you keep a backup.")}</p>
@@ -1787,7 +2006,7 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, readOnlyIds, today, re
             {tr("Restore backup")}
             <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
           </label>
-          <button type="button" className={secondaryButton} onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(invoiceViews(ws, today)), "text/csv;charset=utf-8")}>{tr("Export all as CSV")}</button>
+          <button type="button" className={secondaryButton} onClick={() => downloadText(`invoices-${today}.csv`, invoicesCsv(allInvoiceViews(ws, today)), "text/csv;charset=utf-8")}>{tr("Export all as CSV")}</button>
         </div>
         {confirmRestore && (() => {
           const target = shelf.books[confirmRestore.target]?.business.name || tr("Your business");
@@ -1989,7 +2208,7 @@ function GettingStarted({ ws, businessReady, signedIn, onAction }: { ws: Workspa
   useEffect(() => {
     try { setDismissed(localStorage.getItem(CHECKLIST_KEY) === "1"); } catch { setDismissed(false); }
   }, []);
-  const real = liveInvoices(ws).filter((i) => !isSampleId(i.id));
+  const real = allLiveInvoices(ws).filter((i) => !isSampleId(i.id));
   const steps: { id: "business" | "invoice" | "remind" | "payment" | "account"; label: string; done: boolean }[] = [
     { id: "business", label: tr("Add your business name and UPI ID"), done: businessReady },
     { id: "invoice", label: tr("Add an invoice you're waiting on"), done: real.length > 0 },

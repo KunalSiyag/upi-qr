@@ -603,8 +603,8 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
     const paid = { index: emptyIndex(), books: { biz_primary: M.addPayment(mixed, "inv_usd00001", { amountPaise: 300000, date: "2026-10-05", mode: "bank", reference: "" }, T + 1) } };
     assert.deepEqual(paidLinkTokens(links, paid, new Set(["biz_primary"]), "2026-10-10"), ["t-usd", "t-gone"]);
   }
-  // The switcher badge counts only claims this build can show (review round 1): a claim on a foreign link carries
-  // currency and has no claim card until PR 4, so it is left out; INR invoice and statement claims count as before.
+  // The switcher badge counts every claim the screen shows: since PR 4 foreign claims have claim cards too (review
+  // round 1 of PR 3 left them out until then); INR invoice and statement claims count as before.
   {
     const { pendingClaimCounts } = await import("../src/lib/workspace/paylinks.ts");
     const inrClaim = { utr: "412345678901", amountPaise: 100, at: 1 };
@@ -616,7 +616,7 @@ assert.deepEqual(parseClaims(['{"utr":"412345678901","amountPaise":100,"at":1}',
       "biz_bbbbbb01/inv_usd00001": { claims: [usdClaim] },
       "biz_bbbbbb01/inv_00000002": { claims: [] },
       "biz_cccccc01/inv_00000003": { claims: [inrClaim] },
-    }), { biz_primary: 3, biz_bbbbbb01: 0, biz_cccccc01: 1 });
+    }), { biz_primary: 5, biz_bbbbbb01: 1, biz_cccccc01: 1 });
   }
 }
 

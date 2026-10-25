@@ -130,6 +130,8 @@ try {
   writeFileSync(backupPath, JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(snapshot) }));
   await t(`__t.click(/^Settings$/)`);
   await sleep(200);
+  // INTL_UI is off in this build (docs/spec-foreign-clients.md §5.1): no Clients abroad card, nothing new to create.
+  check("no Clients abroad card while INTL_UI is off", !/Clients abroad/.test(await text()) && !(await b.eval("!!document.getElementById('ws-intl-on')")));
   await t(`__t.click(/^Erase workspace on this device/)`);
   await t(`__t.click(/^Erase$/)`);
   await sleep(200);
@@ -147,6 +149,21 @@ try {
   await sleep(200);
   page = await text();
   check("restore after erase brings data back", page.includes("Acme Traders") && page.includes("₹15,000") && page.includes("Sharma Tuition"));
+
+  // Two offline devices can each issue the same INR number; an INR-only book shows no new note for it (Q9: the
+  // duplicate-number note is only for an INR and a foreign invoice sharing a number, §1.7).
+  await b.eval(`(() => { const w = JSON.parse(localStorage.getItem('proupiqr-workspace-v1')); const inv = Object.values(w.invoices).find((i) => !i.deletedAt);
+    w.invoices.inv_twin0001 = { ...inv, id: 'inv_twin0001', payments: [], reminders: [], updatedAt: inv.updatedAt + 1 }; localStorage.setItem('proupiqr-workspace-v1', JSON.stringify(w)); return true; })()`);
+  await b.go(BASE + "/app/?tab=invoices", 2500);
+  await t(`__t.click(/^all$/)`);
+  const rows = await b.eval("document.querySelectorAll('li [aria-expanded]').length");
+  let noted = false;
+  for (let i = 0; i < rows; i++) {
+    await b.eval(`(() => { const r = document.querySelectorAll('li [aria-expanded]')[${i}]; if (r.getAttribute('aria-expanded') !== 'true') r.click(); return true; })()`);
+    await sleep(150);
+    noted ||= /Another invoice has this number/.test(await text());
+  }
+  check("INR-only book: two INR invoices with one number show no duplicate note", rows >= 2 && !noted, `rows=${rows}`);
 
   check("no console errors", b.errors.length === 0, b.errors.join(" | "));
 } catch (error) {

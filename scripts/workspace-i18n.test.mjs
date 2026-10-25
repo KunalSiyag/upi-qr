@@ -4,7 +4,7 @@ import { WS_HI } from "../src/data/workspacePhrases.ts";
 
 // Every English string the workspace shows through tr() must have Hindi, with the same placeholders.
 const dir = new URL("../src/components/workspace/", import.meta.url);
-const files = ["PaymentsWorkspace", "Sheets", "StatementSheet", "PlanPanel", "NotificationsPanel", "InstallApp", "ui", "BusinessSwitcher"];
+const files = ["PaymentsWorkspace", "Sheets", "StatementSheet", "PlanPanel", "NotificationsPanel", "InstallApp", "ui", "BusinessSwitcher", "IntlSettingsCard"];
 const keys = new Set();
 for (const f of files) {
   const s = readFileSync(new URL(`${f}.tsx`, dir), "utf8");
@@ -37,7 +37,9 @@ const model = readFileSync(new URL("../src/lib/workspace/model.ts", import.meta.
 for (const m of model.matchAll(/key: "[a-z0-9_]+", label: "([^"]+)"/g)) keys.add(m[1]);
 
 // Brand names, and literals that are comparison operands inside tr(cond ? "A" : "B") rather than text.
-const untranslated = new Set(["Pro", "UPI", "UPI ID", "…", "yearly"]);
+// Clients abroad (docs/spec-foreign-clients.md §5.10): codes and names stay Latin in Hindi too.
+const untranslated = new Set(["Pro", "UPI", "UPI ID", "…", "yearly", "SWIFT / BIC", "LUT ARN", "IBAN", "FIRA", "FIRC", "PayPal", "Wise", "Stripe",
+  "INR", "USD", "EUR", "GBP", "AED", "AUD", "CAD", "SGD"]);
 const missing = [...keys].filter((k) => /[A-Za-z]/.test(k) && !untranslated.has(k) && !(k in WS_HI));
 assert.deepEqual(missing, [], `Hindi missing for: ${missing.join(" | ")}`);
 const placeholders = (s) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(",");

@@ -270,6 +270,17 @@ export function getInvoice(ws: Workspace, id: string): Invoice | undefined {
   return own(ws.invoices, id) ?? own(ws.intl?.invoices, id);
 }
 
+/**
+ * `record` without its tombstone. A sheet saving an edit to a record another tab or device deleted while it was open
+ * spreads the stored record; without this the edit would land on the tombstone (and, newer, win against the delete
+ * on every device) while the toast says it was saved. With it the record comes back with the edits, as before.
+ */
+export function withoutTombstone<T extends { deletedAt?: number }>(record: T): T {
+  if (record.deletedAt === undefined) return record;
+  const { deletedAt: _gone, ...rest } = record;
+  return rest as T;
+}
+
 /** A plan in either map (legacy first), tombstones included. */
 export function getPlan(ws: Workspace, id: string): RecurringPlan | undefined {
   return own(ws.recurring, id) ?? own(ws.intl?.recurring, id);
@@ -1164,6 +1175,16 @@ export function upsertPlan(ws: Workspace, plan: RecurringPlan, now: number): Wor
   return { ...ws, recurring: { ...ws.recurring, [plan.id]: { ...legacy, updatedAt: now } } };
 }
 
+/**
+ * Tombstones a plan; the invoices it created stay. The UI offers it for foreign plans: a live one keeps its client
+ * from being removed (deleteClient), and stopping it ("Stop after this month") leaves it live.
+ */
+export function deletePlan(ws: Workspace, planId: string, now: number): Workspace {
+  const plan = getPlan(ws, planId);
+  if (!plan || plan.deletedAt) return ws;
+  return upsertPlan(ws, { ...plan, deletedAt: now }, now);
+}
+
 function monthIndex(month: string): number {
   const [y, m] = month.split("-").map(Number);
   return y * 12 + (m - 1);
@@ -1188,6 +1209,21 @@ export function planMonths(ws: Workspace, plan: RecurringPlan): string[] {
   const months: string[] = [];
   for (const id of Object.keys(map)) if (id.startsWith(prefix)) months.push(`${id.slice(-6, -2)}-${id.slice(-2)}`);
   return months.sort();
+}
+
+/**
+ * The export mark (§6) a foreign plan's month gets: the mark of the plan's latest earlier live month, so a plan
+ * started with "Export of services" ticked keeps the LUT line every month, and unticking it on a month stops it from
+ * then on. No earlier live month → false. Only the plan's own months count (a plan's currency is fixed at creation),
+ * and nothing is repaired afterwards: a month an older build generated without the mark keeps it off, and the user
+ * ticks it on that month.
+ */
+function carriedExportMark(ws: Workspace, plan: RecurringPlan, month: string): boolean {
+  for (let back = monthIndex(month) - 1; back >= monthIndex(plan.startMonth); back--) {
+    const earlier = getInvoice(ws, recurringInvoiceId(plan.id, monthFromIndex(back)));
+    if (earlier && !earlier.deletedAt) return earlier.exportLut === true;
+  }
+  return false;
 }
 
 /**
@@ -1224,7 +1260,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
         reminders: [],
         voided: false,
         recurringId: plan.id,
-        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency } : {}),
+        ...(isForeignCurrency(plan.currency) ? { currency: plan.currency, ...(carriedExportMark(next, plan, month) ? { exportLut: true } : {}) } : {}),
         createdAt: now,
         updatedAt: now,
       }, now);
@@ -1390,6 +1426,95 @@ export function intlPayable(settings: IntlSettings | undefined, currency: Foreig
 }
 
 /**
+ * The client's default billing currency: its live intl.clients entry while the client itself is live, else "INR". It
+ * only pre-fills the invoice sheet. An entry whose client an older tab deleted stays as it is (a revived client gets
+ * its currency back), and pruneTombstones keeps it, as PR 1–3 do: dropping it on one build only would make that build's
+ * copy differ from theirs forever (review round 3).
+ */
+export function clientCurrency(ws: Workspace, clientId: string): CurrencyCode {
+  const entry = own(ws.intl?.clients, clientId);
+  const client = own(ws.clients, clientId);
+  return entry && !entry.deletedAt && client && !client.deletedAt && isForeignCurrency(entry.currency) ? entry.currency : "INR";
+}
+
+/**
+ * Sets a client's billing currency. A foreign currency writes the side record; "INR" tombstones an existing one
+ * (INR is the default and is never written). Unchanged → the same workspace, so saving a client writes nothing new.
+ */
+export function setClientCurrency(ws: Workspace, clientId: string, currency: CurrencyCode, now: number): Workspace {
+  const entry = own(ws.intl?.clients, clientId);
+  if (isForeignCurrency(currency)) {
+    if (entry && !entry.deletedAt && entry.currency === currency) return ws;
+    const intl = ws.intl ?? emptyIntl();
+    return { ...ws, intl: { ...intl, clients: { ...intl.clients, [clientId]: { currency, updatedAt: now } } } };
+  }
+  if (!ws.intl || !entry || entry.deletedAt) return ws;
+  return { ...ws, intl: { ...ws.intl, clients: { ...ws.intl.clients, [clientId]: { ...entry, deletedAt: now, updatedAt: now } } } };
+}
+
+/**
+ * The client an invoice edit saves onto, brought back when another tab or device deleted it while the sheet was open
+ * (the sheet brings the invoice itself back with withoutTombstone). An invoice in a foreign currency also brings back
+ * the client's billing currency when none is live (deleteClient tombstoned it), so the client isn't billed in INR
+ * afterwards (review round 5). A live client, or none: `ws` itself.
+ */
+export function reviveClient(ws: Workspace, clientId: string, currency: CurrencyCode, now: number): Workspace {
+  const client = own(ws.clients, clientId);
+  if (!client?.deletedAt) return ws;
+  const next = upsertClient(ws, withoutTombstone(client), now);
+  return isForeignCurrency(currency) && clientCurrency(next, clientId) === "INR" ? setClientCurrency(next, clientId, currency, now) : next;
+}
+
+/**
+ * The business's clients-abroad settings, patched (one last-writer-wins record). The result goes through the
+ * sanitizer's own rules (normalized fields, LUT fields only with the LUT on, empty per-currency sets dropped), so
+ * what is kept in memory is exactly what the next load would read.
+ */
+export function updateIntlSettings(ws: Workspace, patch: Partial<Omit<IntlSettings, "updatedAt">>, now: number): Workspace {
+  const intl = ws.intl ?? emptyIntl();
+  const settings = sanitizeIntlSettings({ ...(intl.settings ?? emptyIntlSettings(now)), ...patch, updatedAt: now });
+  if (!settings) return ws;
+  // An all-empty save with no record yet writes nothing: an INR-only book keeps its bytes (no intl key). An existing
+  // record is always written, so turning everything off beats an older record on another device.
+  if (!intl.settings && settingsEmpty(settings)) return ws;
+  return { ...ws, intl: { ...intl, settings } };
+}
+
+/** What the Clients abroad form edits: the settings record without its timestamp. */
+export type IntlSettingsForm = Omit<IntlSettings, "updatedAt" | "byCurrency"> & { byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> };
+
+/**
+ * A save from the Clients abroad form: only what the user changed between `before` (the form as it was filled) and
+ * `after` is applied, onto the settings as they are in `ws` now. Sync or another tab may have merged newer settings
+ * into `ws` since the form was filled, and a field, the LUT group or a per-currency set the user didn't touch keeps
+ * that newer value. The LUT toggle, ARN and year move together; a per-currency set moves whole. Nothing changed →
+ * `ws` itself (no write).
+ */
+export function editIntlSettings(ws: Workspace, before: IntlSettingsForm, after: IntlSettingsForm, now: number): Workspace {
+  const patch: Partial<Omit<IntlSettings, "updatedAt">> = {};
+  if (before.on !== after.on) patch.on = after.on;
+  for (const field of PAY_DETAIL_FIELDS) if (before[field] !== after[field]) patch[field] = after[field];
+  if (before.exportUnderLut !== after.exportUnderLut || before.lutArn !== after.lutArn || before.lutFy !== after.lutFy) {
+    patch.exportUnderLut = after.exportUnderLut;
+    patch.lutArn = after.lutArn;
+    patch.lutFy = after.lutFy;
+  }
+  const sameSet = (a?: PayDetailsFields, b?: PayDetailsFields) => PAY_DETAIL_FIELDS.every((f) => (a?.[f] ?? "") === (b?.[f] ?? ""));
+  const touched = FOREIGN_CURRENCIES.filter((c) => !sameSet(own(before.byCurrency, c), own(after.byCurrency, c)));
+  if (touched.length) {
+    const byCurrency: Partial<Record<ForeignCurrency, PayDetailsFields>> = { ...ws.intl?.settings?.byCurrency };
+    for (const c of touched) {
+      const set = own(after.byCurrency, c);
+      if (set) byCurrency[c] = set;
+      else delete byCurrency[c];
+    }
+    patch.byCurrency = byCurrency;
+  }
+  if (!Object.keys(patch).length) return ws;
+  return updateIntlSettings(ws, patch, now);
+}
+
+/**
  * The export line for an invoice: only for a foreign invoice the user marked as an export (exportLut), with the
  * LUT toggle and ARN set, a business GSTIN, a client without a GSTIN, and the issue date in the LUT's financial
  * year. Otherwise "". The currency alone never makes an invoice an export (IGST Act s.2(6)).
@@ -1521,6 +1646,18 @@ export function reminderMessage(
 }
 
 /**
+ * A number typed with "+" or "00" (a client abroad), as dialled from another country: country code and number, with
+ * the bracketed trunk prefix dropped ("+44 (0)20 7946 0958" → 442079460958; every other 0 stays). "" when the number
+ * isn't typed that way. WhatsApp and SMS both use it, so both go to the same number.
+ */
+export function internationalDigits(phone: string): string {
+  const typed = phone.trim();
+  if (!typed.startsWith("+") && !typed.startsWith("00")) return "";
+  const digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
+  return typed.startsWith("+") ? digits : digits.slice(2);
+}
+
+/**
  * wa.me link; 10-digit Indian numbers get the 91 country code. With `international` (the invoice is foreign, or
  * the client is billed in a foreign currency), a number typed with "+" or "00" is used as typed, without 91 and
  * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
@@ -1530,9 +1667,7 @@ export function whatsappLink(phone: string, text: string, opts?: { international
   let digits = phone.replace(/\D/g, "");
   const typed = phone.trim();
   if (opts?.international && (typed.startsWith("+") || typed.startsWith("00"))) {
-    // A bracketed "(0)" is the trunk prefix ("+44 (0)20 ..."), never dialled from abroad; every other 0 stays.
-    digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
-    if (!typed.startsWith("+")) digits = digits.slice(2);
+    digits = internationalDigits(phone);
     const base = digits.length >= 8 ? `https://wa.me/${digits}` : "https://wa.me/";
     return `${base}?text=${encodeURIComponent(text)}`;
   }

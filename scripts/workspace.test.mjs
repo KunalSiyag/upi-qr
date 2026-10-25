@@ -356,6 +356,41 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(gone.clients.cli_globex01.deletedAt, X + 5);
     assert.equal(gone.intl.clients.cli_globex01.deletedAt, X + 5);
   }
+  // Review round 5: device B deletes a US$ invoice and then its client (which tombstones the billing currency); device
+  // A's edit sheet for that invoice was open, applies B's copy and saves. The invoice comes back (withoutTombstone) and
+  // so do the client and its billing currency (reviveClient, as InvoiceSheet.submit runs it), before and after repair.
+  {
+    let A = M.setClientCurrency(M.upsertClient(emptyWorkspace(), { ...cli("cli_acme0001", "Acme Ltd"), phone: "+1 415 555 0100" }, X), "cli_acme0001", "USD", X);
+    A = M.upsertInvoice(A, invoice("inv_usd00009", "INV-0009", "cli_acme0001", 120000, { currency: "USD" }), X);
+    const B = M.deleteClient(M.deleteInvoice(A, "inv_usd00009", X + DAY), "cli_acme0001", X + DAY + 1);
+    assert.ok(B.clients.cli_acme0001.deletedAt && B.intl.clients.cli_acme0001.deletedAt, "B deleted the client and its billing currency");
+    const seen = M.repairIntl(M.mergeWorkspaces(A, B), X + 2 * DAY);
+    const sheetSave = (ws, currency, now) => {
+      const existing = M.getInvoice(ws, "inv_usd00009") ?? M.getInvoice(ws, "inv_inr00009");
+      let ws2 = M.reviveClient(ws, existing.clientId, currency, now);
+      return M.upsertInvoice(ws2, { ...M.withoutTombstone(existing), amountPaise: 150000 }, now);
+    };
+    const saved = sheetSave(seen, "USD", X + 2 * DAY);
+    assert.ok(M.allLiveInvoices(saved).some((i) => i.id === "inv_usd00009"), "the invoice is back");
+    assert.ok(M.liveClients(saved).some((c) => c.id === "cli_acme0001"), "its client is back right after Save");
+    assert.equal(M.clientCurrency(saved, "cli_acme0001"), "USD", "…billed in USD");
+    for (const merged of [M.mergeWorkspaces(B, saved), M.mergeWorkspaces(saved, B)]) {
+      const server = M.pruneTombstones(M.repairIntl(merged, X + 3 * DAY), X + 3 * DAY);
+      assert.ok(!server.clients.cli_acme0001.deletedAt && M.clientCurrency(server, "cli_acme0001") === "USD", "after merge, repair and prune: live and USD");
+      assert.equal(M.canonicalJson(M.repairIntl(server, X + 3 * DAY)), M.canonicalJson(server), "repair changes nothing more");
+    }
+    // A live client, or an INR invoice: nothing to revive / no currency written.
+    assert.equal(M.reviveClient(A, "cli_acme0001", "EUR", X + 1), A, "a live client: unchanged");
+    assert.equal(M.reviveClient(A, "cli_nobody01", "USD", X + 1), A, "no client: unchanged");
+    let I = M.upsertClient(emptyWorkspace(), cli("cli_inr00009", "Rohan"), X);
+    I = M.upsertInvoice(I, invoice("inv_inr00009", "INV-0010", "cli_inr00009", 50000), X);
+    const IB = M.deleteClient(M.deleteInvoice(I, "inv_inr00009", X + DAY), "cli_inr00009", X + DAY + 1);
+    const inrSaved = sheetSave(M.mergeWorkspaces(I, IB), "INR", X + 2 * DAY);
+    assert.ok(!inrSaved.clients.cli_inr00009.deletedAt && inrSaved.intl === undefined, "an INR edit brings its client back and writes no intl");
+    // A client an older tab deleted (its billing currency entry still live, EUR): the revival keeps that currency.
+    const old = M.upsertClient(M.setClientCurrency(A, "cli_acme0001", "EUR", X + 1), { ...A.clients.cli_acme0001, deletedAt: X + 2 }, X + 2);
+    assert.equal(M.clientCurrency(M.reviveClient(old, "cli_acme0001", "USD", X + 3), "cli_acme0001"), "EUR");
+  }
   // Review round 3: a client whose only foreign record is a plan (a US$ retainer starting next month, no invoice yet).
   {
     const TP = Date.UTC(2026, 9, 20);
@@ -405,6 +440,17 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.canonicalJson(M.pruneTombstones(x, X + 200 * DAY)), legacy.canonicalJson(legacy.pruneTombstones(x, X + 200 * DAY)));
     assert.ok(!("intl" in M.eraseWorkspace(x, X + 10)), "erasing an INR-only book writes no intl");
     assert.ok(!("intl" in M.mergeWorkspaces(x, x)) && !("intl" in M.pruneTombstones(x, X)) && !("intl" in M.restoreFrom(x, x, X)));
+  }
+  // generateRecurring on an INR-only book writes what the deployed code writes, byte for byte (the export mark carry
+  // is for foreign plans only).
+  {
+    const planned = upsertPlan(inrBook, { id: "rec_inrbyte01", clientId: "cli_acme0001", amountPaise: 250000, description: "Fees", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
+    const now = M.generateRecurring(M.sanitizeWorkspace(clone(planned)), "2026-10-10", X + 300);
+    const old = legacy.generateRecurring(legacy.sanitizeWorkspace(clone(planned)), "2026-10-10", X + 300);
+    assert.equal(now.created.length, 3);
+    assert.deepEqual(now.created, old.created);
+    assert.equal(M.canonicalJson(now.ws), legacy.canonicalJson(old.ws), "an INR plan's months are byte-identical to the deployed code");
+    assert.ok(now.created.every((id) => now.ws.invoices[id].updatedAt === now.ws.invoices[id].createdAt));
   }
   assert.deepEqual(M.sanitizeWorkspace(clone(M.withoutIntl(W))), M.withoutIntl(W));
   assert.equal(M.withoutIntl(inrBook), inrBook, "withoutIntl of an INR-only book is the same object");
@@ -1180,8 +1226,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // Not an erase: every INR record deleted one by one while the business keeps its name.
     const allDeleted = M.repairIntl(M.updateBusiness(gone, { phone: "" }, E), E + 10);
     assert.equal(allDeleted.intl.settings.account, "GB82WEST12345698765432", "deleting every INR record is never an erase");
-    // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first.
+    // Not an erase: a business without a time (never named, emptyBusiness(0)) with bank details set up first. Its
+    // billing-currency entry has no client and is left alone too.
     const unnamed = M.sanitizeWorkspace({ ...M.emptyWorkspace(), intl: gone.intl });
+    assert.ok(unnamed.intl.clients.cli_abroad01 && !unnamed.intl.clients.cli_abroad01.deletedAt);
     assert.equal(M.repairIntl(unnamed, E), unnamed);
   }
 }
@@ -1515,6 +1563,370 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(M.msmeRightsLine(W.business, "en").includes("UDYAM-MH-12-1234567"), true, "the INR line exists for this business");
     assert.ok(!M.reminderMessage(viewOf("inv_usd00001"), W.business, "final", undefined, "en", true, W.intl.settings).includes("UDYAM"));
   }
+}
+
+/* ---------- PR 4 helpers: client billing currency and the settings record (§1.6) ---------- */
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const X = Date.UTC(2026, 9, 1);
+  const client = { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: X, updatedAt: X };
+  const inr = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), client, X);
+  const bytes = M.canonicalJson(M.sanitizeWorkspace(inr));
+
+  // INR is the default and is never written: an INR-only book keeps its bytes (no intl key).
+  assert.equal(M.clientCurrency(inr, client.id), "INR");
+  assert.equal(M.setClientCurrency(inr, client.id, "INR", X + 1), inr, "INR on a client without an entry writes nothing");
+  assert.equal(M.canonicalJson(M.sanitizeWorkspace(M.setClientCurrency(inr, client.id, "INR", X + 1))), bytes);
+  assert.equal(M.clientCurrency(inr, "constructor"), "INR", "own keys only");
+
+  const usd = M.setClientCurrency(inr, client.id, "USD", X + 2);
+  assert.equal(M.clientCurrency(usd, client.id), "USD");
+  assert.deepEqual(usd.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 });
+  assert.equal(M.setClientCurrency(usd, client.id, "USD", X + 3), usd, "unchanged → same object (no write)");
+  assert.deepEqual(M.sanitizeWorkspace(JSON.parse(JSON.stringify(usd))).intl.clients, usd.intl.clients, "round trip");
+  const eur = M.setClientCurrency(usd, client.id, "EUR", X + 4);
+  assert.equal(M.clientCurrency(eur, client.id), "EUR");
+  // Back to INR: a tombstone, never an "INR" entry.
+  const back = M.setClientCurrency(eur, client.id, "INR", X + 5);
+  assert.equal(M.clientCurrency(back, client.id), "INR");
+  assert.deepEqual(back.intl.clients[client.id], { currency: "EUR", updatedAt: X + 5, deletedAt: X + 5 });
+  assert.ok(!JSON.stringify(back).includes('"INR"'));
+  // The tombstone wins the merge against the older entry in both orders, and the pruned book is INR bytes again.
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(eur, back), client.id), "INR");
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(back, eur), client.id), "INR");
+  assert.equal(M.canonicalJson(M.pruneTombstones(M.sanitizeWorkspace(back), X + 5 + 91 * 86_400_000)), bytes);
+  // An older tab deletes the client (it can't see the entry, and no invoice blocks it). Review round 2: repairIntl
+  // never tombstones the entry (a client merely missing from a copy looked the same, and the tombstone beat the live
+  // entry everywhere). The entry stays; clientCurrency reads INR while the client is gone. Review round 3:
+  // pruneTombstones keeps it after the client's tombstone goes, exactly as PR 1–3 do, so every build agrees on the
+  // bytes (a server-only drop made a PR 3 tab push every 200 ms forever). It costs one ~40-byte entry.
+  {
+    const legacy = await import("./fixtures/legacy-model.ts");
+    const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
+    const clone = (v) => JSON.parse(JSON.stringify(v));
+    const oldTab = legacy.deleteClient(legacy.sanitizeWorkspace(clone(M.withoutIntl(usd))), client.id, X + 7);
+    const joined = M.sanitizeWorkspace({ ...clone(oldTab), intl: clone(usd.intl) });
+    assert.equal(M.repairIntl(joined, X + 8), joined, "nothing to repair: the entry is left as it is");
+    assert.deepEqual(joined.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 });
+    assert.equal(M.clientCurrency(joined, client.id), "INR", "a deleted client reads INR");
+    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(usd, joined), 0)), M.canonicalJson(M.repairIntl(M.mergeWorkspaces(joined, usd), 0)), "both orders agree");
+    assert.ok(M.pruneTombstones(joined, X + 7 + 89 * 86_400_000).intl.clients[client.id], "kept while the client's tombstone is kept");
+    const later = X + 7 + 91 * 86_400_000;
+    const prunedLater = M.pruneTombstones(joined, later);
+    assert.equal(M.canonicalJson(M.withoutIntl(prunedLater)), legacy.canonicalJson(legacy.pruneTombstones(oldTab, later)), "the book key holds that tab's INR bytes");
+    assert.deepEqual(prunedLater.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 }, "the orphaned entry is kept, as PR 1–3 keep it");
+    assert.equal(M.clientCurrency(prunedLater, client.id), "INR", "and reads INR without its client");
+    {
+      const pr3 = await import("./fixtures/pr3-model.ts");
+      assert.equal(M.canonicalJson(prunedLater), pr3.canonicalJson(pr3.pruneTombstones(pr3.sanitizeWorkspace(clone(joined)), later)), "PR 3's prune gives the same bytes");
+    }
+    // A client revived by a foreign record written after the delete gets its currency back.
+    const usdInvoice = { id: "inv_usdrev01", number: "INV-0091", clientId: client.id, issueDate: "2026-10-01", dueDate: "2026-10-16", amountPaise: 120000,
+      description: "", payments: [], reminders: [], voided: false, currency: "USD", createdAt: X + 6, updatedAt: X + 6 };
+    const offline = M.upsertInvoice(usd, usdInvoice, X + 6);
+    assert.equal(M.clientCurrency(M.repairIntl(M.mergeWorkspaces(joined, offline), 0), client.id), "USD");
+
+    // The stale-book-key join (review round 2): another tab writes the sidecar before the book key, so a tab (or a
+    // device whose book-key write failed on quota) can join the new sidecar with a book key that lacks the new client.
+    // repairIntl changes nothing, and the merge with the full copy keeps the currency in every tab and on the server.
+    const fresh = { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: X + 30, updatedAt: X + 30 };
+    const tab1 = M.setClientCurrency(M.upsertClient(inr, fresh, X + 30), fresh.id, "USD", X + 30);
+    const stale = M.sanitizeWorkspace({ ...clone(M.withoutIntl(inr)), intl: clone(tab1.intl) });
+    assert.equal(M.repairIntl(stale, X + 31), stale, "a client missing from the copy is left alone");
+    const tab2 = M.repairIntl(M.mergeWorkspaces(inr, stale), X + 31);
+    assert.deepEqual(tab2.intl.clients[fresh.id], { currency: "USD", updatedAt: X + 30 });
+    assert.equal(M.pruneTombstones(tab2, X + 32).intl.clients[fresh.id].currency, "USD", "a fresh entry survives the prune before the book key's write");
+    const tab2b = M.repairIntl(M.mergeWorkspaces(tab2, tab1), X + 33);
+    const tab1b = M.repairIntl(M.mergeWorkspaces(tab1, tab2b), X + 34);
+    assert.equal(M.clientCurrency(tab2b, fresh.id), "USD");
+    assert.equal(M.clientCurrency(tab1b, fresh.id), "USD");
+    // Device D's stale copy reaches the server after device A's full one; A pulls the result.
+    const store = memoryCloudStore();
+    await syncWorkspace(store, "ws:doc:o", clone(tab1), X + 40);
+    const fromD = await syncWorkspace(store, "ws:doc:o", clone(M.repairIntl(stale, X + 41)), X + 42);
+    assert.equal(M.clientCurrency(fromD.workspace, fresh.id), "USD", "the server keeps the currency");
+    assert.equal(M.clientCurrency(M.repairIntl(M.mergeWorkspaces(tab1, fromD.workspace), X + 43), fresh.id), "USD", "and so does A");
+
+    // Order independence (review round 2): an older tab deletes client X while another device, offline, bills X in
+    // US$. Whichever copy reaches the server first, X ends up live with its US$ invoice and its USD billing currency.
+    const base = M.setClientCurrency(M.upsertClient(inr, { ...fresh, id: "cli_acme0x01", createdAt: X, updatedAt: X }, X), "cli_acme0x01", "USD", X);
+    const legacyCopy = legacy.deleteClient(legacy.sanitizeWorkspace(clone(M.withoutIntl(base))), "cli_acme0x01", X + 2000);
+    const deviceA = M.upsertInvoice(base, { ...usdInvoice, id: "inv_usdord01", clientId: "cli_acme0x01", createdAt: X + 1000, updatedAt: X + 1000 }, X + 1000);
+    const outcomes = [];
+    for (const order of [[deviceA, legacyCopy], [legacyCopy, deviceA]]) {
+      const s = memoryCloudStore();
+      await syncWorkspace(s, "slot", clone(base), X + 1);
+      let r;
+      for (const copy of order) r = await syncWorkspace(s, "slot", clone(copy), X + 3000);
+      const ws = r.workspace;
+      assert.ok(!ws.clients.cli_acme0x01.deletedAt, "the client is live");
+      assert.ok(!ws.intl.invoices.inv_usdord01.deletedAt, "its US$ invoice is live");
+      assert.equal(M.clientCurrency(ws, "cli_acme0x01"), "USD", "its billing currency is USD");
+      outcomes.push(M.canonicalJson(ws.intl.clients));
+    }
+    assert.equal(outcomes[0], outcomes[1], "both orders give the same billing-currency bytes");
+    // A client with a live entry is left alone.
+    assert.equal(M.repairIntl(usd, X + 11), usd);
+  }
+  // A client whose only record is an ended foreign plan (no invoices): removable once the plan is deleted (review
+  // round 1; "Stop after this month" leaves the plan live, so deletePlan is the way out).
+  {
+    const ended = M.upsertPlan(usd, { id: "rec_ended001", clientId: client.id, amountPaise: 90000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: "2026-01", endMonth: "2026-02", paused: false, currency: "USD", createdAt: X, updatedAt: X }, X + 20);
+    assert.equal(M.deleteClient(ended, client.id, X + 21), ended, "refused while the plan is live");
+    const noPlan = M.deletePlan(ended, "rec_ended001", X + 22);
+    assert.equal(noPlan.intl.recurring.rec_ended001.deletedAt, X + 22);
+    assert.equal(M.deletePlan(noPlan, "rec_ended001", X + 23), noPlan, "already deleted → unchanged");
+    assert.equal(M.deletePlan(noPlan, "rec_missing1", X + 23), noPlan);
+    assert.equal(M.clientHasForeignRecords(noPlan, client.id), false);
+    const removed = M.deleteClient(noPlan, client.id, X + 24);
+    assert.equal(removed.clients[client.id].deletedAt, X + 24, "the client goes");
+    assert.equal(removed.intl.clients[client.id].deletedAt, X + 24, "with its billing currency");
+    assert.equal(M.repairIntl(removed, X + 25), removed, "and nothing revives it");
+    assert.equal(M.generateRecurring(noPlan, "2026-10-02", X + 26).created.length, 0, "a deleted plan bills nothing");
+    // Its invoices keep blocking the delete until they go too.
+    const month = M.recurringInvoiceId("rec_ended001", "2026-02");
+    const billed = M.upsertInvoice(noPlan, { id: month, number: "EX-9", clientId: client.id, issueDate: "2026-02-01", dueDate: "2026-02-16", amountPaise: 90000, description: "", payments: [], reminders: [], voided: false, recurringId: "rec_ended001", currency: "USD", createdAt: X, updatedAt: X }, X + 27);
+    assert.equal(M.deleteClient(billed, client.id, X + 28), billed);
+    assert.ok(M.deleteClient(M.deleteInvoice(billed, month, X + 29), client.id, X + 30).clients[client.id].deletedAt);
+  }
+  // USD → INR → EUR: setting a foreign currency again after the tombstone writes a live entry that wins the merge.
+  const again = M.setClientCurrency(back, client.id, "EUR", X + 6);
+  assert.notEqual(again, back, "a tombstoned entry is never 'unchanged'");
+  assert.equal(M.clientCurrency(again, client.id), "EUR");
+  assert.ok(!("deletedAt" in again.intl.clients[client.id]), "the tombstone is not carried into the new entry");
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(again, back), client.id), "EUR");
+  assert.equal(M.clientCurrency(M.mergeWorkspaces(back, again), client.id), "EUR");
+
+  // Settings: one record, normalized like the sanitizer; every field kept on a later patch.
+  const on = M.updateIntlSettings(inr, { on: true }, X + 10);
+  assert.equal(on.intl.settings.on, true);
+  assert.equal(on.intl.settings.updatedAt, X + 10);
+  assert.deepEqual(Object.keys(on.intl.invoices), []);
+  const details = M.updateIntlSettings(on, {
+    accountName: "  Sharma Tuition LLP ", bankName: "HDFC Bank", swift: "hdfc in bb", account: "gb82 west 1234 5698 7654 32",
+    bankDetails: "ABA 026009593\n\n", payUrl: "https://paypal.me/sharma",
+  }, X + 11);
+  const s = details.intl.settings;
+  assert.equal(s.on, true, "an earlier field survives a later patch");
+  assert.equal(s.swift, "HDFCINBB");
+  assert.equal(s.account, "GB82WEST12345698765432");
+  assert.equal(s.payUrl, "https://paypal.me/sharma");
+  assert.ok(M.intlPayable(s, "USD"));
+  assert.equal(M.updateIntlSettings(on, { payUrl: "https://evil.example/pay" }, X + 12).intl.settings.payUrl, "", "unsafe URLs are dropped");
+  // LUT fields are kept only with the LUT on; an all-empty per-currency set is dropped.
+  const lutOff = M.updateIntlSettings(details, { lutArn: "AD2704260012345", lutFy: "2026-27" }, X + 13).intl.settings;
+  assert.equal(lutOff.lutArn, "");
+  const lut = M.updateIntlSettings(details, { exportUnderLut: true, lutArn: "ad27 0426 0012345", lutFy: "2026-27" }, X + 14).intl.settings;
+  assert.equal(lut.lutArn, "AD2704260012345");
+  assert.equal(lut.lutFy, "2026-27");
+  const empty = { accountName: "", bankName: "", swift: "", account: "", bankDetails: "", payUrl: "" };
+  const withUsd = M.updateIntlSettings(details, { byCurrency: { USD: { ...empty, accountName: "Wise USD", account: "8310123456", bankDetails: "ACH 026073150" }, EUR: empty } }, X + 15);
+  assert.deepEqual(Object.keys(withUsd.intl.settings.byCurrency), ["USD"]);
+  assert.equal(M.payDetailsFor(withUsd.intl.settings, "USD").accountName, "Wise USD");
+  assert.equal(M.payDetailsFor(withUsd.intl.settings, "EUR").accountName, "Sharma Tuition LLP");
+  const cleared = M.updateIntlSettings(withUsd, { byCurrency: { USD: empty } }, X + 16);
+  assert.ok(!("byCurrency" in cleared.intl.settings), "clearing all six fields removes the override");
+  // What is kept in memory equals what the next load reads.
+  assert.equal(M.canonicalJson(M.sanitizeWorkspace(JSON.parse(JSON.stringify(withUsd)))), M.canonicalJson(withUsd));
+  // The settings record merges last-writer-wins as a whole.
+  assert.equal(M.mergeWorkspaces(details, withUsd).intl.settings.updatedAt, X + 15);
+  assert.equal(M.mergeWorkspaces(withUsd, details).intl.settings.updatedAt, X + 15);
+
+  // An all-empty save on a book with no settings writes nothing (no intl key, INR bytes); an existing record is written.
+  const blank = { on: false, ...empty, byCurrency: {}, exportUnderLut: false, lutArn: "", lutFy: "" };
+  assert.equal(M.updateIntlSettings(inr, blank, X + 17), inr);
+  assert.equal(M.canonicalJson(M.sanitizeWorkspace(M.updateIntlSettings(inr, blank, X + 17))), bytes);
+  const off = M.updateIntlSettings(on, blank, X + 17);
+  assert.equal(off.intl.settings.on, false);
+  assert.equal(off.intl.settings.updatedAt, X + 17, "turning everything off is a write that beats the older record");
+  assert.equal(M.mergeWorkspaces(on, off).intl.settings.on, false);
+
+  // A save from a stale form (§5.2): only what the user changed is applied, onto the settings as they are now.
+  const formOf = (st) => ({
+    on: st?.on ?? false, accountName: st?.accountName ?? "", bankName: st?.bankName ?? "", swift: st?.swift ?? "", account: st?.account ?? "",
+    bankDetails: st?.bankDetails ?? "", payUrl: st?.payUrl ?? "", byCurrency: { ...st?.byCurrency }, exportUnderLut: st?.exportUnderLut ?? false,
+    lutArn: st?.lutArn ?? "", lutFy: st?.lutFy ?? "",
+  });
+  const biz = M.updateBusiness(details, { gstin: "27AAPFU0939F1ZV" }, X + 18);
+  const mounted = formOf(biz.intl.settings); // device A fills its form now
+  // Device B adds a USD set and the LUT later; sync merges that into A's book while A's form is open.
+  const remote = M.updateIntlSettings(biz, {
+    byCurrency: { USD: { ...empty, accountName: "Wise USD", account: "8310123456", bankDetails: "ACH 026073150" } },
+    exportUnderLut: true, lutArn: "AD2704260012345", lutFy: "2026-27",
+  }, X + 20);
+  const merged = M.mergeWorkspaces(biz, remote);
+  // A edits only the bank name and saves.
+  const saved = M.editIntlSettings(merged, mounted, { ...mounted, bankName: "ICICI Bank" }, X + 21).intl.settings;
+  assert.equal(saved.bankName, "ICICI Bank");
+  assert.equal(saved.updatedAt, X + 21);
+  assert.equal(saved.byCurrency?.USD?.accountName, "Wise USD", "the remote USD set survives");
+  assert.deepEqual([saved.exportUnderLut, saved.lutArn, saved.lutFy], [true, "AD2704260012345", "2026-27"], "the remote LUT survives");
+  assert.equal(saved.accountName, "Sharma Tuition LLP");
+  // An unedited save writes nothing.
+  assert.equal(M.editIntlSettings(merged, mounted, mounted, X + 21), merged);
+  assert.equal(M.editIntlSettings(inr, formOf(undefined), formOf(undefined), X + 21), inr);
+  // Touching one currency's set keeps the others as they are now; clearing a set removes only that set.
+  const withEur = M.editIntlSettings(merged, mounted, { ...mounted, byCurrency: { EUR: { ...empty, accountName: "Wise EUR", account: "BE68539007547034" } } }, X + 22).intl.settings;
+  assert.deepEqual(Object.keys(withEur.byCurrency).sort(), ["EUR", "USD"]);
+  const fromRemote = formOf(remote.intl.settings);
+  const noUsd = M.editIntlSettings(remote, fromRemote, { ...fromRemote, byCurrency: { USD: empty } }, X + 23).intl.settings;
+  assert.ok(!noUsd.byCurrency, "an emptied set is removed");
+  // The LUT moves as a group: turning it off clears the ARN and year together.
+  const lutGone = M.editIntlSettings(remote, fromRemote, { ...fromRemote, exportUnderLut: false, lutArn: "", lutFy: "" }, X + 24).intl.settings;
+  assert.deepEqual([lutGone.exportUnderLut, lutGone.lutArn, lutGone.lutFy, lutGone.byCurrency?.USD?.accountName], [false, "", "", "Wise USD"]);
+  // Editing only the ARN saves the whole group from the form: never this form's ARN with another device's year.
+  const otherLut = M.updateIntlSettings(remote, { lutArn: "AD2704250099999", lutFy: "2025-26" }, X + 25);
+  const arnOnly = M.editIntlSettings(M.mergeWorkspaces(remote, otherLut), fromRemote, { ...fromRemote, lutArn: "AD2704260054321" }, X + 26).intl.settings;
+  assert.deepEqual([arnOnly.exportUnderLut, arnOnly.lutArn, arnOnly.lutFy], [true, "AD2704260054321", "2026-27"], "the LUT group moves together");
+
+  // A foreign plan started as an export (§6, Q3): the mark carries to later months; unticking a month stops it from then on.
+  {
+    const rid = M.recurringInvoiceId;
+    let w = M.upsertClient(remote, { ...client, id: "cli_export01", name: "Export Co" }, X);
+    w = M.upsertPlan(w, { id: "rec_export01", clientId: "cli_export01", amountPaise: 120000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: "2026-10", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X }, X);
+    const first = rid("rec_export01", "2026-10");
+    w = M.upsertInvoice(w, { id: first, number: "EX-1", clientId: "cli_export01", issueDate: "2026-10-01", dueDate: "2026-10-16", amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, recurringId: "rec_export01", currency: "USD", exportLut: true, createdAt: X, updatedAt: X }, X);
+    assert.ok(M.getInvoice(w, first), "the plan month id matches recurringInvoiceId");
+    const nov = M.generateRecurring(w, "2026-11-02", X + 30);
+    const novInv = M.getInvoice(nov.ws, rid("rec_export01", "2026-11"));
+    assert.equal(novInv.exportLut, true, "November keeps the export mark");
+    assert.match(M.invoiceExportNote(nov.ws, novInv), /LUT ARN AD2704260012345/);
+    const { exportLut: _x, ...unmarked } = novInv;
+    const off2 = M.upsertInvoice(nov.ws, unmarked, X + 31);
+    const dec = M.generateRecurring(off2, "2026-12-02", X + 32);
+    assert.ok(!("exportLut" in M.getInvoice(dec.ws, rid("rec_export01", "2026-12"))), "unticked in November → December has no mark");
+    // INR plans never get one.
+    const inrPlan = M.upsertPlan(w, { id: "rec_inrplan1", clientId: "cli_export01", amountPaise: 500000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: "2026-11", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
+    const inrGen = M.generateRecurring(inrPlan, "2026-11-02", X + 33);
+    assert.ok(!("exportLut" in M.getInvoice(inrGen.ws, rid("rec_inrplan1", "2026-11"))));
+    // A deleted month is skipped: the next month carries the latest live month's mark. November differs from October
+    // in both cases, so reading the tombstone instead of skipping it gives the other answer.
+    const novGone = M.deleteInvoice(off2, rid("rec_export01", "2026-11"), X + 34);
+    const decAfterGone = M.generateRecurring(novGone, "2026-12-02", X + 35);
+    assert.equal(M.getInvoice(decAfterGone.ws, rid("rec_export01", "2026-12")).exportLut, true, "December carries October's mark past a deleted unmarked November");
+    {
+      const { exportLut: _o, ...octUnmarked } = M.getInvoice(w, first);
+      const octOff = M.upsertInvoice(w, octUnmarked, X + 41);
+      const novOn = M.generateRecurring(octOff, "2026-11-02", X + 42).ws;
+      assert.ok(!("exportLut" in M.getInvoice(novOn, rid("rec_export01", "2026-11"))), "(October unmarked → November unmarked)");
+      const ticked = M.upsertInvoice(novOn, { ...M.getInvoice(novOn, rid("rec_export01", "2026-11")), exportLut: true }, X + 43);
+      const gone = M.deleteInvoice(ticked, rid("rec_export01", "2026-11"), X + 44);
+      const decOff = M.generateRecurring(gone, "2026-12-02", X + 45);
+      assert.ok(!("exportLut" in M.getInvoice(decOff.ws, rid("rec_export01", "2026-12"))), "a deleted marked November never lends December its mark");
+    }
+    // A generated month is an ordinary write (updatedAt === createdAt), and nothing re-derives a mark later: re-ticking
+    // an earlier month never changes a month already created.
+    const decInv = M.getInvoice(dec.ws, rid("rec_export01", "2026-12"));
+    assert.equal(decInv.updatedAt, decInv.createdAt);
+    const reTicked = M.upsertInvoice(dec.ws, { ...M.getInvoice(dec.ws, rid("rec_export01", "2026-11")), exportLut: true }, X + 36);
+    assert.equal(M.repairIntl(reTicked, X + 37), reTicked, "re-ticking November marks nothing already created");
+    assert.ok(!("exportLut" in M.getInvoice(reTicked, rid("rec_export01", "2026-12"))));
+    // A month an older build (PR 3, production before PR 4) generated without the mark keeps it off: no repair, the
+    // user ticks it on that month (owner decision, 2026-10-25).
+    {
+      const pr3 = await import("./fixtures/pr3-model.ts");
+      const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
+      const old = load(M, pr3.generateRecurring(load(pr3, w), "2026-11-02", X + 38).ws);
+      assert.ok(!("exportLut" in M.getInvoice(old, rid("rec_export01", "2026-11"))), "(the PR 3 copy generates November unmarked)");
+      assert.equal(M.repairIntl(old, X + 39), old, "repairIntl leaves it as it is");
+      const merged = M.mergeWorkspaces(nov.ws, old);
+      assert.equal(M.repairIntl(merged, X + 40), merged, "a merge of both copies needs no repair either (the later write wins)");
+    }
+  }
+
+  // An edit saved after another tab deleted the record while the sheet was open brings it back with the edits (as
+  // before ws.intl): the sheets spread the stored record through withoutTombstone, never the tombstone itself.
+  {
+    const T1 = X + 1000;
+    let w = M.upsertClient(M.emptyWorkspace(), { ...client, id: "cli_tomb0001", name: "Ravi K" }, T1);
+    w = M.upsertInvoice(w, { id: "inv_tomb0001", number: "INV-1", clientId: "cli_tomb0001", issueDate: "2026-10-01", dueDate: "2026-10-15", amountPaise: 150000, description: "", payments: [], reminders: [], voided: false, createdAt: T1, updatedAt: T1 }, T1);
+    const deleted = M.deleteClient(M.deleteInvoice(w, "inv_tomb0001", T1 + 30), "cli_tomb0001", T1 + 31);
+    assert.ok(M.getInvoice(deleted, "inv_tomb0001").deletedAt && deleted.clients.cli_tomb0001.deletedAt);
+    const saved = M.upsertInvoice(deleted, { ...M.withoutTombstone(M.getInvoice(deleted, "inv_tomb0001")), amountPaise: 175000 }, T1 + 40);
+    const savedClient = M.upsertClient(saved, { ...M.withoutTombstone(saved.clients.cli_tomb0001), name: "Ravi Kumar", updatedAt: T1 + 41 }, T1 + 41);
+    for (const merged of [M.mergeWorkspaces(savedClient, deleted), M.mergeWorkspaces(deleted, savedClient)]) {
+      assert.deepEqual(M.liveInvoices(merged).map((i) => [i.number, i.amountPaise]), [["INV-1", 175000]], "the edited invoice is live on both devices");
+      assert.deepEqual(M.liveClients(merged).map((c) => c.name), ["Ravi Kumar"]);
+    }
+    const live = M.getInvoice(w, "inv_tomb0001");
+    assert.equal(M.withoutTombstone(live), live, "a live record is returned as is");
+  }
+
+  // WhatsApp and SMS dial the same number for a client abroad: the bracketed trunk prefix is dropped for both.
+  assert.equal(M.internationalDigits("+44 (0)20 7946 0958"), "442079460958");
+  assert.equal(M.internationalDigits("0044(0)2079460958"), "442079460958");
+  assert.equal(M.internationalDigits("+1 415 555 0100"), "14155550100");
+  assert.equal(M.internationalDigits("98765 43210"), "");
+  for (const phone of ["+44 (0)20 7946 0958", "0044(0)2079460958", "+1 415 555 0100"]) {
+    assert.equal(M.whatsappLink(phone, "x", { international: true }), `https://wa.me/${M.internationalDigits(phone)}?text=x`);
+  }
+}
+
+/* ---------- A currency is fixed at creation (owner decision, 2026-10-25): the model is origin/main's ---------- */
+// No UI changes the currency of an existing invoice or plan, so PR 4 adds no repair, link or prune rule for one.
+// scripts/fixtures/pr3-model.ts is the deployed model (main before PR 4, verbatim): every function PR 4 doesn't touch
+// keeps its exact source, and its results are byte-identical.
+{
+  const M = await import("../src/lib/workspace/model.ts");
+  const pr3 = await import("./fixtures/pr3-model.ts");
+  // pruneTombstones is the deployed code (review round 3): what it keeps decides the bytes every build compares with
+  // the server's copy, so a rule only PR 4 applies (round 2 dropped an orphaned billing-currency entry) makes PR 1–3
+  // tabs and PWAs push again every 200 ms, forever, and a PR 3 and a PR 4 tab rewrite each other's sidecar.
+  for (const name of ["pruneTombstones", "repairIntl", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
+    "restoreFrom", "eraseWorkspace", "deleteInvoice", "deleteClient", "upsertInvoice", "upsertPlan", "planMonths", "nextInvoiceNumber"]) {
+    assert.equal(M[name].toString(), pr3[name].toString(), `${name} is the deployed code`);
+  }
+  for (const gone of ["replacementInvoiceId", "replacementPlanId", "movedCopyOf", "invoicesMovedTwice", "monthsBilledTwice", "planEnd", "planCanChangeCurrency"]) {
+    assert.equal(M[gone], undefined, `${gone} is not exported`);
+  }
+  const X = Date.UTC(2026, 7, 1);
+  const DAY = 86_400_000;
+  const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
+  const cli = (id, name) => ({ id, name, phone: "", email: "", gstin: "", createdAt: X, updatedAt: X });
+  const plan = (id, clientId, extra = {}) => ({ id, clientId, amountPaise: 250000, description: "Fees", dayOfMonth: 5, dueAfterDays: 7, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X, ...extra });
+  let w = M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X);
+  w = M.upsertClient(M.upsertClient(w, cli("cli_inr00001", "Ravi"), X), cli("cli_usd00001", "Globex"), X);
+  w = M.upsertPlan(w, plan("rec_inr00001", "cli_inr00001"), X);
+  w = M.upsertPlan(w, plan("rec_inr00002", "cli_inr00001", { startMonth: "2026-06", endMonth: "2026-09" }), X);
+  w = M.upsertPlan(w, plan("rec_usd00001", "cli_usd00001", { amountPaise: 120000, currency: "USD" }), X);
+  w = M.updateIntlSettings(w, { on: true }, X);
+  // generateRecurring: INR months, and foreign months with no marked month before them, are what the deployed code writes.
+  for (const today of ["2026-08-10", "2026-10-10", "2027-03-10"]) {
+    const now = M.generateRecurring(load(M, w), today, X + 5);
+    const old = pr3.generateRecurring(load(pr3, w), today, X + 5);
+    assert.deepEqual(now.created, old.created, `${today}: the same months`);
+    assert.equal(M.canonicalJson(now.ws), pr3.canonicalJson(old.ws), `${today}: byte-identical`);
+  }
+  // pruneTombstones: deleted INR and foreign plan months go after 90 days, as deployed (no billing-window rule).
+  const generated = M.generateRecurring(w, "2026-10-10", X + 5).ws;
+  let deleted = M.deleteInvoice(generated, M.recurringInvoiceId("rec_inr00001", "2026-09"), X + 10);
+  deleted = M.deleteInvoice(deleted, M.recurringInvoiceId("rec_usd00001", "2026-09"), X + 10);
+  for (const days of [30, 91, 400]) {
+    const t = X + 10 + days * DAY;
+    assert.equal(M.canonicalJson(M.pruneTombstones(load(M, deleted), t)), pr3.canonicalJson(pr3.pruneTombstones(load(pr3, deleted), t)), `prune after ${days} days`);
+  }
+  assert.equal(M.getInvoice(M.pruneTombstones(deleted, X + 10 + 91 * DAY), M.recurringInvoiceId("rec_usd00001", "2026-09")), undefined, "a foreign plan month's tombstone is pruned like any other");
+  // The billing-currency entries (review round 3): live with a live client, live with a deleted client, live with no
+  // client at all (its tombstone pruned), and tombstoned, young and old. PR 3's prune gives byte-identical output.
+  {
+    let c = M.upsertClient(M.upsertClient(w, cli("cli_gone0001", "Deleted"), X), cli("cli_gone0002", "Pruned"), X);
+    for (const id of ["cli_usd00001", "cli_gone0001", "cli_gone0002", "cli_inr00001"]) c = M.setClientCurrency(c, id, "EUR", X + 1);
+    c = M.deleteClient(c, "cli_gone0001", X + 2);
+    // An older tab's delete (it can't see the entry, so the entry stays live).
+    c = M.upsertClient(c, { ...cli("cli_gone0002", "Pruned"), deletedAt: X - 200 * DAY }, X + 2);
+    c = M.setClientCurrency(c, "cli_inr00001", "INR", X + 3);
+    c = { ...c, intl: { ...c.intl, clients: { ...c.intl.clients, cli_nobody01: { currency: "GBP", updatedAt: X - 300 * DAY }, cli_nobody02: { currency: "USD", updatedAt: X - 300 * DAY, deletedAt: X - 300 * DAY } } } };
+    for (const days of [0, 30, 91, 400]) {
+      const t = X + 3 + days * DAY;
+      const ours = M.pruneTombstones(load(M, c), t);
+      assert.equal(M.canonicalJson(ours), pr3.canonicalJson(pr3.pruneTombstones(load(pr3, c), t)), `billing currencies, prune after ${days} days`);
+      assert.ok(ours.intl.clients.cli_nobody01 && ours.intl.clients.cli_gone0002, `${days} days: a live entry without its client is kept`);
+    }
+  }
+  // repairIntl over a merge of two copies: the same bytes.
+  const other = M.logReminder(generated, M.recurringInvoiceId("rec_inr00001", "2026-10"), "whatsapp", X + 20);
+  assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(load(M, deleted), load(M, other)), X + 21)),
+    pr3.canonicalJson(pr3.repairIntl(pr3.mergeWorkspaces(load(pr3, deleted), load(pr3, other)), X + 21)));
 }
 
 console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");

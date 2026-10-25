@@ -132,6 +132,16 @@ try {
   check("foreign claim accepted", fxClaim.status === 303, String(fxClaim.status));
   const fxAlert = received.length > fxBefore ? decrypt(received.at(-1).body) : null;
   check("foreign claim alert names the currency and the reference, not ₹ or UTR", fxAlert?.body === "US$500.00 for INV-7 · ref …1234. Check your bank, then confirm it in the tracker." && fxAlert.url === "/app/", JSON.stringify(fxAlert));
+
+  // The morning digest with an overdue USD invoice (§4.7): the ₹ sum stays rupees, the US$ sum is appended.
+  const fxOverdue = { ...fxWs, intl: { ...fxWs.intl, invoices: { ...fxWs.intl.invoices, inv_usd00008: { ...fxWs.intl.invoices.inv_usd00007, id: "inv_usd00008", number: "INV-8", issueDate: addDays(istToday, -20), dueDate: addDays(istToday, -8) } } } };
+  await admin("set", { key: `ws:doc:${OWNER}`, value: JSON.stringify(fxOverdue) });
+  await fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(["del", `ws:proj:${OWNER}`, `push:digest:${OWNER}:${istToday}`]) });
+  await fetch(`${KV}/`, { method: "POST", headers: { Authorization: "Bearer test-token" }, body: JSON.stringify(["sadd", "push:owners", OWNER]) });
+  const fxDigestBefore = received.length;
+  const fxRun = await (await cron({ Authorization: `Bearer ${SECRET}` })).json();
+  const fxDigest = received.length > fxDigestBefore ? decrypt(received.at(-1).body) : null;
+  check("digest: ₹ and US$ overdue sums side by side, never added", fxRun.sent === 1 && fxDigest?.title === "2 invoices to chase today" && /^₹25,000 \+ US\$1,200\.00 overdue\. Start with Acme Traders — ₹25,000, 12 days late\./.test(fxDigest.body), JSON.stringify({ fxRun, fxDigest }));
 } catch (error) {
   if (String(error).includes("__prod_done__")) { /* production branch finished */ }
   else check("test script ran to completion", false, String(error).slice(0, 500));

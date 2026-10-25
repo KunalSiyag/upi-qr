@@ -38,6 +38,14 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
   const merge = (a, b) => {
     const out = { version: 1, business: b.business.updatedAt > a.business.updatedAt ? b.business : a.business, clients: {}, invoices: {}, recurring: {} };
     for (const k of ['clients', 'invoices', 'recurring']) for (const id of new Set([...Object.keys(a[k] || {}), ...Object.keys(b[k] || {})])) out[k][id] = pick((a[k] || {})[id], (b[k] || {})[id]);
+    // Like a PR 3+ server, each book's foreign section is carried: per entry, newest wins; absence never deletes.
+    if (a.intl || b.intl) {
+      const x = a.intl || {}, y = b.intl || {};
+      out.intl = { invoices: {}, recurring: {}, clients: {} };
+      for (const k of ['invoices', 'recurring', 'clients']) for (const id of new Set([...Object.keys(x[k] || {}), ...Object.keys(y[k] || {})])) out.intl[k][id] = pick((x[k] || {})[id], (y[k] || {})[id]);
+      const st = pick(x.settings, y.settings);
+      if (st) out.intl.settings = st;
+    }
     return out;
   };
   const empty = () => ({ version: 1, business: { name: '', upiId: '', phone: '', gstin: '', invoicePrefix: 'INV-', udyam: '', updatedAt: 0 }, clients: {}, invoices: {}, recurring: {} });
@@ -83,9 +91,9 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
       return s.docs[id];
     };
     if (u === '/api/v1/workspace/') {
-      if (method === 'PUT') { const d = put('biz_primary', body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner }); }
+      if (method === 'PUT') { const d = put('biz_primary', body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, intl: 1 }); }
       const d = s.docs.biz_primary || { ws: empty(), rev: 0 };
-      return json({ workspace: d.ws, rev: d.rev, owner: s.owner });
+      return json({ workspace: d.ws, rev: d.rev, owner: s.owner, intl: 1 });
     }
     const plan = { id: s.plan.id, businesses: s.plan.businesses };
     if (u === '/api/v1/workspace/books/') {
@@ -112,10 +120,10 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
     if (idx(s).books[id].deletedAt !== undefined) return json({ code: 'business_deleted' }, 410);
     if (method === 'PUT') {
       if (readOnly(s, id)) return json({ error: 'read-only', code: 'plan_read_only' }, 402);
-      const d = put(id, body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id });
+      const d = put(id, body.workspace); return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id, intl: 1 });
     }
     const d = s.docs[id] || { ws: empty(), rev: 0 };
-    return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id });
+    return json({ workspace: d.ws, rev: d.rev, owner: s.owner, businessId: id, intl: 1 });
   };
 })();
 ` });
@@ -137,8 +145,8 @@ const bookTwo = book("Book Two Traders", "two@okaxis", "BT-", { inv_00000001: in
 const bookThree = book("Third Shop", "three@okaxis", "TS-", { inv_00000002: inv("inv_00000002", "TS-0001", 120000, "cli_cccccccc") }, { cli_cccccccc: client("cli_cccccccc", "Anil Rao") });
 
 /** Seed from a page without the workspace island, so no running sync engine races the new data. */
-async function setup({ signedIn = false, plan = { id: "free", businesses: 1 }, books = {}, links = [], registered = false, local = true, failIndexPut = false } = {}) {
-  await b.go(BASE + "/terms/", 400);
+async function setup({ signedIn = false, plan = { id: "free", businesses: 1 }, books = {}, links = [], registered = false, local = true, failIndexPut = false, base = BASE, sidecars = {} } = {}) {
+  await b.go(base + "/terms/", 400);
   const index = { v: 1, books: { biz_primary: { id: "biz_primary", createdAt: 0 } } };
   for (const [i, id] of Object.keys(books).entries()) index.books[id] = { id, createdAt: T + i };
   const docs = registered ? Object.fromEntries([["biz_primary", { ws: primary, rev: 1 }], ...Object.entries(books).map(([id, ws]) => [id, { ws, rev: 1 }])]) : {};
@@ -151,6 +159,7 @@ async function setup({ signedIn = false, plan = { id: "free", businesses: 1 }, b
     ${local ? `localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(primary))});` : ""}
     ${Object.keys(books).length ? `localStorage.setItem('proupiqr-books-v1', ${JSON.stringify(JSON.stringify({ ...index, ...(signedIn ? { owner: OWNER } : {}) }))});` : ""}
     ${Object.entries(books).map(([id, ws]) => `localStorage.setItem('proupiqr-book-v1:${id}', ${JSON.stringify(JSON.stringify(ws))});`).join("\n")}
+    ${Object.entries(sidecars).map(([id, intl]) => `localStorage.setItem('proupiqr-intl-v1:${id}', ${JSON.stringify(JSON.stringify({ owner: signedIn ? OWNER : null, intl }))});`).join("\n")}
     true`);
 }
 const storage = (key) => b.eval(`localStorage.getItem(${JSON.stringify(key)})`);
@@ -740,6 +749,44 @@ try {
   await sleep(1200);
   check("R10: the other tab's reset is honoured (stored copy, not merged back)", !(await storage(`proupiqr-book-v1:${C}`)).includes("TS-0777") && !(await text()).includes("TS-0777"));
   check("R10: the set-aside copy still holds it", (await storage(`proupiqr-aside-v1:${C}`)).includes("TS-0777"));
+
+  // ---- Clients abroad (docs/spec-foreign-clients.md §9.3) ----
+  const usd = (id, number, clientId) => ({ ...inv(id, number, 120000, clientId), currency: "USD" });
+  const details = (accountName) => ({ on: true, accountName, bankName: "", swift: "HDFCINBB", account: "50100123456789", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T });
+  const intlOf = (accountName, invoice) => ({ settings: details(accountName), invoices: { [invoice.id]: invoice }, recurring: {}, clients: {} });
+  const sidecars = { biz_primary: intlOf("Sharma Tuition LLP", usd("inv_usd00001", "INV-0009", "cli_aaaaaaaa")), [B]: intlOf("Book Two Traders LLP", usd("inv_usd00002", "BT-0009", "cli_bbbbbbbb")) };
+  await setup({ books: { [B]: bookTwo }, sidecars });
+  const remindUsd = async (business) => {
+    await b.go(BASE + `/app/?tab=invoices&business=${business}`, 2500);
+    await t("(() => { const r = [...document.querySelectorAll('li [aria-expanded]')].find(x => x.textContent.includes('US$')); r.click(); return true; })()");
+    await t(`__t.click(/^Remind$/, ${inRow})`);
+    await b.waitFor("!!document.getElementById('ws-reminder')");
+    return b.eval("document.getElementById('ws-reminder').value");
+  };
+  const reminderAbroadTwo = await remindUsd(B);
+  check("F1: Book Two's foreign reminder carries Book Two's bank details only", /Account name: Book Two Traders LLP/.test(reminderAbroadTwo) && !/Sharma Tuition LLP/.test(reminderAbroadTwo), reminderAbroadTwo);
+  const reminderAbroadOne = await remindUsd("biz_primary");
+  check("F1: the first business's foreign reminder carries its own details only", /Account name: Sharma Tuition LLP/.test(reminderAbroadOne) && !/Book Two Traders LLP/.test(reminderAbroadOne), reminderAbroadOne);
+  // An old tab rewrites Book Two's key (it can't see the foreign section): the sidecar and the USD invoice stay.
+  await b.go(BASE + `/app/?tab=invoices&business=${B}`, 2500);
+  await b.eval(`(async () => { const f = document.createElement('iframe'); f.src = '/terms/'; f.style.display = 'none'; document.body.appendChild(f);
+    await new Promise((r) => { f.onload = r; });
+    const w = JSON.parse(localStorage.getItem('proupiqr-book-v1:${B}')); w.business.updatedAt += 1; w.business.phone = '98200 00000';
+    f.contentWindow.localStorage.setItem('proupiqr-book-v1:${B}', JSON.stringify(w)); return true; })()`);
+  await sleep(1200);
+  check("F2: an old-tab write of Book Two's key keeps its sidecar", (await storage(`proupiqr-intl-v1:${B}`) ?? "").includes("inv_usd00002") && /US\$1,200\.00/.test(await text()) && !(await storage(`proupiqr-book-v1:${B}`)).includes("USD"));
+  check("F2: the first business's sidecar is untouched", (await storage("proupiqr-intl-v1:biz_primary") ?? "").includes("inv_usd00001") && !(await storage("proupiqr-intl-v1:biz_primary")).includes("Book Two"));
+  // The Settings card only exists with the clients-abroad UI on: the runner's flag-on copy (INTL_BASE).
+  const INTL = process.env.INTL_BASE;
+  check("F3: the flag-on build is available (INTL_BASE)", Boolean(INTL));
+  if (INTL) {
+    await setup({ signedIn: true, plan: { id: "free", businesses: 1 }, registered: true, books: { [B]: bookTwo, [C]: bookThree }, base: INTL });
+    await b.go(INTL + `/app/?tab=settings&business=${C}`, 3000);
+    await b.waitFor("!!document.querySelector('[data-read-only]')", 8000);
+    check("F3: the Clients abroad fieldset is disabled in a read-only business", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && d.querySelector('fieldset').disabled && document.getElementById('ws-intl-account-name').matches(':disabled'); })()"));
+    await b.go(INTL + "/app/?tab=settings", 2500);
+    check("F3: …and enabled in the first business", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.querySelector('fieldset').disabled; })()"));
+  }
 
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load|402|404|503/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {

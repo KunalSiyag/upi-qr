@@ -162,17 +162,25 @@ try {
   };
 })();` });
     await b.go(`${STATIC}/terms/`, 400);
-    // The book also holds Riya's US$ invoice (in its sidecar, as PR 1+ code stores it): this build doesn't show it, and a
-    // statement claim never touches it.
-    const sidecar = JSON.stringify({ intl: { ...intl, invoices: { inv_usd00031: intl.invoices.inv_usd00031 } }, owner: "o" });
-    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-owner', 'o'); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(ws))}); localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(sidecar)}); localStorage.setItem('__plan', 'free'); true`);
+    // The book also holds Riya's US$ invoice (in its sidecar, as PR 1+ code stores it): this build shows it (its own
+    // balance line, its own invoice row), and a statement claim never touches it.
+    // Globex owes only US$ (review round 1: its statement link offers bank details, not a UPI button).
+    const sidecar = JSON.stringify({ intl: { ...intl, invoices: { inv_usd00031: intl.invoices.inv_usd00031, inv_usd00032: intl.invoices.inv_usd00032 } }, owner: "o" });
+    const { intl: _uiIntl, ...uiBook } = mixedWs;
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-owner', 'o'); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(uiBook))}); localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(sidecar)}); localStorage.setItem('__plan', 'free'); true`);
     await b.go(`${STATIC}/app/?tab=clients`, 3500);
     await b.waitFor("/Statement link for all dues/.test(document.body.innerText)", 8000);
     check("free plan sees the Pro upsell on clients", await b.eval("[...document.querySelectorAll('a')].some(a => a.textContent.includes('Statement link for all dues') && a.getAttribute('href') === '/app/?tab=settings&upgrade=monthly')"));
     await b.eval("localStorage.setItem('__plan', 'pro'); true");
     await b.go(`${STATIC}/app/?tab=clients`, 3500);
     await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent.includes('Share statement link'))", 8000);
-    await t("__t.click(/Share statement link/)");
+    const linkButton = (name) => b.eval(`[...document.querySelectorAll('li')].find((li) => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}))?.querySelector('button.text-leaf')?.textContent ?? null`);
+    check("a client owing ₹ is offered the UPI statement link", (await linkButton("Riya Kapoor")) === "Share statement link — all dues + one UPI button", await linkButton("Riya Kapoor"));
+    check("a client owing only US$ is offered bank details, not a UPI button", (await linkButton("Globex LLC")) === "Share statement link — all dues + bank details", await linkButton("Globex LLC"));
+    // Review round 5 (§5.7): a client owing ₹ and US$ shows the ₹ balance and its overdue first, then the US$ lines.
+    const riyaBalances = await b.eval(`[...document.querySelectorAll('li')].find((li) => li.querySelector('button')?.textContent.includes('Riya Kapoor'))?.querySelector('[data-client-balances]')?.innerText ?? null`);
+    check("a mixed client's balances: ₹ first (with its overdue), then US$", /^₹6,000\s+₹6,000 overdue\s+US\$1,200\.00\s+US\$1,200\.00\s+overdue$/.test(riyaBalances?.trim() ?? ""), JSON.stringify(riyaBalances));
+    await t("__t.click(/one UPI button/)");
     await b.waitFor("!!document.getElementById('stmt-cli_riya0001')", 8000);
     check("Pro creates a statement link for the client", (await b.eval("document.getElementById('stmt-cli_riya0001').value")) === `${STATIC}/i/S00000000000000000000T/` && (await b.eval("window.__posts.some(p => p.clientId === 'cli_riya0001')")));
     // A statement claim arrives; confirming applies it oldest first.
@@ -180,6 +188,7 @@ try {
     await b.go(`${STATIC}/app/`, 3500);
     await b.waitFor("/Statement payments to confirm/.test(document.body.innerText)", 8000);
     check("statement claim shown", /Riya Kapoor says they paid ₹4,500 on their statement/.test(await b.eval("document.body.innerText")));
+    check("the claim of a client who also owes US$ says it applies to ₹ invoices only", /Applied to ₹ invoices only\./.test(await b.eval("document.body.innerText")));
     await t("__t.click(/^Confirm & apply$/)");
     await sleep(500);
     const data = await b.eval("JSON.parse(localStorage.getItem('proupiqr-workspace-v1'))");

@@ -111,12 +111,13 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export function Field({ label, htmlFor, error, children }: { label: string; htmlFor: string; error?: string; children: ReactNode }) {
+export function Field({ label, htmlFor, error, children }: { label: ReactNode; htmlFor: string; error?: string; children: ReactNode }) {
   return (
     <div>
       <label htmlFor={htmlFor} className={labelClass}>{label}</label>
       {children}
-      {error && <p className={`mt-1 text-xs font-medium ${dangerText}`} role="alert">{error}</p>}
+      {/* `${htmlFor}-error`, so the input can point aria-describedby at its message. */}
+      {error && <p id={`${htmlFor}-error`} className={`mt-1 text-xs font-medium ${dangerText}`} role="alert" data-field-error>{error}</p>}
     </div>
   );
 }
