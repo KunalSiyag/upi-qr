@@ -1,6 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import {
-  addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, intlPayable, isIsoDate, liveClients, logReminder, newId,
+  addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
   nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, replaceInvoiceCurrency, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type ReminderTone, type Workspace,
@@ -69,7 +69,8 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   const [currencyTouched, setCurrencyTouched] = useState(false);
   const [exportLut, setExportLut] = useState(existing ? existing.exportLut === true : true);
   const foreign = isForeignCurrency(currency);
-  const showPicker = intlPickers(ws);
+  // INTL_UI at the use site (not only inside intlPickers) so a flag-off build drops the picker code.
+  const showPicker = INTL_UI && intlPickers(ws);
   const lockedByPayment = Boolean(existing?.payments.length);
   const lockedByPlan = Boolean(existing?.recurringId);
   // A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
@@ -80,7 +81,9 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     setClientName(name);
     const match = clients.find((c) => c.name.toLowerCase() === name.trim().toLowerCase());
     if (match && !phone) setPhone(match.phone);
-    if (match && !existing && !currencyTouched && showPicker) setCurrency(clientCurrency(ws, match.id));
+    // Until the user picks a currency it follows the typed name: a client's billing currency while the name matches
+    // one, INR once it no longer does (typing past "Globex" to a new client never keeps Globex's US$).
+    if (!existing && !currencyTouched && showPicker) setCurrency(match ? clientCurrency(ws, match.id) : "INR");
   }
 
   function submit(event: FormEvent) {
@@ -96,7 +99,8 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     // One number series across INR and foreign invoices.
     const duplicate = allLiveInvoices(ws).find((i) => i.id !== invoiceId && i.number.trim().toLowerCase() === number.trim().toLowerCase());
     if (duplicate) next.number = tr("{number} already exists.", { number: duplicate.number });
-    if (phone && !phoneOk(phone, foreign)) next.phone = tr("Enter a 10-digit mobile number, or leave it blank.");
+    // A client billed abroad keeps their + number on an INR invoice too (the same rule as the reminder sheet).
+    if (phone && !phoneOk(phone, foreign || (matched ? clientCurrency(ws, matched.id) !== "INR" : false))) next.phone = tr("Enter a 10-digit mobile number, or leave it blank.");
     if (repeat && untilMonth && isIsoDate(issueDate) && untilMonth < issueDate.slice(0, 7)) next.until = tr("The last month can't be before the first invoice.");
     setErrors(next);
     if (Object.keys(next).length || !amountPaise) return;
@@ -409,7 +413,7 @@ export function ReminderSheet({ ws, today, invoiceId, msmeTools, payLink, onSent
   function send(channel: "whatsapp" | "sms") {
     const typed = phone.trim();
     const asTyped = international && (typed.startsWith("+") || typed.startsWith("00"));
-    const digits = asTyped ? typed.replace(/\D/g, "").replace(/^00/, "") : phone.replace(/\D/g, "").slice(-10);
+    const digits = asTyped ? internationalDigits(phone) : phone.replace(/\D/g, "").slice(-10);
     const url = channel === "whatsapp"
       ? whatsappLink(phone, message, { international })
       : `sms:${digits ? (asTyped ? `+${digits}` : `+91${digits}`) : ""}?body=${encodeURIComponent(message)}`;

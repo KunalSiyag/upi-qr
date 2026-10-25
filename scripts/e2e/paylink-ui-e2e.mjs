@@ -72,7 +72,8 @@ await b.send("Page.addScriptToEvaluateOnNewDocument", { source: `
     let doc = JSON.parse(localStorage.getItem('__srvdoc') || 'null') || empty();
     if (method === 'DELETE') { localStorage.removeItem('__srvdoc'); return new Response('{"ok":true}', { status: 200 }); }
     if (method === 'PUT') { doc = merge(doc, JSON.parse(init.body).workspace); localStorage.setItem('__srvdoc', JSON.stringify(doc)); }
-    return new Response(JSON.stringify({ workspace: doc, rev: 1, owner: c.owner, intl: 1 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    // c.noIntl: a server that doesn't keep the foreign section (a rollback to before PR 1).
+    return new Response(JSON.stringify({ workspace: doc, rev: 1, owner: c.owner, ...(c.noIntl ? {} : { intl: 1 }) }), { status: 200, headers: { 'Content-Type': 'application/json' } });
   };
 })();
 ` });
@@ -154,6 +155,13 @@ try {
   await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'Synced ✓')");
   check("server copy carries the foreign section", (await server())?.intl?.invoices?.inv_usd00001?.currency === "USD");
   check("no device-only line against a server that keeps intl", !/saved on this device only right now/.test(await text()));
+  await b.eval(`localStorage.setItem('__srvcfg', ${JSON.stringify(JSON.stringify({ signedIn: true, owner: "owner-a", noIntl: true }))}); true`);
+  await b.go(BASE + "/app/?tab=invoices", 2500);
+  await b.waitFor("/saved on this device only right now/.test(document.body.innerText)", 8000).catch(() => {});
+  check("device-only line against a server that drops intl", /Foreign-currency invoices are saved on this device only right now\. They sync again after the next update\./.test(await text()));
+  await b.eval(`localStorage.setItem('__srvcfg', ${JSON.stringify(JSON.stringify({ signedIn: true, owner: "owner-a" }))}); true`);
+  await b.go(BASE + "/app/?tab=invoices", 2500);
+  await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent === 'Synced ✓')");
   await t("[...document.querySelectorAll('li [aria-expanded]')].find(r => r.textContent.includes('Globex')).click(), true");
   check("foreign row offers a bank-details pay link", !!(await t("!!__t.btn(/Create pay link — client sees amount \\+ bank details/)")));
   await t("__t.click(/Create pay link/)");
@@ -197,6 +205,11 @@ try {
   await b.waitFor("!/Payments to confirm/.test(document.body.innerText)", 8000);
   const side = await b.eval("JSON.parse(localStorage.getItem('proupiqr-intl-v1:biz_primary'))");
   check("foreign claim recorded on the USD invoice", side.intl.invoices.inv_usd00001.payments.some((p) => p.amountPaise === 50000 && p.mode === "bank" && p.reference === "WISE-REF-123456"));
+  // A statement claim from a client who also owes in US$ is applied to ₹ invoices only (§3.4).
+  await b.eval("(() => { const l = JSON.parse(localStorage.getItem('__links')); l['stmt:cli_globex01'] = { token: 'S000000000000000000001', claims: [{ utr: '412345678902', amountPaise: 100000, at: Date.now() }] }; localStorage.setItem('__links', JSON.stringify(l)); })(), true");
+  await b.go(BASE + "/app/", 3000);
+  await b.waitFor("/Statement payments to confirm/.test(document.body.innerText)", 8000).catch(() => {});
+  check("a statement claim for a client owing in US$ says it applies to ₹ invoices only", /Globex LLC says they paid ₹1,000 on their statement[\s\S]*Applied to ₹ invoices only\./.test(await text()), (await text()).slice(0, 800));
   check("book key never holds the foreign invoice", !(await b.eval("localStorage.getItem('proupiqr-workspace-v1')")).includes("USD"));
   check("no console errors (excluding blocked Clerk CDN)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {

@@ -1190,6 +1190,42 @@ export function planMonths(ws: Workspace, plan: RecurringPlan): string[] {
   return months.sort();
 }
 
+/** The month a plan month's id was generated for ("YYYY-MM"), or "" when `invoice` isn't one of `plan`'s months. */
+function planMonthOf(plan: RecurringPlan, invoice: Invoice): string {
+  const month = `${invoice.id.slice(-6, -2)}-${invoice.id.slice(-2)}`;
+  return invoice.recurringId === plan.id && invoice.id === recurringInvoiceId(plan.id, month) ? month : "";
+}
+
+/**
+ * The export mark (§6) a foreign plan's month gets: the mark of the plan's latest earlier live month, so a plan
+ * started with "Export of services" ticked keeps the LUT line every month, and unticking it on a month stops it from
+ * then on. A plan with no earlier live month (one a currency change created) takes the mark of the latest live month
+ * of a plan of the same client that ended before `month` (the plan it replaced; an INR month counts as unmarked).
+ * No such month → false: the user ticks it on that month. Reads only the book, so generateRecurring and
+ * repairExportMarks agree on every device.
+ */
+function carriedExportMark(ws: Workspace, plan: RecurringPlan, month: string): boolean {
+  for (let back = monthIndex(month) - 1; back >= monthIndex(plan.startMonth); back--) {
+    const earlier = getInvoice(ws, recurringInvoiceId(plan.id, monthFromIndex(back)));
+    if (!earlier || earlier.deletedAt) continue;
+    return earlier.exportLut === true;
+  }
+  let latest = "";
+  let mark = false;
+  for (const other of [...Object.values(ws.recurring), ...Object.values(ws.intl?.recurring ?? {})]) {
+    if (other.id === plan.id || other.clientId !== plan.clientId || !other.endMonth || other.endMonth >= month) continue;
+    for (const m of planMonths(ws, other)) {
+      if (m >= month || m < latest) continue;
+      const earlier = getInvoice(ws, recurringInvoiceId(other.id, m));
+      if (!earlier || earlier.deletedAt) continue;
+      // Same month in two ended plans (only after a double billing): a mark wins, so the order of plans never matters.
+      mark = m > latest ? earlier.exportLut === true : mark || earlier.exportLut === true;
+      latest = m;
+    }
+  }
+  return mark;
+}
+
 /**
  * Creates every due invoice for active plans up to `today` (newest
  * MAX_BACKFILL_MONTHS at most). Months that already have an invoice — or had
@@ -1212,17 +1248,7 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
       const id = recurringInvoiceId(plan.id, month);
       // Either map, tombstones included: a foreign plan's months live in ws.intl.invoices.
       if (getInvoice(next, id)) continue;
-      // A foreign plan's export mark (§6) carries forward from its latest earlier live month, so a plan started with
-      // "Export of services" ticked keeps the LUT line on every month, and unticking it on a month stops it from then on.
-      let exportLut = false;
-      if (isForeignCurrency(plan.currency)) {
-        for (let back = index - 1; back >= monthIndex(plan.startMonth); back--) {
-          const earlier = getInvoice(next, recurringInvoiceId(plan.id, monthFromIndex(back)));
-          if (!earlier || earlier.deletedAt) continue;
-          exportLut = earlier.exportLut === true;
-          break;
-        }
-      }
+      const exportLut = isForeignCurrency(plan.currency) && carriedExportMark(next, plan, month);
       next = upsertInvoice(next, {
         id,
         number: nextInvoiceNumber(next),
@@ -1265,6 +1291,17 @@ export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: Curr
 }
 
 /**
+ * Whether a plan has a month left to bill, so its currency can change: live, and not ended with all its months
+ * created (a plan a currency change already ended, or one stopped after its last created month, has none).
+ */
+export function planCanChangeCurrency(ws: Workspace, plan: RecurringPlan): boolean {
+  if (plan.deletedAt) return false;
+  const months = planMonths(ws, plan);
+  const last = months[months.length - 1];
+  return !(last && plan.endMonth && monthAfter(last) > plan.endMonth);
+}
+
+/**
  * A plan's currency change: `planId` ends after its last generated month and a new plan (new id, same client,
  * day, due days and description) in `currency`, billing `amountMinor` (minor units of `currency`), starts the month
  * after. The old amount never carries over: ₹50,000 is not US$50,000. Existing months keep their ids and currency,
@@ -1272,13 +1309,11 @@ export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: Curr
  */
 export function replacePlanCurrency(ws: Workspace, planId: string, currency: CurrencyCode, now: number, amountMinor: Minor): { ws: Workspace; id: string } | null {
   const plan = getPlan(ws, planId);
-  if (!plan || plan.deletedAt) return null;
+  if (!plan || !planCanChangeCurrency(ws, plan)) return null;
   if (currencyOf(plan) === currency) return { ws, id: planId };
   if (!Number.isSafeInteger(amountMinor) || amountMinor <= 0 || amountMinor > MAX_MINOR) return null;
   const months = planMonths(ws, plan);
   const last = months[months.length - 1];
-  // An ended plan whose months are all billed has no month left to bill in another currency.
-  if (last && plan.endMonth && monthAfter(last) > plan.endMonth) return null;
   const { currency: _from, ...rest } = plan;
   const replacement: RecurringPlan = {
     ...rest, id: newId("rec"), amountPaise: amountMinor, startMonth: last ? monthAfter(last) : plan.startMonth, createdAt: now, updatedAt: now,
@@ -1293,6 +1328,8 @@ export function replacePlanCurrency(ws: Workspace, planId: string, currency: Cur
  * device, an older tab) billed a month of the old plan after its new endMonth, and the plan that replaced it, for the
  * same client in another currency, bills that month too. The two can't converge (the new plan has a new id), so they
  * are shown for the user to delete one. Unpaid, live months of the old plan only. Empty for an INR-only book.
+ * A deleted plan covers no month (a currency change deletes a plan that has no month yet instead of ending it), and
+ * the month is the one the id was generated for, never the editable issue date.
  */
 export function monthsBilledTwice(ws: Workspace): Set<string> {
   const out = new Set<string>();
@@ -1301,8 +1338,8 @@ export function monthsBilledTwice(ws: Workspace): Set<string> {
   for (const invoice of allLiveInvoices(ws)) {
     if (!invoice.recurringId || invoice.payments.length) continue;
     const plan = getPlan(ws, invoice.recurringId);
-    const month = invoice.issueDate.slice(0, 7);
-    if (!plan || !plan.endMonth || month <= plan.endMonth) continue;
+    const month = plan ? planMonthOf(plan, invoice) : "";
+    if (!plan || !month || !(plan.deletedAt || (plan.endMonth && month > plan.endMonth))) continue;
     const replaced = plans.some((other) => other.id !== plan.id && other.clientId === plan.clientId && currencyOf(other) !== currencyOf(plan)
       && other.startMonth <= month && (!other.endMonth || month <= other.endMonth));
     if (replaced) out.add(invoice.id);
@@ -1368,7 +1405,8 @@ function detectLegacyErase(ws: Workspace): number | null {
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
  * (which that tab couldn't see) is revived. An erased client's foreign records older than the erase are tombstoned
- * first, so only a record written after the erase revives it. Returns `ws` itself
+ * first, so only a record written after the erase revives it. Last, unedited generated plan months get the export
+ * mark an older copy left out (repairExportMarks). Returns `ws` itself
  * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
@@ -1393,7 +1431,42 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
     // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.
     clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt, client.deletedAt) + 1 } };
   }
-  return clients ? { ...next, clients } : next;
+  if (clients) next = { ...next, clients };
+  return repairExportMarks(next);
+}
+
+/**
+ * Gives an unedited generated month of a foreign plan the export mark carriedExportMark gives it (§6). Copies of the
+ * app from before the carry (PR 3, open tabs and offline PWAs) generate the same month id without the mark, and the
+ * later copy wins the merge, so without this the LUT line would depend on which device generated the month last,
+ * and every later month would carry the loss. Unedited means created by generateRecurring and never written since
+ * (createdAt === updatedAt, not created together with its plan by the invoice sheet, no payment, reminder or void):
+ * an untick is an edit, so it is kept. Adds the mark only, keeps updatedAt, and goes month by month in order, so one
+ * pass is the fixed point and every device and the server repair to the same bytes. `ws` itself when nothing changes.
+ */
+function repairExportMarks(ws: Workspace): Workspace {
+  const intl = ws.intl;
+  if (!intl) return ws;
+  const candidates: { month: string; invoice: Invoice; plan: RecurringPlan }[] = [];
+  for (const invoice of Object.values(intl.invoices)) {
+    if (invoice.exportLut || invoice.deletedAt || invoice.voided || !invoice.recurringId || invoice.createdAt !== invoice.updatedAt
+      || invoice.payments.length || invoice.reminders.length) continue;
+    const plan = own(intl.recurring, invoice.recurringId);
+    const month = plan ? planMonthOf(plan, invoice) : "";
+    if (!plan || !month || invoice.createdAt === plan.createdAt) continue;
+    candidates.push({ month, invoice, plan });
+  }
+  if (!candidates.length) return ws;
+  candidates.sort((a, b) => (a.month === b.month ? (a.invoice.id < b.invoice.id ? -1 : 1) : a.month < b.month ? -1 : 1));
+  let invoices: Record<string, Invoice> | null = null;
+  let view = ws;
+  for (const { month, invoice, plan } of candidates) {
+    if (!carriedExportMark(view, plan, month)) continue;
+    invoices ??= { ...intl.invoices };
+    invoices[invoice.id] = { ...invoice, exportLut: true };
+    view = { ...ws, intl: { ...intl, invoices } };
+  }
+  return invoices ? view : ws;
 }
 
 // ---------------------------------------------------------------------------
@@ -1631,13 +1704,23 @@ export function reminderMessage(
  * without dropping a leading 0 (only a bracketed "(0)" trunk prefix goes). Every other number keeps today's rule (so an INR client's "+98765 43210" still
  * goes to 919876543210).
  */
+/**
+ * A number typed with "+" or "00" (a client abroad), as dialled from another country: country code and number, with
+ * the bracketed trunk prefix dropped ("+44 (0)20 7946 0958" → 442079460958; every other 0 stays). "" when the number
+ * isn't typed that way. WhatsApp and SMS both use it, so both go to the same number.
+ */
+export function internationalDigits(phone: string): string {
+  const typed = phone.trim();
+  if (!typed.startsWith("+") && !typed.startsWith("00")) return "";
+  const digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
+  return typed.startsWith("+") ? digits : digits.slice(2);
+}
+
 export function whatsappLink(phone: string, text: string, opts?: { international?: boolean }): string {
   let digits = phone.replace(/\D/g, "");
   const typed = phone.trim();
   if (opts?.international && (typed.startsWith("+") || typed.startsWith("00"))) {
-    // A bracketed "(0)" is the trunk prefix ("+44 (0)20 ..."), never dialled from abroad; every other 0 stays.
-    digits = typed.replace(/\(\s*0\s*\)/g, "").replace(/\D/g, "");
-    if (!typed.startsWith("+")) digits = digits.slice(2);
+    digits = internationalDigits(phone);
     const base = digits.length >= 8 ? `https://wa.me/${digits}` : "https://wa.me/";
     return `${base}?text=${encodeURIComponent(text)}`;
   }

@@ -33,6 +33,16 @@ const otherTabWrite = (key, js) => b.eval(`new Promise((resolve) => { const f = 
   const v = (${js})(localStorage.getItem(${JSON.stringify(key)})); f.contentWindow.localStorage.setItem(${JSON.stringify(key)}, v); f.remove(); resolve(true); }; document.body.appendChild(f); })`);
 /** The Clients list row (li) whose text includes `name`. */
 const clientRow = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.innerText || ''`);
+/** The balance cell (right column) of a Clients list row. */
+const clientBalance = (name) => b.eval(`[...document.querySelectorAll('li')].find(li => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}) && !li.querySelector('[aria-expanded]'))?.querySelector('.text-right')?.innerText.trim() ?? null`);
+const setIntlOn = async (on) => {
+  await tab("Settings");
+  await openSettingsCard();
+  await sleep(150);
+  if ((await b.eval("document.getElementById('ws-intl-on').checked")) !== on) await t("document.getElementById('ws-intl-on').click(), true");
+  await t(`__t.click(/^Save payment details$/)`);
+  await sleep(300);
+};
 const openSettingsCard = () => t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); if (!d.open) d.querySelector('summary').click(); return true; })()");
 
 try {
@@ -123,6 +133,19 @@ try {
   await sleep(300);
   st = JSON.parse(await sidecar()).intl.settings;
   check("an unedited save changes nothing", st.payUrl === "https://wise.com/pay/me/sharma" && st.byCurrency?.CAD?.accountName === "Wise CAD");
+  check("the details card's save is not a second filled action", await b.eval("!__t.btn(/^Save payment details$/).className.includes('bg-graphite')"));
+
+  // §5.1: with "Invoice clients in other currencies" off and no foreign invoice in the book, no sheet shows a picker.
+  await setIntlOn(false);
+  check("the switch is saved off", JSON.parse(await sidecar()).intl.settings.on === false);
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  check("switch off, no foreign invoice: no currency picker", !(await exists("ws-currency")) && /Amount \(₹\)/.test(await dialogText()));
+  await esc(); await closed();
+  await tab("Clients");
+  await t(`__t.click(/^\\+ Add client$/)`); await opened();
+  check("switch off: no billing currency on the client sheet", !(await exists("ws-client-currency")));
+  await esc(); await closed();
+  await setIntlOn(true);
 
   // A client billed in USD: the phone hint, and their number kept as typed.
   await tab("Clients");
@@ -140,11 +163,44 @@ try {
   check("…and accepted for a GBP client", /Kensington Ltd/.test(await text()));
   check("client currency stored in the sidecar only", JSON.parse(await sidecar()).intl.clients && Object.values(JSON.parse(await sidecar()).intl.clients).some((c) => c.currency === "USD") && !(await book()).includes("USD"));
 
+  // A client sheet left open while another tab changes the billing currency: a phone edit never writes over it.
+  const globexId = Object.entries(JSON.parse(await sidecar()).intl.clients).find(([, c]) => c.currency === "USD")[0];
+  await t(`document.querySelector('button[aria-label="Edit Globex LLC"]').click(), true`); await opened();
+  await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); v.intl.clients['${globexId}'] = { currency: 'EUR', updatedAt: Date.now() }; return JSON.stringify(v); }`);
+  await sleep(500);
+  check("an open client sheet shows the currency set elsewhere", (await value("ws-client-currency")) === "EUR");
+  await t(`__t.set('ws-c-phone', '+1 415 555 0199'), __t.click(/^Save$/, __t.dialog())`);
+  await closed();
+  let entry = JSON.parse(await sidecar()).intl.clients[globexId];
+  check("saving a phone edit keeps the currency set elsewhere", entry.currency === "EUR" && !entry.deletedAt, JSON.stringify(entry));
+  // Picking a currency is a write (back to USD, and the number back for the reminder checks below).
+  await t(`document.querySelector('button[aria-label="Edit Globex LLC"]').click(), true`); await opened();
+  await t(`__t.set('ws-client-currency', 'USD'), __t.set('ws-c-phone', '+1 415 555 0100'), __t.click(/^Save$/, __t.dialog())`);
+  await closed();
+  entry = JSON.parse(await sidecar()).intl.clients[globexId];
+  check("a currency picked in the sheet is saved", entry.currency === "USD" && !entry.deletedAt, JSON.stringify(entry));
+
+  // An INR invoice for the GBP client keeps their short + number (the client's billing currency counts, §5.4).
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Kensington Ltd')`);
+  await sleep(100);
+  check("the GBP client's number is prefilled", (await value("ws-phone")) === "+44 20 7946" && (await value("ws-currency")) === "GBP");
+  await t(`__t.set('ws-currency', 'INR'), __t.click(/^Add invoice$/, __t.dialog())`);
+  await sleep(100);
+  check("an INR invoice for a client billed abroad accepts their + number", !/Enter a 10-digit mobile number/.test(await dialogText()) && /Enter an amount like 1500/.test(await dialogText()), await dialogText());
+  await esc(); await closed();
+
   // A USD invoice: the picker follows the client; foreign amounts never take a decimal comma.
   await t(`__t.click(/^\\+ New invoice$/)`); await opened();
   await t(`__t.set('ws-client', 'Globex LLC')`);
   await sleep(100);
   check("new invoice pre-selects the client's currency", (await value("ws-currency")) === "USD" && /Amount \(USD\)/.test(await dialogText()));
+  await t(`__t.set('ws-client', 'Globex LLC Europe')`);
+  await sleep(100);
+  check("typing past a client's name to a new client goes back to INR", (await value("ws-currency")) === "INR" && /Amount \(₹\)/.test(await dialogText()));
+  await t(`__t.set('ws-client', 'Globex LLC')`);
+  await sleep(100);
+  check("…and back to the client's currency when it matches again", (await value("ws-currency")) === "USD");
   check("export choice shown and on by default", await b.eval("document.getElementById('ws-export-lut')?.checked === true"));
   await t(`__t.set('ws-amount', '12,50'), __t.click(/^Add invoice$/, __t.dialog())`);
   check("a decimal comma is refused for USD", /Enter the amount like 1,200\.50\./.test(await dialogText()));
@@ -157,6 +213,13 @@ try {
   check("aging card says foreign invoices aren't in it", /Foreign-currency invoices aren't included\./.test(page));
   await tab("Invoices");
   check("row shows US$1,200.50", /Globex LLC[\s\S]*US\$1,200\.50/.test(await text()));
+  // §5.1: a book that holds a foreign invoice keeps the pickers with the switch off.
+  await setIntlOn(false);
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  check("switch off, foreign invoice in the book: the picker shows", await exists("ws-currency"));
+  await esc(); await closed();
+  await setIntlOn(true);
+  await tab("Invoices");
   await b.shot("cur-02-invoices.png");
 
   // Payment with INR credited.
@@ -216,6 +279,17 @@ try {
   msg = await value("ws-reminder");
   check("EUR reminder uses the default set, without the export line", /€750\.00/.test(msg) && /Account name: Sharma Tuition LLP\n/.test(msg) && !/Wise\)/.test(msg) && !/SUPPLY MEANT/.test(msg), msg);
   await esc(); await closed();
+  // Without receiving details for EUR (and no pay link), the reminder sheet says what to add (§5.8).
+  const keptSettings = JSON.parse(await sidecar()).intl.settings;
+  await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); Object.assign(v.intl.settings, { accountName: '', bankName: '', swift: '', account: '', bankDetails: '', payUrl: '', updatedAt: Date.now() }); return JSON.stringify(v); }`);
+  await sleep(500);
+  await openRow("Acme GmbH");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("no EUR details: the reminder sheet asks for them", /Add international payment details in Settings so the client knows how to pay\./.test(await dialogText()), await dialogText());
+  await esc(); await closed();
+  await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); v.intl.settings = { ...${JSON.stringify(keptSettings)}, updatedAt: Date.now() }; return JSON.stringify(v); }`);
+  await sleep(500);
+  check("details restored", JSON.parse(await sidecar()).intl.settings.payUrl === keptSettings.payUrl);
 
   // A client with a GSTIN is never an export recipient.
   await tab("Clients");
@@ -231,8 +305,9 @@ try {
   // Client rows per currency; a monthly plan in USD and its currency change.
   const globexRow = await clientRow("Globex LLC");
   check("client row shows USD balance, not ₹0", /US\$500\.00[\s\S]*US\$500\.00 overdue/.test(globexRow) && !/₹0(?!\d)/.test(globexRow), globexRow);
+  check("the open count adds foreign invoices", /\b1 open\b/.test(globexRow), globexRow);
   const kenRow = await clientRow("Kensington Ltd");
-  check("a client billed abroad with nothing open reads —, not ₹0", /—/.test(kenRow) && !/₹/.test(kenRow), kenRow);
+  check("a client billed abroad with nothing open reads —, not ₹0", (await clientBalance("Kensington Ltd")) === "—" && !/₹/.test(kenRow), `${await clientBalance("Kensington Ltd")} | ${kenRow}`);
   check("an INR client with nothing open still reads ₹0", /₹0(?!\d)/.test(await clientRow("Desi Exports")), await clientRow("Desi Exports"));
   await t(`__t.click(/^\\+ New invoice$/)`); await opened();
   await t(`__t.set('ws-client', 'Globex LLC'), __t.set('ws-amount', '300'), __t.set('ws-number', 'MON-1')`);
@@ -252,6 +327,8 @@ try {
   await closed();
   page = await text();
   check("plan replaced in GBP at the new amount; the created month stays USD", /Globex LLC · £240\.00/.test(page) && /Globex LLC · US\$300\.00/.test(page) && !/£300\.00/.test(page), page.slice(0, 1200));
+  const planActions = await b.eval(`Object.fromEntries([...document.querySelectorAll('[aria-labelledby=monthly-title] li')].map((li) => [li.querySelector('p').textContent.includes('£') ? 'gbp' : 'usd', [...li.querySelectorAll('button')].some((x) => x.textContent === 'Change currency')]))`);
+  check("only the new plan offers Change currency (the old one has no month left)", planActions.gbp === true && planActions.usd === false, JSON.stringify(planActions));
 
   // A plan month's currency is locked in the invoice sheet.
   await tab("Invoices");
@@ -283,8 +360,22 @@ try {
   await t(`__t.click(/^Record payment$/)`); await opened();
   await t(`__t.set('ws-pay-amount', '750'), __t.set('ws-pay-ref', 'WISE-9001'), __t.click(/^Save payment$/, __t.dialog())`);
   await closed();
+  await tab("Overview");
+  check("the overview counts the payment without INR credited", /INR earned this month: ₹99,840 \(1 payment without INR credited\)/.test(await text()), (await text()).slice(0, 800));
+  await tab("Invoices");
   await t(`__t.click(/^all$/)`);
   await openRow("Acme GmbH");
+  await t(`__t.click(/^Add INR credited$/)`);
+  await sleep(100);
+  check("the INR credited input takes focus", await b.eval("document.activeElement?.id?.startsWith('ws-credit-')"));
+  await esc();
+  await sleep(100);
+  check("Escape closes the form and returns focus to its button", await b.eval("!document.querySelector('[id^=ws-credit-]') && document.activeElement?.hasAttribute('data-credit-open')"));
+  await t(`__t.click(/^Add INR credited$/)`);
+  await sleep(100);
+  await t(`__t.click(/^Cancel$/)`);
+  await sleep(100);
+  check("Cancel returns focus to the button", await b.eval("!document.querySelector('[id^=ws-credit-]') && document.activeElement?.hasAttribute('data-credit-open')"));
   await t(`__t.click(/^Add INR credited$/)`);
   await sleep(100);
   const creditForm = await b.eval(`(() => { const i = document.querySelector('[id^=ws-credit-]'); const btn = [...i.form.querySelectorAll('button')].find((x) => x.textContent === 'Add INR credited');
@@ -293,6 +384,7 @@ try {
   await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/)`);
   await sleep(200);
   check("payment line shows the ₹ added later", /£750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
+  check("after the save, focus is on that payment's Undo, not the page", await b.eval("document.activeElement?.hasAttribute('data-credit-undo')"));
   check("INR credited stored on the foreign payment in the sidecar", Object.values(JSON.parse(await sidecar()).intl.invoices).some((i) => !i.deletedAt && i.payments.some((p) => p.reference === "WISE-9001" && p.inrCreditedPaise === 8_000_000)));
   await tab("Overview");
   check("INR earned this month adds it", /INR earned this month: ₹1,79,840/.test(await text()), (await text()).slice(0, 800));

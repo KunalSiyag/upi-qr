@@ -5,7 +5,7 @@ import {
   type ForeignCurrency,
 } from "../../lib/workspace/currency";
 import { expiredLutFy } from "./Sheets";
-import { cardNote, cardTitle, dangerText, Field, inputClass, labelClass, primaryButton } from "./ui";
+import { card, cardNote, cardTitle, dangerText, Field, inputClass, labelClass, secondaryButton } from "./ui";
 import { useWs, type Tr } from "./i18n";
 
 const EMPTY: PayDetailsFields = { accountName: "", bankName: "", swift: "", account: "", bankDetails: "", payUrl: "" };
@@ -161,7 +161,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
   }
 
   return (
-    <details className="group rounded-[12px] bg-white shadow-[0_1px_2px_rgba(28,40,64,0.04)] ring-1 ring-hairline" open={Boolean(saved)}>
+    <details className={`group ${card}`} open={Boolean(saved)}>
       <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-[12px] p-5 [&::-webkit-details-marker]:hidden">
         <span className="min-w-0">
           <span className={`block ${cardTitle}`}>{tr("Clients abroad")}</span>
@@ -240,7 +240,8 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
           </div>
 
           {Object.keys(errors).length > 0 && <p role="alert" className={`text-[13px] font-medium ${dangerText}`}>{tr("Some details need fixing. See the messages above.")}</p>}
-          <div className="flex items-end pt-1"><button type="submit" className={primaryButton}>{tr("Save payment details")}</button></div>
+          {/* A per-card save is secondary: Business details' "Save settings" stays the view's one filled action (DESIGN.md). */}
+          <div className="flex items-end pt-1"><button type="submit" className={secondaryButton}>{tr("Save payment details")}</button></div>
         </fieldset>
       </form>
     </details>

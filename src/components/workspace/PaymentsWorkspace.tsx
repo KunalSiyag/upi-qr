@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
-  getPlan, inrEarned, monthsBilledTwice, parseRupeesToPaise, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
+  getPlan, inrEarned, monthsBilledTwice, parseRupeesToPaise, planCanChangeCurrency, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam,
   type InvoiceView, type Workspace,
@@ -480,7 +480,7 @@ function Workspace() {
     return new Set([...foreign].filter((key) => inr.has(key)));
   }, [views]);
   const billedTwice = useMemo(() => monthsBilledTwice(ws), [ws]);
-  const pickers = intlPickers(ws);
+  const pickers = INTL_UI && intlPickers(ws);
   const clients = useMemo(() => liveClients(ws), [ws]);
   // This screen shows one business, so it only ever reads that business's links (§4.4): entries are filtered by the
   // book in their key ("<bookId>/<subject>", bare = the primary) and looked up with linkFor. Other businesses' links are
@@ -1122,7 +1122,7 @@ function Workspace() {
                                 onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
                                 {plan.paused ? tr("Resume") : tr("Pause")}
                               </button>
-                              {INTL_UI && (pickers || planForeign) && (
+                              {INTL_UI && (pickers || planForeign) && planCanChangeCurrency(ws, plan) && (
                                 <button type="button" className={`${rowButton} whitespace-nowrap`} onClick={() => setSheet({ kind: "plan", id: plan.id })}>{tr("Change currency")}</button>
                               )}
                               <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
@@ -1321,7 +1321,7 @@ function Workspace() {
       {sheet?.kind === "client" && (
         <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { const taken = setWs(next, sheet.bookId); setSheet(null); if (taken) setFlash(message); }} />
       )}
-      {sheet?.kind === "plan" && getPlan(ws, sheet.id) && (
+      {INTL_UI && sheet?.kind === "plan" && getPlan(ws, sheet.id) && (
         <PlanCurrencySheet ws={ws} planId={sheet.id} onClose={closeSheet} onSave={(next) => { const taken = setWs(next, sheet.bookId); setSheet(null); if (taken) setFlash(tr("Months already created keep their currency.")); }} />
       )}
       {BOOKS_UI && addOpen && <AddBusinessSheet onClose={() => setAddOpen(false)} onAdd={addBusiness} />}
@@ -1603,6 +1603,17 @@ function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOn
   const [crediting, setCrediting] = useState<string | null>(null);
   const [credit, setCredit] = useState("");
   const [creditError, setCreditError] = useState("");
+  // Where focus goes when the inline INR credited form closes: back to its trigger (Cancel, Escape) or, after a save
+  // (the trigger is gone), to that payment's Undo. Never left on <body>.
+  const creditFocus = useRef<{ paymentId: string; to: "open" | "undo" } | null>(null);
+  const rowRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = creditFocus.current;
+    if (crediting !== null || !target) return;
+    creditFocus.current = null;
+    rowRef.current?.querySelector<HTMLElement>(`[data-credit-${target.to}="${target.paymentId}"]`)?.focus();
+  });
+  const closeCredit = (paymentId: string, to: "open" | "undo") => { creditFocus.current = { paymentId, to }; setCrediting(null); };
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [copied, setCopied] = useState(false);
   const { tr, dateLocale } = useWs();
@@ -1624,7 +1635,7 @@ function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOn
         </div>
       </button>
       {open && (
-        <div className="ws-row-detail border-t border-hairline px-4 pb-4 pt-3 text-sm">
+        <div ref={rowRef} className="ws-row-detail border-t border-hairline px-4 pb-4 pt-3 text-sm">
           <dl className="grid grid-cols-2 gap-x-4 gap-y-2 text-[13px] sm:grid-cols-4">
             <div><dt className="text-muted">{tr("Invoice date")}</dt><dd className="text-ink">{shortDate(invoice.issueDate, dateLocale)}</dd></div>
             <div><dt className="text-muted">{tr("Due")}</dt><dd className="text-ink">{shortDate(invoice.dueDate, dateLocale)}</dd></div>
@@ -1645,23 +1656,28 @@ function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOn
                     </span>
                     <span className="flex shrink-0 items-center gap-3">
                       {foreign && !p.inrCreditedPaise && !readOnly && crediting !== p.id && (
-                        <button type="button" onClick={() => { setCrediting(p.id); setCredit(""); setCreditError(""); }} className="font-medium text-leaf hover:underline">{tr("Add INR credited")}</button>
+                        <button type="button" data-credit-open={p.id} onClick={() => { setCrediting(p.id); setCredit(""); setCreditError(""); }} className="font-medium text-leaf hover:underline">{tr("Add INR credited")}</button>
                       )}
-                      {!readOnly && <button type="button" onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
+                      {!readOnly && <button type="button" data-credit-undo={p.id} onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
                     </span>
                   </div>
                   {crediting === p.id && (
-                    <form noValidate className="mt-1.5 flex flex-wrap items-center gap-2" onSubmit={(e) => {
+                    <form noValidate className="mt-1.5 flex flex-wrap items-center gap-2" onKeyDown={(e) => {
+                      if (e.key !== "Escape") return;
+                      e.preventDefault();
+                      e.stopPropagation();
+                      closeCredit(p.id, "open");
+                    }} onSubmit={(e) => {
                       e.preventDefault();
                       const paise = parseRupeesToPaise(credit);
                       if (!paise) return setCreditError(tr("Enter an amount like 1500 or 1500.50."));
                       onCredit(p.id, paise);
-                      setCrediting(null);
+                      closeCredit(p.id, "undo");
                     }}>
                       <label htmlFor={`ws-credit-${p.id}`} className="sr-only">{tr("INR credited (₹, optional)")}</label>
                       <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus />
                       <button type="submit" className={rowButton}>{tr("Add INR credited")}</button>
-                      <button type="button" onClick={() => setCrediting(null)} className={ghostButton}>{tr("Cancel")}</button>
+                      <button type="button" onClick={() => closeCredit(p.id, "open")} className={ghostButton}>{tr("Cancel")}</button>
                       {creditError && <p role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
                     </form>
                   )}
@@ -1749,12 +1765,16 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
   const [phone, setPhone] = useState(existing?.phone ?? "");
   const [email, setEmail] = useState(existing?.email ?? "");
   const [gstin, setGstin] = useState(existing?.gstin ?? "");
-  const startCurrency = clientId ? clientCurrency(ws, clientId) : "INR";
-  const [currency, setCurrency] = useState<CurrencyCode>(startCurrency);
+  // The client's billing currency as it is now: sync or another tab may change it while this sheet is open. The field
+  // shows that live value until the user picks one, and Save writes the currency only when the user picked it, so a
+  // name or phone edit never overwrites (or brings back) a currency set elsewhere.
+  const liveCurrency = clientId ? clientCurrency(ws, clientId) : "INR";
+  const [picked, setPicked] = useState<CurrencyCode | null>(null);
+  const currency = picked ?? liveCurrency;
   const [error, setError] = useState("");
   const { tr } = useWs();
   // The billing-currency field and its phone hint show under the same rule as the invoice sheet's picker (§5.4).
-  const showCurrency = intlPickers(ws) || (INTL_UI && startCurrency !== "INR");
+  const showCurrency = INTL_UI && (intlPickers(ws) || liveCurrency !== "INR");
   const international = isForeignCurrency(currency);
   // deleteClient refuses while a live invoice in either map, or a live foreign plan, references the client.
   const hasInvoices = !!clientId && allLiveInvoices(ws).some((i) => i.clientId === clientId);
@@ -1774,7 +1794,7 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
           ...existing, id, name: name.trim().slice(0, 80), phone: phone.trim(), email: email.trim().slice(0, 120),
           gstin: gstin.trim().toUpperCase(), createdAt: existing?.createdAt ?? now, updatedAt: now,
         }, now);
-        if (currency !== startCurrency) next = setClientCurrency(next, id, currency, now);
+        if (showCurrency && picked !== null && picked !== liveCurrency) next = setClientCurrency(next, id, picked, now);
         onSave(next, existing ? tr("Client updated.") : tr("Client added."));
       }}>
         <Field label={tr("Name")} htmlFor="ws-c-name"><input id="ws-c-name" className={inputClass} value={name} onChange={(e) => setName(e.target.value)} maxLength={80} /></Field>
@@ -1784,7 +1804,7 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
         <Field label={tr("GSTIN (optional)")} htmlFor="ws-c-gstin"><input id="ws-c-gstin" className={inputClass} value={gstin} onChange={(e) => setGstin(e.target.value)} maxLength={15} autoCapitalize="characters" /></Field>
         {showCurrency && (
           <Field label={tr("Billing currency")} htmlFor="ws-client-currency">
-            <select id="ws-client-currency" className={inputClass} value={currency} onChange={(e) => setCurrency(e.target.value as CurrencyCode)}>
+            <select id="ws-client-currency" className={inputClass} value={currency} onChange={(e) => setPicked(e.target.value as CurrencyCode)}>
               {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
             </select>
           </Field>
@@ -1857,7 +1877,7 @@ function ForeignSummary({ summaries, earned }: { summaries: ReturnType<typeof su
     .filter(([, s]) => s.outstandingPaise > 0);
   if (!lines.length && earned.creditedPaise <= 0) return null;
   return (
-    <section aria-label={tr("Clients abroad")} className="divide-y divide-hairline rounded-[12px] bg-white px-4 text-[13px] text-charcoal ring-1 ring-hairline">
+    <section aria-label={tr("Clients abroad")} className={`${card} divide-y divide-hairline px-4 text-[13px] text-charcoal`}>
       {lines.map(([currency, s]) => (
         <p key={currency} className="flex flex-wrap gap-x-1.5 py-2 tabular-nums">
           <span className="font-medium text-ink">{tr("{amount} to collect", { amount: formatMoney(s.outstandingPaise, currency) })}</span>

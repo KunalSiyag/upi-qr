@@ -1635,6 +1635,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   // The LUT moves as a group: turning it off clears the ARN and year together.
   const lutGone = M.editIntlSettings(remote, fromRemote, { ...fromRemote, exportUnderLut: false, lutArn: "", lutFy: "" }, X + 24).intl.settings;
   assert.deepEqual([lutGone.exportUnderLut, lutGone.lutArn, lutGone.lutFy, lutGone.byCurrency?.USD?.accountName], [false, "", "", "Wise USD"]);
+  // Editing only the ARN saves the whole group from the form: never this form's ARN with another device's year.
+  const otherLut = M.updateIntlSettings(remote, { lutArn: "AD2704250099999", lutFy: "2025-26" }, X + 25);
+  const arnOnly = M.editIntlSettings(M.mergeWorkspaces(remote, otherLut), fromRemote, { ...fromRemote, lutArn: "AD2704260054321" }, X + 26).intl.settings;
+  assert.deepEqual([arnOnly.exportUnderLut, arnOnly.lutArn, arnOnly.lutFy], [true, "AD2704260054321", "2026-27"], "the LUT group moves together");
 
   // A foreign plan started as an export (§6, Q3): the mark carries to later months; unticking a month stops it from then on.
   {
@@ -1658,10 +1662,77 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.ok(!("exportLut" in M.getInvoice(inrGen.ws, rid("rec_inrplan1", "2026-11"))));
   }
 
+  // The export mark never depends on which copy generated a month last (§6). A PR 3 copy (production before PR 4: open
+  // tabs, offline PWAs) generates the same month id without the mark; repairIntl gives an unedited generated month the
+  // mark it carries, on every device and the server, and leaves an edited month (an untick) alone.
+  {
+    const pr3 = await import("./fixtures/pr3-model.ts");
+    const rid = M.recurringInvoiceId;
+    const load = (Model, w) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(w)));
+    const monthOf = (w, plan, month) => M.getInvoice(w, rid(plan, month));
+    const usdPlan = (id, startMonth, extra = {}) => ({ id, clientId: "cli_export02", amountPaise: 120000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth, endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X, ...extra });
+    const sheetMonth = (plan, month, exportLut, at = X) => ({ id: rid(plan, month), number: `EX-${plan}-${month}`, clientId: "cli_export02", issueDate: `${month}-01`, dueDate: `${month}-16`, amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, recurringId: plan, currency: "USD", ...(exportLut ? { exportLut: true } : {}), createdAt: at, updatedAt: at });
+    let w = M.upsertClient(remote, { ...client, id: "cli_export02", name: "Export Two" }, X);
+    w = M.upsertPlan(w, usdPlan("rec_export02", "2026-10"), X);
+    w = M.upsertInvoice(w, sheetMonth("rec_export02", "2026-10", true), X);
+    const laptop = M.generateRecurring(w, "2026-11-02", X + 40).ws; // PR 4 at 09:00
+    const phone = pr3.generateRecurring(load(pr3, w), "2026-11-02", X + 41).ws; // PR 3 an hour later
+    assert.equal(monthOf(load(M, phone), "rec_export02", "2026-11").exportLut, undefined, "the PR 3 copy generates November without the mark");
+    const ab = M.repairIntl(M.mergeWorkspaces(laptop, load(M, phone)), X + 42);
+    const ba = M.repairIntl(M.mergeWorkspaces(load(M, phone), laptop), X + 42);
+    assert.equal(monthOf(ab, "rec_export02", "2026-11").exportLut, true, "the merged November keeps the mark");
+    assert.equal(monthOf(ab, "rec_export02", "2026-11").updatedAt, X + 41, "the repair keeps updatedAt");
+    assert.equal(M.canonicalJson(ab), M.canonicalJson(ba), "both merge orders repair to the same bytes");
+    assert.equal(M.repairIntl(ab, X + 99), ab, "a repaired book needs no second repair");
+    assert.match(M.invoiceExportNote(ab, monthOf(ab, "rec_export02", "2026-11")), /LUT ARN AD2704260012345/);
+    // A chain of PR 3 months is repaired in order: December carries November's restored mark.
+    const phoneDec = pr3.generateRecurring(load(pr3, phone), "2026-12-02", X + 50).ws;
+    const chain = M.repairIntl(M.mergeWorkspaces(laptop, load(M, phoneDec)), X + 51);
+    assert.deepEqual(["2026-11", "2026-12"].map((m) => monthOf(chain, "rec_export02", m).exportLut), [true, true]);
+    // The server copy repairs to the same thing a PR 3 push leaves it with.
+    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(chain, load(M, phoneDec)), X + 52)), M.canonicalJson(chain));
+    // An untick is an edit: kept, and later unedited months follow it.
+    const { exportLut: _x, ...plainNov } = monthOf(ab, "rec_export02", "2026-11");
+    const unticked = M.upsertInvoice(ab, plainNov, X + 60);
+    assert.equal(M.repairIntl(unticked, X + 61), unticked, "an unticked month stays unticked");
+    const decAfter = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(unticked, "2026-12-02", X + 62).ws, load(M, pr3.generateRecurring(load(pr3, unticked), "2026-12-02", X + 63).ws)), X + 64);
+    assert.ok(!monthOf(decAfter, "rec_export02", "2026-12").exportLut, "December follows the unticked November");
+    // A month with a reminder or payment is never touched (the client may have it already).
+    const reminded = M.upsertInvoice(load(M, phone), { ...monthOf(load(M, phone), "rec_export02", "2026-11"), reminders: [{ at: X + 41, channel: "copy" }], updatedAt: X + 41 }, X + 41);
+    const remindedNov = monthOf(reminded, "rec_export02", "2026-11");
+    assert.equal(remindedNov.createdAt, remindedNov.updatedAt);
+    assert.ok(!monthOf(M.repairIntl(reminded, X + 65), "rec_export02", "2026-11").exportLut, "a reminded month keeps what was sent");
+
+    // A deleted month is skipped: December carries October's mark past a deleted November.
+    const novGone = M.deleteInvoice(M.upsertInvoice(laptop, plainNov, X + 70), rid("rec_export02", "2026-11"), X + 71);
+    assert.equal(monthOf(M.generateRecurring(novGone, "2026-12-02", X + 72).ws, "rec_export02", "2026-12").exportLut, true);
+
+    // Across a currency change (US$ → €): the new plan's first month carries the old plan's last mark.
+    const toEur = M.replacePlanCurrency(laptop, "rec_export02", "EUR", X + 80, 110_000);
+    const eurDec = M.generateRecurring(toEur.ws, "2026-12-02", X + 81).ws;
+    assert.equal(monthOf(eurDec, toEur.id, "2026-12").exportLut, true, "the first € month keeps the export mark");
+    assert.equal(monthOf(M.generateRecurring(eurDec, "2027-01-02", X + 82).ws, toEur.id, "2027-01").exportLut, true);
+    const eurPhone = pr3.generateRecurring(load(pr3, toEur.ws), "2026-12-02", X + 83).ws;
+    assert.equal(monthOf(M.repairIntl(M.mergeWorkspaces(eurDec, load(M, eurPhone)), X + 84), toEur.id, "2026-12").exportLut, true, "…also when a PR 3 copy generated it later");
+    // From an unmarked old plan, or from INR, the first month is unmarked (the user ticks it).
+    let inrBook = M.upsertPlan(laptop, { ...usdPlan("rec_inrexp01", "2026-10"), currency: undefined, amountPaise: 9_000_000 }, X);
+    inrBook = M.generateRecurring(inrBook, "2026-10-02", X + 85).ws;
+    const fromInr = M.replacePlanCurrency(inrBook, "rec_inrexp01", "USD", X + 85, 100_000);
+    assert.ok(!monthOf(M.generateRecurring(fromInr.ws, "2026-11-02", X + 86).ws, fromInr.id, "2026-11").exportLut, "₹ → US$: the first month is unmarked");
+    const unmarkedOld = M.replacePlanCurrency(unticked, "rec_export02", "EUR", X + 86, 110_000);
+    assert.ok(!monthOf(M.generateRecurring(unmarkedOld.ws, "2026-12-02", X + 87).ws, unmarkedOld.id, "2026-12").exportLut);
+    // A plan's first month made by the invoice sheet with the box unticked is the user's choice, never repaired.
+    const ended = M.upsertPlan(laptop, { ...M.getPlan(laptop, "rec_export02"), endMonth: "2026-11" }, X + 90);
+    let fresh = M.upsertPlan(ended, usdPlan("rec_export03", "2026-12", { createdAt: X + 91, updatedAt: X + 91 }), X + 91);
+    fresh = M.upsertInvoice(fresh, sheetMonth("rec_export03", "2026-12", false, X + 91), X + 91);
+    assert.equal(M.repairIntl(fresh, X + 92), fresh, "a sheet-made first month keeps its unticked box");
+  }
+
   // A currency change on device A while device B (pre-intl code) is offline: both bill November (risk 22). The two
   // can't converge (new plan id), so the old plan's month past its endMonth is flagged for the user to delete.
   {
     const legacy = await import("./fixtures/legacy-model.ts");
+    const load = (Model, book) => Model.sanitizeWorkspace(JSON.parse(JSON.stringify(book)));
     let w = M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), { ...client, id: "cli_plan0001" }, X);
     w = M.upsertPlan(w, { id: "rec_plan0001", clientId: "cli_plan0001", amountPaise: 5_000_000, description: "", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, createdAt: X, updatedAt: X }, X);
     w = M.generateRecurring(w, "2026-10-25", X).ws;
@@ -1679,6 +1750,66 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     // An INR-only book never flags anything (no intl), even with a month past a stopped plan's end.
     const stopped = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-09" }, X + 43);
     assert.equal(M.monthsBilledTwice(stopped).size, 0);
+    // Each filter: a paid month, another client's plan, a same-currency plan, a plan that starts later or ended earlier.
+    const paidNov = M.addPayment(merged, oldNov, { amountPaise: 5_000_000, date: "2026-11-06", mode: "upi", reference: "" }, X + 44);
+    assert.equal(M.monthsBilledTwice(paidNov).size, 0, "a paid month is never flagged");
+    const newPlan = M.getPlan(merged, M.allLiveRecurring(merged).find((p) => M.currencyOf(p) === "USD").id);
+    const swap = (patch) => M.upsertPlan(merged, { ...newPlan, ...patch }, X + 45);
+    const otherClient = M.upsertClient(merged, { ...client, id: "cli_plan0002", name: "Other" }, X);
+    assert.equal(M.monthsBilledTwice(M.upsertPlan(otherClient, { ...newPlan, clientId: "cli_plan0002" }, X + 45)).size, 0, "another client's plan never flags it");
+    assert.equal(M.monthsBilledTwice(swap({ startMonth: "2026-12" })).size, 0, "a plan that starts after the month");
+    assert.equal(M.monthsBilledTwice(swap({ endMonth: "2026-10" })).size, 0, "a plan that ended before the month");
+    // (the US$ plan and its month gone, a second ₹ plan from August on)
+    let sameCurrency = M.deleteInvoice(M.upsertPlan(merged, { ...newPlan, deletedAt: X + 46 }, X + 46), M.recurringInvoiceId(newPlan.id, "2026-11"), X + 46);
+    sameCurrency = M.upsertPlan(sameCurrency, { ...M.getPlan(merged, "rec_plan0001"), id: "rec_plan0003", endMonth: "", createdAt: X + 46 }, X + 46);
+    assert.equal(M.monthsBilledTwice(M.upsertPlan(sameCurrency, { ...newPlan, id: "rec_plan0004", deletedAt: undefined }, X + 47)).size, 1, "(control: a US$ plan flags it)");
+    assert.equal(M.monthsBilledTwice(sameCurrency).size, 0, "a plan in the same currency never flags it");
+
+    // The month is the one the id was generated for: a last month re-dated into the next month is not flagged.
+    {
+      let r = M.generateRecurring(w, "2026-10-25", X).ws;
+      const oct = M.recurringInvoiceId("rec_plan0001", "2026-10");
+      r = M.upsertInvoice(r, { ...M.getInvoice(r, oct), issueDate: "2026-11-01", dueDate: "2026-11-16" }, X + 47);
+      const changed = M.replacePlanCurrency(r, "rec_plan0001", "USD", X + 48, 60_000);
+      assert.equal(M.getPlan(changed.ws, "rec_plan0001").endMonth, "2026-10");
+      const usdNov = M.generateRecurring(changed.ws, "2026-11-28", X + 49).ws;
+      assert.equal(M.monthsBilledTwice(usdNov).size, 0, "October's only invoice, re-dated, is never flagged");
+    }
+
+    // A plan a currency change deleted (it had no month yet) covers no month: ₹ → US$, then US$ → € before November.
+    // A copy that saw only the first change bills November in US$; the € plan bills it too: the US$ month is flagged.
+    {
+      const usd = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 50, 60_000);
+      const stale = load(M, usd.ws);
+      const eur = M.replacePlanCurrency(usd.ws, usd.id, "EUR", X + 51, 55_000);
+      assert.ok(M.getPlan(eur.ws, usd.id).deletedAt && !M.getPlan(eur.ws, usd.id).endMonth, "the US$ plan is deleted, not ended");
+      const twice = M.repairIntl(M.mergeWorkspaces(M.generateRecurring(eur.ws, "2026-11-06", X + 52).ws, M.generateRecurring(stale, "2026-11-06", X + 53).ws), X + 54);
+      const novs = M.allLiveInvoices(twice).filter((i) => i.issueDate.startsWith("2026-11")).map((i) => M.currencyOf(i)).sort();
+      assert.deepEqual(novs, ["EUR", "USD"]);
+      assert.deepEqual([...M.monthsBilledTwice(twice)], [M.recurringInvoiceId(usd.id, "2026-11")], "the deleted plan's month is flagged");
+      // The same from a PR 3 copy.
+      const pr3 = await import("./fixtures/pr3-model.ts");
+      const fromPr3 = M.mergeWorkspaces(M.generateRecurring(eur.ws, "2026-11-06", X + 52).ws, load(M, pr3.generateRecurring(load(pr3, usd.ws), "2026-11-06", X + 53).ws));
+      assert.deepEqual([...M.monthsBilledTwice(M.repairIntl(fromPr3, X + 54))], [M.recurringInvoiceId(usd.id, "2026-11")]);
+    }
+
+    // "Change currency" is offered only while a month is left to bill.
+    const replaced = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 55, 60_000);
+    assert.equal(M.planCanChangeCurrency(replaced.ws, M.getPlan(replaced.ws, "rec_plan0001")), false, "the old plan of a change has none");
+    assert.equal(M.replacePlanCurrency(replaced.ws, "rec_plan0001", "EUR", X + 56, 1), null);
+    assert.equal(M.planCanChangeCurrency(replaced.ws, M.getPlan(replaced.ws, replaced.id)), true);
+    const stoppedNow = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-10" }, X + 57);
+    assert.equal(M.planCanChangeCurrency(stoppedNow, M.getPlan(stoppedNow, "rec_plan0001")), false, "stopped after its last created month");
+    assert.equal(M.planCanChangeCurrency(w, M.getPlan(w, "rec_plan0001")), true);
+  }
+
+  // WhatsApp and SMS dial the same number for a client abroad: the bracketed trunk prefix is dropped for both.
+  assert.equal(M.internationalDigits("+44 (0)20 7946 0958"), "442079460958");
+  assert.equal(M.internationalDigits("0044(0)2079460958"), "442079460958");
+  assert.equal(M.internationalDigits("+1 415 555 0100"), "14155550100");
+  assert.equal(M.internationalDigits("98765 43210"), "");
+  for (const phone of ["+44 (0)20 7946 0958", "0044(0)2079460958", "+1 415 555 0100"]) {
+    assert.equal(M.whatsappLink(phone, "x", { international: true }), `https://wa.me/${M.internationalDigits(phone)}?text=x`);
   }
 }
 
