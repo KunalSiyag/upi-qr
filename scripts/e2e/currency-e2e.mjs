@@ -367,7 +367,7 @@ try {
   await tab("Clients");
   check("monthly plan shown in its currency", /Monthly billing[\s\S]*Globex LLC · US\$300\.00/.test(await text()));
   check("no plan offers a currency change (a currency is fixed at creation)", !(await b.eval("[...document.querySelectorAll('button')].some((x) => /Change currency/.test(x.textContent))")));
-  check("the Monthly billing note says how to switch without billing a month twice", await b.eval("document.querySelector('section[aria-labelledby=monthly-title] [data-monthly-note]')?.textContent === 'To bill in another currency, stop the monthly billing after this month, then start a new one in that currency dated next month.'"));
+  check("the Monthly billing note says how to switch without billing a month twice", await b.eval("document.querySelector('section[aria-labelledby=monthly-title] [data-monthly-note]')?.textContent === 'To bill in another currency, stop the monthly billing, then start a new one in that currency. If a month would be billed twice, the new invoice says which month to start in.'"));
   // Repeat in another currency for months Globex's US$ plan already bills: the sheet blocks it; in US$ it doesn't
   // (review rounds 1-2, PR 5). The US$ plan has no end month, so no date clears it: the message says to stop it first.
   const monthName = (offset) => b.eval(`(() => { const d = new Date(); const m = new Date(Date.UTC(d.getFullYear(), d.getMonth() + (${offset}), 1));
@@ -933,20 +933,23 @@ try {
     const intl = {
       settings: { on: true, updatedAt: T },
       invoices: { [usdId]: { id: usdId, number: "FUT-1", clientId: "cli_fut00001", issueDate: `${start}-01`, dueDate: `${start}-15`, amountPaise: 30000, description: "", currency: "USD", payments: [], reminders: [], voided: false, recurringId: "rec_fut00001", createdAt: T, updatedAt: T } },
-      recurring: { rec_fut00001: { id: "rec_fut00001", clientId: "cli_fut00001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: start, endMonth: "", paused: false, currency: "USD", createdAt: T, updatedAt: T } },
-      clients: { cli_fut00001: { currency: "USD", updatedAt: T } },
+      recurring: { rec_fut00001: { id: "rec_fut00001", clientId: "cli_fut00001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: start, endMonth: "", paused: false, currency: "USD", createdAt: T, updatedAt: T },
+        // Review round 4: billing that starts later and has an end month ("from {month} to {last}").
+        rec_lat00001: { id: "rec_lat00001", clientId: "cli_lat00001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: start, endMonth: await ym(3), paused: false, currency: "USD", createdAt: T, updatedAt: T } },
+      clients: { cli_fut00001: { currency: "USD", updatedAt: T }, cli_lat00001: { currency: "USD", updatedAt: T } },
     };
     const bookJson = { version: 1, business: { name: "Future Studio", upiId: "future@okaxis", phone: "", gstin: "", invoicePrefix: "FS-", updatedAt: T },
-      clients: { cli_fut00001: { id: "cli_fut00001", name: "Future Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
+      clients: { cli_fut00001: { id: "cli_fut00001", name: "Future Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
+        cli_lat00001: { id: "cli_lat00001", name: "Later Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
     await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(bookJson))});
       localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); true`);
     await b.go(BASE + "/app/?tab=clients", 2500);
     await b.waitFor("/Future Studio/.test(document.body.innerText)", 8000);
     const w = mobile ? "390px" : "1280px";
-    const newPlan = async (delta, day = "05") => {
+    const newPlan = async (delta, day = "05", client = "Future Co") => {
       await t(`__t.click(/^\\+ New invoice$/)`); await opened();
       const month = await ym(delta);
-      await t(`__t.set('ws-client', 'Future Co'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '25000'), __t.set('ws-number', 'FS-${delta}'), __t.set('ws-issue', '${month}-${day}'), __t.set('ws-due', '${month}-20')`);
+      await t(`__t.set('ws-client', '${client}'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '25000'), __t.set('ws-number', 'FS-${delta}'), __t.set('ws-issue', '${month}-${day}'), __t.set('ws-due', '${month}-20')`);
       await t(`${repeatBox}.click(), true`);
       await sleep(150);
     };
@@ -962,6 +965,15 @@ try {
     await sleep(400);
     await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-overlap.png`);
     await esc(); await closed();
+    // Review round 4: billing that starts later with an end month names both months and the month after the last.
+    await newPlan(1, "05", "Later Co");
+    check(`${w}: billing that starts later with an end month: "from … to …", on the last-month field`,
+      (await overlapText()) === `Later Co already has monthly billing in USD from ${await name(2)} to ${await name(3)}. Set the last month to bill before ${await name(2)}, or date this invoice in ${await name(4)} or later.`
+      && await b.eval("document.getElementById('ws-until').getAttribute('aria-describedby') === 'ws-plan-overlap' && !document.getElementById('ws-issue').hasAttribute('aria-describedby')"), await overlapText());
+    await t(`__t.set('ws-until', '${await ym(1)}')`);
+    await sleep(150);
+    check(`${w}: …and ending the new billing the month before clears it`, !(await b.eval("!!document.querySelector('[data-plan-overlap]')")), await overlapText());
+    await esc(); await closed();
     // "Stop after this month" before the plan's first month: it bills nothing more, so the row reads "ended".
     const futRow = `[...document.querySelectorAll('section[aria-labelledby=monthly-title] li')].find((li) => li.textContent.includes('Future Co'))`;
     await t(`__t.click(/^Stop after this month$/, ${futRow})`);
@@ -969,10 +981,21 @@ try {
     const row = await b.eval(`(() => { const li = ${futRow}; return { text: li.innerText, buttons: [...li.querySelectorAll('button')].map((x) => x.textContent) }; })()`);
     check(`${w}: a plan stopped before its first month reads ended, with no Pause or Stop`, / · ended/.test(row.text) && !/until/.test(row.text) && !row.buttons.some((x) => /^(Pause|Resume|Stop after this month)$/.test(x)) && row.buttons.includes("Delete monthly billing"), JSON.stringify(row));
     await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-stopped.png`);
-    // Its first month is still billed in US$: a ₹ plan from that month is refused; from the month after, it is saved.
+    // Following the Monthly billing note (stop it, then start the new one): its first month is still billed in US$, and
+    // the sheet names that invoice, not "monthly billing" the client still has (review round 4). Dated next month, the
+    // fix is the last month (on #ws-until) or deleting the invoice.
+    await newPlan(1);
+    check(`${w}: following the note, a ₹ plan from next month names the US$ invoice already made`,
+      (await overlapText()) === `Future Co already has a USD invoice for ${await name(2)} from monthly billing. Set the last month to bill before ${await name(2)}, or delete that invoice first.`
+      && await b.eval("document.getElementById('ws-until').getAttribute('aria-describedby') === 'ws-plan-overlap'"), await overlapText());
+    await b.eval("document.getElementById('ws-plan-overlap').scrollIntoView({ block: 'center' }), true");
+    await sleep(300);
+    await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-invoice-only.png`);
+    await esc(); await closed();
+    // A ₹ plan from that month is refused; from the month after, it is saved.
     await newPlan(2);
     check(`${w}: the US$ month already billed still blocks a ₹ plan for it`,
-      (await overlapText()) === `Future Co already has monthly billing in USD until ${await name(2)}. Date this invoice in ${await name(3)} or later so no month is billed twice.`, await overlapText());
+      (await overlapText()) === `Future Co already has a USD invoice for ${await name(2)} from monthly billing. Date this invoice in ${await name(3)} or later, or delete that invoice first.`, await overlapText());
     await t(`__t.click(/^Add invoice$/, __t.dialog())`);
     await sleep(200);
     check(`${w}: …and Add invoice is refused`, await b.eval("!!document.querySelector('[role=dialog]')") && !(await book()).includes('"rec_'), (await book()).slice(0, 200));

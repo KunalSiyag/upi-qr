@@ -1287,6 +1287,11 @@ export interface OtherCurrencyBilling {
    * stopping leaves no month billed. Only meaningful when `last` is "".
    */
   lastIfStopped: string;
+  /**
+   * True when every shared month is an invoice the plan already made and the plan bills none of them any more (it was
+   * stopped before its first month, or deleted): the sheet then names the invoice, not "monthly billing" (review round 4).
+   */
+  invoicesOnly: boolean;
 }
 
 /** The month a plan invoice bills: the month in its id (generateRecurring and the sheet derive the id from it). */
@@ -1300,9 +1305,11 @@ function planInvoiceMonth(invoice: Invoice): string {
  * Monthly billing of a client in another currency that bills any month a new plan in `currency` would bill, from
  * `fromMonth` to `toMonth` ("" = no end): both would bill each shared month, once per currency (review rounds 1-3,
  * PR 5). A plan covers the months it still bills (startMonth to endMonth, open-ended without one; none when it was
- * stopped before its first month) and the months it already billed (its live, not voided invoices, also those of a
- * deleted plan): the invoice sheet creates a plan's first invoice at once, even for a future month, so a plan stopped
- * before its start month still bills that month (review round 3). A paused plan counts (it backfills when resumed).
+ * stopped before its first month) and the months it already billed (its live invoices, also those of a deleted plan):
+ * the invoice sheet creates a plan's first invoice at once, even for a future month, so a plan stopped before its start
+ * month still bills that month (review round 3). A cancelled (voided) invoice counts too: Restore brings it back with
+ * one tap and generateRecurring never bills its month again; only deleting it frees the month (review round 4). A
+ * paused plan counts (it backfills when resumed).
  * `todayMonth` is the month "Stop after this month" would end a plan in.
  */
 export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode, todayMonth: string): OtherCurrencyBilling | undefined {
@@ -1312,7 +1319,7 @@ export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth:
     if (plan.clientId === clientId && currencyOf(plan) !== currency) groups.set(plan.id, { currency: currencyOf(plan), billed: [], plan });
   }
   for (const invoice of allLiveInvoices(ws)) {
-    if (!invoice.recurringId || invoice.voided || invoice.clientId !== clientId || currencyOf(invoice) === currency) continue;
+    if (!invoice.recurringId || invoice.clientId !== clientId || currencyOf(invoice) === currency) continue;
     const group = groups.get(invoice.recurringId) ?? { currency: currencyOf(invoice), billed: [] };
     group.billed.push(planInvoiceMonth(invoice));
     groups.set(invoice.recurringId, group);
@@ -1323,13 +1330,14 @@ export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth:
     // The months the plan still bills; none when it was stopped before its first month.
     const runs = plan && (!plan.endMonth || plan.endMonth >= plan.startMonth) ? { start: plan.startMonth, end: plan.endMonth || "9999-12" } : undefined;
     const candidates = billed.filter((month) => month >= fromMonth && month <= to);
-    if (runs && later(runs.start, fromMonth) <= (runs.end < to ? runs.end : to)) candidates.push(later(runs.start, fromMonth));
+    const fromRun = Boolean(runs && later(runs.start, fromMonth) <= (runs.end < to ? runs.end : to));
+    if (runs && fromRun) candidates.push(later(runs.start, fromMonth));
     if (!candidates.length) continue;
     const lastBilled = billed.length ? billed[billed.length - 1] : "";
     const last = runs && !plan?.endMonth ? "" : later(lastBilled, runs ? runs.end : "");
     // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed.
     const lastIfStopped = later(lastBilled, plan && plan.startMonth <= todayMonth ? todayMonth : "");
-    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped };
+    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped, invoicesOnly: !fromRun };
   }
   return undefined;
 }

@@ -61,6 +61,28 @@ try {
   await sleep(200);
   const stopped = Object.values((await local()).recurring)[0];
   check("stop sets the last month to this month", stopped.endMonth === (await b.eval("(() => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0'); })()")) && stopped.paused === false);
+
+  // Review round 4 (PR 5): an INR plan dated next month, paused, then stopped before its first month. It bills nothing
+  // more and offers no Resume, so the row reads "ended", never "paused".
+  {
+    const next = await b.eval("(() => { const d = new Date(); const m = new Date(d.getFullYear(), d.getMonth() + 1, 1); return m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0'); })()");
+    await t("__t.click(/^\\+ New invoice$/)");
+    await b.waitFor("!!document.getElementById('ws-amount')");
+    await t(`__t.set('ws-client', 'Mehta Classes'), __t.set('ws-amount', '2000'), __t.set('ws-issue', '${next}-05'), __t.set('ws-due', '${next}-20')`);
+    await t("[...document.querySelectorAll('[role=dialog] label')].find(l => l.textContent.startsWith('Repeat every month')).querySelector('input').click(), true");
+    await t("__t.click(/^Add invoice$/, __t.dialog())");
+    await b.waitFor("!document.querySelector('[role=dialog]')", 5000);
+    await t("__t.click(/^Clients$/)");
+    await sleep(200);
+    const mehta = "[...document.querySelectorAll('section[aria-labelledby=monthly-title] li')].find((li) => li.textContent.includes('Mehta Classes'))";
+    await t(`__t.click(/^Pause$/, ${mehta})`);
+    await sleep(150);
+    await t(`__t.click(/^Stop after this month$/, ${mehta})`);
+    await sleep(200);
+    const row = await b.eval(`(() => { const li = ${mehta}; return { text: li.innerText, buttons: [...li.querySelectorAll('button')].map((x) => x.textContent) }; })()`);
+    const plan = Object.values((await local()).recurring).find((p) => p.startMonth === next);
+    check("INR: a paused plan stopped before its first month reads ended, not paused, with no buttons", / · ended/.test(row.text) && !/paused/.test(row.text) && row.buttons.length === 0 && plan?.paused === true && plan.endMonth < plan.startMonth, JSON.stringify({ row, plan }));
+  }
   check("no console errors (excluding blocked Clerk)", b.errors.filter((e) => !/clerk|ERR_BLOCKED|Failed to load/i.test(e)).length === 0, b.errors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));

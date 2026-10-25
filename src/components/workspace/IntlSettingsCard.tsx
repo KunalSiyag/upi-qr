@@ -177,12 +177,13 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
 
   return (
     <details className={`group ${card}`} open={Boolean(saved)}>
-      <summary className="flex cursor-pointer list-none items-start justify-between gap-3 rounded-[12px] p-5 [&::-webkit-details-marker]:hidden">
-        <span className="min-w-0">
-          <span className={`block ${cardTitle}`}>{tr("Clients abroad")}</span>
-          <span className={`mt-0.5 block ${cardNote}`}>{tr("Invoice clients outside India in their currency. Reminders and pay links show your bank details instead of UPI.")}</span>
-        </span>
-        <svg className="mt-1 h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
+      {/* The title is an h2 like every other Settings card's, so heading navigation reaches the card and its h3 isn't
+          read as part of the card above (review round 4, PR 5). A summary takes headings and phrasing content only (no
+          div or span wrapper around a heading), so a grid places the title, the note and the chevron. */}
+      <summary className="grid cursor-pointer list-none grid-cols-[minmax(0,1fr)_auto] gap-x-3 rounded-[12px] p-5 [&::-webkit-details-marker]:hidden">
+        <h2 className={`min-w-0 ${cardTitle}`}>{tr("Clients abroad")}</h2>
+        <span className={`col-start-1 mt-0.5 block min-w-0 ${cardNote}`}>{tr("Invoice clients outside India in their currency. Reminders and pay links show your bank details instead of UPI.")}</span>
+        <svg className="col-start-2 row-span-2 row-start-1 mt-1 h-4 w-4 shrink-0 text-muted transition-transform duration-200 group-open:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true">
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
         </svg>
       </summary>

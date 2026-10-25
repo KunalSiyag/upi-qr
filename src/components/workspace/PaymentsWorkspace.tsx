@@ -1136,7 +1136,9 @@ function Workspace() {
                             <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatMoney(plan.amountPaise, currencyOf(plan))}</span></p>
                             <p className="text-[13px] text-muted">
                               {tr("Day {d} of each month", { d: plan.dayOfMonth })}{plan.description ? ` · ${plan.description}` : ""}
-                              {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
+                              {/* "ended" first: a paused plan stopped before its first month has no Resume, so it never reads
+                                  "paused" (review round 4). */}
+                              {ended ? tr(" · ended") : plan.paused ? tr(" · paused") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
                             </p>
                           </div>
                           {(!ended || deletable) && !readOnly && (
@@ -1181,7 +1183,7 @@ function Workspace() {
                   {/* A plan's currency is fixed when it is created (owner decision 2026-10-25): say how to bill in another one.
                       Also for a foreign plan kept after the switch is turned off (review round 3, PR 5). */}
                   {INTL_UI && (intlPickers(ws) || allLiveRecurring(ws).some((plan) => currencyOf(plan) !== "INR")) && !readOnly && (
-                    <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing after this month, then start a new one in that currency dated next month.")}</p>
+                    <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing, then start a new one in that currency. If a month would be billed twice, the new invoice says which month to start in.")}</p>
                   )}
                 </section>
               )}

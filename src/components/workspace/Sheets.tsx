@@ -63,6 +63,14 @@ function monthBefore(month: string): string {
 export function overlapMessage(tr: Tr, locale: string, name: string, other: OtherCurrencyBilling, fromMonth: string): string {
   const vars = { name, currency: other.currency };
   const month = (m: string) => monthName(m, locale);
+  // Only invoices already made by billing that bills no more (stopped before its first month, or deleted): name the
+  // invoice, never "monthly billing" the client still has (review round 4). Cancelling it isn't enough (Restore brings
+  // it back); deleting it frees the month.
+  if (other.invoicesOnly) {
+    return other.first > fromMonth
+      ? tr("{name} already has a {currency} invoice for {month} from monthly billing. Set the last month to bill before {month}, or delete that invoice first.", { ...vars, month: month(other.first) })
+      : tr("{name} already has a {currency} invoice for {month} from monthly billing. Date this invoice in {next} or later, or delete that invoice first.", { ...vars, month: month(other.first), next: month(monthAfter(other.last)) });
+  }
   if (other.first > fromMonth) {
     return other.last
       ? tr("{name} already has monthly billing in {currency} from {month} to {last}. Set the last month to bill before {month}, or date this invoice in {next} or later.", { ...vars, month: month(other.first), last: month(other.last), next: month(monthAfter(other.last)) })

@@ -135,6 +135,11 @@ try {
   check("INR-only: the Clients abroad card is there, collapsed", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.open && !d.closest('li'); })()"));
   // Opening it and saving without an edit writes nothing and never says "saved" (review round 1, PR 5).
   await t(`[...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')).open = true, true`);
+  // Review round 4 (PR 5): the card's title is an h2 like the other Settings cards', so its h3 sits under it.
+  const outline = await b.eval("[...document.querySelectorAll('main h1, main h2, main h3')].filter((h) => h.getClientRects().length).map((h) => h.tagName + ': ' + h.textContent.trim())");
+  const abroadAt = outline.indexOf("H2: Clients abroad");
+  check("Settings outline: an h2 'Clients abroad' right above its h3", abroadAt > 0 && outline[abroadAt + 1] === "H3: Details for all foreign currencies"
+    && await b.eval("(() => { const h = [...document.querySelectorAll('summary > h2')].find((x) => x.textContent === 'Clients abroad'); return !!h && h.parentElement.firstElementChild === h; })()"), JSON.stringify(outline));
   await t(`__t.click(/^Save payment details$/)`);
   await sleep(250);
   page = await text();
