@@ -1292,10 +1292,16 @@ export interface OtherCurrencyBilling {
    * stopped before its first month, or deleted): the sheet then names the invoice, not "monthly billing" (review round 4).
    */
   invoicesOnly: boolean;
+  /**
+   * The invoices it already made for the new plan's months, ordered by the month they bill: the sheet names them (one
+   * by its number, several by count and months), since deleting only one of several doesn't clear the overlap (review
+   * round 5).
+   */
+  shared: string[];
 }
 
 /** The month a plan invoice bills: the month in its id (generateRecurring and the sheet derive the id from it). */
-function planInvoiceMonth(invoice: Invoice): string {
+export function planInvoiceMonth(invoice: Invoice): string {
   const prefix = recurringInvoiceId(invoice.recurringId ?? "", "0000-00").slice(0, -6);
   const tail = invoice.id.startsWith(prefix) ? invoice.id.slice(prefix.length) : "";
   return /^\d{6}$/.test(tail) ? `${tail.slice(0, 4)}-${tail.slice(4)}` : invoice.issueDate.slice(0, 7);
@@ -1314,22 +1320,24 @@ function planInvoiceMonth(invoice: Invoice): string {
  */
 export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode, todayMonth: string): OtherCurrencyBilling | undefined {
   const to = toMonth || "9999-12";
-  const groups = new Map<string, { currency: CurrencyCode; billed: string[]; plan?: RecurringPlan }>();
+  const groups = new Map<string, { currency: CurrencyCode; made: { month: string; id: string }[]; plan?: RecurringPlan }>();
   for (const plan of allLiveRecurring(ws)) {
-    if (plan.clientId === clientId && currencyOf(plan) !== currency) groups.set(plan.id, { currency: currencyOf(plan), billed: [], plan });
+    if (plan.clientId === clientId && currencyOf(plan) !== currency) groups.set(plan.id, { currency: currencyOf(plan), made: [], plan });
   }
   for (const invoice of allLiveInvoices(ws)) {
     if (!invoice.recurringId || invoice.clientId !== clientId || currencyOf(invoice) === currency) continue;
-    const group = groups.get(invoice.recurringId) ?? { currency: currencyOf(invoice), billed: [] };
-    group.billed.push(planInvoiceMonth(invoice));
+    const group = groups.get(invoice.recurringId) ?? { currency: currencyOf(invoice), made: [] };
+    group.made.push({ month: planInvoiceMonth(invoice), id: invoice.id });
     groups.set(invoice.recurringId, group);
   }
   const later = (a: string, b: string) => (a > b ? a : b);
-  for (const [id, { currency: other, billed, plan }] of groups) {
-    billed.sort();
+  for (const [id, { currency: other, made, plan }] of groups) {
+    made.sort((a, b) => (a.month < b.month ? -1 : a.month > b.month ? 1 : a.id < b.id ? -1 : 1));
+    const billed = made.map((m) => m.month);
     // The months the plan still bills; none when it was stopped before its first month.
     const runs = plan && (!plan.endMonth || plan.endMonth >= plan.startMonth) ? { start: plan.startMonth, end: plan.endMonth || "9999-12" } : undefined;
-    const candidates = billed.filter((month) => month >= fromMonth && month <= to);
+    const inRange = made.filter(({ month }) => month >= fromMonth && month <= to);
+    const candidates = inRange.map((m) => m.month);
     const fromRun = Boolean(runs && later(runs.start, fromMonth) <= (runs.end < to ? runs.end : to));
     if (runs && fromRun) candidates.push(later(runs.start, fromMonth));
     if (!candidates.length) continue;
@@ -1337,7 +1345,7 @@ export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth:
     const last = runs && !plan?.endMonth ? "" : later(lastBilled, runs ? runs.end : "");
     // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed.
     const lastIfStopped = later(lastBilled, plan && plan.startMonth <= todayMonth ? todayMonth : "");
-    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped, invoicesOnly: !fromRun };
+    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped, invoicesOnly: !fromRun, shared: inRange.map((m) => m.id) };
   }
   return undefined;
 }

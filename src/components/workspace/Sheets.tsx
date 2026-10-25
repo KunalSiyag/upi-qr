@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  monthAfter, nextInvoiceNumber, otherCurrencyBilling, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
+  monthAfter, nextInvoiceNumber, otherCurrencyBilling, planInvoiceMonth, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type OtherCurrencyBilling, type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
@@ -55,21 +55,35 @@ function monthBefore(month: string): string {
 }
 
 /**
- * Why a new monthly billing can't start (review rounds 1-3, PR 5): `other`, in another currency, already bills a month
+ * Why a new monthly billing can't start (review rounds 1-5, PR 5): `other`, in another currency, already bills a month
  * the new one would. Every piece of advice leaves no month billed twice and none billed in neither currency: end the new
  * plan before the other starts, date it after the other's last month, or (an open-ended plan) stop that one first and
  * date the new one the month after its last month, or stop it in the month before the new one starts.
  */
-export function overlapMessage(tr: Tr, locale: string, name: string, other: OtherCurrencyBilling, fromMonth: string): string {
+export function overlapMessage(tr: Tr, locale: string, name: string, other: OtherCurrencyBilling, fromMonth: string, ws: Workspace): string {
   const vars = { name, currency: other.currency };
   const month = (m: string) => monthName(m, locale);
   // Only invoices already made by billing that bills no more (stopped before its first month, or deleted): name the
-  // invoice, never "monthly billing" the client still has (review round 4). Cancelling it isn't enough (Restore brings
-  // it back); deleting it frees the month.
+  // invoices, never "monthly billing" the client still has (review round 4). The one gap-free date is the month after
+  // the last of them, also when they start after this invoice's month: ending the new billing before them would leave
+  // every month after them billed in neither currency (review round 5). Cancelling isn't enough (Restore brings an
+  // invoice back); deleting frees its month, so deleting is offered only for all of them at once, and never for an
+  // invoice with a payment recorded (that is billing history).
   if (other.invoicesOnly) {
-    return other.first > fromMonth
-      ? tr("{name} already has a {currency} invoice for {month} from monthly billing. Set the last month to bill before {month}, or delete that invoice first.", { ...vars, month: month(other.first) })
-      : tr("{name} already has a {currency} invoice for {month} from monthly billing. Date this invoice in {next} or later, or delete that invoice first.", { ...vars, month: month(other.first), next: month(monthAfter(other.last)) });
+    const made = other.shared.map((id) => getInvoice(ws, id)).filter((invoice): invoice is Invoice => Boolean(invoice));
+    const one = made.length === 1 ? made[0] : undefined;
+    const lastMonth = made.length ? planInvoiceMonth(made[made.length - 1]) : other.first;
+    const head = one
+      ? tr("{name} already has {number}, a {currency} invoice from monthly billing for {month}.", { ...vars, number: one.number, month: month(other.first) })
+      : tr("{name} already has {count} {currency} invoices from monthly billing, for {month} to {last}.", { ...vars, count: String(made.length), month: month(other.first), last: month(lastMonth) });
+    const next = month(monthAfter(other.last || lastMonth));
+    const paid = made.some((invoice) => invoice.payments.length > 0);
+    const tail = paid
+      ? tr("Date this invoice in {next} or later.", { next })
+      : one
+        ? tr("Date this invoice in {next} or later, or delete {number} first.", { next, number: one.number })
+        : tr("Date this invoice in {next} or later, or delete those invoices first.", { next });
+    return `${head} ${tail}`;
   }
   if (other.first > fromMonth) {
     return other.last
@@ -139,9 +153,9 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   const overlap = target && (!untilMonth || untilMonth >= issueDate.slice(0, 7))
     ? otherCurrencyBilling(ws, target.id, issueDate.slice(0, 7), untilMonth, currency, today.slice(0, 7))
     : undefined;
-  const overlapText = overlap && target ? overlapMessage(tr, dateLocale, target.name, overlap, issueDate.slice(0, 7)) : "";
-  // Billing that starts later is fixed by the last month; the rest by the invoice date.
-  const overlapField = overlap && overlap.first > issueDate.slice(0, 7) ? "ws-until" : "ws-issue";
+  const overlapText = overlap && target ? overlapMessage(tr, dateLocale, target.name, overlap, issueDate.slice(0, 7), ws) : "";
+  // Billing that starts later is fixed by the last month; the rest, and invoices already made, by the invoice date.
+  const overlapField = overlap && !overlap.invoicesOnly && overlap.first > issueDate.slice(0, 7) ? "ws-until" : "ws-issue";
 
   function pickClient(name: string) {
     setClientName(name);
@@ -168,8 +182,13 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     setErrors(next);
     if (Object.keys(next).length || !amountPaise) return;
     if (overlap) {
-      // Blocked, never only warned: the message under Repeat says what to change; focus the field it names.
-      document.getElementById(overlapField)?.focus();
+      // Blocked, never only warned: the message under Repeat says what to change; focus the field it names, and keep
+      // the message itself on screen, clear of the bottom toast (scroll-mb-24): on a phone, scrolling to the invoice date
+      // pushed it below the fold (round 5).
+      const field = document.getElementById(overlapField);
+      field?.focus({ preventScroll: true });
+      field?.scrollIntoView({ block: "nearest" });
+      document.getElementById("ws-plan-overlap")?.scrollIntoView({ block: "nearest" });
       return;
     }
 
@@ -338,7 +357,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
               </div>
             )}
             {overlap && (
-              <p id="ws-plan-overlap" data-plan-overlap="" role="status" className={`mt-2 text-xs font-medium ${dangerText}`}>{overlapText}</p>
+              <p id="ws-plan-overlap" data-plan-overlap="" role="status" className={`mt-2 scroll-mb-24 text-xs font-medium ${dangerText}`}>{overlapText}</p>
             )}
           </div>
         )}

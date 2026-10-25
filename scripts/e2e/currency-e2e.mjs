@@ -938,9 +938,19 @@ try {
         rec_lat00001: { id: "rec_lat00001", clientId: "cli_lat00001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: start, endMonth: await ym(3), paused: false, currency: "USD", createdAt: T, updatedAt: T } },
       clients: { cli_fut00001: { currency: "USD", updatedAt: T }, cli_lat00001: { currency: "USD", updatedAt: T } },
     };
+    // Review round 5: invoices left by deleted US$ plans. Old Co has three (none paid), Paid Co two (one with a payment).
+    const leftover = (plan, client, number, delta, paid) => ym(delta).then((m) => {
+      const id = `inv_${plan}M${m.replace("-", "")}`;
+      intl.invoices[id] = { id, number, clientId: client, issueDate: `${m}-01`, dueDate: `${m}-15`, amountPaise: 30000, description: "", currency: "USD",
+        payments: paid ? [{ id: "pay_r5paid001", amountPaise: 10000, date: `${m}-10`, mode: "bank", reference: "WISE-1", createdAt: T }] : [], reminders: [], voided: false, recurringId: `rec_${plan}`, createdAt: T, updatedAt: T };
+    });
+    for (const [n, delta] of [[1, -3], [2, -2], [3, -1]]) await leftover("old00001", "cli_old00001", `OLD-${n}`, delta, false);
+    for (const [n, delta] of [[1, -2], [2, -1]]) await leftover("pd000001", "cli_pd000001", `PD-${n}`, delta, n === 2);
     const bookJson = { version: 1, business: { name: "Future Studio", upiId: "future@okaxis", phone: "", gstin: "", invoicePrefix: "FS-", updatedAt: T },
       clients: { cli_fut00001: { id: "cli_fut00001", name: "Future Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
-        cli_lat00001: { id: "cli_lat00001", name: "Later Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
+        cli_lat00001: { id: "cli_lat00001", name: "Later Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
+        cli_old00001: { id: "cli_old00001", name: "Old Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T },
+        cli_pd000001: { id: "cli_pd000001", name: "Paid Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
     await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(bookJson))});
       localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); true`);
     await b.go(BASE + "/app/?tab=clients", 2500);
@@ -982,31 +992,49 @@ try {
     check(`${w}: a plan stopped before its first month reads ended, with no Pause or Stop`, / · ended/.test(row.text) && !/until/.test(row.text) && !row.buttons.some((x) => /^(Pause|Resume|Stop after this month)$/.test(x)) && row.buttons.includes("Delete monthly billing"), JSON.stringify(row));
     await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-stopped.png`);
     // Following the Monthly billing note (stop it, then start the new one): its first month is still billed in US$, and
-    // the sheet names that invoice, not "monthly billing" the client still has (review round 4). Dated next month, the
-    // fix is the last month (on #ws-until) or deleting the invoice.
+    // the sheet names that invoice by its number, not "monthly billing" the client still has (review round 4). Dated
+    // next month, the fix is still the invoice date (the month after it) or deleting it: ending the new billing before
+    // it would leave every later month billed in neither currency (review round 5).
     await newPlan(1);
-    check(`${w}: following the note, a ₹ plan from next month names the US$ invoice already made`,
-      (await overlapText()) === `Future Co already has a USD invoice for ${await name(2)} from monthly billing. Set the last month to bill before ${await name(2)}, or delete that invoice first.`
-      && await b.eval("document.getElementById('ws-until').getAttribute('aria-describedby') === 'ws-plan-overlap'"), await overlapText());
+    const futOnly = `Future Co already has FUT-1, a USD invoice from monthly billing for ${await name(2)}. Date this invoice in ${await name(3)} or later, or delete FUT-1 first.`;
+    check(`${w}: following the note, a ₹ plan from next month names the US$ invoice already made, and the gap-free date`,
+      (await overlapText()) === futOnly
+      && await b.eval("document.getElementById('ws-issue').getAttribute('aria-describedby') === 'ws-plan-overlap' && !document.getElementById('ws-until').hasAttribute('aria-describedby')"), await overlapText());
     await b.eval("document.getElementById('ws-plan-overlap').scrollIntoView({ block: 'center' }), true");
     await sleep(300);
     await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-invoice-only.png`);
     await esc(); await closed();
     // A ₹ plan from that month is refused; from the month after, it is saved.
     await newPlan(2);
-    check(`${w}: the US$ month already billed still blocks a ₹ plan for it`,
-      (await overlapText()) === `Future Co already has a USD invoice for ${await name(2)} from monthly billing. Date this invoice in ${await name(3)} or later, or delete that invoice first.`, await overlapText());
+    check(`${w}: the US$ month already billed still blocks a ₹ plan for it`, (await overlapText()) === futOnly, await overlapText());
     await t(`__t.click(/^Add invoice$/, __t.dialog())`);
-    await sleep(200);
+    await sleep(400);
     check(`${w}: …and Add invoice is refused`, await b.eval("!!document.querySelector('[role=dialog]')") && !(await book()).includes('"rec_'), (await book()).slice(0, 200));
+    // The refused save focuses the invoice date and keeps the whole message on screen (on a phone it was cut off, round 5).
+    const seen = await b.eval(`(() => { const el = document.getElementById('ws-plan-overlap'); const r = el.getBoundingClientRect();
+      const clear = [r.top + 2, (r.top + r.bottom) / 2, r.bottom - 2].every((y) => el.contains(document.elementFromPoint(r.left + 8, y)));
+      return { top: r.top, bottom: r.bottom, h: innerHeight, clear, focus: document.activeElement?.id }; })()`);
+    check(`${w}: …the focus is on the invoice date and the message is fully visible, not under the toast`, seen.focus === "ws-issue" && seen.top >= 0 && seen.bottom <= seen.h && seen.clear, JSON.stringify(seen));
+    await b.shot(`cur-${mobile ? "m" : "d"}-overlap-after-submit.png`);
     await t(`__t.set('ws-issue', '${await ym(3)}-05'), __t.set('ws-due', '${await ym(3)}-20')`);
     await sleep(150);
     check(`${w}: dated the month after, the overlap clears`, !(await b.eval("!!document.querySelector('[data-plan-overlap]')")), await overlapText());
     await t(`__t.click(/^Add invoice$/, __t.dialog())`);
     await closed();
+    // Several invoices left by a deleted US$ plan: all are counted, so the advice is to delete all of them, or (one has a
+    // payment) only to date the new billing after them (review round 5).
+    await newPlan(-3, "05", "Old Co");
+    check(`${w}: three US$ invoices left by a deleted plan are counted, and the advice deletes all of them`,
+      (await overlapText()) === `Old Co already has 3 USD invoices from monthly billing, for ${await name(-3)} to ${await name(-1)}. Date this invoice in ${await name(0)} or later, or delete those invoices first.`, await overlapText());
+    await esc(); await closed();
+    await newPlan(-2, "05", "Paid Co");
+    check(`${w}: …with a payment recorded on one, deleting isn't offered`,
+      (await overlapText()) === `Paid Co already has 2 USD invoices from monthly billing, for ${await name(-2)} to ${await name(-1)}. Date this invoice in ${await name(0)} or later.`, await overlapText());
+    check(`${w}: the longest overlap message fits (no sideways scroll)`, await noScroll());
+    await esc(); await closed();
     const months = {};
     const stored = JSON.parse(await book());
-    for (const inv of [...Object.values(stored.invoices), ...Object.values(JSON.parse(await sidecar()).intl.invoices)]) if (!inv.deletedAt) (months[inv.id.slice(-6)] ??= []).push(inv.currency ?? "INR");
+    for (const inv of [...Object.values(stored.invoices), ...Object.values(JSON.parse(await sidecar()).intl.invoices)]) if (!inv.deletedAt && inv.clientId === "cli_fut00001") (months[inv.id.slice(-6)] ??= []).push(inv.currency ?? "INR");
     check(`${w}: each month is billed once, none skipped`, JSON.stringify(months) === JSON.stringify({ [start.replace("-", "")]: ["USD"], [(await ym(3)).replace("-", "")]: ["INR"] }) || JSON.stringify(months) === JSON.stringify({ [(await ym(3)).replace("-", "")]: ["INR"], [start.replace("-", "")]: ["USD"] }), JSON.stringify(months));
   }
   await b.mobile(false);

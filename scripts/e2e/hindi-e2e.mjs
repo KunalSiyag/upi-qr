@@ -105,7 +105,7 @@ try {
   {
     const on = await entryPoints(BASE);
     check("flag on: both entry points show (the probe above can find them), and no plan currency change", on.planShown && on.clientSheet && on.invoice && on.client && !on.plan, JSON.stringify(on));
-    check("Hindi Monthly billing: how to bill in another currency", on.planNote === "दूसरी मुद्रा में बिल करने के लिए मासिक बिलिंग रोकें, फिर उस मुद्रा में नई शुरू करें। अगर कोई महीना दो बार बिल होता, तो नया इनवॉइस बताता है कि किस महीने से शुरू करें।", JSON.stringify(on.planNote));
+    check("Hindi Monthly billing: how to bill in another currency", on.planNote === "दूसरी मुद्रा में बिल करने के लिए मासिक बिलिंग बंद करें (इस महीने के बाद रोकें), फिर उस मुद्रा में नई शुरू करें। अगर कोई महीना दो बार बिल होता, तो नया इनवॉइस बताता है कि किस महीने से शुरू करें।", JSON.stringify(on.planNote));
     await b.go(BASE + "/app/?tab=settings", 2500);
     await t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('विदेशी ग्राहक')); if (!d.open) d.querySelector('summary').click(); return true; })()");
     await sleep(200);
