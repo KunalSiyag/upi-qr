@@ -1,14 +1,14 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  nextInvoiceNumber, otherCurrencyPlanFor, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
+  monthAfter, nextInvoiceNumber, otherCurrencyPlanFor, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
-  type ReminderTone, type Workspace,
+  type RecurringPlan, type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
 import { CURRENCIES, formatMoney, fyOf, isForeignCurrency, minorToDecimal, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
 import { INTL_UI } from "../../lib/workspace/localStore";
 import { Field, inputClass, labelClass, primaryButton, secondaryButton, Sheet } from "./ui";
-import { useWs } from "./i18n";
+import { useWs, type Tr } from "./i18n";
 
 const TERMS = [
   { label: "On receipt", days: 0 },
@@ -42,6 +42,29 @@ export function phoneOk(phone: string, international: boolean): boolean {
   return digits >= 10 || (international && phone.trim().startsWith("+") && digits >= 8);
 }
 
+/** "Dec 2026" in the workspace language, with a no-break space so a month never wraps mid-name at 390px. */
+function monthName(month: string, locale: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale, { month: "short", year: "numeric", timeZone: "UTC" }).replace(/ /g, "\u00a0");
+}
+
+/**
+ * Why a new monthly billing can't start (review rounds 1-2, PR 5): `plan`, in another currency, already bills a month
+ * the new one would. The advice is one the user can follow: end the new plan before a later-starting plan, date it
+ * after a plan with an end month, or stop an open-ended plan first (no date clears that one).
+ */
+export function overlapMessage(tr: Tr, locale: string, name: string, plan: RecurringPlan, fromMonth: string, today: string): string {
+  const vars = { name, currency: currencyOf(plan) };
+  if (plan.startMonth > fromMonth) {
+    return tr("{name}'s monthly billing in {currency} starts in {month}. Set the last month to bill before {month} so no month is billed twice.", { ...vars, month: monthName(plan.startMonth, locale) });
+  }
+  if (plan.endMonth) {
+    return tr("{name} already has monthly billing in {currency} until {month}. Date this invoice in {next} or later so no month is billed twice.", { ...vars, month: monthName(plan.endMonth, locale), next: monthName(monthAfter(plan.endMonth), locale) });
+  }
+  const after = monthAfter(today.slice(0, 7));
+  return tr("{name} already has monthly billing in {currency} with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in {next} or later.", { ...vars, next: monthName(after, locale) });
+}
+
 export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   ws: Workspace;
   today: string;
@@ -50,7 +73,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   onClose: () => void;
 }) {
   const existing = invoiceId ? getInvoice(ws, invoiceId) : undefined;
-  const { tr } = useWs();
+  const { tr, dateLocale } = useWs();
   const existingClient = existing ? ws.clients[existing.clientId] : undefined;
   const clients = useMemo(() => liveClients(ws), [ws]);
   const settings = ws.intl?.settings;
@@ -80,11 +103,21 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   // offers nothing. A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
   const lutOn = settings?.exportUnderLut === true && Boolean(ws.business.gstin.trim());
   const showExport = foreign && lutOn && !matched?.gstin.trim();
-  // A new monthly billing in one currency for a client whose plan in another currency already bills this month would
-  // bill the month twice (review round 1, PR 5). Only reachable with the pickers on, so INR-only sheets never show it.
-  const overlap = showPicker && !existing && repeat && matched && isIsoDate(issueDate)
-    ? otherCurrencyPlanFor(ws, matched.id, issueDate.slice(0, 7), currency)
+  // The client the invoice is saved to: the edited invoice's client while the name still matches, otherwise a live
+  // client matched by phone or name (submit() and the overlap check must agree, review round 2).
+  const resolveClient = () => existingClient && existingClient.name.trim().toLowerCase() === clientName.trim().toLowerCase()
+    ? existingClient
+    : findClient(ws, clientName, phone);
+  // A new monthly billing in one currency that shares any month with the client's plan in another currency would bill
+  // that month twice (review rounds 1-2, PR 5), so it can't be saved. Only reachable with the pickers on, so INR-only
+  // sheets never show it.
+  const target = showPicker && !existing && repeat && isIsoDate(issueDate) ? resolveClient() : undefined;
+  const overlap = target && (!untilMonth || untilMonth >= issueDate.slice(0, 7))
+    ? otherCurrencyPlanFor(ws, target.id, issueDate.slice(0, 7), untilMonth, currency)
     : undefined;
+  const overlapText = overlap && target ? overlapMessage(tr, dateLocale, target.name, overlap, issueDate.slice(0, 7), today) : "";
+  // A later-starting plan is fixed by the last month; the others by the invoice date.
+  const overlapField = overlap && overlap.startMonth > issueDate.slice(0, 7) ? "ws-until" : "ws-issue";
 
   function pickClient(name: string) {
     setClientName(name);
@@ -110,12 +143,15 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     if (repeat && untilMonth && isIsoDate(issueDate) && untilMonth < issueDate.slice(0, 7)) next.until = tr("The last month can't be before the first invoice.");
     setErrors(next);
     if (Object.keys(next).length || !amountPaise) return;
+    if (overlap) {
+      // Blocked, never only warned: the message under Repeat says what to change; focus the field it names.
+      document.getElementById(overlapField)?.focus();
+      return;
+    }
 
     const now = Date.now();
     let ws2 = ws;
-    let client = existingClient && existingClient.name.trim().toLowerCase() === clientName.trim().toLowerCase()
-      ? existingClient
-      : findClient(ws, clientName, phone);
+    let client = resolveClient();
     if (!client) {
       client = { id: newId("cli"), name: clientName.trim().slice(0, 80), phone: phone.trim(), email: "", gstin: "", createdAt: now, updatedAt: now };
       ws2 = upsertClient(ws2, client, now);
@@ -234,7 +270,8 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             <input id="ws-number" className={inputClass} value={number} onChange={(e) => setNumber(e.target.value)} maxLength={40} />
           </Field>
           <Field label={tr("Invoice date")} htmlFor="ws-issue" error={errors.issueDate}>
-            <input id="ws-issue" type="date" className={inputClass} value={issueDate} onChange={(e) => setIssueDate(e.target.value)} />
+            <input id="ws-issue" type="date" className={inputClass} value={issueDate} onChange={(e) => setIssueDate(e.target.value)}
+              aria-describedby={overlapField === "ws-issue" && overlap ? "ws-plan-overlap" : undefined} aria-invalid={overlapField === "ws-issue" && overlap ? true : undefined} />
           </Field>
           <Field label={tr("Due date")} htmlFor="ws-due" error={errors.dueDate}>
             <input id="ws-due" type="date" className={inputClass} value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
@@ -271,14 +308,13 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             {repeat && (
               <div className="mt-3">
                 <Field label={tr("Last month to bill (optional)")} htmlFor="ws-until" error={errors.until}>
-                  <input id="ws-until" type="month" className={inputClass} value={untilMonth} onChange={(e) => setUntilMonth(e.target.value)} />
+                  <input id="ws-until" type="month" className={inputClass} value={untilMonth} onChange={(e) => setUntilMonth(e.target.value)}
+                    aria-describedby={overlapField === "ws-until" && overlap ? "ws-plan-overlap" : undefined} aria-invalid={overlapField === "ws-until" && overlap ? true : undefined} />
                 </Field>
               </div>
             )}
             {overlap && (
-              <p data-plan-overlap="" role="status" className="mt-2 text-xs font-medium text-[#a8321d]">
-                {tr("{name} already has monthly billing in {currency} for {month}. Pick a date in a later month so that month isn't billed twice.", { name: matched!.name, currency: currencyOf(overlap), month: issueDate.slice(0, 7) })}
-              </p>
+              <p id="ws-plan-overlap" data-plan-overlap="" role="status" className="mt-2 text-xs font-medium text-[#a8321d]">{overlapText}</p>
             )}
           </div>
         )}

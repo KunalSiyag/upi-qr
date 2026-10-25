@@ -1270,15 +1270,24 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
   return { ws: next, created };
 }
 
-const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
+/** The month after `month` ("2026-12" → "2027-01"). */
+export const monthAfter = (month: string): string => monthFromIndex(monthIndex(month) + 1);
 
 /**
- * A client's live plan in another currency that bills `month` (a paused plan counts: it backfills when resumed).
- * A new plan in `currency` starting that month would bill the month twice, once per currency (review round 1, PR 5).
+ * A client's live plan in another currency that bills any month a new plan in `currency` would bill, from `fromMonth`
+ * to `toMonth` ("" = no end): both would bill each shared month, once per currency (review rounds 1-2, PR 5). Ranges
+ * are compared whole, because generateRecurring backfills every month of both plans. A paused plan counts (it
+ * backfills when resumed); a plan stopped before its first month bills nothing.
  */
-export function otherCurrencyPlanFor(ws: Workspace, clientId: string, month: string, currency: CurrencyCode): RecurringPlan | undefined {
-  return allLiveRecurring(ws).find((plan) => plan.clientId === clientId && currencyOf(plan) !== currency
-    && plan.startMonth <= month && (!plan.endMonth || plan.endMonth >= month));
+export function otherCurrencyPlanFor(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode): RecurringPlan | undefined {
+  const until = (end: string) => end || "9999-12";
+  return allLiveRecurring(ws).find((plan) => {
+    if (plan.clientId !== clientId || currencyOf(plan) === currency) return false;
+    // The shared months run from the later start to the earlier end; there are none when that range is empty.
+    const first = plan.startMonth > fromMonth ? plan.startMonth : fromMonth;
+    const last = until(plan.endMonth) < until(toMonth) ? until(plan.endMonth) : until(toMonth);
+    return first <= last;
+  });
 }
 
 /**
