@@ -373,6 +373,9 @@ try {
   const monthName = (offset) => b.eval(`(() => { const d = new Date(); const m = new Date(Date.UTC(d.getFullYear(), d.getMonth() + (${offset}), 1));
     return m.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/ /g, ' '); })()`);
   const overlapText = () => b.eval("document.querySelector('[data-plan-overlap]')?.textContent || ''");
+  /** The name of the month `delta` months after the one holding the ISO date `date`. */
+  const monthOfIso = (date, delta) => b.eval(`(() => { const [y, m] = '${date}'.split('-').map(Number); const d = new Date(Date.UTC(y, m - 1 + (${delta}), 1));
+    return d.toLocaleDateString('en-IN', { month: 'short', year: 'numeric', timeZone: 'UTC' }).replace(/ /g, '\u00a0'); })()`);
   const sidecarCounts = async () => { const intl = JSON.parse(await sidecar()).intl; const bk = JSON.parse(await book());
     return { invoices: Object.keys(bk.invoices).length + Object.keys(intl.invoices).length, plans: Object.keys(bk.recurring).length + Object.keys(intl.recurring).length }; };
   const repeatBox = `[...document.querySelectorAll('[role=dialog] label')].find(l => l.textContent.startsWith('Repeat every month')).querySelector('input')`;
@@ -383,12 +386,15 @@ try {
   check("a same-currency monthly billing shows no overlap warning", !(await b.eval("!!document.querySelector('[data-plan-overlap]')")));
   await t(`__t.set('ws-currency', 'INR')`);
   await sleep(100);
-  const stopFirst = `Globex LLC already has monthly billing in USD with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in ${await monthName(1)} or later.`;
+  const stopFirst = `Globex LLC already has monthly billing in USD with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in ${await monthName(1)}.`;
   check("a monthly billing in ₹ alongside an open-ended US$ plan says to stop that plan first", (await overlapText()) === stopFirst, await overlapText());
   check("the message describes the invoice date field", await b.eval("document.getElementById('ws-issue').getAttribute('aria-describedby') === 'ws-plan-overlap' && document.getElementById('ws-issue').getAttribute('aria-invalid') === 'true'"));
   await t(`__t.set('ws-issue', '${await iso(400)}'), __t.set('ws-due', '${await iso(415)}')`);
   await sleep(100);
-  check("a later date doesn't clear an open-ended plan's overlap (and the advice doesn't promise it would)", (await overlapText()) === stopFirst, await overlapText());
+  // Review round 3: a start two or more months ahead. Stopping the US$ plan now would leave the months between billed in
+  // neither currency, so the advice is to stop it in the month before, or to start next month.
+  const later = `Globex LLC already has monthly billing in USD with no end month. To switch in ${await monthOfIso(await iso(400), 0)}, stop it during ${await monthOfIso(await iso(400), -1)} (Clients → Monthly billing → Stop after this month) and add this invoice then, or stop it now and date this invoice in ${await monthName(1)}.`;
+  check("a later date doesn't clear an open-ended plan's overlap, and the advice leaves no month unbilled", (await overlapText()) === later, await overlapText());
   const before = await sidecarCounts();
   await t(`__t.click(/^Add invoice$/, __t.dialog())`);
   await sleep(200);
@@ -912,6 +918,100 @@ try {
     await sleep(200);
     const lastPlan = await b.eval("({ section: !!document.querySelector('section[aria-labelledby=monthly-title]'), addClient: document.activeElement?.hasAttribute('data-add-client') ?? false })");
     check("deleting the last plan moves focus to + Add client, not <body>", !lastPlan.section && lastPlan.addClient, JSON.stringify(lastPlan));
+  }
+
+  // Review round 3 (PR 5): a US$ plan that starts in two months (its first invoice created with it, as the sheet does).
+  // The advice for a ₹ plan never leaves a month billed twice or in neither currency, "Stop after this month" on it
+  // reads "ended" at once, and the month it already billed still blocks a ₹ plan. At 390px and 1280px.
+  for (const mobile of [true, false]) {
+    await b.mobile(mobile);
+    const T = Date.now();
+    const ym = (delta) => b.eval(`(() => { const d = new Date(); const m = new Date(d.getFullYear(), d.getMonth() + (${delta}), 1); return m.getFullYear() + '-' + String(m.getMonth() + 1).padStart(2, '0'); })()`);
+    const name = (delta) => monthName(delta);
+    const start = await ym(2);
+    const usdId = `inv_fut00001M${start.replace("-", "")}`;
+    const intl = {
+      settings: { on: true, updatedAt: T },
+      invoices: { [usdId]: { id: usdId, number: "FUT-1", clientId: "cli_fut00001", issueDate: `${start}-01`, dueDate: `${start}-15`, amountPaise: 30000, description: "", currency: "USD", payments: [], reminders: [], voided: false, recurringId: "rec_fut00001", createdAt: T, updatedAt: T } },
+      recurring: { rec_fut00001: { id: "rec_fut00001", clientId: "cli_fut00001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: start, endMonth: "", paused: false, currency: "USD", createdAt: T, updatedAt: T } },
+      clients: { cli_fut00001: { currency: "USD", updatedAt: T } },
+    };
+    const bookJson = { version: 1, business: { name: "Future Studio", upiId: "future@okaxis", phone: "", gstin: "", invoicePrefix: "FS-", updatedAt: T },
+      clients: { cli_fut00001: { id: "cli_fut00001", name: "Future Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(bookJson))});
+      localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); true`);
+    await b.go(BASE + "/app/?tab=clients", 2500);
+    await b.waitFor("/Future Studio/.test(document.body.innerText)", 8000);
+    const w = mobile ? "390px" : "1280px";
+    const newPlan = async (delta, day = "05") => {
+      await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+      const month = await ym(delta);
+      await t(`__t.set('ws-client', 'Future Co'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '25000'), __t.set('ws-number', 'FS-${delta}'), __t.set('ws-issue', '${month}-${day}'), __t.set('ws-due', '${month}-20')`);
+      await t(`${repeatBox}.click(), true`);
+      await sleep(150);
+    };
+    await newPlan(3);
+    check(`${w}: a ₹ plan the month after the US$ plan's first month is told to stop it, then date it then`,
+      (await overlapText()) === `Future Co already has monthly billing in USD with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in ${await name(3)}.`, await overlapText());
+    await t(`__t.set('ws-issue', '${await ym(4)}-05'), __t.set('ws-due', '${await ym(4)}-20')`);
+    await sleep(150);
+    check(`${w}: a later ₹ start names the month to stop it in`,
+      (await overlapText()) === `Future Co already has monthly billing in USD with no end month. To switch in ${await name(4)}, stop it during ${await name(3)} (Clients → Monthly billing → Stop after this month) and add this invoice then, or stop it now and date this invoice in ${await name(3)}.`, await overlapText());
+    check(`${w}: the overlap message fits (no sideways scroll) and is visible`, await noScroll() && await b.eval("document.getElementById('ws-plan-overlap').getClientRects().length > 0"));
+    await b.eval("document.getElementById('ws-plan-overlap').scrollIntoView({ block: 'center' }), true");
+    await sleep(400);
+    await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-overlap.png`);
+    await esc(); await closed();
+    // "Stop after this month" before the plan's first month: it bills nothing more, so the row reads "ended".
+    const futRow = `[...document.querySelectorAll('section[aria-labelledby=monthly-title] li')].find((li) => li.textContent.includes('Future Co'))`;
+    await t(`__t.click(/^Stop after this month$/, ${futRow})`);
+    await sleep(200);
+    const row = await b.eval(`(() => { const li = ${futRow}; return { text: li.innerText, buttons: [...li.querySelectorAll('button')].map((x) => x.textContent) }; })()`);
+    check(`${w}: a plan stopped before its first month reads ended, with no Pause or Stop`, / · ended/.test(row.text) && !/until/.test(row.text) && !row.buttons.some((x) => /^(Pause|Resume|Stop after this month)$/.test(x)) && row.buttons.includes("Delete monthly billing"), JSON.stringify(row));
+    await b.shot(`cur-${mobile ? "m" : "d"}-future-plan-stopped.png`);
+    // Its first month is still billed in US$: a ₹ plan from that month is refused; from the month after, it is saved.
+    await newPlan(2);
+    check(`${w}: the US$ month already billed still blocks a ₹ plan for it`,
+      (await overlapText()) === `Future Co already has monthly billing in USD until ${await name(2)}. Date this invoice in ${await name(3)} or later so no month is billed twice.`, await overlapText());
+    await t(`__t.click(/^Add invoice$/, __t.dialog())`);
+    await sleep(200);
+    check(`${w}: …and Add invoice is refused`, await b.eval("!!document.querySelector('[role=dialog]')") && !(await book()).includes('"rec_'), (await book()).slice(0, 200));
+    await t(`__t.set('ws-issue', '${await ym(3)}-05'), __t.set('ws-due', '${await ym(3)}-20')`);
+    await sleep(150);
+    check(`${w}: dated the month after, the overlap clears`, !(await b.eval("!!document.querySelector('[data-plan-overlap]')")), await overlapText());
+    await t(`__t.click(/^Add invoice$/, __t.dialog())`);
+    await closed();
+    const months = {};
+    const stored = JSON.parse(await book());
+    for (const inv of [...Object.values(stored.invoices), ...Object.values(JSON.parse(await sidecar()).intl.invoices)]) if (!inv.deletedAt) (months[inv.id.slice(-6)] ??= []).push(inv.currency ?? "INR");
+    check(`${w}: each month is billed once, none skipped`, JSON.stringify(months) === JSON.stringify({ [start.replace("-", "")]: ["USD"], [(await ym(3)).replace("-", "")]: ["INR"] }) || JSON.stringify(months) === JSON.stringify({ [(await ym(3)).replace("-", "")]: ["INR"], [start.replace("-", "")]: ["USD"] }), JSON.stringify(months));
+  }
+  await b.mobile(false);
+
+  // Review round 3 (PR 5): "Invoice clients in other currencies" off and no foreign invoice, so no picker, but the client
+  // keeps a paused US$ plan. A ₹ "Repeat every month" for them is still refused, and Monthly billing keeps its note.
+  {
+    const T = Date.now();
+    const lastMonth = (await iso(-40)).slice(0, 7);
+    const intl = { invoices: {}, recurring: { rec_pause001: { id: "rec_pause001", clientId: "cli_pause001", amountPaise: 30000, description: "", dayOfMonth: 1, dueAfterDays: 14, startMonth: lastMonth, endMonth: "", paused: true, currency: "USD", createdAt: T, updatedAt: T } }, clients: {} };
+    const bookJson = { version: 1, business: { name: "Paused Studio", upiId: "paused@okaxis", phone: "", gstin: "", invoicePrefix: "PS-", updatedAt: T },
+      clients: { cli_pause001: { id: "cli_pause001", name: "Paused Co", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(bookJson))});
+      localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); true`);
+    await b.go(BASE + "/app/?tab=clients", 2500);
+    await b.waitFor("/Paused Studio/.test(document.body.innerText)", 8000);
+    check("switch off, a paused US$ plan: Monthly billing still says how to switch currency", await b.eval("!!document.querySelector('section[aria-labelledby=monthly-title] [data-monthly-note]')"));
+    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+    check("switch off and no foreign invoice: no currency picker", !(await exists("ws-currency")));
+    await t(`__t.set('ws-client', 'Paused Co'), __t.set('ws-amount', '25000'), __t.set('ws-number', 'PS-1')`);
+    await t(`${repeatBox}.click(), true`);
+    await sleep(150);
+    check("…but a ₹ Repeat for the client with the paused US$ plan is checked",
+      (await overlapText()) === `Paused Co already has monthly billing in USD with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in ${await monthName(1)}.`, await overlapText());
+    await t(`__t.click(/^Add invoice$/, __t.dialog())`);
+    await sleep(200);
+    check("…and refused: nothing saved", await b.eval("!!document.querySelector('[role=dialog]')") && Object.keys(JSON.parse(await book()).invoices).length === 0 && Object.keys(JSON.parse(await book()).recurring).length === 0);
+    await esc(); await closed();
   }
 
   check("no console errors", b.errors.length === 0, b.errors.join(" | "));

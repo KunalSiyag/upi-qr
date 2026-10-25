@@ -1,13 +1,13 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  monthAfter, nextInvoiceNumber, otherCurrencyPlanFor, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
+  monthAfter, nextInvoiceNumber, otherCurrencyBilling, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
-  type RecurringPlan, type ReminderTone, type Workspace,
+  type OtherCurrencyBilling, type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
 import { CURRENCIES, formatMoney, fyOf, isForeignCurrency, minorToDecimal, parseMoneyToMinor, type CurrencyCode } from "../../lib/workspace/currency";
 import { INTL_UI } from "../../lib/workspace/localStore";
-import { Field, inputClass, labelClass, primaryButton, secondaryButton, Sheet } from "./ui";
+import { dangerText, Field, inputClass, labelClass, primaryButton, secondaryButton, Sheet } from "./ui";
 import { useWs, type Tr } from "./i18n";
 
 const TERMS = [
@@ -48,21 +48,36 @@ function monthName(month: string, locale: string): string {
   return new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString(locale, { month: "short", year: "numeric", timeZone: "UTC" }).replace(/ /g, "\u00a0");
 }
 
+/** The month before `month` ("2027-01" → "2026-12"). */
+function monthBefore(month: string): string {
+  const [y, m] = month.split("-").map(Number);
+  return m === 1 ? `${y - 1}-12` : `${y}-${String(m - 1).padStart(2, "0")}`;
+}
+
 /**
- * Why a new monthly billing can't start (review rounds 1-2, PR 5): `plan`, in another currency, already bills a month
- * the new one would. The advice is one the user can follow: end the new plan before a later-starting plan, date it
- * after a plan with an end month, or stop an open-ended plan first (no date clears that one).
+ * Why a new monthly billing can't start (review rounds 1-3, PR 5): `other`, in another currency, already bills a month
+ * the new one would. Every piece of advice leaves no month billed twice and none billed in neither currency: end the new
+ * plan before the other starts, date it after the other's last month, or (an open-ended plan) stop that one first and
+ * date the new one the month after its last month, or stop it in the month before the new one starts.
  */
-export function overlapMessage(tr: Tr, locale: string, name: string, plan: RecurringPlan, fromMonth: string, today: string): string {
-  const vars = { name, currency: currencyOf(plan) };
-  if (plan.startMonth > fromMonth) {
-    return tr("{name}'s monthly billing in {currency} starts in {month}. Set the last month to bill before {month} so no month is billed twice.", { ...vars, month: monthName(plan.startMonth, locale) });
+export function overlapMessage(tr: Tr, locale: string, name: string, other: OtherCurrencyBilling, fromMonth: string): string {
+  const vars = { name, currency: other.currency };
+  const month = (m: string) => monthName(m, locale);
+  if (other.first > fromMonth) {
+    return other.last
+      ? tr("{name} already has monthly billing in {currency} from {month} to {last}. Set the last month to bill before {month}, or date this invoice in {next} or later.", { ...vars, month: month(other.first), last: month(other.last), next: month(monthAfter(other.last)) })
+      : tr("{name}'s monthly billing in {currency} starts in {month}. Set the last month to bill before {month} so no month is billed twice.", { ...vars, month: month(other.first) });
   }
-  if (plan.endMonth) {
-    return tr("{name} already has monthly billing in {currency} until {month}. Date this invoice in {next} or later so no month is billed twice.", { ...vars, month: monthName(plan.endMonth, locale), next: monthName(monthAfter(plan.endMonth), locale) });
+  if (other.last) {
+    return tr("{name} already has monthly billing in {currency} until {month}. Date this invoice in {next} or later so no month is billed twice.", { ...vars, month: month(other.last), next: month(monthAfter(other.last)) });
   }
-  const after = monthAfter(today.slice(0, 7));
-  return tr("{name} already has monthly billing in {currency} with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in {next} or later.", { ...vars, next: monthName(after, locale) });
+  // Open-ended: "Stop after this month" ends it in today's month (keeping what it already billed). The first month after
+  // that is the one gap-free start; a later start means stopping it later, in the month before.
+  const next = other.lastIfStopped ? monthAfter(other.lastIfStopped) : fromMonth;
+  if (fromMonth > next) {
+    return tr("{name} already has monthly billing in {currency} with no end month. To switch in {month}, stop it during {prev} (Clients → Monthly billing → Stop after this month) and add this invoice then, or stop it now and date this invoice in {next}.", { ...vars, month: month(fromMonth), prev: month(monthBefore(fromMonth)), next: month(next) });
+  }
+  return tr("{name} already has monthly billing in {currency} with no end month. Stop it first (Clients → Monthly billing → Stop after this month), then date this invoice in {next}.", { ...vars, next: month(next) });
 }
 
 export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
@@ -108,16 +123,17 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   const resolveClient = () => existingClient && existingClient.name.trim().toLowerCase() === clientName.trim().toLowerCase()
     ? existingClient
     : findClient(ws, clientName, phone);
-  // A new monthly billing in one currency that shares any month with the client's plan in another currency would bill
-  // that month twice (review rounds 1-2, PR 5), so it can't be saved. Only reachable with the pickers on, so INR-only
-  // sheets never show it.
-  const target = showPicker && !existing && repeat && isIsoDate(issueDate) ? resolveClient() : undefined;
+  // A new monthly billing in one currency that shares any month with the client's billing in another currency would
+  // bill that month twice (review rounds 1-3, PR 5), so it can't be saved. Checked with the pickers hidden too (an INR
+  // plan then): a client can keep a foreign plan after the switch is turned off and its invoices are deleted. A book
+  // with no foreign plan or plan invoice finds nothing, so INR-only sheets never show it.
+  const target = !existing && repeat && isIsoDate(issueDate) ? resolveClient() : undefined;
   const overlap = target && (!untilMonth || untilMonth >= issueDate.slice(0, 7))
-    ? otherCurrencyPlanFor(ws, target.id, issueDate.slice(0, 7), untilMonth, currency)
+    ? otherCurrencyBilling(ws, target.id, issueDate.slice(0, 7), untilMonth, currency, today.slice(0, 7))
     : undefined;
-  const overlapText = overlap && target ? overlapMessage(tr, dateLocale, target.name, overlap, issueDate.slice(0, 7), today) : "";
-  // A later-starting plan is fixed by the last month; the others by the invoice date.
-  const overlapField = overlap && overlap.startMonth > issueDate.slice(0, 7) ? "ws-until" : "ws-issue";
+  const overlapText = overlap && target ? overlapMessage(tr, dateLocale, target.name, overlap, issueDate.slice(0, 7)) : "";
+  // Billing that starts later is fixed by the last month; the rest by the invoice date.
+  const overlapField = overlap && overlap.first > issueDate.slice(0, 7) ? "ws-until" : "ws-issue";
 
   function pickClient(name: string) {
     setClientName(name);
@@ -314,7 +330,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
               </div>
             )}
             {overlap && (
-              <p id="ws-plan-overlap" data-plan-overlap="" role="status" className="mt-2 text-xs font-medium text-[#a8321d]">{overlapText}</p>
+              <p id="ws-plan-overlap" data-plan-overlap="" role="status" className={`mt-2 text-xs font-medium ${dangerText}`}>{overlapText}</p>
             )}
           </div>
         )}

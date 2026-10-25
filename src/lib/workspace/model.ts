@@ -1273,21 +1273,65 @@ export function generateRecurring(ws: Workspace, today: string, now: number): { 
 /** The month after `month` ("2026-12" → "2027-01"). */
 export const monthAfter = (month: string): string => monthFromIndex(monthIndex(month) + 1);
 
+/** What another currency's monthly billing of a client already covers (otherCurrencyBilling). */
+export interface OtherCurrencyBilling {
+  /** The plan: a live one, or a deleted one whose invoices stay. */
+  id: string;
+  currency: CurrencyCode;
+  /** The first month it bills, or has billed, from the new plan's first month on (inside the new plan's months). */
+  first: string;
+  /** The last month it bills or has billed; "" while it is live with no end month ("Stop after this month" ends it). */
+  last: string;
+  /**
+   * The last month it will have billed if it is stopped this month (Stop sets endMonth to today's month), or "" when
+   * stopping leaves no month billed. Only meaningful when `last` is "".
+   */
+  lastIfStopped: string;
+}
+
+/** The month a plan invoice bills: the month in its id (generateRecurring and the sheet derive the id from it). */
+function planInvoiceMonth(invoice: Invoice): string {
+  const prefix = recurringInvoiceId(invoice.recurringId ?? "", "0000-00").slice(0, -6);
+  const tail = invoice.id.startsWith(prefix) ? invoice.id.slice(prefix.length) : "";
+  return /^\d{6}$/.test(tail) ? `${tail.slice(0, 4)}-${tail.slice(4)}` : invoice.issueDate.slice(0, 7);
+}
+
 /**
- * A client's live plan in another currency that bills any month a new plan in `currency` would bill, from `fromMonth`
- * to `toMonth` ("" = no end): both would bill each shared month, once per currency (review rounds 1-2, PR 5). Ranges
- * are compared whole, because generateRecurring backfills every month of both plans. A paused plan counts (it
- * backfills when resumed); a plan stopped before its first month bills nothing.
+ * Monthly billing of a client in another currency that bills any month a new plan in `currency` would bill, from
+ * `fromMonth` to `toMonth` ("" = no end): both would bill each shared month, once per currency (review rounds 1-3,
+ * PR 5). A plan covers the months it still bills (startMonth to endMonth, open-ended without one; none when it was
+ * stopped before its first month) and the months it already billed (its live, not voided invoices, also those of a
+ * deleted plan): the invoice sheet creates a plan's first invoice at once, even for a future month, so a plan stopped
+ * before its start month still bills that month (review round 3). A paused plan counts (it backfills when resumed).
+ * `todayMonth` is the month "Stop after this month" would end a plan in.
  */
-export function otherCurrencyPlanFor(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode): RecurringPlan | undefined {
-  const until = (end: string) => end || "9999-12";
-  return allLiveRecurring(ws).find((plan) => {
-    if (plan.clientId !== clientId || currencyOf(plan) === currency) return false;
-    // The shared months run from the later start to the earlier end; there are none when that range is empty.
-    const first = plan.startMonth > fromMonth ? plan.startMonth : fromMonth;
-    const last = until(plan.endMonth) < until(toMonth) ? until(plan.endMonth) : until(toMonth);
-    return first <= last;
-  });
+export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth: string, toMonth: string, currency: CurrencyCode, todayMonth: string): OtherCurrencyBilling | undefined {
+  const to = toMonth || "9999-12";
+  const groups = new Map<string, { currency: CurrencyCode; billed: string[]; plan?: RecurringPlan }>();
+  for (const plan of allLiveRecurring(ws)) {
+    if (plan.clientId === clientId && currencyOf(plan) !== currency) groups.set(plan.id, { currency: currencyOf(plan), billed: [], plan });
+  }
+  for (const invoice of allLiveInvoices(ws)) {
+    if (!invoice.recurringId || invoice.voided || invoice.clientId !== clientId || currencyOf(invoice) === currency) continue;
+    const group = groups.get(invoice.recurringId) ?? { currency: currencyOf(invoice), billed: [] };
+    group.billed.push(planInvoiceMonth(invoice));
+    groups.set(invoice.recurringId, group);
+  }
+  const later = (a: string, b: string) => (a > b ? a : b);
+  for (const [id, { currency: other, billed, plan }] of groups) {
+    billed.sort();
+    // The months the plan still bills; none when it was stopped before its first month.
+    const runs = plan && (!plan.endMonth || plan.endMonth >= plan.startMonth) ? { start: plan.startMonth, end: plan.endMonth || "9999-12" } : undefined;
+    const candidates = billed.filter((month) => month >= fromMonth && month <= to);
+    if (runs && later(runs.start, fromMonth) <= (runs.end < to ? runs.end : to)) candidates.push(later(runs.start, fromMonth));
+    if (!candidates.length) continue;
+    const lastBilled = billed.length ? billed[billed.length - 1] : "";
+    const last = runs && !plan?.endMonth ? "" : later(lastBilled, runs ? runs.end : "");
+    // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed.
+    const lastIfStopped = later(lastBilled, plan && plan.startMonth <= todayMonth ? todayMonth : "");
+    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped };
+  }
+  return undefined;
 }
 
 /**

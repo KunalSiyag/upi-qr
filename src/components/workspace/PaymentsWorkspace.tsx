@@ -1125,7 +1125,9 @@ function Workspace() {
                   <h2 id="monthly-title" className={`${cardTitle} border-b border-hairline px-4 py-3.5`}>{tr("Monthly billing")}</h2>
                   <ul className="divide-y divide-hairline">
                     {allLiveRecurring(ws).map((plan) => {
-                      const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
+                      // Stopped before its first month (review round 3, PR 5): it bills nothing more, so it reads "ended" at
+                      // once, never "until" a month before it started, and offers no Pause or Stop.
+                      const ended = plan.endMonth !== "" && (plan.endMonth < today.slice(0, 7) || plan.endMonth < plan.startMonth);
                       // A foreign plan can be deleted (its invoices stay): while it is live its client can't be removed.
                       const deletable = currencyOf(plan) !== "INR";
                       return (
@@ -1176,8 +1178,9 @@ function Workspace() {
                       );
                     })}
                   </ul>
-                  {/* A plan's currency is fixed when it is created (owner decision 2026-10-25): say how to bill in another one. */}
-                  {INTL_UI && intlPickers(ws) && !readOnly && (
+                  {/* A plan's currency is fixed when it is created (owner decision 2026-10-25): say how to bill in another one.
+                      Also for a foreign plan kept after the switch is turned off (review round 3, PR 5). */}
+                  {INTL_UI && (intlPickers(ws) || allLiveRecurring(ws).some((plan) => currencyOf(plan) !== "INR")) && !readOnly && (
                     <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing after this month, then start a new one in that currency dated next month.")}</p>
                   )}
                 </section>
