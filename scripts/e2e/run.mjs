@@ -10,7 +10,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import { createECDH, generateKeyPairSync } from "node:crypto";
 import { connect } from "node:net";
-import { existsSync, readFileSync, renameSync, rmSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -22,11 +22,6 @@ const SUITES = [
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
   "books-server-e2e", "books-client-e2e", "books-e2e", "currency-e2e",
 ];
-// Suites that need the clients-abroad UI on (INTL_UI, docs/spec-foreign-clients.md §5.1), all or in part. The runner builds a
-// separate flag-on copy of the static site for them (PROUPIQR_E2E_INTL_UI=1) and serves it at INTL_BASE; the
-// normal build in .vercel/output stays exactly as it was.
-const INTL_SUITES = ["currency-e2e", "books-e2e", "hindi-e2e"];
-const INTL_STATIC_DIR = join(ROOT, ".vercel", "e2e-intl-static");
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");
 // --prod runs the server-backed suites against the real production bundle (scripts/e2e/prod-server.mjs).
@@ -42,20 +37,6 @@ async function freePort(start) {
   for (let port = start; port < start + 50; port++) if (!(await portBusy(port))) return port;
   throw new Error(`no free port from ${start}`);
 }
-
-const OUTPUT = join(ROOT, ".vercel", "output");
-const KEPT = join(ROOT, ".vercel", "output.e2e-keep");
-/**
- * KEPT exists only while a flag-on build runs, and then holds the real (flag-off) build. Left behind by a run that was
- * killed mid-build, it is still the real build and .vercel/output is the partial flag-on one: put it back. Runs before
- * anything reads .vercel/output (this check, perf_budget_check, --prod), and never deletes KEPT (review round 4).
- */
-function restoreKeptBuild() {
-  if (!existsSync(KEPT)) return;
-  rmSync(OUTPUT, { recursive: true, force: true });
-  renameSync(KEPT, OUTPUT);
-}
-restoreKeptBuild();
 
 if (!existsSync(join(STATIC_DIR, "app", "index.html"))) {
   console.error("Run `npx astro build` first (missing .vercel/output/static/app/index.html).");
@@ -93,71 +74,12 @@ function stopAll() {
   spawnSync("npx", ["astro", "dev", "stop"], { cwd: ROOT, stdio: "ignore" });
   for (const child of children) child.kill();
 }
-// SIGTERM too (a harness or `timeout` stops runs that way): a flag-on build in flight is stopped and the normal build
-// is put back before exiting. A SIGKILL can't be caught; the next run's restoreKeptBuild() repairs it.
-let stopping = false;
-for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) {
-  process.on(signal, async () => {
-    if (stopping) return;
-    stopping = true;
-    const child = building;
-    if (child) {
-      const closed = new Promise((resolve) => { child.once("close", resolve); setTimeout(resolve, 10_000); });
-      child.kill("SIGTERM");
-      await closed;
-    }
-    restoreKeptBuild();
-    stopAll();
-    process.exit(code);
-  });
-}
-
-/**
- * Builds the flag-on static site into INTL_STATIC_DIR without touching the normal build: the adapter always writes
- * .vercel/output, so the normal output is moved to KEPT first and put back afterwards (also on failure or a signal).
- * The build runs as an async child so a SIGTERM/SIGINT handler can stop it and put the normal build back.
- */
-let building = null;
-async function buildIntlStatic() {
-  restoreKeptBuild();
-  const moved = existsSync(OUTPUT);
-  if (moved) renameSync(OUTPUT, KEPT);
-  try {
-    const child = spawn(join(ROOT, "node_modules", ".bin", "astro"), ["build", "--outDir", join(ROOT, ".vercel", "e2e-intl-dist")], {
-      cwd: ROOT, env: { ...process.env, PROUPIQR_E2E_INTL_UI: "1" }, stdio: ["ignore", "pipe", "pipe"],
-    });
-    building = child;
-    let log = "";
-    const keep = (chunk) => { log = `${log}${chunk}`.slice(-2000); };
-    child.stdout.on("data", keep);
-    child.stderr.on("data", keep);
-    const timer = setTimeout(() => child.kill("SIGTERM"), 600_000);
-    const code = await new Promise((resolve) => child.once("close", resolve));
-    clearTimeout(timer);
-    building = null;
-    if (code !== 0) throw new Error(`flag-on build failed:\n${log}`);
-    rmSync(INTL_STATIC_DIR, { recursive: true, force: true });
-    renameSync(join(OUTPUT, "static"), INTL_STATIC_DIR);
-  } finally {
-    building = null;
-    rmSync(join(ROOT, ".vercel", "e2e-intl-dist"), { recursive: true, force: true });
-    // KEPT gone while moved: a signal handler already put the normal build back, so leave .vercel/output alone.
-    if (existsSync(KEPT)) restoreKeptBuild();
-    else if (!moved) rmSync(OUTPUT, { recursive: true, force: true });
-  }
-}
+// SIGTERM too: a harness or `timeout` stops runs that way.
+for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) process.on(signal, () => { stopAll(); process.exit(code); });
 
 let failed = 0;
 let passed = 0;
 try {
-  const selected = [...SUITES].filter((s) => (only.length ? only.includes(s) : true) && !PROD);
-  if (selected.some((s) => INTL_SUITES.includes(s))) {
-    await buildIntlStatic();
-    const intlPort = await freePort(4401);
-    start("python3", ["-m", "http.server", String(intlPort), "--directory", INTL_STATIC_DIR]);
-    process.env.INTL_BASE = `http://localhost:${intlPort}`;
-    await waitFor(`${process.env.INTL_BASE}/app/`);
-  }
   start("node", [join(HERE, "fake-upstash.mjs")]);
   start("python3", ["-m", "http.server", "4400", "--directory", STATIC_DIR]);
   const serverEnv = {

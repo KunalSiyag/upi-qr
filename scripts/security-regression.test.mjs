@@ -530,10 +530,11 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   const sheetsSrc = read("src/components/workspace/Sheets.tsx");
   assert.doesNotMatch(sheetsSrc, /formatPaise|parseRupeesToPaise\(amount\)/, "sheets parse and format in the invoice's currency");
   assert.match(sheetsSrc, /const modes = foreign \? PAYMENT_MODES\.filter\(\(m\) => m !== "upi"\) : PAYMENT_MODES;/, "no UPI mode on a foreign payment");
-  // INTL_UI (§5.1): false in source; only a local e2e build can turn it on, never on Vercel or CI.
+  // INTL_UI (§5.1): on since the launch (PR 5), the same in every build: no environment or build-time override, so
+  // what e2e tests is what ships. Reverting PR 5 turns it off again (the rollback in §10).
   const storeSrc = read("src/lib/workspace/localStore.ts");
-  assert.match(storeSrc, /export const INTL_UI: boolean = false \|\| E2E_INTL_UI;/, "PR 4 ships INTL_UI false (PR 5 flips it)");
-  assert.match(read("astro.config.mjs"), /const E2E_INTL_UI = process\.env\.PROUPIQR_E2E_INTL_UI === "1" && !process\.env\.VERCEL && !process\.env\.CI;/, "the e2e override never applies to Vercel or CI builds");
+  assert.match(storeSrc, /export const INTL_UI: boolean = true;/, "PR 5 ships INTL_UI on");
+  assert.doesNotMatch(storeSrc + read("astro.config.mjs"), /E2E_INTL_UI|PROUPIQR_E2E_INTL_UI/, "no build-time override of INTL_UI");
   // §5.9: the Settings card adds no dialog, file input or aria-expanded (e2e selectors stay unambiguous).
   const card = read("src/components/workspace/IntlSettingsCard.tsx");
   assert.doesNotMatch(card, /role="dialog"|aria-expanded|aria-current|type="file"|<li\b/);

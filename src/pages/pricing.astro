@@ -29,6 +29,7 @@ const tiers = [
       "Payment tracker: who owes you, overdue first",
       `${PLANS.free.businesses} business in the payment tracker`,
       "Monthly fees: invoices that repeat every month",
+      "Invoice clients abroad in USD, EUR, GBP, AED, AUD, CAD or SGD, with your bank details instead of UPI",
       "WhatsApp and SMS reminders in one tap (English or Hindi)",
       "Match bank statement credits to invoices",
       "Backup file and CSV export",
@@ -46,7 +47,7 @@ const tiers = [
       "Everything in Free",
       "Sync between your devices",
       `${PLANS.free.businesses} business in the payment tracker`,
-      `${FREE_ACTIVE_PAYLINKS} active pay links with live amount, UPI button and QR`,
+      `${FREE_ACTIVE_PAYLINKS} active pay links with live amount, UPI button and QR (bank details for clients abroad)`,
       "Clients send their UTR back; you confirm with one tap",
       "Delete your cloud copy anytime",
     ],
@@ -80,7 +81,7 @@ const tiers = [
 const faqs = [
   {
     question: "Do you take a cut of my payments?",
-    answer: "No. Pro UPI QR takes 0% of your payments. Your client pays from their UPI app straight to your UPI ID. We never hold, route, or settle money, so there is no MDR or gateway fee from us.",
+    answer: "No. Pro UPI QR takes 0% of your payments. Your client pays straight to your UPI ID, or for clients abroad, to your bank or PayPal, Wise or Stripe account. We never hold, route, or settle money, so there is no MDR or gateway fee from us.",
   },
   {
     question: "Is Pro UPI QR really free?",
@@ -111,6 +112,10 @@ const faqs = [
   {
     question: "What happens to my extra businesses if I go back to Free?",
     answer: "Nothing is deleted. Every business stays in your tracker, where you can open it, export it and back it up, and its pay links keep working. On Free only your first business can be edited; the others are read-only, and you can't add another business, until you upgrade again.",
+  },
+  {
+    question: "Can I invoice clients outside India?",
+    answer: "Yes, on the Free plan. Turn on Clients abroad in the tracker's Settings, add your bank details (and a PayPal, Wise or Stripe link if you use one), and choose USD, EUR, GBP, AED, AUD, CAD or SGD when you create an invoice. Reminders and pay links show the amount in that currency with your bank details instead of UPI. Totals stay separate per currency, with no conversion, and you can record the rupees your bank credited.",
   },
   {
     question: "Where is my data stored?",

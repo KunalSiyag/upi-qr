@@ -166,7 +166,10 @@ try {
     // balance line, its own invoice row), and a statement claim never touches it.
     // Globex owes only US$ (review round 1: its statement link offers bank details, not a UPI button).
     const sidecar = JSON.stringify({ intl: { ...intl, invoices: { inv_usd00031: intl.invoices.inv_usd00031, inv_usd00032: intl.invoices.inv_usd00032 } }, owner: "o" });
-    const { intl: _uiIntl, ...uiBook } = mixedWs;
+    const { intl: _uiIntl, ...mixedBook } = mixedWs;
+    // Asha owes only ₹: her statement link keeps the "one UPI button" wording.
+    const uiBook = { ...mixedBook, clients: { ...mixedBook.clients, cli_asha0001: { id: "cli_asha0001", name: "Asha Iyer", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } },
+      invoices: { ...mixedBook.invoices, inv_00000041: { ...inv("inv_00000041", "TU-41", addDays(-5), addDays(10), 250000), clientId: "cli_asha0001" } } };
     await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-owner', 'o'); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(uiBook))}); localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(sidecar)}); localStorage.setItem('__plan', 'free'); true`);
     await b.go(`${STATIC}/app/?tab=clients`, 3500);
     await b.waitFor("/Statement link for all dues/.test(document.body.innerText)", 8000);
@@ -175,12 +178,14 @@ try {
     await b.go(`${STATIC}/app/?tab=clients`, 3500);
     await b.waitFor("[...document.querySelectorAll('button')].some(b => b.textContent.includes('Share statement link'))", 8000);
     const linkButton = (name) => b.eval(`[...document.querySelectorAll('li')].find((li) => li.querySelector('button')?.textContent.includes(${JSON.stringify(name)}))?.querySelector('button.text-leaf')?.textContent ?? null`);
-    check("a client owing ₹ is offered the UPI statement link", (await linkButton("Riya Kapoor")) === "Share statement link — all dues + one UPI button", await linkButton("Riya Kapoor"));
-    check("a client owing only US$ is offered bank details, not a UPI button", (await linkButton("Globex LLC")) === "Share statement link — all dues + bank details", await linkButton("Globex LLC"));
+    // PR 5: "one UPI button" only for a client who owes nothing but ₹; a mixed or foreign-only client gets neutral wording.
+    check("a client owing only ₹ is offered the UPI statement link", (await linkButton("Asha Iyer")) === "Share statement link — all dues + one UPI button", await linkButton("Asha Iyer"));
+    check("a client owing ₹ and US$ gets the neutral statement link text", (await linkButton("Riya Kapoor")) === "Share statement link — all dues on one page", await linkButton("Riya Kapoor"));
+    check("a client owing only US$ is not promised a UPI button", (await linkButton("Globex LLC")) === "Share statement link — all dues on one page", await linkButton("Globex LLC"));
     // Review round 5 (§5.7): a client owing ₹ and US$ shows the ₹ balance and its overdue first, then the US$ lines.
     const riyaBalances = await b.eval(`[...document.querySelectorAll('li')].find((li) => li.querySelector('button')?.textContent.includes('Riya Kapoor'))?.querySelector('[data-client-balances]')?.innerText ?? null`);
     check("a mixed client's balances: ₹ first (with its overdue), then US$", /^₹6,000\s+₹6,000 overdue\s+US\$1,200\.00\s+US\$1,200\.00\s+overdue$/.test(riyaBalances?.trim() ?? ""), JSON.stringify(riyaBalances));
-    await t("__t.click(/one UPI button/)");
+    await b.eval(`[...document.querySelectorAll('li')].find((li) => li.querySelector('button')?.textContent.includes('Riya Kapoor')).querySelector('button.text-leaf').click(), true`);
     await b.waitFor("!!document.getElementById('stmt-cli_riya0001')", 8000);
     check("Pro creates a statement link for the client", (await b.eval("document.getElementById('stmt-cli_riya0001').value")) === `${STATIC}/i/S00000000000000000000T/` && (await b.eval("window.__posts.some(p => p.clientId === 'cli_riya0001')")));
     // A statement claim arrives; confirming applies it oldest first.

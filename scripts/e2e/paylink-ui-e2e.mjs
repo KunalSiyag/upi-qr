@@ -145,7 +145,7 @@ try {
   await t("__t.click(/^Turn off$/)");
   await b.waitFor("!document.querySelector('input[id^=link-]')", 8000);
   check("turn off removes the link", (await b.eval("Object.keys(JSON.parse(localStorage.getItem('__links'))).length")) === 0);
-  // Clients abroad (PR 4; this build has INTL_UI off, and foreign data that arrives by sync is still handled fully).
+  // Clients abroad (PR 4): foreign data that arrives by sync is handled fully.
   const usdInvoice = { id: "inv_usd00001", number: "INV-0002", clientId: "cli_globex01", issueDate: "2026-10-01", dueDate: "2026-10-20", amountPaise: 120000, description: "", payments: [], reminders: [], voided: false, currency: "USD", createdAt: T, updatedAt: T };
   const abroad = { ...guest, clients: { ...guest.clients, cli_globex01: { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: T, updatedAt: T } } };
   const sidecarOf = (settings) => JSON.stringify({ owner: null, intl: { invoices: { inv_usd00001: usdInvoice }, recurring: {}, clients: { cli_globex01: { currency: "USD", updatedAt: T } }, ...(settings ? { settings } : {}) } });
@@ -175,11 +175,11 @@ try {
   await b.waitFor("/अंतरराष्ट्रीय भुगतान की जानकारी जोड़ें/.test(document.body.innerText)", 8000);
   check("no_intl message in Hindi", /विदेशी मुद्रा वाले इनवॉइस के पेमेंट लिंक भेजने से पहले सेटिंग्स में अंतरराष्ट्रीय भुगतान की जानकारी जोड़ें।/.test(await text()));
   await b.eval("localStorage.setItem('proupiqr-workspace-lang', 'en'); true");
-  // Review round 2: the message above points to Settings, so this flag-off build shows the Clients abroad card for a
-  // book that holds foreign data (an INR-only book still has none: workspace-e2e).
+  // Review round 2: the message above points to Settings, where the Clients abroad card is (a collapsed card in every
+  // book since PR 5: workspace-e2e).
   await b.go(BASE + "/app/?tab=settings", 2500);
   await b.waitFor("[...document.querySelectorAll('details')].some(d => d.querySelector('summary')?.textContent.includes('Clients abroad'))", 8000).catch(() => {});
-  check("flag off: the Clients abroad card shows for a book with foreign data", await b.eval("[...document.querySelectorAll('details')].some(d => d.querySelector('summary')?.textContent.includes('Clients abroad')) && !!document.getElementById('ws-intl-account-name')"));
+  check("the Clients abroad card shows for a book with foreign data", await b.eval("[...document.querySelectorAll('details')].some(d => d.querySelector('summary')?.textContent.includes('Clients abroad')) && !!document.getElementById('ws-intl-account-name')"));
   // With details (synced from a device where they were saved): the link is created and the reminder carries it.
   const settings = { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T + 5 };
   await b.go(BASE + "/terms/", 600);

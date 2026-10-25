@@ -1,10 +1,10 @@
-// Clients abroad in /app/ (docs/spec-foreign-clients.md §5, §9.3), against the runner's flag-on build (INTL_UI on,
-// served at INTL_BASE). Static: no server, sync stays signed out.
+// Clients abroad in /app/ (docs/spec-foreign-clients.md §5, §9.3), against the normal static build (INTL_UI is on since
+// PR 5). Static: no server, sync stays signed out.
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { checker, helpers, OUT, sleep, startBrowser } from "./cdp-lib.mjs";
 
-const BASE = process.env.INTL_BASE || process.env.BASE || "http://localhost:4401";
+const BASE = process.env.BASE || "http://localhost:4400";
 const b = await startBrowser();
 const check = checker();
 const t = async (js) => { await b.eval(helpers); return b.eval(js); };

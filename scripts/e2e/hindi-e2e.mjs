@@ -80,6 +80,7 @@ try {
     await sleep(250);
     const plan = await b.eval("[...document.querySelectorAll('button')].some(b => b.textContent === 'मुद्रा बदलें')");
     const planShown = await b.eval("document.body.innerText.includes('मासिक बिलिंग') && document.body.innerText.includes('US$500.00')");
+    const planNote = await b.eval("document.querySelector('[data-monthly-note]')?.textContent ?? null");
     await t("[...document.querySelectorAll('li')].find(li => li.innerText.includes('Globex LLC') && !li.innerText.includes('US$500.00') && [...li.querySelectorAll('button')].some(x => x.textContent === 'बदलें')).querySelectorAll('button').forEach(x => { if (x.textContent === 'बदलें') x.click(); }), true");
     await b.waitFor("!!document.querySelector('[role=dialog]')");
     await sleep(150);
@@ -87,28 +88,25 @@ try {
     const clientSheet = await b.eval("document.querySelector('[role=dialog]').innerText.includes('Globex LLC') || document.getElementById('ws-c-name')?.value === 'Globex LLC'");
     await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await b.waitFor("!document.querySelector('[role=dialog]')");
-    return { invoice, client, plan, planShown, clientSheet };
+    return { invoice, client, plan, planShown, clientSheet, planNote };
   };
   const seedAbroad = async (base) => {
     await b.go(base + "/terms/", 300);
     await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(abroad))});
       localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); localStorage.setItem('proupiqr-workspace-lang', 'hi'); true`);
   };
-  // Foreign data shown in this (flag-off) build: amounts in their own currency, in the Hindi UI too.
+  // Foreign data shown in Hindi: amounts in their own currency.
   await seedAbroad(BASE);
   await b.go(BASE + "/app/", 2500);
   page = await text();
   check("Hindi overview: the foreign row in US$ (Western grouping)", /US\$1,200\.00 वसूलना है/.test(page) && page.includes("लेना बाकी"), page.slice(0, 600));
-  // INTL_UI off (§5.1, the PR 5 rollback in §10): with settings.on and foreign data in the book, no creation entry point shows.
-  const off = await entryPoints(BASE);
-  check("flag off: no currency picker in the invoice sheet, the client sheet, or on a USD plan", off.planShown && off.clientSheet && !off.invoice && !off.client && !off.plan, JSON.stringify(off));
-  const INTL = process.env.INTL_BASE;
-  check("the flag-on build is available (INTL_BASE)", Boolean(INTL));
-  if (INTL) {
-    await seedAbroad(INTL);
-    const on = await entryPoints(INTL);
+  // INTL_UI is on (PR 5) and the book has settings.on: both creation entry points show, no plan currency change, and
+  // Monthly billing says how to bill in another currency.
+  {
+    const on = await entryPoints(BASE);
     check("flag on: both entry points show (the probe above can find them), and no plan currency change", on.planShown && on.clientSheet && on.invoice && on.client && !on.plan, JSON.stringify(on));
-    await b.go(INTL + "/app/?tab=settings", 2500);
+    check("Hindi Monthly billing: how to bill in another currency", on.planNote === "दूसरी मुद्रा में बिल करने के लिए मासिक बिलिंग रोकें और उस मुद्रा में नई शुरू करें।", JSON.stringify(on.planNote));
+    await b.go(BASE + "/app/?tab=settings", 2500);
     await t("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('विदेशी ग्राहक')); if (!d.open) d.querySelector('summary').click(); return true; })()");
     await sleep(200);
     page = await text();
@@ -124,7 +122,7 @@ try {
     await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
     await b.waitFor("!document.querySelector('[role=dialog]')");
     // An existing invoice: its currency as text, with the note in Hindi, and no select.
-    await b.go(INTL + "/app/?tab=invoices", 2500);
+    await b.go(BASE + "/app/?tab=invoices", 2500);
     await t("(() => { const r = [...document.querySelectorAll('li [aria-expanded]')].find(x => x.textContent.includes('TU-0002')); if (r.getAttribute('aria-expanded') !== 'true') r.click(); return true; })()");
     await sleep(150);
     await t("[...document.querySelectorAll('li button')].find(x => x.textContent === 'बदलें' && x.closest('li').textContent.includes('TU-0002')).click(), true");

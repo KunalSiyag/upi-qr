@@ -1176,6 +1176,10 @@ function Workspace() {
                       );
                     })}
                   </ul>
+                  {/* A plan's currency is fixed when it is created (owner decision 2026-10-25): say how to bill in another one. */}
+                  {INTL_UI && intlPickers(ws) && !readOnly && (
+                    <p data-monthly-note="" className="border-t border-hairline px-4 py-2.5 text-[13px] text-muted">{tr("To bill in another currency, stop the monthly billing and start a new one in that currency.")}</p>
+                  )}
                 </section>
               )}
               <div className="flex items-center justify-between gap-3">
@@ -1242,7 +1246,7 @@ function Workspace() {
                               ) : readOnly ? null : !signedIn ? (
                                 <span className="text-muted">{tr("Statement links need a free account + Pro.")}</span>
                               ) : isPro ? (
-                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : (bal?.balancePaise ?? 0) > 0 ? tr("Share statement link — all dues + one UPI button") : tr("Share statement link — all dues + bank details")}</button>
+                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : fx.length === 0 ? tr("Share statement link — all dues + one UPI button") : tr("Share statement link — all dues on one page")}</button>
                               ) : (
                                 <a href="/app/?tab=settings&upgrade=monthly" className="inline-flex items-center gap-1.5 text-charcoal hover:text-ink"><Icon name="link" className="h-3.5 w-3.5" />{tr("Statement link for all dues")} · <span className="font-medium text-leaf">Pro</span></a>
                               )}

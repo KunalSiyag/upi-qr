@@ -130,8 +130,15 @@ try {
   writeFileSync(backupPath, JSON.stringify({ app: "proupiqr-workspace", workspace: JSON.parse(snapshot) }));
   await t(`__t.click(/^Settings$/)`);
   await sleep(200);
-  // INTL_UI is off in this build (docs/spec-foreign-clients.md §5.1): no Clients abroad card, nothing new to create.
-  check("no Clients abroad card while INTL_UI is off", !/Clients abroad/.test(await text()) && !(await b.eval("!!document.getElementById('ws-intl-on')")));
+  // INTL_UI is on (PR 5, docs/spec-foreign-clients.md §5.1): an INR-only book sees one new thing, the collapsed
+  // "Clients abroad" card. No currency picker, no plan note, and nothing is written for it.
+  check("INR-only: the Clients abroad card is there, collapsed", await b.eval("(() => { const d = [...document.querySelectorAll('details')].find(x => x.querySelector('summary')?.textContent.includes('Clients abroad')); return !!d && !d.open && !d.closest('li'); })()"));
+  await t(`__t.click(/^\\+ New invoice$/)`);
+  await b.waitFor("!!document.querySelector('[role=dialog]')");
+  check("INR-only: no currency picker in the new-invoice sheet", !(await b.eval("!!document.getElementById('ws-currency') || !!document.getElementById('ws-currency-fixed')")) && /Amount \(₹\)/.test(await b.eval("document.querySelector('[role=dialog]').innerText")));
+  await b.send("Input.dispatchKeyEvent", { type: "keyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27 });
+  await b.waitFor("!document.querySelector('[role=dialog]')");
+  check("INR-only: no clients-abroad data stored", (await b.eval("Object.keys(localStorage).filter(k => k.startsWith('proupiqr-intl-v1')).length")) === 0 && !(await b.eval("localStorage.getItem('proupiqr-workspace-v1')")).includes('"intl"'));
   await t(`__t.click(/^Erase workspace on this device/)`);
   await t(`__t.click(/^Erase$/)`);
   await sleep(200);

@@ -71,18 +71,11 @@ const PLACEHOLDER_VPA = "merchant@upi";
 export const BOOKS_UI = true;
 
 /**
- * Local test builds only: astro.config.mjs defines this as true when PROUPIQR_E2E_INTL_UI=1 and the build isn't on
- * Vercel (the e2e runner's flag-on build), false otherwise. Node (unit tests) never defines it.
+ * Clients abroad UI (docs/spec-foreign-clients.md §5.1). PR 4 shipped it false; the launch (PR 5) turns it on. Gates
+ * only the entry points that create foreign data (the Settings card, the currency pickers): foreign data that arrives
+ * by sync is shown and handled fully either way. An INR-only book sees only the collapsed "Clients abroad" card.
  */
-declare const __PROUPIQR_E2E_INTL_UI__: boolean | undefined;
-const E2E_INTL_UI = typeof __PROUPIQR_E2E_INTL_UI__ !== "undefined" && __PROUPIQR_E2E_INTL_UI__ === true;
-
-/**
- * Clients abroad UI (docs/spec-foreign-clients.md §5.1). PR 4: false; the launch (PR 5) flips it. Gates only the
- * entry points that create foreign data (the Settings card, currency pickers, plan currency changes): foreign data
- * that arrives by sync is shown and handled fully either way.
- */
-export const INTL_UI: boolean = false || E2E_INTL_UI;
+export const INTL_UI: boolean = true;
 
 export const bookKey = (id: string): string => (id === PRIMARY_BOOK_ID ? WORKSPACE_KEY : `${BOOK_PREFIX}${id}`);
 /** The sidecar of a book's foreign section, the primary included ({ owner, intl }; absent when the book has none). */
