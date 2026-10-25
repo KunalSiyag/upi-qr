@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, deletePlan, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
-  inrEarned, parseRupeesToPaise, repairIntl, setClientCurrency, summarizeForeign,
+  inrEarned, paiseToDecimal, parseRupeesToPaise, repairIntl, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam, withoutTombstone,
   type InvoiceView, type Workspace,
@@ -165,6 +165,14 @@ function Workspace() {
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   // The monthly-billing row asking "Delete for good?" (foreign plans only).
   const [confirmPlan, setConfirmPlan] = useState<string | null>(null);
+  // "Keep" hands focus back to that plan's Delete button (the confirm takes it on open), never to <body>.
+  const planFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const id = planFocus.current;
+    if (!id || confirmPlan !== null) return;
+    planFocus.current = null;
+    document.querySelector<HTMLElement>(`[data-plan-delete="${CSS.escape(id)}"]`)?.focus();
+  });
   const [upsell, setUpsell] = useState<null | "paylinks" | "businesses" | "business_paylink">(null);
   const [addOpen, setAddOpen] = useState(false);
   /** A generator document waiting for "Which business is this for?" (§7.5). */
@@ -986,10 +994,10 @@ function Workspace() {
                       {chase.map((v) => (
                         <li key={v.invoice.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 ${hasForeign ? "sm:grid-cols-[minmax(0,1fr)_9rem_auto]" : "sm:grid-cols-[minmax(0,1fr)_7rem_auto]"}`}>
                           <div className="min-w-0">
-                            {/* With foreign amounts (wider) the number moves to the due line below sm, as in the invoice
-                                rows, so the name line's truncation never hides it. */}
-                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")} <span className={`font-normal text-muted ${hasForeign ? "hidden sm:inline" : ""}`}>· {v.invoice.number}</span></p>
-                            <p className="text-[13px] text-muted">{hasForeign && <span className="sm:hidden">{v.invoice.number} · </span>}<span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
+                            {/* With foreign amounts (wider) the number moves to the due line at every width, so the
+                                name line's truncation never hides it. */}
+                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")}{!hasForeign && <> <span className="font-normal text-muted">· {v.invoice.number}</span></>}</p>
+                            <p className="text-[13px] text-muted">{hasForeign && <span data-chase-number>{v.invoice.number} · </span>}<span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
                           </div>
                           <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatMoney(v.balancePaise, v.currency)}</p>
                           <div className="col-span-2 flex gap-2 sm:col-span-1 sm:justify-end">
@@ -1084,8 +1092,13 @@ function Workspace() {
                         onDelete={() => { setWs(deleteInvoice(ws, v.invoice.id, Date.now())); setFlash(tr("{number} deleted.", { number: v.invoice.number })); }}
                         onUndoPayment={(paymentId) => setWs(removePayment(ws, v.invoice.id, paymentId, Date.now()))}
                         onCredit={(paymentId, paise) => {
-                          // INR credited is edited later from the payment row: an upsert of that foreign invoice (§3.5).
-                          const payments = v.invoice.payments.map((p) => (p.id === paymentId ? { ...p, inrCreditedPaise: paise } : p));
+                          // INR credited is added or corrected later from the payment row: an upsert of that foreign
+                          // invoice (§3.5). null removes the figure (the key is dropped; 0 is never stored).
+                          const payments = v.invoice.payments.map((p) => {
+                            if (p.id !== paymentId) return p;
+                            const { inrCreditedPaise: _old, ...rest } = p;
+                            return paise === null ? rest : { ...rest, inrCreditedPaise: paise };
+                          });
                           setWs(upsertInvoice(ws, { ...v.invoice, payments }, Date.now()));
                         }}
                       />
@@ -1136,14 +1149,14 @@ function Workspace() {
                               {deletable && (confirmPlan === plan.id ? (
                                 <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                                   {tr("Delete for good?")}
-                                  <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
+                                  <button type="button" data-plan-delete-confirm="" autoFocus className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
                                     onClick={() => { setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay.")); }}>
                                     {tr("Delete")}
                                   </button>
-                                  <button type="button" onClick={() => setConfirmPlan(null)} className={ghostButton}>{tr("Keep")}</button>
+                                  <button type="button" onClick={() => { planFocus.current = plan.id; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
                                 </span>
                               ) : (
-                                <button type="button" data-plan-delete="" className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete")}</button>
+                                <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete")}</button>
                               ))}
                             </div>
                           )}
@@ -1615,15 +1628,15 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
   onVoid: () => void;
   onDelete: () => void;
   onUndoPayment: (paymentId: string) => void;
-  /** Records the rupees credited for a payment of a foreign-currency invoice. */
-  onCredit: (paymentId: string, inrCreditedPaise: number) => void;
+  /** Records, corrects or (null) removes the rupees credited for a payment of a foreign-currency invoice. */
+  onCredit: (paymentId: string, inrCreditedPaise: number | null) => void;
 }) {
   const [open, setOpen] = useState(false);
   const [crediting, setCrediting] = useState<string | null>(null);
   const [credit, setCredit] = useState("");
   const [creditError, setCreditError] = useState("");
-  // Where focus goes when the INR credited form in the row closes: back to its trigger (Cancel, Escape) or, after a save
-  // (the trigger is gone), to that payment's Undo. Never left on <body>.
+  // Where focus goes when the INR credited form in the row closes: back to its trigger ("Add INR credited" or "Change",
+  // after Cancel, Escape or a save). Never left on <body>.
   const creditFocus = useRef<{ paymentId: string; to: "open" | "undo" } | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1667,15 +1680,19 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
             <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
               {invoice.payments.map((p) => (
                 <li key={p.id} className="px-3 py-1.5">
-                  {/* "Add INR credited" next to Undo leaves the payment text half a phone row: below sm the actions wrap under it. */}
-                  <div className={foreign && !p.inrCreditedPaise && !readOnly ? "flex flex-wrap items-center justify-between gap-2 gap-y-1 sm:flex-nowrap" : "flex items-center justify-between gap-2"}>
+                  {/* "Add INR credited" (or "Change") next to Undo leaves the payment text half a phone row: below sm the
+                      actions wrap under it. */}
+                  <div className={foreign && !readOnly ? "flex flex-wrap items-center justify-between gap-2 gap-y-1 sm:flex-nowrap" : "flex items-center justify-between gap-2"}>
                     <span className="min-w-0 break-words text-charcoal">
                       <span className="font-medium tabular-nums text-ink">{money(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}
                       {foreign && p.inrCreditedPaise ? <> · <span className="tabular-nums">{tr("{amount} credited", { amount: formatPaise(p.inrCreditedPaise) })}</span></> : null}
                     </span>
-                    <span className={`${foreign && !p.inrCreditedPaise && !readOnly ? "ml-auto " : ""}flex shrink-0 items-center gap-3`}>
-                      {foreign && !p.inrCreditedPaise && !readOnly && crediting !== p.id && (
-                        <button type="button" data-credit-open={p.id} onClick={() => { setCrediting(p.id); setCredit(""); setCreditError(""); }} className="font-medium text-leaf hover:underline">{tr("Add INR credited")}</button>
+                    <span className={`${foreign && !readOnly ? "ml-auto " : ""}flex shrink-0 items-center gap-3`}>
+                      {/* Spec §3.5: the figure stays editable from the payment row, so a typo can be corrected. */}
+                      {foreign && !readOnly && crediting !== p.id && (
+                        <button type="button" data-credit-open={p.id} aria-label={p.inrCreditedPaise ? tr("Change INR credited") : undefined}
+                          onClick={() => { setCrediting(p.id); setCredit(p.inrCreditedPaise ? paiseToDecimal(p.inrCreditedPaise) : ""); setCreditError(""); }}
+                          className="font-medium text-leaf hover:underline">{p.inrCreditedPaise ? tr("Change") : tr("Add INR credited")}</button>
                       )}
                       {!readOnly && <button type="button" data-credit-undo={p.id} onClick={() => onUndoPayment(p.id)} className="font-medium text-muted hover:text-[#a8321d]" aria-label={tr("Remove this payment")}>{tr("Undo")}</button>}
                     </span>
@@ -1688,14 +1705,19 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
                       closeCredit(p.id, "open");
                     }} onSubmit={(e) => {
                       e.preventDefault();
+                      // Emptying the field of a saved figure removes it; a new figure must be a valid amount.
+                      if (p.inrCreditedPaise && !credit.trim()) {
+                        onCredit(p.id, null);
+                        return closeCredit(p.id, "open");
+                      }
                       const paise = parseRupeesToPaise(credit);
                       if (!paise) return setCreditError(tr("Enter an amount like 1500 or 1500.50."));
                       onCredit(p.id, paise);
-                      closeCredit(p.id, "undo");
+                      closeCredit(p.id, "open");
                     }}>
                       <label htmlFor={`ws-credit-${p.id}`} className="sr-only">{tr("INR credited (₹, optional)")}</label>
                       <input id={`ws-credit-${p.id}`} className={`${inputClass.replace("w-full", "w-36")} py-1.5`} value={credit} onChange={(e) => { setCredit(e.target.value); setCreditError(""); }} inputMode="decimal" placeholder="₹" autoFocus />
-                      <button type="submit" className={rowButton}>{tr("Add INR credited")}</button>
+                      <button type="submit" className={rowButton}>{p.inrCreditedPaise ? tr("Save") : tr("Add INR credited")}</button>
                       <button type="button" onClick={() => closeCredit(p.id, "open")} className={ghostButton}>{tr("Cancel")}</button>
                       {creditError && <p role="alert" className={`w-full text-xs font-medium ${dangerText}`}>{creditError}</p>}
                     </form>
@@ -1953,7 +1975,10 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, readOnlyIds, today, re
         )}
       </section>
 
-      {INTL_UI && <IntlSettingsCard ws={ws} today={today} readOnly={readOnly} onChange={onChange} />}
+      {/* Also on a flag-off build once the book holds foreign data (synced, or a PR 5 rollback, §10): the reminder, LUT
+          and pay-link messages on that data point here, and live foreign pay links show these details. An INR-only book
+          has no intl key, so its Settings stay as they are. */}
+      {(INTL_UI || ws.intl) && <IntlSettingsCard ws={ws} today={today} readOnly={readOnly} onChange={onChange} />}
 
       <section className={`${card} p-5`}>
         <h2 className={cardTitle}>{tr("Your data")}</h2>

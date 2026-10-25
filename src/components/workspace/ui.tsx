@@ -111,7 +111,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
   );
 }
 
-export function Field({ label, htmlFor, error, children }: { label: string; htmlFor: string; error?: string; children: ReactNode }) {
+export function Field({ label, htmlFor, error, children }: { label: ReactNode; htmlFor: string; error?: string; children: ReactNode }) {
   return (
     <div>
       <label htmlFor={htmlFor} className={labelClass}>{label}</label>

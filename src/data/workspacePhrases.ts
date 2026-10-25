@@ -564,6 +564,8 @@ export const WS_HI: Record<string, string> = {
   "INR credited (₹, optional)": "खाते में आए रुपये (₹, वैकल्पिक)",
   "The rupees your bank credited, as on the FIRA/FIRC. Keep it for your records.": "आपके बैंक ने जितने रुपये जमा किए, जैसा FIRA/FIRC में है। इसे अपने रिकॉर्ड के लिए रखें।",
   "Add INR credited": "खाते में आए रुपये जोड़ें",
+  "Change": "बदलें",
+  "Change INR credited": "खाते में आए रुपये बदलें",
   "{amount} credited": "{amount} खाते में आए",
   "Transfer reference (optional)": "ट्रांसफ़र रेफ़रेंस (वैकल्पिक)",
   "{amount} to collect": "{amount} वसूलना है",

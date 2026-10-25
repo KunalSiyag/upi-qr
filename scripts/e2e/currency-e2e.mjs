@@ -118,6 +118,11 @@ try {
   await sleep(300);
   const side = JSON.parse(await sidecar());
   check("LUT and USD override saved", side.intl.settings.lutArn === "AD2704260012345" && side.intl.settings.lutFy === fy && side.intl.settings.byCurrency?.USD?.account === "8310123456" && !side.intl.settings.byCurrency.EUR, JSON.stringify(side.intl.settings));
+  // Review round 2: the per-currency set's fields carry the currency in their names, so a screen reader never hears
+  // two fields called "Account name".
+  const fieldNames = await b.eval("['ws-intl-account-name', 'ws-intl-account-name-usd', 'ws-intl-swift-usd', 'ws-intl-pay-url-usd'].map((id) => document.querySelector('label[for=' + id + ']')?.textContent)");
+  check("per-currency fields are named with their currency", fieldNames[0] === "Account name" && fieldNames[1] === "Account name (USD)" && fieldNames[2] === "SWIFT / BIC (USD)"
+    && fieldNames[3] === "PayPal, Wise or Stripe payment link (optional) (USD)", JSON.stringify(fieldNames));
   check("an LUT for this financial year is not reported as expired", fy === await b.eval("document.getElementById('ws-intl-lut-fy').options[1].value") && !/has expired/.test(await text()));
   await b.shot("cur-01-settings.png");
 
@@ -286,7 +291,11 @@ try {
 
   // EUR for a client without a billing currency: the default set; export unticked → no line.
   await t(`__t.click(/^\\+ New invoice$/)`); await opened();
-  await t(`__t.set('ws-client', 'Acme GmbH'), __t.set('ws-currency', 'EUR'), __t.set('ws-amount', '750'), __t.set('ws-issue', '${await iso(-20)}'), __t.set('ws-due', '${await iso(-5)}')`);
+  await t(`__t.set('ws-client', 'Acme GmbH'), __t.set('ws-currency', 'EUR'), __t.set('ws-amount', '12,345,678.00')`);
+  // Review round 2: from sm up the amount + currency row spans the sheet, so a large amount is never cut off.
+  const amountBox = await b.eval("(() => { const a = document.getElementById('ws-amount'), n = document.getElementById('ws-number'); return { w: a.clientWidth, scroll: a.scrollWidth, number: n.clientWidth }; })()");
+  check("1280px: the amount field shows a large amount whole and is at least as wide as the other fields", amountBox.scroll <= amountBox.w && amountBox.w >= amountBox.number, JSON.stringify(amountBox));
+  await t(`__t.set('ws-amount', '750'), __t.set('ws-issue', '${await iso(-20)}'), __t.set('ws-due', '${await iso(-5)}')`);
   await t(`document.getElementById('ws-export-lut').click(), __t.click(/^Add invoice$/, __t.dialog())`);
   await closed();
   await openRow("Acme GmbH");
@@ -356,6 +365,13 @@ try {
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
     await sleep(100);
     check("deleting a plan asks first", /Delete for good\?/.test(await b.eval(`${planRow("Plan Only Co")}.innerText`)));
+    // Review round 2: keyboard focus follows the confirm, and Keep hands it back to Delete (never <body>).
+    check("the confirm takes focus", await b.eval("document.activeElement?.hasAttribute('data-plan-delete-confirm')"));
+    await t(`__t.click(/^Keep$/, ${planRow("Plan Only Co")})`);
+    await sleep(100);
+    check("Keep returns focus to that plan's Delete", await b.eval(`document.activeElement === ${planRow("Plan Only Co")}?.querySelector('[data-plan-delete]')`));
+    await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
+    await sleep(100);
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete-confirm]').click(), true`);
     await sleep(200);
     const planGone = Object.values(JSON.parse(await sidecar()).intl.recurring).filter((p) => p.amountPaise === 8000);
@@ -426,8 +442,27 @@ try {
   await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/)`);
   await sleep(200);
   check("payment line shows the ₹ added later", /€750\.00 · BANK[\s\S]*WISE-9001 · ₹80,000 credited/.test(await text()));
-  check("after the save, focus is on that payment's Undo, not the page", await b.eval("document.activeElement?.hasAttribute('data-credit-undo')"));
-  check("INR credited stored on the foreign payment in the sidecar", Object.values(JSON.parse(await sidecar()).intl.invoices).some((i) => !i.deletedAt && i.payments.some((p) => p.reference === "WISE-9001" && p.inrCreditedPaise === 8_000_000)));
+  check("after the save, focus is on that payment's INR credited button, not the page", await b.eval("document.activeElement?.hasAttribute('data-credit-open') && document.activeElement.textContent === 'Change'"));
+  const creditedOf = async () => Object.values(JSON.parse(await sidecar()).intl.invoices).flatMap((i) => i.deletedAt ? [] : i.payments).find((p) => p.reference === "WISE-9001");
+  check("INR credited stored on the foreign payment in the sidecar", (await creditedOf())?.inrCreditedPaise === 8_000_000);
+  // Review round 2 (spec §3.5, "editable later from the payment row"): a saved figure can be corrected or removed.
+  await t(`__t.click(/^Change$/)`);
+  await sleep(100);
+  check("Change opens the form filled with the saved figure", (await b.eval("document.querySelector('[id^=ws-credit-]')?.value")) === "80000.00" && await b.eval("document.activeElement?.id?.startsWith('ws-credit-')"));
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '8,000'), __t.click(/^Save$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await sleep(200);
+  check("a second save overwrites the figure", /WISE-9001 · ₹8,000 credited/.test(await text()) && (await creditedOf())?.inrCreditedPaise === 800_000);
+  await t(`__t.click(/^Change$/)`);
+  await sleep(100);
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, ''), __t.click(/^Save$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await sleep(200);
+  const removedCredit = await creditedOf();
+  check("an emptied figure is removed (no key, never 0)", removedCredit && !("inrCreditedPaise" in removedCredit) && !!(await t("!!__t.btn(/^Add INR credited$/)")), JSON.stringify(removedCredit));
+  await t(`__t.click(/^Add INR credited$/)`);
+  await sleep(100);
+  await t(`__t.set(document.querySelector('[id^=ws-credit-]').id, '80,000'), __t.click(/^Add INR credited$/, document.querySelector('[id^=ws-credit-]').form)`);
+  await sleep(200);
+  check("…and can be added again", (await creditedOf())?.inrCreditedPaise === 8_000_000);
   await tab("Overview");
   check("INR earned this month adds it", /INR earned this month: ₹1,79,840/.test(await text()), (await text()).slice(0, 800));
   await tab("Invoices");
@@ -635,6 +670,17 @@ try {
     check(`no horizontal scroll at 390px: ${name}`, await noScroll(), String(await b.eval("document.documentElement.scrollWidth")));
     await b.shot(`cur-m-${name.toLowerCase()}.png`);
   }
+  // 390px (review round 2): a chase row in a book with foreign invoices puts the invoice number on the due line (the
+  // name line truncates), and the Clients abroad line puts the overdue amount on its own line with no separator.
+  await tab("Overview");
+  const chaseLayout = () => b.eval(`(() => { const li = [...document.querySelectorAll('section[aria-labelledby=chase-title] li')].find((x) => /US\\$/.test(x.textContent)); if (!li) return null;
+    const [name, due] = li.querySelectorAll('p'); const num = due.querySelector('[data-chase-number]');
+    return { nameHasNumber: name.textContent.includes('·'), numberShown: !!num && num.getClientRects().length > 0 && /^\\S+ · $/.test(num.textContent) }; })()`);
+  const chase390 = await chaseLayout();
+  check("390px: a foreign chase row shows its invoice number on the due line, not in the name line", chase390?.numberShown && !chase390.nameHasNumber, JSON.stringify(chase390));
+  const abroadLine = await b.eval(`(() => { const p = [...document.querySelectorAll('[aria-label="Clients abroad"] p')].find((x) => /overdue/.test(x.textContent)); if (!p) return null;
+    const [collect, overdue] = p.children; return { under: overdue.getBoundingClientRect().top >= collect.getBoundingClientRect().bottom - 1, lines: p.innerText.split('\\n').map((l) => l.trim()) }; })()`);
+  check("390px: Clients abroad puts the overdue amount on its own line, no line starts with '·'", abroadLine?.under && abroadLine.lines.every((l) => !l.startsWith("·")), JSON.stringify(abroadLine));
   // 390px: a foreign payment line with "Add INR credited" keeps the full row for its text; the actions wrap under it.
   await tab("Invoices");
   await t(`__t.click(/^all$/)`);
@@ -678,6 +724,10 @@ try {
   await b.shot("cur-m-new-sheet.png");
   await esc(); await closed();
   await b.mobile(false);
+  await sleep(300);
+  await tab("Overview");
+  const chaseWide = await chaseLayout();
+  check("1280px: the foreign chase row keeps the invoice number on the due line too", chaseWide?.numberShown && !chaseWide.nameHasNumber, JSON.stringify(chaseWide));
 
   check("no console errors", b.errors.length === 0, b.errors.join(" | "));
 } catch (error) {

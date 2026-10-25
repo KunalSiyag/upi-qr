@@ -175,6 +175,11 @@ try {
   await b.waitFor("/अंतरराष्ट्रीय भुगतान की जानकारी जोड़ें/.test(document.body.innerText)", 8000);
   check("no_intl message in Hindi", /विदेशी मुद्रा वाले इनवॉइस के पेमेंट लिंक भेजने से पहले सेटिंग्स में अंतरराष्ट्रीय भुगतान की जानकारी जोड़ें।/.test(await text()));
   await b.eval("localStorage.setItem('proupiqr-workspace-lang', 'en'); true");
+  // Review round 2: the message above points to Settings, so this flag-off build shows the Clients abroad card for a
+  // book that holds foreign data (an INR-only book still has none: workspace-e2e).
+  await b.go(BASE + "/app/?tab=settings", 2500);
+  await b.waitFor("[...document.querySelectorAll('details')].some(d => d.querySelector('summary')?.textContent.includes('Clients abroad'))", 8000).catch(() => {});
+  check("flag off: the Clients abroad card shows for a book with foreign data", await b.eval("[...document.querySelectorAll('details')].some(d => d.querySelector('summary')?.textContent.includes('Clients abroad')) && !!document.getElementById('ws-intl-account-name')"));
   // With details (synced from a device where they were saved): the link is created and the reminder carries it.
   const settings = { on: true, accountName: "Sharma Tuition LLP", bankName: "HDFC Bank", swift: "HDFCINBB", account: "GB82WEST12345698765432", bankDetails: "", payUrl: "", exportUnderLut: false, lutArn: "", lutFy: "", updatedAt: T + 5 };
   await b.go(BASE + "/terms/", 600);

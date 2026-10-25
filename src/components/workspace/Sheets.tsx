@@ -188,7 +188,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             <input id="ws-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" maxLength={20} placeholder={foreign ? "+1 415 555 0100" : "98765 43210"} />
           </Field>
           {showPicker ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
+            <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2 sm:col-span-2">
               <Field label={foreign ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-amount" error={errors.amount}>
                 <input id="ws-amount" className={inputClass} value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder={foreign ? "1,200.50" : "1500"}
                   aria-describedby={existing ? "ws-currency-note" : undefined} />

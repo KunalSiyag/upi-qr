@@ -936,7 +936,11 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
     ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
     invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i))),
     recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
-    clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
+    // A live billing-currency entry goes with its client: once the client's tombstone is pruned (an older tab can
+    // delete a client without seeing the entry), the entry is dropped, never tombstoned. A dropped entry is an absence,
+    // so it can't beat a live entry elsewhere, and a client merely missing from a stale copy (a sidecar joined with an
+    // older book key) never loses its currency: the entry must also be older than the cutoff.
+    clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([id, c]) => keep(c) && (c.deletedAt || own(pruned.clients, id) || c.updatedAt > cutoff))),
   });
 }
 
@@ -1369,8 +1373,7 @@ function detectLegacyErase(ws: Workspace): number | null {
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
  * (which that tab couldn't see) is revived. An erased client's foreign records older than the erase are tombstoned
- * first, so only a record written after the erase revives it. Last, a billing-currency entry whose client is still
- * gone is tombstoned (tombstoneOrphanCurrencies). Returns `ws` itself
+ * first, so only a record written after the erase revives it. Returns `ws` itself
  * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
@@ -1395,28 +1398,7 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
     // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.
     clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt, client.deletedAt) + 1 } };
   }
-  return tombstoneOrphanCurrencies(clients ? { ...next, clients } : next);
-}
-
-/**
- * repairIntl's last step: a billing-currency entry (intl.clients) whose client is deleted or gone is tombstoned. An
- * older tab may delete such a client (it can't see the entry, and only an INR invoice blocks its delete); without this
- * the live entry outlives the pruned client and the book never returns to INR-only bytes. Runs after the revival, so a
- * client with live foreign records is never one. Stamped from the entry and the client's delete, never the clock, so
- * every device and the server write the same bytes, and the tombstone wins the merge against the live entry. Returns
- * `ws` itself when there is nothing to do.
- */
-function tombstoneOrphanCurrencies(ws: Workspace): Workspace {
-  if (!ws.intl) return ws;
-  let entries: IntlData["clients"] | null = null;
-  for (const [id, entry] of Object.entries(ws.intl.clients)) {
-    if (entry.deletedAt) continue;
-    const client = own(ws.clients, id);
-    if (client && !client.deletedAt) continue;
-    const at = Math.max(entry.updatedAt, client?.deletedAt ?? 0);
-    entries = { ...(entries ?? ws.intl.clients), [id]: { ...entry, deletedAt: at, updatedAt: at } };
-  }
-  return entries ? { ...ws, intl: { ...ws.intl, clients: entries } } : ws;
+  return clients ? { ...next, clients } : next;
 }
 
 // ---------------------------------------------------------------------------
@@ -1447,10 +1429,15 @@ export function intlPayable(settings: IntlSettings | undefined, currency: Foreig
   return Boolean((d.accountName.trim() && d.account.trim() && (d.swift.trim() || d.bankDetails.trim())) || safePayUrl(d.payUrl));
 }
 
-/** The client's default billing currency: its live intl.clients entry, else "INR". It only pre-fills the invoice sheet. */
+/**
+ * The client's default billing currency: its live intl.clients entry while the client itself is live, else "INR". It
+ * only pre-fills the invoice sheet. An entry whose client an older tab deleted stays as it is (a revived client gets
+ * its currency back) until pruneTombstones drops it with the client.
+ */
 export function clientCurrency(ws: Workspace, clientId: string): CurrencyCode {
   const entry = own(ws.intl?.clients, clientId);
-  return entry && !entry.deletedAt && isForeignCurrency(entry.currency) ? entry.currency : "INR";
+  const client = own(ws.clients, clientId);
+  return entry && !entry.deletedAt && client && !client.deletedAt && isForeignCurrency(entry.currency) ? entry.currency : "INR";
 }
 
 /**

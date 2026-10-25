@@ -1559,25 +1559,68 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   assert.equal(M.clientCurrency(M.mergeWorkspaces(eur, back), client.id), "INR");
   assert.equal(M.clientCurrency(M.mergeWorkspaces(back, eur), client.id), "INR");
   assert.equal(M.canonicalJson(M.pruneTombstones(M.sanitizeWorkspace(back), X + 5 + 91 * 86_400_000)), bytes);
-  // An older tab deletes the client (it can't see the entry, and no invoice blocks it): repairIntl tombstones the
-  // entry from the stored stamps, so every copy agrees and the pruned book is that tab's INR bytes again.
+  // An older tab deletes the client (it can't see the entry, and no invoice blocks it). Review round 2: repairIntl
+  // never tombstones the entry (a client merely missing from a copy looked the same, and the tombstone beat the live
+  // entry everywhere). The entry stays; clientCurrency reads INR while the client is gone, and pruneTombstones drops
+  // the entry with the client's tombstone, so the book is that tab's INR bytes again.
   {
     const legacy = await import("./fixtures/legacy-model.ts");
+    const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
     const clone = (v) => JSON.parse(JSON.stringify(v));
     const oldTab = legacy.deleteClient(legacy.sanitizeWorkspace(clone(M.withoutIntl(usd))), client.id, X + 7);
     const joined = M.sanitizeWorkspace({ ...clone(oldTab), intl: clone(usd.intl) });
-    const repaired = M.repairIntl(joined, X + 8);
-    assert.deepEqual(repaired.intl.clients[client.id], { currency: "USD", updatedAt: X + 7, deletedAt: X + 7 }, "stamped from the client's delete");
-    assert.equal(M.clientCurrency(repaired, client.id), "INR");
-    assert.equal(M.repairIntl(repaired, X + 9), repaired, "a second repair changes nothing");
-    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(usd, repaired), 0)), M.canonicalJson(repaired), "the live entry never wins back");
-    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(repaired, joined), 0)), M.canonicalJson(repaired));
+    assert.equal(M.repairIntl(joined, X + 8), joined, "nothing to repair: the entry is left as it is");
+    assert.deepEqual(joined.intl.clients[client.id], { currency: "USD", updatedAt: X + 2 });
+    assert.equal(M.clientCurrency(joined, client.id), "INR", "a deleted client reads INR");
+    assert.equal(M.canonicalJson(M.repairIntl(M.mergeWorkspaces(usd, joined), 0)), M.canonicalJson(M.repairIntl(M.mergeWorkspaces(joined, usd), 0)), "both orders agree");
+    assert.ok(M.pruneTombstones(joined, X + 7 + 89 * 86_400_000).intl.clients[client.id], "kept while the client's tombstone is kept");
     const later = X + 7 + 91 * 86_400_000;
-    assert.equal(M.canonicalJson(M.pruneTombstones(repaired, later)), legacy.canonicalJson(legacy.pruneTombstones(oldTab, later)), "INR-only bytes once pruned");
-    // A book that already lost the client (pruned) while the entry stayed live heals the same way.
-    const { [client.id]: _c, ...noClient } = joined.clients;
-    const stray = M.repairIntl({ ...joined, clients: noClient }, X + 10);
-    assert.deepEqual(stray.intl.clients[client.id], { currency: "USD", updatedAt: X + 2, deletedAt: X + 2 });
+    assert.equal(M.canonicalJson(M.pruneTombstones(joined, later)), legacy.canonicalJson(legacy.pruneTombstones(oldTab, later)), "INR-only bytes once pruned");
+    // A client revived by a foreign record written after the delete gets its currency back.
+    const usdInvoice = { id: "inv_usdrev01", number: "INV-0091", clientId: client.id, issueDate: "2026-10-01", dueDate: "2026-10-16", amountPaise: 120000,
+      description: "", payments: [], reminders: [], voided: false, currency: "USD", createdAt: X + 6, updatedAt: X + 6 };
+    const offline = M.upsertInvoice(usd, usdInvoice, X + 6);
+    assert.equal(M.clientCurrency(M.repairIntl(M.mergeWorkspaces(joined, offline), 0), client.id), "USD");
+
+    // The stale-book-key join (review round 2): another tab writes the sidecar before the book key, so a tab (or a
+    // device whose book-key write failed on quota) can join the new sidecar with a book key that lacks the new client.
+    // repairIntl changes nothing, and the merge with the full copy keeps the currency in every tab and on the server.
+    const fresh = { id: "cli_globex01", name: "Globex LLC", phone: "+1 415 555 0100", email: "", gstin: "", createdAt: X + 30, updatedAt: X + 30 };
+    const tab1 = M.setClientCurrency(M.upsertClient(inr, fresh, X + 30), fresh.id, "USD", X + 30);
+    const stale = M.sanitizeWorkspace({ ...clone(M.withoutIntl(inr)), intl: clone(tab1.intl) });
+    assert.equal(M.repairIntl(stale, X + 31), stale, "a client missing from the copy is left alone");
+    const tab2 = M.repairIntl(M.mergeWorkspaces(inr, stale), X + 31);
+    assert.deepEqual(tab2.intl.clients[fresh.id], { currency: "USD", updatedAt: X + 30 });
+    assert.equal(M.pruneTombstones(tab2, X + 32).intl.clients[fresh.id].currency, "USD", "a fresh entry survives the prune before the book key's write");
+    const tab2b = M.repairIntl(M.mergeWorkspaces(tab2, tab1), X + 33);
+    const tab1b = M.repairIntl(M.mergeWorkspaces(tab1, tab2b), X + 34);
+    assert.equal(M.clientCurrency(tab2b, fresh.id), "USD");
+    assert.equal(M.clientCurrency(tab1b, fresh.id), "USD");
+    // Device D's stale copy reaches the server after device A's full one; A pulls the result.
+    const store = memoryCloudStore();
+    await syncWorkspace(store, "ws:doc:o", clone(tab1), X + 40);
+    const fromD = await syncWorkspace(store, "ws:doc:o", clone(M.repairIntl(stale, X + 41)), X + 42);
+    assert.equal(M.clientCurrency(fromD.workspace, fresh.id), "USD", "the server keeps the currency");
+    assert.equal(M.clientCurrency(M.repairIntl(M.mergeWorkspaces(tab1, fromD.workspace), X + 43), fresh.id), "USD", "and so does A");
+
+    // Order independence (review round 2): an older tab deletes client X while another device, offline, bills X in
+    // US$. Whichever copy reaches the server first, X ends up live with its US$ invoice and its USD billing currency.
+    const base = M.setClientCurrency(M.upsertClient(inr, { ...fresh, id: "cli_acme0x01", createdAt: X, updatedAt: X }, X), "cli_acme0x01", "USD", X);
+    const legacyCopy = legacy.deleteClient(legacy.sanitizeWorkspace(clone(M.withoutIntl(base))), "cli_acme0x01", X + 2000);
+    const deviceA = M.upsertInvoice(base, { ...usdInvoice, id: "inv_usdord01", clientId: "cli_acme0x01", createdAt: X + 1000, updatedAt: X + 1000 }, X + 1000);
+    const outcomes = [];
+    for (const order of [[deviceA, legacyCopy], [legacyCopy, deviceA]]) {
+      const s = memoryCloudStore();
+      await syncWorkspace(s, "slot", clone(base), X + 1);
+      let r;
+      for (const copy of order) r = await syncWorkspace(s, "slot", clone(copy), X + 3000);
+      const ws = r.workspace;
+      assert.ok(!ws.clients.cli_acme0x01.deletedAt, "the client is live");
+      assert.ok(!ws.intl.invoices.inv_usdord01.deletedAt, "its US$ invoice is live");
+      assert.equal(M.clientCurrency(ws, "cli_acme0x01"), "USD", "its billing currency is USD");
+      outcomes.push(M.canonicalJson(ws.intl.clients));
+    }
+    assert.equal(outcomes[0], outcomes[1], "both orders give the same billing-currency bytes");
     // A client with a live entry is left alone.
     assert.equal(M.repairIntl(usd, X + 11), usd);
   }
@@ -1782,12 +1825,13 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
 {
   const M = await import("../src/lib/workspace/model.ts");
   const pr3 = await import("./fixtures/pr3-model.ts");
-  // repairIntl is the deployed code plus one last step that tombstones a billing-currency entry whose client an older
-  // tab deleted (review round 1): nothing about changed currencies.
-  const orphanStep = "return tombstoneOrphanCurrencies(clients ? { ...next, clients } : next);";
-  assert.ok(M.repairIntl.toString().includes(orphanStep));
-  assert.equal(M.repairIntl.toString().replace(orphanStep, "return clients ? { ...next, clients } : next;"), pr3.repairIntl.toString(), "repairIntl is the deployed code plus the orphan step");
-  for (const name of ["pruneTombstones", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
+  // pruneTombstones is the deployed code plus one rule (review round 2): a live billing-currency entry is dropped with
+  // its pruned client (an older tab can delete the client without seeing it). Nothing about changed currencies.
+  const orphanRule = "filter(([id, c]) => keep(c) && (c.deletedAt || own(pruned.clients, id) || c.updatedAt > cutoff))";
+  const pruneSource = M.pruneTombstones.toString().replace(/\n *\/\/[^\n]*/g, "");
+  assert.ok(pruneSource.includes(orphanRule));
+  assert.equal(pruneSource.replace(orphanRule, "filter(([, c]) => keep(c))"), pr3.pruneTombstones.toString().replace(/\n *\/\/[^\n]*/g, ""), "pruneTombstones is the deployed code plus the orphan rule");
+  for (const name of ["repairIntl", "replaceInvoiceCurrency", "replacePlanCurrency", "mergeWorkspaces", "sanitizeWorkspace",
     "restoreFrom", "eraseWorkspace", "deleteInvoice", "deleteClient", "upsertInvoice", "upsertPlan", "planMonths", "nextInvoiceNumber"]) {
     assert.equal(M[name].toString(), pr3[name].toString(), `${name} is the deployed code`);
   }

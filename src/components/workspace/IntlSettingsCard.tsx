@@ -51,31 +51,35 @@ function checkDetails(d: PayDetailsFields, tr: Tr, suffix: string, errors: Error
   if (d.payUrl.trim() && !safePayUrl(d.payUrl.trim())) errors[`payUrl${suffix}`] = tr("Enter an https link from PayPal, Wise or Stripe.");
 }
 
-/** The six receiving fields, for the default set (suffix "") or one currency's own set (suffix "-usd"). */
-function DetailFields({ value, onChange, suffix, errors }: { value: PayDetailsFields; onChange: (next: PayDetailsFields) => void; suffix: string; errors: Errors }) {
+/**
+ * The six receiving fields, for the default set (suffix "") or one currency's own set (suffix "-usd", `currency`
+ * "USD"). A currency's set names its fields "Account name (USD)" for screen readers, so the two sets never share names.
+ */
+function DetailFields({ value, onChange, suffix, errors, currency }: { value: PayDetailsFields; onChange: (next: PayDetailsFields) => void; suffix: string; errors: Errors; currency?: ForeignCurrency }) {
   const { tr } = useWs();
   const set = (field: (typeof FIELDS)[number]) => (e: { target: { value: string } }) => onChange({ ...value, [field]: e.target.value });
+  const named = (label: string): ReactNode => (currency ? <>{label}<span className="sr-only"> ({currency})</span></> : label);
   return (
     <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-      <Field label={tr("Account name")} htmlFor={`ws-intl-account-name${suffix}`} error={errors[`accountName${suffix}`]}>
+      <Field label={named(tr("Account name"))} htmlFor={`ws-intl-account-name${suffix}`} error={errors[`accountName${suffix}`]}>
         <input id={`ws-intl-account-name${suffix}`} className={inputClass} value={value.accountName} onChange={set("accountName")} maxLength={80} autoComplete="off" />
       </Field>
-      <Field label={tr("Bank name")} htmlFor={`ws-intl-bank${suffix}`} error={errors[`bankName${suffix}`]}>
+      <Field label={named(tr("Bank name"))} htmlFor={`ws-intl-bank${suffix}`} error={errors[`bankName${suffix}`]}>
         <input id={`ws-intl-bank${suffix}`} className={inputClass} value={value.bankName} onChange={set("bankName")} maxLength={80} autoComplete="off" />
       </Field>
-      <Field label="SWIFT / BIC" htmlFor={`ws-intl-swift${suffix}`} error={errors[`swift${suffix}`]}>
+      <Field label={named("SWIFT / BIC")} htmlFor={`ws-intl-swift${suffix}`} error={errors[`swift${suffix}`]}>
         <input id={`ws-intl-swift${suffix}`} className={`${inputClass} font-mono uppercase`} value={value.swift} onChange={set("swift")} maxLength={14} autoComplete="off" autoCapitalize="characters" spellCheck={false} />
       </Field>
-      <Field label={tr("IBAN or account number")} htmlFor={`ws-intl-account${suffix}`} error={errors[`account${suffix}`]}>
+      <Field label={named(tr("IBAN or account number"))} htmlFor={`ws-intl-account${suffix}`} error={errors[`account${suffix}`]}>
         <input id={`ws-intl-account${suffix}`} className={`${inputClass} font-mono uppercase`} value={value.account} onChange={set("account")} maxLength={48} autoComplete="off" autoCapitalize="characters" spellCheck={false} />
       </Field>
       <div className="sm:col-span-2">
-        <Field label={tr("Bank address, routing or sort code (optional)")} htmlFor={`ws-intl-bank-details${suffix}`}>
+        <Field label={named(tr("Bank address, routing or sort code (optional)"))} htmlFor={`ws-intl-bank-details${suffix}`}>
           <textarea id={`ws-intl-bank-details${suffix}`} className={`${inputClass} min-h-[4.5rem] leading-6`} value={value.bankDetails} onChange={set("bankDetails")} maxLength={300} rows={3} />
         </Field>
       </div>
       <div className="sm:col-span-2">
-        <Field label={tr("PayPal, Wise or Stripe payment link (optional)")} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
+        <Field label={named(tr("PayPal, Wise or Stripe payment link (optional)"))} htmlFor={`ws-intl-pay-url${suffix}`} error={errors[`payUrl${suffix}`]}>
           <input id={`ws-intl-pay-url${suffix}`} type="url" className={inputClass} value={value.payUrl} onChange={set("payUrl")} maxLength={300} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="https://paypal.me/yourname" />
         </Field>
         <p className="mt-1 text-xs leading-5 text-muted">{tr("Use a link from paypal.me, paypal.com, wise.com or buy.stripe.com.")}</p>
@@ -214,6 +218,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
                 onChange={(next) => setForm((f) => ({ ...f, overrides: { ...f.overrides, [overrideCurrency]: next } }))}
                 suffix={suffix}
                 errors={errors}
+                currency={overrideCurrency}
               />
             </div>
           </details>
