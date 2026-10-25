@@ -291,6 +291,7 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
   const [mode, setMode] = useState<PaymentMode>(foreign ? "bank" : "upi");
   const [reference, setReference] = useState(initialReference ?? "");
   const [credited, setCredited] = useState("");
+  const [creditedError, setCreditedError] = useState("");
   const [error, setError] = useState("");
 
   function submit(event: FormEvent) {
@@ -301,7 +302,8 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
     if (amountPaise > view.balancePaise) return setError(tr("That's more than the {amount} still due.", { amount: formatMoney(view.balancePaise, currency) }));
     // INR credited is always rupees, whatever the invoice's currency.
     const creditedPaise = foreign && credited.trim() ? parseRupeesToPaise(credited) : null;
-    if (foreign && credited.trim() && !creditedPaise) return setError(tr("Enter an amount like 1500 or 1500.50."));
+    // Under its own field: the sheet has two amounts, and this one is in rupees.
+    if (foreign && credited.trim() && !creditedPaise) return setCreditedError(tr("Enter an amount like 1500 or 1500.50."));
     onSave(addPayment(ws, invoiceId, { amountPaise, date, mode, reference: reference.trim().slice(0, 60), ...(creditedPaise ? { inrCreditedPaise: creditedPaise } : {}) }, Date.now()));
   }
 
@@ -328,8 +330,8 @@ export function PaymentSheet({ ws, today, invoiceId, initialAmountPaise, initial
           </Field>
           {foreign && (
             <div className="sm:col-span-2">
-              <Field label={tr("INR credited (₹, optional)")} htmlFor="ws-pay-inr">
-                <input id="ws-pay-inr" className={inputClass} value={credited} onChange={(e) => { setCredited(e.target.value); setError(""); }} inputMode="decimal" placeholder="99840" />
+              <Field label={tr("INR credited (₹, optional)")} htmlFor="ws-pay-inr" error={creditedError}>
+                <input id="ws-pay-inr" className={inputClass} value={credited} onChange={(e) => { setCredited(e.target.value); setCreditedError(""); setError(""); }} inputMode="decimal" placeholder="99840" aria-invalid={creditedError ? true : undefined} />
               </Field>
               <p className="mt-1 text-xs leading-5 text-muted">{tr("The rupees your bank credited, as on the FIRA/FIRC. Keep it for your records.")}</p>
             </div>

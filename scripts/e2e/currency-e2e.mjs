@@ -453,6 +453,67 @@ try {
   check("the Invoices badge equals the rows marked Overdue, a US$ one included", foreignOverdue && Number(badge) === overdueCount, `badge ${badge}, rows ${overdueCount}`);
   await t(`__t.click(/^unpaid$/)`); await sleep(150);
 
+  // An edit saved after another tab deleted the record (sheet still open) brings it back with the edits: a foreign
+  // invoice with a currency change, an INR invoice, and a client (review round 4; the sheets use withoutTombstone).
+  {
+    const live = async (number) => Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => i.number === number);
+    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+    await t(`__t.set('ws-client', 'Tomb Traders'), __t.set('ws-currency', 'USD'), __t.set('ws-amount', '100'), __t.set('ws-number', 'TOMB-1'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
+    await closed();
+    const tombId = (await live("TOMB-1")).find((i) => !i.deletedAt)?.id;
+    await t(`__t.click(/^all$/)`);
+    await openRow("TOMB-1");
+    await t(`__t.click(/^Edit$/)`); await opened();
+    await otherTabWrite("proupiqr-intl-v1:biz_primary", `(raw) => { const v = JSON.parse(raw); const i = v.intl.invoices['${tombId}']; const now = Date.now(); i.deletedAt = now; i.updatedAt = now; return JSON.stringify(v); }`);
+    await sleep(400);
+    check("deleted in another tab: the invoice sheet stays open", await b.eval("!!document.querySelector('[role=dialog]')") && !(await live("TOMB-1")).some((i) => !i.deletedAt));
+    await t(`__t.set('ws-currency', 'CAD'), __t.set('ws-amount', '150'), __t.click(/^Save changes$/, __t.dialog())`);
+    await closed();
+    const tomb = await live("TOMB-1");
+    check("a foreign invoice deleted in another tab comes back with the edits and its currency change", tomb.filter((i) => !i.deletedAt).map((i) => `${i.currency} ${i.amountPaise}`).join() === "CAD 15000"
+      && Boolean(tomb.find((i) => i.id === tombId)?.deletedAt) && /TOMB-1[\s\S]*CA\$150\.00/.test(await text()), JSON.stringify(tomb.map((i) => [i.id, i.currency, i.amountPaise, i.deletedAt])));
+
+    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+    await t(`__t.set('ws-client', 'Tomb Rupee'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '2000'), __t.set('ws-number', 'TOMB-2'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
+    await closed();
+    const inrId = Object.values(JSON.parse(await book()).invoices).find((i) => i.number === "TOMB-2")?.id;
+    await openRow("TOMB-2");
+    await t(`__t.click(/^Edit$/)`); await opened();
+    await otherTabWrite("proupiqr-workspace-v1", `(raw) => { const v = JSON.parse(raw); const i = v.invoices['${inrId}']; const now = Date.now(); i.deletedAt = now; i.updatedAt = now; return JSON.stringify(v); }`);
+    await sleep(400);
+    await t(`__t.set('ws-amount', '2500'), __t.click(/^Save changes$/, __t.dialog())`);
+    await closed();
+    const inr = JSON.parse(await book()).invoices[inrId];
+    check("an INR invoice deleted in another tab comes back with the edits", inr && !inr.deletedAt && inr.amountPaise === 250000 && /TOMB-2/.test(await text()), JSON.stringify(inr));
+
+    await tab("Clients");
+    const clientId = Object.values(JSON.parse(await book()).clients).find((c) => c.name === "Tomb Rupee")?.id;
+    await t(`document.querySelector('button[aria-label="Edit Tomb Rupee"]').click(), true`); await opened();
+    await otherTabWrite("proupiqr-workspace-v1", `(raw) => { const v = JSON.parse(raw); const c = v.clients['${clientId}']; const now = Date.now(); c.deletedAt = now; c.updatedAt = now; return JSON.stringify(v); }`);
+    await sleep(400);
+    await t(`__t.set('ws-c-name', 'Tomb Rupee Kumar'), __t.click(/^Save$/, __t.dialog())`); await closed();
+    const cl = JSON.parse(await book()).clients[clientId];
+    check("a client deleted in another tab comes back with the edits", cl && !cl.deletedAt && cl.name === "Tomb Rupee Kumar", JSON.stringify(cl));
+
+    // A bad "INR credited" value is reported under that field, not as a sheet-level line.
+    await tab("Invoices");
+    await t(`__t.click(/^all$/)`);
+    await openRow("TOMB-1");
+    await t(`__t.click(/^Record payment$/)`); await opened();
+    await t(`__t.set('ws-pay-ref', 'WISE-REF-123456'), __t.set('ws-pay-inr', 'abc'), __t.click(/^Save payment$/, __t.dialog())`);
+    await sleep(150);
+    const credErr = await b.eval("({ under: document.getElementById('ws-pay-inr')?.parentElement?.querySelector('[role=alert]')?.textContent || '', alerts: document.querySelectorAll('[role=dialog] [role=alert]').length, invalid: document.getElementById('ws-pay-inr')?.getAttribute('aria-invalid') })");
+    check("a bad INR credited value shows its error under that field", credErr.under === "Enter an amount like 1500 or 1500.50." && credErr.alerts === 1 && credErr.invalid === "true", JSON.stringify(credErr));
+    await b.shot("cur-credited-error.png");
+    await t(`__t.set('ws-pay-inr', ''), __t.click(/^Save payment$/, __t.dialog())`);
+    await closed();
+    await openRow("TOMB-1");
+    await sleep(150);
+    const wideLine = await b.eval("(() => { const open = document.querySelector('[data-credit-open]'); const text = open?.closest('li')?.firstElementChild?.firstElementChild; return open && text ? Math.abs(open.getBoundingClientRect().top - text.getBoundingClientRect().top) < 4 : null; })()");
+    check("desktop: the payment line keeps its actions on the same line", wideLine === true, String(wideLine));
+    await b.shot("cur-payment-line.png");
+  }
+
   // Phone width: rows, sheets and the Settings card never scroll sideways.
   await b.mobile(true);
   await sleep(300);
@@ -464,6 +525,15 @@ try {
     check(`no horizontal scroll at 390px: ${name}`, await noScroll(), String(await b.eval("document.documentElement.scrollWidth")));
     await b.shot(`cur-m-${name.toLowerCase()}.png`);
   }
+  // 390px: a foreign payment line with "Add INR credited" keeps the full row for its text; the actions wrap under it.
+  await tab("Invoices");
+  await t(`__t.click(/^all$/)`);
+  await openRow("TOMB-1");
+  await sleep(200);
+  const payLine = await b.eval(`(() => { const open = document.querySelector('[data-credit-open]'); const line = open?.closest('li')?.firstElementChild; const text = line?.firstElementChild; if (!line || !text) return null;
+    const a = line.getBoundingClientRect(), t = text.getBoundingClientRect(), o = open.getBoundingClientRect(); return { share: t.width / a.width, under: o.top >= t.bottom - 1, refWhole: text.textContent.includes('WISE-REF-123456') && text.getClientRects().length > 0 }; })()`);
+  check("390px: a payment line without INR credited puts its actions under the text", payLine && payLine.share > 0.9 && payLine.under, JSON.stringify(payLine));
+  await b.shot("cur-m-payment-line.png");
   // A client billed abroad keeps their name readable at 390px: the balances go on a row under it.
   await tab("Clients");
   await b.eval(`document.querySelector('button[aria-label="Edit Globex LLC"]').click()`); await opened();

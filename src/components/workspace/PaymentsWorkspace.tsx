@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, ty
 import {
   agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
-  getPlan, inrEarned, monthsBilledTwice, parseRupeesToPaise, planCanChangeCurrency, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
+  getPlan, inrEarned, invoicesMovedTwice, monthsBilledTwice, parseRupeesToPaise, planCanChangeCurrency, repairIntl, replacePlanCurrency, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
   daysBetween, isUdyam, msmeDeadline, msmeInterestPaise, normalizeUdyam, withoutTombstone,
   type InvoiceView, type Workspace,
@@ -482,6 +482,7 @@ function Workspace() {
     return new Set([...foreign].filter((key) => inr.has(key)));
   }, [views]);
   const billedTwice = useMemo(() => monthsBilledTwice(ws), [ws]);
+  const movedTwice = useMemo(() => invoicesMovedTwice(ws), [ws]);
   const pickers = INTL_UI && intlPickers(ws);
   const clients = useMemo(() => liveClients(ws), [ws]);
   // This screen shows one business, so it only ever reads that business's links (§4.4): entries are filtered by the
@@ -1070,6 +1071,7 @@ function Workspace() {
                         wide={hasForeign}
                         duplicate={duplicateNumbers.has(v.invoice.number.trim().toLowerCase())}
                         billedTwice={billedTwice.has(v.invoice.id)}
+                        movedTwice={movedTwice.has(v.invoice.id)}
                         msme={msmeFor(v)}
                         signedIn={signedIn}
                         readOnly={readOnly}
@@ -1581,13 +1583,14 @@ function Stat({ label, value, note, tone, dot, className = "" }: { label: string
   );
 }
 
-function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment, onCredit }: {
+function InvoiceRow({ view, wide, duplicate, billedTwice, movedTwice, msme, signedIn, readOnly, payLink, linkBusy, onCreateLink, onRevokeLink, onPay, onRemind, onEdit, onVoid, onDelete, onUndoPayment, onCredit }: {
   view: InvoiceView;
   /** The list holds foreign amounts ("AED 12,345,678.00"): a wider amount column. */
   wide: boolean;
   /** Another live invoice has the same number (§1.7). */
   duplicate: boolean;
   billedTwice: boolean;
+  movedTwice: boolean;
   /** A read-only business (after a downgrade): no edits, payments or new links. */
   readOnly: boolean;
   /** Set when a Udyam-registered business's invoice is past its MSMED deadline; interest is null without MSME tools. */
@@ -1649,19 +1652,21 @@ function InvoiceRow({ view, wide, duplicate, billedTwice, msme, signedIn, readOn
             <div><dt className="text-muted">{tr("Amount")}</dt><dd className="tabular-nums text-ink">{money(invoice.amountPaise)}{foreign && !money(0).startsWith(currency) && <span className="whitespace-nowrap text-muted"> · {currency}</span>}</dd></div>
             <div><dt className="text-muted">{tr("Received")}</dt><dd className="tabular-nums text-ink">{money(view.paidPaise)}</dd></div>
           </dl>
-          {duplicate && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("Another invoice has this number.")}</p>}
-          {billedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This month is also billed by the plan that replaced this one when its currency changed. Delete one of the two.")}</p>}
+          {duplicate && !movedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("Another invoice has this number.")}</p>}
+          {billedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This month is billed twice: a plan linked to this one by a currency change bills it too. Delete one of the two.")}</p>}
+          {movedTwice && <p className="mt-3 border-t border-hairline pt-2 text-[13px] text-[#8a5a00]">{tr("This invoice also exists in another currency after a currency change. Keep one and delete the other.")}</p>}
           {invoice.description && <p className="mt-3 text-[13px] text-charcoal">{invoice.description}</p>}
           {invoice.payments.length > 0 && (
             <ul className="mt-3 divide-y divide-hairline rounded-[10px] bg-white text-[13px] ring-1 ring-hairline">
               {invoice.payments.map((p) => (
                 <li key={p.id} className="px-3 py-1.5">
-                  <div className="flex items-center justify-between gap-2">
+                  {/* "Add INR credited" next to Undo leaves the payment text half a phone row: below sm the actions wrap under it. */}
+                  <div className={foreign && !p.inrCreditedPaise && !readOnly ? "flex flex-wrap items-center justify-between gap-2 gap-y-1 sm:flex-nowrap" : "flex items-center justify-between gap-2"}>
                     <span className="min-w-0 break-words text-charcoal">
                       <span className="font-medium tabular-nums text-ink">{money(p.amountPaise)}</span> · {p.mode.toUpperCase()} · {shortDate(p.date, dateLocale)}{p.reference ? ` · ${p.reference}` : ""}
                       {foreign && p.inrCreditedPaise ? <> · <span className="tabular-nums">{tr("{amount} credited", { amount: formatPaise(p.inrCreditedPaise) })}</span></> : null}
                     </span>
-                    <span className="flex shrink-0 items-center gap-3">
+                    <span className={`${foreign && !p.inrCreditedPaise && !readOnly ? "ml-auto " : ""}flex shrink-0 items-center gap-3`}>
                       {foreign && !p.inrCreditedPaise && !readOnly && crediting !== p.id && (
                         <button type="button" data-credit-open={p.id} onClick={() => { setCrediting(p.id); setCredit(""); setCreditError(""); }} className="font-medium text-leaf hover:underline">{tr("Add INR credited")}</button>
                       )}
