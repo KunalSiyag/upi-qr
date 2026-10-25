@@ -1175,6 +1175,16 @@ export function upsertPlan(ws: Workspace, plan: RecurringPlan, now: number): Wor
   return { ...ws, recurring: { ...ws.recurring, [plan.id]: { ...legacy, updatedAt: now } } };
 }
 
+/**
+ * Tombstones a plan; the invoices it created stay. The UI offers it for foreign plans: a live one keeps its client
+ * from being removed (deleteClient), and stopping it ("Stop after this month") leaves it live.
+ */
+export function deletePlan(ws: Workspace, planId: string, now: number): Workspace {
+  const plan = getPlan(ws, planId);
+  if (!plan || plan.deletedAt) return ws;
+  return upsertPlan(ws, { ...plan, deletedAt: now }, now);
+}
+
 function monthIndex(month: string): number {
   const [y, m] = month.split("-").map(Number);
   return y * 12 + (m - 1);
@@ -1359,7 +1369,8 @@ function detectLegacyErase(ws: Workspace): number | null {
  * Deterministic repairs after every load and merge (client and server). First a legacy erase is applied to the
  * foreign section at its own time; then a client an old tab deleted while it still had live foreign invoices or plans
  * (which that tab couldn't see) is revived. An erased client's foreign records older than the erase are tombstoned
- * first, so only a record written after the erase revives it. Returns `ws` itself
+ * first, so only a record written after the erase revives it. Last, a billing-currency entry whose client is still
+ * gone is tombstoned (tombstoneOrphanCurrencies). Returns `ws` itself
  * when nothing needs repair, so it never causes a write by itself. The result never depends on the clock
  * (`_now` is kept for callers), so repairing the same copy anywhere gives the same bytes.
  */
@@ -1384,7 +1395,28 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
     // loaded but not saved (non-primary books) never looks changed against its sync meta on the next load.
     clients = { ...(clients ?? next.clients), [client.id]: { ...revived, updatedAt: Math.max(client.updatedAt, client.deletedAt) + 1 } };
   }
-  return clients ? { ...next, clients } : next;
+  return tombstoneOrphanCurrencies(clients ? { ...next, clients } : next);
+}
+
+/**
+ * repairIntl's last step: a billing-currency entry (intl.clients) whose client is deleted or gone is tombstoned. An
+ * older tab may delete such a client (it can't see the entry, and only an INR invoice blocks its delete); without this
+ * the live entry outlives the pruned client and the book never returns to INR-only bytes. Runs after the revival, so a
+ * client with live foreign records is never one. Stamped from the entry and the client's delete, never the clock, so
+ * every device and the server write the same bytes, and the tombstone wins the merge against the live entry. Returns
+ * `ws` itself when there is nothing to do.
+ */
+function tombstoneOrphanCurrencies(ws: Workspace): Workspace {
+  if (!ws.intl) return ws;
+  let entries: IntlData["clients"] | null = null;
+  for (const [id, entry] of Object.entries(ws.intl.clients)) {
+    if (entry.deletedAt) continue;
+    const client = own(ws.clients, id);
+    if (client && !client.deletedAt) continue;
+    const at = Math.max(entry.updatedAt, client?.deletedAt ?? 0);
+    entries = { ...(entries ?? ws.intl.clients), [id]: { ...entry, deletedAt: at, updatedAt: at } };
+  }
+  return entries ? { ...ws, intl: { ...ws.intl, clients: entries } } : ws;
 }
 
 // ---------------------------------------------------------------------------

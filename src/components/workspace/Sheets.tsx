@@ -76,8 +76,10 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
     ? currencyOf(existing)
     : picked ?? (showPicker && matched ? clientCurrency(ws, matched.id) : "INR");
   const foreign = isForeignCurrency(currency);
-  // A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
-  const showExport = foreign && settings?.exportUnderLut === true && !matched?.gstin.trim();
+  // The export choice needs the LUT on and a business GSTIN (§0, §6): a LUT left stored after the GSTIN was cleared
+  // offers nothing. A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
+  const lutOn = settings?.exportUnderLut === true && Boolean(ws.business.gstin.trim());
+  const showExport = foreign && lutOn && !matched?.gstin.trim();
 
   function pickClient(name: string) {
     setClientName(name);
@@ -118,7 +120,9 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
       client = { ...client, phone: phone.trim() };
       ws2 = upsertClient(ws2, client, now);
     }
-    const marked = foreign && (showExport ? exportLut : !settings?.exportUnderLut && existing?.exportLut === true);
+    // Not offered: a new invoice is unmarked, and an edit with the LUT off keeps the mark it has (a client with a GSTIN
+    // under an active LUT loses it).
+    const marked = foreign && (showExport ? exportLut : !lutOn && existing?.exportLut === true);
     const money = (record: Invoice): Invoice => {
       const { currency: _c, exportLut: _e, ...rest } = record;
       return { ...rest, ...(isForeignCurrency(currency) ? { currency } : {}), ...(marked ? { exportLut: true as const } : {}) };
@@ -354,10 +358,10 @@ const TONES: { id: ReminderTone; label: string }[] = [
   { id: "final", label: "Firm" },
 ];
 
-/** The LUT's financial year when it has ended (today is in a later FY), else "" (§5.2, §6). */
+/** The LUT's financial year when it has ended (today is in a later FY), else "" (§5.2, §6). Never without a business GSTIN. */
 export function expiredLutFy(ws: Workspace, today: string): string {
   const s = ws.intl?.settings;
-  if (!s?.exportUnderLut || !s.lutFy) return "";
+  if (!s?.exportUnderLut || !s.lutFy || !ws.business.gstin.trim()) return "";
   const now = fyOf(today);
   return now && now > s.lutFy ? s.lutFy : "";
 }

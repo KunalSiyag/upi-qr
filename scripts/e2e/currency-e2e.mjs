@@ -118,6 +118,7 @@ try {
   await sleep(300);
   const side = JSON.parse(await sidecar());
   check("LUT and USD override saved", side.intl.settings.lutArn === "AD2704260012345" && side.intl.settings.lutFy === fy && side.intl.settings.byCurrency?.USD?.account === "8310123456" && !side.intl.settings.byCurrency.EUR, JSON.stringify(side.intl.settings));
+  check("an LUT for this financial year is not reported as expired", fy === await b.eval("document.getElementById('ws-intl-lut-fy').options[1].value") && !/has expired/.test(await text()));
   await b.shot("cur-01-settings.png");
 
   // A save never overwrites what another tab or device saved meanwhile (§5.2): only the fields edited here are applied.
@@ -162,7 +163,11 @@ try {
   await t(`__t.set('ws-c-name', 'Kensington Ltd'), __t.set('ws-c-phone', '+44 20 7946'), __t.click(/^Save$/, __t.dialog())`);
   await sleep(150);
   check("an 8-digit + number is refused for an INR client", /Enter a 10-digit mobile number/.test(await dialogText()));
-  await t(`__t.set('ws-client-currency', 'GBP'), __t.click(/^Save$/, __t.dialog())`);
+  // The short form needs the + (and so a country code) even for a client billed abroad.
+  await t(`__t.set('ws-client-currency', 'GBP'), __t.set('ws-c-phone', '4420 7946'), __t.click(/^Save$/, __t.dialog())`);
+  await sleep(150);
+  check("8 digits without + are refused for a GBP client", await b.eval("!!document.querySelector('[role=dialog]')") && /Enter a 10-digit mobile number/.test(await dialogText()));
+  await t(`__t.set('ws-c-phone', '+44 20 7946'), __t.click(/^Save$/, __t.dialog())`);
   await closed();
   check("…and accepted for a GBP client", /Kensington Ltd/.test(await text()));
   check("client currency stored in the sidecar only", JSON.parse(await sidecar()).intl.clients && Object.values(JSON.parse(await sidecar()).intl.clients).some((c) => c.currency === "USD") && !(await book()).includes("USD"));
@@ -260,6 +265,7 @@ try {
     && msg.includes("WITHOUT PAYMENT OF INTEGRATED TAX (LUT ARN AD2704260012345)"), msg);
   check("foreign reminder never mentions UPI or UTR", !/UPI|UTR|upi:\/\//.test(msg), msg);
   check("reminder sheet: no MSME box, English default", !/MSME/.test(await dialogText()) && await b.eval("[...document.querySelectorAll('[aria-pressed=true]')].some(x => x.textContent === 'English')"));
+  check("reminder sheet: a current-FY LUT is not reported as expired", !/has expired/.test(await dialogText()));
   await b.shot("cur-03-reminder.png");
   await t(`__t.click(/^WhatsApp$/, __t.dialog())`);
   const wa = await b.eval("window.__opened.at(-1)");
@@ -326,6 +332,41 @@ try {
   await tab("Clients");
   check("monthly plan shown in its currency", /Monthly billing[\s\S]*Globex LLC · US\$300\.00/.test(await text()));
   check("no plan offers a currency change (a currency is fixed at creation)", !(await b.eval("[...document.querySelectorAll('button')].some((x) => /Change currency/.test(x.textContent))")));
+
+  // A client whose only record is a foreign monthly plan (its invoice deleted): removable once the plan is deleted
+  // (review round 1; "Stop after this month" leaves the plan live).
+  {
+    const planRow = (name) => `[...document.querySelectorAll('section[aria-labelledby=monthly-title] li')].find((li) => li.textContent.includes(${JSON.stringify(name)}))`;
+    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+    await t(`__t.set('ws-client', 'Plan Only Co'), __t.set('ws-currency', 'USD'), __t.set('ws-amount', '80'), __t.set('ws-number', 'PLAN-1'), __t.set('ws-due', '${await iso(20)}')`);
+    await t(`[...document.querySelectorAll('[role=dialog] label')].find(l => l.textContent.startsWith('Repeat every month')).querySelector('input').click(), true`);
+    await t(`__t.click(/^Add invoice$/, __t.dialog())`);
+    await closed();
+    await tab("Invoices");
+    await t(`__t.click(/^all$/)`);
+    await openRow("PLAN-1");
+    await t(`__t.click(/^Delete$/)`);
+    await t(`__t.click(/^Delete$/)`);
+    await sleep(200);
+    await tab("Clients");
+    check("a foreign plan row offers Delete", await b.eval(`!!${planRow("Plan Only Co")}?.querySelector('[data-plan-delete]')`));
+    await t(`document.querySelector('button[aria-label="Edit Plan Only Co"]').click(), true`); await opened();
+    check("a client with only a foreign plan can't be removed, and is told how", /delete the monthly billing first/.test(await dialogText()) && !(await b.eval("!!__t.btn(/^Remove client$/, __t.dialog())")), await dialogText());
+    await esc(); await closed();
+    await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
+    await sleep(100);
+    check("deleting a plan asks first", /Delete for good\?/.test(await b.eval(`${planRow("Plan Only Co")}.innerText`)));
+    await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete-confirm]').click(), true`);
+    await sleep(200);
+    const planGone = Object.values(JSON.parse(await sidecar()).intl.recurring).filter((p) => p.amountPaise === 8000);
+    check("the plan is deleted (a tombstone in the sidecar) and leaves the list", planGone.length === 1 && !!planGone[0].deletedAt && !(await b.eval(`!!${planRow("Plan Only Co")}`))
+      && /Monthly billing deleted\. Existing invoices stay\./.test(await text()) && /Globex LLC · US\$300\.00/.test(await text()), JSON.stringify(planGone));
+    await t(`document.querySelector('button[aria-label="Edit Plan Only Co"]').click(), true`); await opened();
+    await t(`__t.click(/^Remove client$/, __t.dialog())`);
+    await closed();
+    const removed = Object.values(JSON.parse(await book()).clients).find((c) => c.name === "Plan Only Co");
+    check("…and then the client can be removed", !!removed?.deletedAt && !(await clientRow("Plan Only Co")), JSON.stringify(removed));
+  }
 
   // An existing invoice (a plan month, an unpaid one, a paid one): the currency is text with the note, never a select.
   const NOTE = "The currency can't be changed. To bill in another currency, delete this invoice and create a new one.";
@@ -444,6 +485,74 @@ try {
   await openRow("US$500.00");
   await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
   check("reminder: the expired LUT notice, and no export line", /has expired/.test(await dialogText()) && !(await value("ws-reminder")).includes("SUPPLY MEANT"), await value("ws-reminder"));
+  await esc(); await closed();
+
+  // The LUT stays stored when the business GSTIN is cleared, but nothing offers or reports it without one (§0, §6).
+  await tab("Settings");
+  await t(`__t.set('ws-s-gstin', ''), __t.click(/^Save settings$/)`);
+  await sleep(300);
+  await openSettingsCard();
+  await sleep(150);
+  check("no GSTIN: no expired-LUT notice in the card", JSON.parse(await sidecar()).intl.settings.exportUnderLut === true && !/has expired/.test(await text()));
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Globex LLC'), __t.set('ws-currency', 'USD')`);
+  await sleep(100);
+  check("no GSTIN: a USD invoice offers no export choice", !(await exists("ws-export-lut")));
+  await esc(); await closed();
+  await tab("Invoices");
+  await t(`__t.click(/^unpaid$/)`);
+  await openRow("US$500.00");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("no GSTIN: the reminder reports no expired LUT", !/has expired/.test(await dialogText()));
+  await esc(); await closed();
+  await tab("Settings");
+  await t(`__t.set('ws-s-gstin', '27AAAPL1234C1Z5'), __t.click(/^Save settings$/)`);
+  await sleep(300);
+
+  // A foreign invoice saved with the LUT off is never marked, and an edit with the LUT off keeps an existing mark.
+  await openSettingsCard();
+  await sleep(150);
+  await t(`document.getElementById('ws-intl-lut').click(), __t.click(/^Save payment details$/)`);
+  await sleep(300);
+  check("LUT turned off", JSON.parse(await sidecar()).intl.settings.exportUnderLut === false);
+  await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+  await t(`__t.set('ws-client', 'Globex LLC'), __t.set('ws-amount', '40'), __t.set('ws-number', 'NOLUT-1'), __t.set('ws-due', '${await iso(20)}')`);
+  await sleep(100);
+  check("LUT off: no export choice on a USD invoice", (await value("ws-currency")) === "USD" && !(await exists("ws-export-lut")));
+  await t(`__t.click(/^Add invoice$/, __t.dialog())`);
+  await closed();
+  const sideInvoices = async () => Object.values(JSON.parse(await sidecar()).intl.invoices).filter((i) => !i.deletedAt);
+  const noLut = (await sideInvoices()).find((i) => i.number === "NOLUT-1");
+  check("LUT off: the new USD invoice is stored without the export mark", noLut && noLut.currency === "USD" && !("exportLut" in noLut), JSON.stringify(noLut));
+  // (The paid US$1,200.50 invoice: INV-0003, the US$500 one, shares its number with the old tab's ₹ invoice, so its
+  // edit would stop at the duplicate-number check.)
+  const markedBefore = (await sideInvoices()).find((i) => i.currency === "USD" && i.amountPaise === 120050);
+  await tab("Invoices");
+  await t(`__t.click(/^all$/)`);
+  await openRow("US$1,200.50");
+  await t(`__t.click(/^Edit$/)`); await opened();
+  await t(`__t.set('ws-desc', 'Edited with the LUT off'), __t.click(/^Save changes$/, __t.dialog())`);
+  await closed();
+  const markedAfter = (await sideInvoices()).find((i) => i.id === markedBefore?.id);
+  check("LUT off: an edit keeps the invoice's export mark", markedBefore?.exportLut === true && markedAfter?.exportLut === true && markedAfter.description === "Edited with the LUT off", JSON.stringify(markedAfter));
+  // The LUT back on (this year's): the unmarked invoice still has no export line; the marked one has it.
+  await tab("Settings");
+  await openSettingsCard();
+  await sleep(150);
+  await t(`document.getElementById('ws-intl-lut').click(), true`);
+  await sleep(100);
+  await t(`__t.set('ws-intl-lut-arn', 'AD2704260012345'), __t.set('ws-intl-lut-fy', '${fy}'), __t.click(/^Save payment details$/)`);
+  await sleep(300);
+  check("LUT back on for this year", JSON.parse(await sidecar()).intl.settings.lutFy === fy && !/has expired/.test(await text()));
+  await tab("Invoices");
+  await t(`__t.click(/^all$/)`);
+  await openRow("NOLUT-1");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("an invoice saved with the LUT off gets no export line later", /US\$40\.00/.test(await value("ws-reminder")) && !(await value("ws-reminder")).includes("SUPPLY MEANT"), await value("ws-reminder"));
+  await esc(); await closed();
+  await openRow("US$500.00");
+  await t(`__t.click(/^Remind$/)`); await b.waitFor("!!document.getElementById('ws-reminder')");
+  check("…while the marked one has it", (await value("ws-reminder")).includes("SUPPLY MEANT") && !/has expired/.test(await dialogText()), await value("ws-reminder"));
   await esc(); await closed();
 
   // The Invoices badge counts every overdue invoice, foreign ones too (only the KPI cells stay ₹).

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
-  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
+  agingBuckets, chaseList, clientBalances, deleteClient, deleteInvoice, deletePlan, emptyWorkspace, eraseWorkspace, formatPaise, generateRecurring, allInvoiceViews,
   allLiveInvoices, allLiveRecurring, upsertPlan, allocatePayment, clientHasForeignRecords, clientCurrency, clientForeignBalances, currencyOf, getInvoice,
   inrEarned, parseRupeesToPaise, repairIntl, setClientCurrency, summarizeForeign,
   invoicesCsv, liveClients, liveInvoices, localToday, mergeWorkspaces, newId, removePayment, sanitizeWorkspace, summarize, updateBusiness, upsertClient, upsertInvoice,
@@ -163,6 +163,8 @@ function Workspace() {
   const syncRef = useRef<ReturnType<typeof createShelfSync> | null>(null);
   const [paylinks, setPaylinks] = useState<PaylinkList | null>(null);
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
+  // The monthly-billing row asking "Delete for good?" (foreign plans only).
+  const [confirmPlan, setConfirmPlan] = useState<string | null>(null);
   const [upsell, setUpsell] = useState<null | "paylinks" | "businesses" | "business_paylink">(null);
   const [addOpen, setAddOpen] = useState(false);
   /** A generator document waiting for "Which business is this for?" (§7.5). */
@@ -984,8 +986,10 @@ function Workspace() {
                       {chase.map((v) => (
                         <li key={v.invoice.id} className={`grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 px-4 py-3 ${hasForeign ? "sm:grid-cols-[minmax(0,1fr)_9rem_auto]" : "sm:grid-cols-[minmax(0,1fr)_7rem_auto]"}`}>
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")} <span className="font-normal text-muted">· {v.invoice.number}</span></p>
-                            <p className="text-[13px] text-muted"><span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
+                            {/* With foreign amounts (wider) the number moves to the due line below sm, as in the invoice
+                                rows, so the name line's truncation never hides it. */}
+                            <p className="truncate text-sm font-medium text-ink">{v.client?.name ?? tr("Unknown client")} <span className={`font-normal text-muted ${hasForeign ? "hidden sm:inline" : ""}`}>· {v.invoice.number}</span></p>
+                            <p className="text-[13px] text-muted">{hasForeign && <span className="sm:hidden">{v.invoice.number} · </span>}<span className={v.daysPastDue > 0 ? "text-[#a8321d]" : ""}>{dueText(v, tr, dateLocale)}</span>{v.invoice.reminders.length ? tr(" · reminded {n}×", { n: v.invoice.reminders.length }) : ""}</p>
                           </div>
                           <p className="text-right text-sm font-semibold tabular-nums text-ink">{formatMoney(v.balancePaise, v.currency)}</p>
                           <div className="col-span-2 flex gap-2 sm:col-span-1 sm:justify-end">
@@ -1104,6 +1108,8 @@ function Workspace() {
                   <ul className="divide-y divide-hairline">
                     {allLiveRecurring(ws).map((plan) => {
                       const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
+                      // A foreign plan can be deleted (its invoices stay): while it is live its client can't be removed.
+                      const deletable = currencyOf(plan) !== "INR";
                       return (
                         <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                           <div className="min-w-0">
@@ -1113,16 +1119,32 @@ function Workspace() {
                               {plan.paused ? tr(" · paused") : ended ? tr(" · ended") : plan.endMonth ? tr(" · until {month}", { month: plan.endMonth }) : ""}
                             </p>
                           </div>
-                          {!ended && !readOnly && (
-                            <div className="flex gap-2">
-                              <button type="button" className={rowButton}
-                                onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
-                                {plan.paused ? tr("Resume") : tr("Pause")}
-                              </button>
-                              <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
-                                onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
-                                {tr("Stop after this month")}
-                              </button>
+                          {(!ended || deletable) && !readOnly && (
+                            <div className="flex flex-wrap items-center gap-2">
+                              {!ended && (
+                                <>
+                                  <button type="button" className={rowButton}
+                                    onClick={() => { setWs(upsertPlan(ws, { ...plan, paused: !plan.paused }, Date.now())); setFlash(plan.paused ? tr("Monthly billing resumed.") : tr("Monthly billing paused.")); }}>
+                                    {plan.paused ? tr("Resume") : tr("Pause")}
+                                  </button>
+                                  <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
+                                    onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
+                                    {tr("Stop after this month")}
+                                  </button>
+                                </>
+                              )}
+                              {deletable && (confirmPlan === plan.id ? (
+                                <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
+                                  {tr("Delete for good?")}
+                                  <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
+                                    onClick={() => { setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay.")); }}>
+                                    {tr("Delete")}
+                                  </button>
+                                  <button type="button" onClick={() => setConfirmPlan(null)} className={ghostButton}>{tr("Keep")}</button>
+                                </span>
+                              ) : (
+                                <button type="button" data-plan-delete="" className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete")}</button>
+                              ))}
                             </div>
                           )}
                         </li>
@@ -1171,9 +1193,11 @@ function Workspace() {
                               // the name keeps its width; from md the balance column as before.
                               <div data-client-balances="" className="col-span-2 row-start-2 space-y-0.5 pl-[2.375rem] md:col-span-1 md:row-start-auto md:space-y-0 md:pl-0 md:text-right">
                                 {[...((bal?.balancePaise ?? 0) > 0 ? [["INR", bal!.balancePaise, bal!.overduePaise] as const] : []), ...fx.map(([currency, b]) => [currency, b.balancePaise, b.overduePaise] as const)].map(([currency, balance, overdue]) => (
-                                  <div key={currency} className="flex flex-wrap items-baseline gap-x-1.5 md:block">
+                                  // The overdue amount sits under its balance (as in the ₹-only column): a long amount never
+                                  // leaves a separator dangling at a line end.
+                                  <div key={currency}>
                                     <p className="whitespace-nowrap text-sm font-semibold tabular-nums text-ink">{formatMoney(balance, currency)}</p>
-                                    {overdue ? <><span aria-hidden="true" className="text-xs text-muted md:hidden">·</span><p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency) })}</p></> : null}
+                                    {overdue ? <p className="text-xs font-medium text-[#a8321d]">{tr("{amount} overdue", { amount: formatMoney(overdue, currency) })}</p> : null}
                                   </div>
                                 ))}
                               </div>
@@ -1192,7 +1216,7 @@ function Workspace() {
                               ) : readOnly ? null : !signedIn ? (
                                 <span className="text-muted">{tr("Statement links need a free account + Pro.")}</span>
                               ) : isPro ? (
-                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : tr("Share statement link — all dues + one UPI button")}</button>
+                                <button type="button" disabled={linkBusy === c.id} onClick={() => void makeStatementLink(c.id)} className="inline-flex items-center gap-1.5 font-medium text-leaf hover:underline disabled:opacity-50"><Icon name="link" className="h-3.5 w-3.5" />{linkBusy === c.id ? tr("Creating…") : (bal?.balancePaise ?? 0) > 0 ? tr("Share statement link — all dues + one UPI button") : tr("Share statement link — all dues + bank details")}</button>
                               ) : (
                                 <a href="/app/?tab=settings&upgrade=monthly" className="inline-flex items-center gap-1.5 text-charcoal hover:text-ink"><Icon name="link" className="h-3.5 w-3.5" />{tr("Statement link for all dues")} · <span className="font-medium text-leaf">Pro</span></a>
                               )}
@@ -1598,7 +1622,7 @@ function InvoiceRow({ view, wide, duplicate, msme, signedIn, readOnly, payLink, 
   const [crediting, setCrediting] = useState<string | null>(null);
   const [credit, setCredit] = useState("");
   const [creditError, setCreditError] = useState("");
-  // Where focus goes when the inline INR credited form closes: back to its trigger (Cancel, Escape) or, after a save
+  // Where focus goes when the INR credited form in the row closes: back to its trigger (Cancel, Escape) or, after a save
   // (the trigger is gone), to that payment's Undo. Never left on <body>.
   const creditFocus = useRef<{ paymentId: string; to: "open" | "undo" } | null>(null);
   const rowRef = useRef<HTMLDivElement>(null);
@@ -1812,7 +1836,7 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
           )}
         </div>
         {existing && hasInvoices && <p className="text-xs text-muted">{tr("Clients with invoices can't be removed — delete their invoices first.")}</p>}
-        {existing && hasPlan && <p className="text-xs text-muted">{tr("Clients with monthly billing in another currency can't be removed.")}</p>}
+        {existing && hasPlan && <p className="text-xs text-muted">{tr("Clients with monthly billing in another currency can't be removed — delete the monthly billing first (Clients → Monthly billing).")}</p>}
       </form>
     </Sheet>
   );
@@ -1830,9 +1854,10 @@ function ForeignSummary({ summaries, earned }: { summaries: ReturnType<typeof su
   return (
     <section aria-label={tr("Clients abroad")} className={`${card} divide-y divide-hairline px-4 text-[13px] text-charcoal`}>
       {lines.map(([currency, s]) => (
-        <p key={currency} className="flex flex-wrap gap-x-1.5 py-2 tabular-nums">
-          <span className="font-medium text-ink">{tr("{amount} to collect", { amount: formatMoney(s.outstandingPaise, currency) })}</span>
-          {s.overduePaise > 0 && <span className="text-[#a8321d]">· {tr("{amount} overdue", { amount: formatMoney(s.overduePaise, currency) })}</span>}
+        // Below sm the overdue amount takes its own line, so a wrapped line never starts with the separator.
+        <p key={currency} className="py-2 tabular-nums sm:flex sm:flex-wrap sm:gap-x-1.5">
+          <span className="block font-medium text-ink sm:inline">{tr("{amount} to collect", { amount: formatMoney(s.outstandingPaise, currency) })}</span>
+          {s.overduePaise > 0 && <span className="block text-[#a8321d] sm:inline"><span aria-hidden="true" className="hidden sm:inline">· </span>{tr("{amount} overdue", { amount: formatMoney(s.overduePaise, currency) })}</span>}
         </p>
       ))}
       {earned.creditedPaise > 0 && (
