@@ -2015,16 +2015,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   // The reviewer's probe: a USD plan from December (today is 2026-10-25), open-ended, with its December invoice.
   let w = sheetPlan(base, "rec_usd", "USD", "2026-12-01", "", X + 1);
   const open = M.otherCurrencyBilling(w, cli.id, "2027-01", "", "INR", "2026-10");
-  assert.deepEqual(open, { id: "rec_usd", currency: "USD", first: "2027-01", last: "", lastIfStopped: "2026-12", invoicesOnly: false, shared: [] },
+  assert.deepEqual(open, { id: "rec_usd", currency: "USD", first: "2027-01", last: "", startIfStopped: "2027-01", invoicesOnly: false, shared: [] },
     "open-ended: the gap-free start after stopping it now is January (December is already billed)");
   // A later start: stopping now would leave months unbilled, so the sheet says to stop it in the month before.
-  assert.equal(M.otherCurrencyBilling(w, cli.id, "2027-03", "", "INR", "2026-10")?.lastIfStopped, "2026-12");
+  assert.equal(M.otherCurrencyBilling(w, cli.id, "2027-03", "", "INR", "2026-10")?.startIfStopped, "2027-01");
   // The user stops it ("Stop after this month" on 2026-10-25): endMonth 2026-10, before its start month.
   w = M.upsertPlan(w, { ...M.getPlan(w, "rec_usd"), endMonth: "2026-10" }, X + 2);
   const stopped = M.otherCurrencyBilling(w, cli.id, "2026-11", "", "INR", "2026-10");
-  assert.deepEqual(stopped, { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] },
+  assert.deepEqual(stopped, { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] },
     "an INR plan from November is blocked: December is already billed in USD (this returned undefined before round 3)");
-  assert.deepEqual(M.otherCurrencyBilling(w, cli.id, "2026-12", "", "INR", "2026-10"), { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] });
+  assert.deepEqual(M.otherCurrencyBilling(w, cli.id, "2026-12", "", "INR", "2026-10"), { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] });
   assert.equal(M.otherCurrencyBilling(w, cli.id, "2026-11", "2026-11", "INR", "2026-10"), undefined, "November only: free");
   assert.equal(M.otherCurrencyBilling(w, cli.id, "2027-01", "", "INR", "2026-10"), undefined, "January on: free");
   // The probe's outcome before the fix: saving INR from November billed December twice. Following the advice instead
@@ -2034,10 +2034,10 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   // A deleted plan's invoices stay, so they still count; so does a cancelled (voided) one, which Restore brings back with
   // one tap (review round 4). Only a deleted invoice frees its month.
   const deleted = M.deletePlan(w, "rec_usd", X + 4);
-  assert.deepEqual(M.otherCurrencyBilling(deleted, cli.id, "2026-11", "", "INR", "2026-10"), { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a deleted plan's live invoice still counts");
+  assert.deepEqual(M.otherCurrencyBilling(deleted, cli.id, "2026-11", "", "INR", "2026-10"), { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a deleted plan's live invoice still counts");
   const usdDec = M.recurringInvoiceId("rec_usd", "2026-12");
   assert.deepEqual(M.otherCurrencyBilling(M.upsertInvoice(deleted, { ...M.getInvoice(deleted, usdDec), voided: true, updatedAt: X + 5 }, X + 5), cli.id, "2026-11", "", "INR", "2026-10"),
-    { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a cancelled month still counts (round 4)");
+    { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a cancelled month still counts (round 4)");
   assert.equal(M.otherCurrencyBilling(M.deleteInvoice(deleted, usdDec, X + 5), cli.id, "2026-11", "", "INR", "2026-10"), undefined, "a deleted month is not billed");
   // Review round 4, the reviewer's probe: cancel the US$ December invoice of the stopped plan, save a ₹ plan from
   // November, then Restore the US$ invoice. December was billed in both currencies. Now the cancelled month blocks the
@@ -2045,7 +2045,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   {
     const cancelled = M.upsertInvoice(w, { ...M.getInvoice(w, usdDec), voided: true, updatedAt: X + 5 }, X + 5);
     assert.deepEqual(M.otherCurrencyBilling(cancelled, cli.id, "2026-11", "", "INR", "2026-10"),
-      { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a cancelled month blocks a ₹ plan for it");
+      { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [M.recurringInvoiceId("rec_usd", "2026-12")] }, "a cancelled month blocks a ₹ plan for it");
     // What the sheet allowed before round 4 (save, then Restore): the double billing the check now refuses.
     const restored = M.upsertInvoice(sheetPlan(cancelled, "rec_inr", "INR", "2026-11-05", "", X + 6), { ...M.getInvoice(cancelled, usdDec), voided: false, updatedAt: X + 7 }, X + 7);
     assert.deepEqual(billedByMonth(restored, "2026-12-31"), { "2026-11": ["INR"], "2026-12": ["INR", "USD"] });
@@ -2057,7 +2057,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   {
     let inr = sheetPlan(base, "rec_run", "INR", "2026-08-05", "2026-12", X + 1);
     inr = M.generateRecurring(inr, "2026-10-25", X + 2).ws;
-    assert.deepEqual(M.otherCurrencyBilling(inr, cli.id, "2026-07", "", "USD", "2026-10"), { id: "rec_run", currency: "INR", first: "2026-08", last: "2026-12", lastIfStopped: "2026-10", invoicesOnly: false, shared: ["2026-08", "2026-09", "2026-10"].map((m) => M.recurringInvoiceId("rec_run", m)) });
+    assert.deepEqual(M.otherCurrencyBilling(inr, cli.id, "2026-07", "", "USD", "2026-10"), { id: "rec_run", currency: "INR", first: "2026-08", last: "2026-12", startIfStopped: "2026-11", invoicesOnly: false, shared: ["2026-08", "2026-09", "2026-10"].map((m) => M.recurringInvoiceId("rec_run", m)) });
     assert.equal(M.otherCurrencyBilling(inr, cli.id, "2026-09", "", "USD", "2026-10")?.invoicesOnly, false);
   }
   // A month moved by editing the invoice date still counts as the month in its id (the one generateRecurring skips).
@@ -2068,7 +2068,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   {
     let inr = sheetPlan(base, "rec_aug", "INR", "2026-08-05", "", X + 1);
     inr = M.generateRecurring(inr, "2026-10-25", X + 2).ws;
-    assert.deepEqual(M.otherCurrencyBilling(inr, cli.id, "2027-01", "", "USD", "2026-10"), { id: "rec_aug", currency: "INR", first: "2027-01", last: "", lastIfStopped: "2026-10", invoicesOnly: false, shared: [] });
+    assert.deepEqual(M.otherCurrencyBilling(inr, cli.id, "2027-01", "", "USD", "2026-10"), { id: "rec_aug", currency: "INR", first: "2027-01", last: "", startIfStopped: "2026-11", invoicesOnly: false, shared: [] });
     // Stopped in December instead (the month before January), each month is billed once and none is skipped.
     const decStop = M.upsertPlan(inr, { ...M.getPlan(inr, "rec_aug"), endMonth: "2026-12" }, X + 3);
     assert.equal(M.otherCurrencyBilling(decStop, cli.id, "2027-01", "", "USD", "2026-12"), undefined);
@@ -2078,7 +2078,25 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   // A plan that has not started and has no invoice (its first one deleted): stopping leaves nothing billed.
   {
     const bare = M.deleteInvoice(sheetPlan(base, "rec_feb", "USD", "2027-02-01", "", X + 1), M.recurringInvoiceId("rec_feb", "2027-02"), X + 2);
-    assert.deepEqual(M.otherCurrencyBilling(bare, cli.id, "2027-02", "", "INR", "2026-10"), { id: "rec_feb", currency: "USD", first: "2027-02", last: "", lastIfStopped: "", invoicesOnly: false, shared: [] });
+    assert.deepEqual(M.otherCurrencyBilling(bare, cli.id, "2027-02", "", "INR", "2026-10"), { id: "rec_feb", currency: "USD", first: "2027-02", last: "", startIfStopped: "2027-02", invoicesOnly: false, shared: [] });
+    // Review round 6, the reviewer's probe: a ₹ billing from April, two months after the plan's first month. Stopping
+    // now bills nothing, so the gap-free start is still February (the sheet then says "stop it during March, or stop it
+    // now and date this invoice in February"); round 5 said "stop it, then date this invoice in April", leaving March
+    // billed in neither currency.
+    const april = M.otherCurrencyBilling(bare, cli.id, "2027-04", "", "INR", "2026-10");
+    assert.deepEqual(april, { id: "rec_feb", currency: "USD", first: "2027-04", last: "", startIfStopped: "2027-02", invoicesOnly: false, shared: [] });
+    const stopNow = M.upsertPlan(bare, { ...M.getPlan(bare, "rec_feb"), endMonth: "2026-10" }, X + 3);
+    assert.deepEqual(billedByMonth(sheetPlan(stopNow, "rec_inr", "INR", "2027-04-05", "", X + 4), "2027-05-25"), { "2027-04": ["INR"], "2027-05": ["INR"] }, "the gap round 5's advice left (March)");
+    // Advice followed, stop it now and date the ₹ billing in February: every month from February on billed once.
+    assert.equal(M.otherCurrencyBilling(stopNow, cli.id, april.startIfStopped, "", "INR", "2026-10"), undefined);
+    assert.deepEqual(billedByMonth(sheetPlan(stopNow, "rec_inr", "INR", "2027-02-05", "", X + 4), "2027-05-25"),
+      { "2027-02": ["INR"], "2027-03": ["INR"], "2027-04": ["INR"], "2027-05": ["INR"] });
+    // Or stop it during March ("Stop after this month" then sets endMonth 2027-03) and add the ₹ billing from April:
+    // March in US$, April on in ₹ (February is the invoice the user deleted).
+    const stopMarch = M.upsertPlan(bare, { ...M.getPlan(bare, "rec_feb"), endMonth: "2027-03" }, X + 3);
+    assert.equal(M.otherCurrencyBilling(stopMarch, cli.id, "2027-04", "", "INR", "2027-03"), undefined);
+    assert.deepEqual(billedByMonth(sheetPlan(stopMarch, "rec_inr", "INR", "2027-04-05", "", X + 4), "2027-05-25"),
+      { "2027-03": ["USD"], "2027-04": ["INR"], "2027-05": ["INR"] });
   }
   // A book with no foreign plan or plan invoice (INR-only): nothing, whatever the dates.
   const inrOnly = sheetPlan(M.upsertClient(M.updateBusiness(M.emptyWorkspace(), { name: "Shop", upiId: "s@okaxis" }, X), cli, X), "rec_only", "INR", "2026-08-05", "", X + 1);
@@ -2115,7 +2133,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   w = M.upsertPlan(w, { ...M.getPlan(w, "rec_usd"), endMonth: "2026-10" }, X + 2);
   const usdDec = M.recurringInvoiceId("rec_usd", "2026-12");
   const found = M.otherCurrencyBilling(w, cli.id, "2026-11", "", "INR", "2026-10");
-  assert.deepEqual(found, { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", lastIfStopped: "2026-12", invoicesOnly: true, shared: [usdDec] });
+  assert.deepEqual(found, { id: "rec_usd", currency: "USD", first: "2026-12", last: "2026-12", startIfStopped: "2027-01", invoicesOnly: true, shared: [usdDec] });
   // What round 4 advised ("set the last month to bill before December"): allowed, but January to March go unbilled.
   assert.equal(M.otherCurrencyBilling(w, cli.id, "2026-11", "2026-11", "INR", "2026-10"), undefined);
   assert.deepEqual(billedByMonth(sheetPlan(w, "rec_inr", "INR", "2026-11-05", "2026-11", X + 3), "2027-03-25"), { "2026-11": ["INR"], "2026-12": ["USD"] }, "the gap round 4's advice left");
@@ -2135,7 +2153,7 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   let d = M.generateRecurring(sheetPlan(base, "rec_old", "USD", "2026-08-05", "", X + 1), "2026-10-25", X + 2).ws;
   d = M.deletePlan(d, "rec_old", X + 3);
   const three = ["2026-08", "2026-09", "2026-10"].map((m) => M.recurringInvoiceId("rec_old", m));
-  assert.deepEqual(M.otherCurrencyBilling(d, cli.id, "2026-08", "", "INR", "2026-10"), { id: "rec_old", currency: "USD", first: "2026-08", last: "2026-10", lastIfStopped: "2026-10", invoicesOnly: true, shared: three });
+  assert.deepEqual(M.otherCurrencyBilling(d, cli.id, "2026-08", "", "INR", "2026-10"), { id: "rec_old", currency: "USD", first: "2026-08", last: "2026-10", startIfStopped: "2026-11", invoicesOnly: true, shared: three });
   assert.deepEqual(M.otherCurrencyBilling(d, cli.id, "2026-09", "2026-09", "INR", "2026-10")?.shared, [three[1]], "only the invoices in the new billing's months");
   const oneGone = M.deleteInvoice(d, three[0], X + 4);
   assert.deepEqual(M.otherCurrencyBilling(oneGone, cli.id, "2026-08", "", "INR", "2026-10")?.shared, three.slice(1), "deleting one of three still blocks: the sheet says to delete all of them");
@@ -2149,6 +2167,18 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
   const moved = M.upsertInvoice(d, { ...M.getInvoice(d, three[0]), issueDate: "2026-12-01", dueDate: "2026-12-08", updatedAt: X + 4 }, X + 4);
   assert.deepEqual(M.otherCurrencyBilling(moved, cli.id, "2026-08", "", "INR", "2026-10")?.shared, three);
   assert.deepEqual(three.map((id) => M.planInvoiceMonth(M.getInvoice(moved, id))), ["2026-08", "2026-09", "2026-10"]);
+  // Review round 6: invoices stored out of month order (October made first, then August and September, as a restore or
+  // a regenerated pruned month can leave them) are still listed, and bound `last` / the gap-free start, in month order.
+  {
+    const made = (ws, month, now) => M.upsertInvoice(ws, { id: M.recurringInvoiceId("rec_mix", month), number: `MIX-${month}`, clientId: cli.id, issueDate: `${month}-05`, dueDate: `${month}-12`,
+      amountPaise: 50_000, description: "", payments: [], reminders: [], voided: false, recurringId: "rec_mix", currency: "USD", createdAt: now, updatedAt: now }, now);
+    const mixed = ["2026-10", "2026-08", "2026-09"].reduce((ws, month, i) => made(ws, month, X + 1 + i), base);
+    assert.deepEqual(M.allLiveInvoices(mixed).map((invoice) => M.planInvoiceMonth(invoice)), ["2026-10", "2026-08", "2026-09"], "stored out of month order");
+    const ordered = ["2026-08", "2026-09", "2026-10"].map((m) => M.recurringInvoiceId("rec_mix", m));
+    assert.deepEqual(M.otherCurrencyBilling(mixed, cli.id, "2026-08", "", "INR", "2026-10"),
+      { id: "rec_mix", currency: "USD", first: "2026-08", last: "2026-10", startIfStopped: "2026-11", invoicesOnly: true, shared: ordered });
+    assert.deepEqual(M.otherCurrencyBilling(mixed, cli.id, "2026-09", "", "INR", "2026-10")?.shared, ordered.slice(1));
+  }
 }
 
 console.log("[workspace] money, dates, aging, reminders, CSV, merge, sanitizer, receipt, and MSME checks passed");

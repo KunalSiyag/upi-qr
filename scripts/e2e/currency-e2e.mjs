@@ -983,6 +983,30 @@ try {
     await t(`__t.set('ws-until', '${await ym(1)}')`);
     await sleep(150);
     check(`${w}: …and ending the new billing the month before clears it`, !(await b.eval("!!document.querySelector('[data-plan-overlap]')")), await overlapText());
+    // Review round 6: a last month to bill inside the US$ months. Dating the invoice after them can't be followed while
+    // that last month is before the new date (the sheet refuses a last month before the first invoice), so only the
+    // last month is offered here.
+    await t(`__t.set('ws-until', '${await ym(3)}')`);
+    await sleep(150);
+    check(`${w}: a last month inside the US$ months only offers moving the last month`,
+      (await overlapText()) === `Later Co already has monthly billing in USD from ${await name(2)} to ${await name(3)}. Set the last month to bill before ${await name(2)} so no month is billed twice.`
+      && await b.eval("document.getElementById('ws-until').getAttribute('aria-invalid') === 'true' && !document.getElementById('ws-issue').hasAttribute('aria-invalid')"), await overlapText());
+    await esc(); await closed();
+    // Dated in the US$ plan's first month with the last month to bill inside its months: every month asked for is
+    // already billed in US$, so the date advice also says to clear or move the last month, and both fields are marked.
+    await newPlan(2, "05", "Later Co");
+    await t(`__t.set('ws-until', '${await ym(3)}')`);
+    await sleep(150);
+    check(`${w}: "date it in …" with a last month before that date also says to clear or move the last month, on both fields`,
+      (await overlapText()) === `Later Co already has monthly billing in USD until ${await name(3)}. Date this invoice in ${await name(4)} or later so no month is billed twice. To date it in ${await name(4)} or later, also clear the last month to bill or set it to ${await name(4)} or later.`
+      && await b.eval("['ws-issue', 'ws-until'].every((id) => document.getElementById(id).getAttribute('aria-invalid') === 'true' && document.getElementById(id).getAttribute('aria-describedby') === 'ws-plan-overlap')"), await overlapText());
+    check(`${w}: the longer message fits (no sideways scroll)`, await noScroll());
+    await b.eval("document.getElementById('ws-plan-overlap').scrollIntoView({ block: 'center' }), true");
+    await sleep(300);
+    await b.shot(`cur-${mobile ? "m" : "d"}-overlap-until.png`);
+    await t(`__t.set('ws-issue', '${await ym(4)}-05'), __t.set('ws-due', '${await ym(4)}-20'), __t.set('ws-until', '${await ym(4)}')`);
+    await sleep(150);
+    check(`${w}: …and following it (date and last month in the month after) clears it`, !(await b.eval("!!document.querySelector('[data-plan-overlap]')")), await overlapText());
     await esc(); await closed();
     // "Stop after this month" before the plan's first month: it bills nothing more, so the row reads "ended".
     const futRow = `[...document.querySelectorAll('section[aria-labelledby=monthly-title] li')].find((li) => li.textContent.includes('Future Co'))`;

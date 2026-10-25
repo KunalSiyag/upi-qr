@@ -1283,10 +1283,12 @@ export interface OtherCurrencyBilling {
   /** The last month it bills or has billed; "" while it is live with no end month ("Stop after this month" ends it). */
   last: string;
   /**
-   * The last month it will have billed if it is stopped this month (Stop sets endMonth to today's month), or "" when
-   * stopping leaves no month billed. Only meaningful when `last` is "".
+   * The first month new billing can start in if this one is stopped this month (Stop sets endMonth to today's month),
+   * with no month billed twice and none billed in neither currency: the month after the last month it will have
+   * billed, or its own first month when stopping leaves nothing billed (a future plan whose first invoice was deleted,
+   * review round 6). Only meaningful when `last` is "".
    */
-  lastIfStopped: string;
+  startIfStopped: string;
   /**
    * True when every shared month is an invoice the plan already made and the plan bills none of them any more (it was
    * stopped before its first month, or deleted): the sheet then names the invoice, not "monthly billing" (review round 4).
@@ -1343,9 +1345,12 @@ export function otherCurrencyBilling(ws: Workspace, clientId: string, fromMonth:
     if (!candidates.length) continue;
     const lastBilled = billed.length ? billed[billed.length - 1] : "";
     const last = runs && !plan?.endMonth ? "" : later(lastBilled, runs ? runs.end : "");
-    // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed.
+    // Stopping this month keeps the plan's months up to today's (if it has started) plus what it already billed. When
+    // that is nothing, new billing that starts after the plan's first month would leave the months between billed in
+    // neither currency, so the gap-free start is that first month.
     const lastIfStopped = later(lastBilled, plan && plan.startMonth <= todayMonth ? todayMonth : "");
-    return { id, currency: other, first: candidates.sort()[0], last, lastIfStopped, invoicesOnly: !fromRun, shared: inRange.map((m) => m.id) };
+    const startIfStopped = lastIfStopped ? monthAfter(lastIfStopped) : plan?.startMonth ?? fromMonth;
+    return { id, currency: other, first: candidates.sort()[0], last, startIfStopped, invoicesOnly: !fromRun, shared: inRange.map((m) => m.id) };
   }
   return undefined;
 }

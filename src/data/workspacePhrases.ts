@@ -596,6 +596,8 @@ export const WS_HI: Record<string, string> = {
   "Date this invoice in {next} or later.": "इस इनवॉइस की तारीख {next} या उसके बाद रखें।",
   "Date this invoice in {next} or later, or delete {number} first.": "इस इनवॉइस की तारीख {next} या उसके बाद रखें, या पहले {number} डिलीट करें।",
   "Date this invoice in {next} or later, or delete those invoices first.": "इस इनवॉइस की तारीख {next} या उसके बाद रखें, या पहले वे सभी इनवॉइस डिलीट करें।",
+  "To date it in {next} or later, also clear the last month to bill or set it to {next} or later.": "इसकी तारीख {next} या उसके बाद रखने के लिए बिल का आख़िरी महीना भी हटाएँ या उसे {next} या उसके बाद रखें।",
+  "{name} already has monthly billing in {currency} from {month} to {last}. Set the last month to bill before {month} so no month is billed twice.": "{name} की {currency} में मासिक बिलिंग {month} से {last} तक पहले से है। बिल का आख़िरी महीना {month} से पहले रखें ताकि कोई महीना दो बार बिल न हो।",
   "Delete billing": "बिलिंग डिलीट करें",
   "No changes to save.": "सेव करने के लिए कोई बदलाव नहीं है।",
   "Enter the IBAN or account number (4 to 34 letters and digits).": "IBAN या खाता नंबर डालें (4 से 34 अक्षर और अंक)।",
