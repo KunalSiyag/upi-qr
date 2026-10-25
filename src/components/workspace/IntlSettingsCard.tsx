@@ -119,6 +119,16 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
   const overrideRef = useRef<HTMLDetailsElement>(null);
   const thisFy = fyOf(today);
   const [errors, setErrors] = useState<Errors>({});
+  // A save with errors moves focus to the first invalid field: the card is long, and on a phone the field can be a
+  // screen or more above Save (review round 5). After the render, so a per-currency set's error is in the DOM.
+  const formRef = useRef<HTMLFormElement>(null);
+  const [errorTurn, setErrorTurn] = useState(0);
+  useEffect(() => {
+    if (!errorTurn) return;
+    const control = formRef.current?.querySelector("[data-field-error]")?.parentElement?.querySelector<HTMLElement>("input, select, textarea");
+    control?.focus({ preventScroll: true });
+    control?.scrollIntoView({ block: "center" });
+  }, [errorTurn]);
   // Newer settings arrived (sync, another tab, the book loading after the card mounted): an untouched form shows them.
   const dirty = !sameForm(form, base);
   useEffect(() => {
@@ -152,7 +162,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
       // The error sits inside the per-currency details: open them so it can be seen.
       if (overrideRef.current) overrideRef.current.open = true;
     }
-    if (Object.keys(next).length) return;
+    if (Object.keys(next).length) return setErrorTurn((n) => n + 1);
     const after = settingsOf(form, gstin);
     const nextWs = editIntlSettings(ws, settingsOf(base, gstin), after, Date.now());
     // The form is now the base, so the settings this save wrote refresh it (normalized) without counting as an edit.
@@ -171,7 +181,7 @@ export function IntlSettingsCard({ ws, today, readOnly, onChange }: {
           <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
         </svg>
       </summary>
-      <form noValidate className="px-5 pb-5" onSubmit={(e) => { e.preventDefault(); save(); }}>
+      <form ref={formRef} noValidate className="px-5 pb-5" onSubmit={(e) => { e.preventDefault(); save(); }}>
         <fieldset disabled={readOnly} className="m-0 min-w-0 space-y-4 border-0 p-0">
           {expired && <p role="status" className="rounded-[10px] bg-[#fdf4e6] px-3 py-2 text-[13px] text-[#6b4600]">{tr("Your LUT for FY {fy} has expired. Add this year's ARN.", { fy: expired })}</p>}
           <label className="flex cursor-pointer items-start gap-2 text-sm font-medium text-ink">

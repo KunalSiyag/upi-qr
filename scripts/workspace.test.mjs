@@ -866,9 +866,11 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(M.invoicesMovedTwice(repaired).size, 0);
       // A backup from before the move, restored after it.
       assert.deepEqual(st3(M.repairIntl(M.restoreFrom(moved.ws, W, X + 30), X + 30)), [[moved.id, "EUR"]], "a restore doesn't bring the old one back");
-      // The copy deleted by the user since: the old one stays deleted too.
+      // The copy deleted by the user since: a stale write that brings the old one back leaves it live (review round 5:
+      // a deleted copy means the user resolved the pair or deleted the invoice; they can delete this one too).
       const gone = M.mergeWorkspaces(M.deleteInvoice(moved.ws, moved.id, X + 31), M.logReminder(W, "inv_usd00001", "sms", X + 32));
-      assert.deepEqual(st3(M.repairIntl(gone, X + 33)), [], "the old one stays deleted when the copy was deleted");
+      assert.deepEqual(st3(M.repairIntl(gone, X + 33)), [["inv_usd00001", "USD"]], "a deleted copy never deletes the old one");
+      assert.equal(M.invoicesMovedTwice(M.repairIntl(gone, X + 33)).size, 0);
       // A payment recorded on the old id by a stale copy is kept: both stay, both flagged.
       const paid = M.repairIntl(M.mergeWorkspaces(moved.ws, M.addPayment(W, "inv_usd00001", { amountPaise: 1000, date: "2026-10-02", mode: "bank", reference: "" }, X + 40)), X + 41);
       assert.deepEqual(st3(paid), [["inv_usd00001", "USD"], [moved.id, "EUR"]].sort());
@@ -890,6 +892,66 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(M.getInvoice(re.ws, moved.id).payments.length, 1, "the copy's payment stays");
       assert.ok(M.getInvoice(re.ws, "inv_usd00001").deletedAt);
       assert.equal(M.invoicesMovedTwice(W).size, 0, "nothing moved, nothing flagged");
+
+      // Review round 5. A void recorded on the old id by a stale copy is kept, like a payment: both stay, both flagged.
+      {
+        const voided = M.repairIntl(M.mergeWorkspaces(moved.ws, M.upsertInvoice(W, { ...W.intl.invoices.inv_usd00001, voided: true }, X + 40)), X + 41);
+        assert.deepEqual([Boolean(voided.intl.invoices.inv_usd00001.deletedAt), voided.intl.invoices.inv_usd00001.voided], [false, true], "the void is kept");
+        assert.deepEqual([...M.invoicesMovedTwice(voided)].sort(), ["inv_usd00001", moved.id].sort());
+      }
+      // The user keeps the ₹ invoice a stale tab paid and deletes its US$ copy; undoing that payment later doesn't
+      // delete the kept invoice.
+      {
+        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
+        const stale = legacy.addPayment(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(M.withoutIntl(W)))), "inv_inr00001", { amountPaise: 450000, date: "2026-10-03", mode: "upi", reference: "" }, X + 60);
+        let kept = M.repairIntl(M.deleteInvoice(M.repairIntl(M.mergeWorkspaces(usd.ws, stale), X + 61), usd.id, X + 62), X + 63);
+        assert.equal(M.invoicesMovedTwice(kept).size, 0, "resolved");
+        kept = M.repairIntl(M.removePayment(kept, "inv_inr00001", kept.invoices.inv_inr00001.payments[0].id, X + 64), X + 65);
+        assert.ok(!kept.invoices.inv_inr00001.deletedAt, "the kept ₹ invoice stays after its payment is undone");
+      }
+      // A backup from before the move restores the old invoice once its copy is gone: deleted by the user, or erased.
+      {
+        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
+        const restoredAfter = (book) => M.repairIntl(M.restoreFrom(book, W, X + 70), X + 70);
+        assert.ok(!restoredAfter(M.deleteInvoice(usd.ws, usd.id, X + 60)).invoices.inv_inr00001.deletedAt, "copy deleted, then restore: the ₹ invoice is back");
+        const erased = restoredAfter(M.eraseWorkspace(usd.ws, X + 60));
+        assert.ok(!erased.invoices.inv_inr00001.deletedAt, "Erase, then restore of a pre-move backup: the ₹ invoice is back");
+        assert.ok(M.getInvoice(erased, usd.id).deletedAt, "and the copy stays erased");
+      }
+      // A chain of moves: the old invoice is deleted again while any later copy is live, never after the last is deleted.
+      {
+        const usd = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 50);
+        const eur = M.replaceInvoiceCurrency(usd.ws, usd.id, "EUR", X + 51);
+        assert.equal(M.movedCopyOf(eur.ws, W.invoices.inv_inr00001).id, eur.id, "followed through the deleted US$ copy");
+        const stale = M.mergeWorkspaces(eur.ws, M.logReminder(W, "inv_inr00001", "whatsapp", X + 60));
+        assert.ok(M.repairIntl(stale, X + 61).invoices.inv_inr00001.deletedAt, "₹ → US$ → €: a stale ₹ write is deleted again");
+        const allGone = M.mergeWorkspaces(M.deleteInvoice(eur.ws, eur.id, X + 55), M.logReminder(W, "inv_inr00001", "whatsapp", X + 60));
+        assert.ok(!M.repairIntl(allGone, X + 61).invoices.inv_inr00001.deletedAt, "…and left alone once the € copy was deleted");
+      }
+      // Two devices make the same move; one records the client's payment on the copy before the other's move syncs.
+      // The copy is written at a time derived from the old invoice, so the later move never overwrites the payment.
+      {
+        const sheetMove = (book, now, amount) => M.replaceInvoiceCurrency(book, "inv_inr00001", "USD", now, (copy) => ({ ...copy, amountPaise: amount, description: "Design" }));
+        const x = sheetMove(W, X + 100, 100_000);
+        assert.equal(M.getInvoice(x.ws, x.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 1, "the copy's time comes from the old invoice");
+        assert.deepEqual([M.getInvoice(x.ws, x.id).amountPaise, M.getInvoice(x.ws, x.id).currency, M.getInvoice(x.ws, x.id).description], [100_000, "USD", "Design"], "the edit is in the copy");
+        const paidX = M.addPayment(x.ws, x.id, { amountPaise: 100_000, date: "2026-10-20", mode: "bank", reference: "FIRA-778", inrCreditedPaise: 8_350_000 }, X + 200);
+        const y = sheetMove(W, X + 300, 100_000);
+        assert.equal(y.id, x.id);
+        for (const merged of [M.mergeWorkspaces(paidX, y.ws), M.mergeWorkspaces(y.ws, paidX)]) {
+          const copy = M.getInvoice(M.repairIntl(merged, X + 400), x.id);
+          assert.deepEqual([copy.payments.length, copy.payments[0]?.inrCreditedPaise, Boolean(copy.deletedAt)], [1, 8_350_000, false], "the payment and its INR credited survive");
+        }
+        // The edit can't change the copy's id or currency.
+        const forced = M.replaceInvoiceCurrency(W, "inv_inr00001", "EUR", X + 100, (copy) => ({ ...copy, id: "inv_other", currency: "GBP" }));
+        assert.deepEqual([forced.id, M.getInvoice(forced.ws, forced.id).currency, M.getInvoice(forced.ws, "inv_other")], [M.replacementInvoiceId("inv_inr00001", "EUR"), "EUR", undefined]);
+        // A copy the user deleted is written again past its tombstone, so the new move wins every merge.
+        // (The old one came back through a stale reminder at X + 150, older than the copy's deletion at X + 500.)
+        const userDeleted = M.deleteInvoice(M.mergeWorkspaces(x.ws, M.logReminder(W, "inv_inr00001", "sms", X + 150)), x.id, X + 500);
+        assert.ok(!M.repairIntl(userDeleted, X + 501).invoices.inv_inr00001.deletedAt);
+        const again = M.replaceInvoiceCurrency(userDeleted, "inv_inr00001", "USD", X + 600);
+        assert.ok(!M.getInvoice(M.mergeWorkspaces(again.ws, userDeleted), x.id).deletedAt, "moved again after the copy was deleted");
+      }
     }
     // Prune after a currency change: nothing comes back.
     const later = M.pruneTombstones(moved.ws, X + 10 + 91 * DAY);
@@ -917,6 +979,15 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(again.ws.intl.invoices[recurringInvoiceId(plan.id, "2026-09")].payments.length, 1);
     const tomb = M.deleteInvoice(paid, recurringInvoiceId(plan.id, "2026-10"), X + 23);
     assert.equal(M.generateRecurring(tomb, "2026-10-10", X + 24).created.length, 0);
+    // Review round 5: a deleted foreign plan month keeps its tombstone while generateRecurring could still bill the
+    // month (monthsBilledTwice asks the user to delete one), so prune-then-generate never bills it again.
+    for (const days of [91, 200, 330]) {
+      const later = M.pruneTombstones(tomb, X + 23 + days * DAY);
+      const day = new Date(X + 23 + days * DAY).toISOString().slice(0, 10);
+      assert.ok(M.getInvoice(later, recurringInvoiceId(plan.id, "2026-10"))?.deletedAt, `kept after ${days} days`);
+      assert.ok(!M.generateRecurring(later, day, X + 24 + days * DAY).created.includes(recurringInvoiceId(plan.id, "2026-10")), `not billed again after ${days} days`);
+    }
+    assert.equal(M.getInvoice(M.pruneTombstones(tomb, X + 23 + 500 * DAY), recurringInvoiceId(plan.id, "2026-10")), undefined, "pruned once the month is past the backfill window");
     assert.equal(M.replaceInvoiceCurrency(g.ws, recurringInvoiceId(plan.id, "2026-10"), "EUR", X + 25), null, "a plan month can't change currency");
     // A plan's currency change ends the old plan after its last month and starts a new one; nothing regenerates.
     // The amount is given in the new currency: a plan's minor units never carry across currencies.

@@ -116,7 +116,7 @@ export function Field({ label, htmlFor, error, children }: { label: string; html
     <div>
       <label htmlFor={htmlFor} className={labelClass}>{label}</label>
       {children}
-      {error && <p className={`mt-1 text-xs font-medium ${dangerText}`} role="alert">{error}</p>}
+      {error && <p className={`mt-1 text-xs font-medium ${dangerText}`} role="alert" data-field-error>{error}</p>}
     </div>
   );
 }

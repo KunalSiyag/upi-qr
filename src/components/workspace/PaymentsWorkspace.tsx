@@ -450,6 +450,16 @@ function Workspace() {
   }, [flash]);
 
   const closeSheet = useCallback(() => setSheet(null), []);
+  // After a plan's currency change the row that opened the sheet is gone (the plan has a new id): focus goes to the
+  // replacement plan's row, or to the Monthly billing heading, never <body> (review round 5).
+  const planFocus = useRef<string | null>(null);
+  useEffect(() => {
+    const id = planFocus.current;
+    if (id === null || sheet) return;
+    planFocus.current = null;
+    const row = document.querySelector<HTMLElement>(`[data-plan-row="${id}"]`);
+    (row?.querySelector<HTMLElement>("[data-plan-currency]") ?? row?.querySelector<HTMLElement>("button") ?? document.getElementById("monthly-title"))?.focus();
+  });
   // Every invoice, INR and foreign (docs/spec-foreign-clients.md §5): ₹ figures (summary, aging, client ₹ balances)
   // are over INR views only; foreign amounts are per currency and always formatted in their own currency.
   const views = useMemo(() => allInvoiceViews(ws, today), [ws, today]);
@@ -1106,13 +1116,13 @@ function Workspace() {
             <div className="space-y-4">
               {allLiveRecurring(ws).length > 0 && (
                 <section className={card} aria-labelledby="monthly-title">
-                  <h2 id="monthly-title" className={`${cardTitle} border-b border-hairline px-4 py-3.5`}>{tr("Monthly billing")}</h2>
+                  <h2 id="monthly-title" tabIndex={-1} className={`${cardTitle} border-b border-hairline px-4 py-3.5 outline-none`}>{tr("Monthly billing")}</h2>
                   <ul className="divide-y divide-hairline">
                     {allLiveRecurring(ws).map((plan) => {
                       const ended = plan.endMonth !== "" && plan.endMonth < today.slice(0, 7);
                       const planForeign = currencyOf(plan) !== "INR";
                       return (
-                        <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                        <li key={plan.id} data-plan-row={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                           <div className="min-w-0">
                             <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatMoney(plan.amountPaise, currencyOf(plan))}</span></p>
                             <p className="text-[13px] text-muted">
@@ -1127,7 +1137,7 @@ function Workspace() {
                                 {plan.paused ? tr("Resume") : tr("Pause")}
                               </button>
                               {INTL_UI && (pickers || planForeign) && planCanChangeCurrency(ws, plan) && (
-                                <button type="button" className={`${rowButton} whitespace-nowrap`} onClick={() => setSheet({ kind: "plan", id: plan.id })}>{tr("Change currency")}</button>
+                                <button type="button" data-plan-currency className={`${rowButton} whitespace-nowrap`} onClick={() => setSheet({ kind: "plan", id: plan.id })}>{tr("Change currency")}</button>
                               )}
                               <button type="button" className={`${ghostButton} hover:text-[#a8321d]`}
                                 onClick={() => { setWs(upsertPlan(ws, { ...plan, endMonth: today.slice(0, 7) }, Date.now())); setFlash(tr("Monthly billing stops after this month. Existing invoices stay.")); }}>
@@ -1331,7 +1341,7 @@ function Workspace() {
         <ClientSheet ws={ws} clientId={sheet.id} onClose={closeSheet} onSave={(next, message) => { const taken = setWs(next, sheet.bookId); setSheet(null); if (taken) setFlash(message); }} />
       )}
       {INTL_UI && sheet?.kind === "plan" && getPlan(ws, sheet.id) && (
-        <PlanCurrencySheet ws={ws} planId={sheet.id} onClose={closeSheet} onSave={(next) => { const taken = setWs(next, sheet.bookId); setSheet(null); if (taken) setFlash(tr("Months already created keep their currency.")); }} />
+        <PlanCurrencySheet ws={ws} planId={sheet.id} onClose={closeSheet} onSave={(next, id) => { const taken = setWs(next, sheet.bookId); planFocus.current = taken ? id : null; setSheet(null); if (taken) setFlash(tr("Months already created keep their currency.")); }} />
       )}
       {BOOKS_UI && addOpen && <AddBusinessSheet onClose={() => setAddOpen(false)} onAdd={addBusiness} />}
       {BOOKS_UI && pickDoc && (
@@ -1836,7 +1846,7 @@ function ClientSheet({ ws, clientId, onSave, onClose }: {
 }
 
 /** A monthly plan's currency (§1.6, §5.3): the plan ends after its last created month and a new one starts the month after. */
-function PlanCurrencySheet({ ws, planId, onSave, onClose }: { ws: Workspace; planId: string; onSave: (next: Workspace) => void; onClose: () => void }) {
+function PlanCurrencySheet({ ws, planId, onSave, onClose }: { ws: Workspace; planId: string; onSave: (next: Workspace, id: string) => void; onClose: () => void }) {
   const { tr } = useWs();
   const plan = getPlan(ws, planId);
   const [currency, setCurrency] = useState<CurrencyCode>(plan ? currencyOf(plan) : "INR");
@@ -1856,7 +1866,7 @@ function PlanCurrencySheet({ ws, planId, onSave, onClose }: { ws: Workspace; pla
         if (!amountMinor) return setAmountError(isForeignCurrency(currency) ? tr("Enter the amount like 1,200.50.") : tr("Enter an amount like 1500 or 1500.50."));
         const moved = replacePlanCurrency(ws, planId, currency, Date.now(), amountMinor);
         if (!moved) return setError(tr("This plan has no month left to bill."));
-        onSave(moved.ws);
+        onSave(moved.ws, moved.id);
       }}>
         <Field label={tr("Currency")} htmlFor="ws-plan-currency">
           <select id="ws-plan-currency" className={inputClass} value={currency} onChange={(e) => { setCurrency(e.target.value as CurrencyCode); setAmount(""); setAmountError(""); setError(""); }}>

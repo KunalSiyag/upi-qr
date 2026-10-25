@@ -931,10 +931,19 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
     recurring: Object.fromEntries(Object.entries(ws.recurring).filter(([, r]) => keep(r))),
   };
   if (!ws.intl) return pruned;
+  // A foreign plan month's tombstone stays while generateRecurring could still bill that month (the newest
+  // MAX_BACKFILL_MONTHS, one more for time zones): a month the user deleted, as monthsBilledTwice asks after a
+  // currency change, would otherwise come back as a new unpaid invoice (review round 5). The legacy maps keep the
+  // deployed rule, byte for byte (§1.8); old code prunes them the same way.
+  const oldest = monthIndex(new Date(now).toISOString().slice(0, 7)) - MAX_BACKFILL_MONTHS;
+  const billable = (invoice: Invoice) => {
+    const month = /M(\d{4})(\d{2})$/.exec(invoice.id);
+    return Boolean(invoice.recurringId && month && Number(month[1]) * 12 + Number(month[2]) - 1 >= oldest);
+  };
   // Pruning the last foreign tombstone returns the exact INR-only bytes.
   return withIntl(pruned, {
     ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
-    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i))),
+    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i) || billable(i))),
     recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
     clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
   });
@@ -1403,23 +1412,62 @@ export function replacementInvoiceId(invoiceId: string, currency: CurrencyCode):
 
 /**
  * Moves an invoice to another currency: tombstones `id` and creates a copy (replacementInvoiceId), the same number
- * and fields, in `currency`. Only while it has no payments, and never for a plan month (null): a plan month's id is
- * recurringInvoiceId(plan, month), and once its tombstone is pruned generateRecurring would bill that month again.
- * A live copy from the same change on another device is kept as it is (its payments too), never overwritten.
+ * and fields, in `currency`; `edit` (the invoice sheet's changes) shapes the copy, never its id or currency. Only
+ * while it has no payments, and never for a plan month (null): a plan month's id is recurringInvoiceId(plan, month),
+ * and once its tombstone is pruned generateRecurring would bill that month again.
+ * The copy is written at a time derived from the records (the old invoice's updatedAt + 1, past a deleted copy's),
+ * never the clock: two devices making the same change write it at the same time, so anything one of them recorded on
+ * it since (a payment, the INR credited, an edit) is newer and wins the merge (review round 5). A live copy from the
+ * same change on another device is kept as it is (its payments too), never overwritten; the edit is applied to it.
  */
-export function replaceInvoiceCurrency(ws: Workspace, id: string, currency: CurrencyCode, now: number): { ws: Workspace; id: string } | null {
+export function replaceInvoiceCurrency(
+  ws: Workspace, id: string, currency: CurrencyCode, now: number, edit?: (copy: Invoice) => Invoice,
+): { ws: Workspace; id: string } | null {
   const invoice = getInvoice(ws, id);
   if (!invoice || invoice.deletedAt || invoice.payments.length || invoice.recurringId) return null;
   if (currencyOf(invoice) === currency) return { ws, id };
   const copyId = replacementInvoiceId(id, currency);
-  const existing = getInvoice(ws, copyId);
-  if (existing && !existing.deletedAt && currencyOf(existing) === currency) return { ws: deleteInvoice(ws, id, now), id: copyId };
-  const { currency: _from, exportLut: _export, ...rest } = invoice;
-  // The export mark moves with a foreign copy (US$ → €: still an export under the LUT); an INR copy never has one.
-  const copy: Invoice = {
-    ...rest, id: copyId, ...(isForeignCurrency(currency) ? { currency, ...(invoice.exportLut === true ? { exportLut: true } : {}) } : {}),
+  const pin = (record: Invoice): Invoice => {
+    const { currency: _c, exportLut, ...rest } = record;
+    return { ...rest, id: copyId, ...(isForeignCurrency(currency) ? { currency, ...(exportLut === true ? { exportLut: true as const } : {}) } : {}) };
   };
-  return { ws: upsertInvoice(deleteInvoice(ws, id, now), copy, now), id: copy.id };
+  const existing = getInvoice(ws, copyId);
+  if (existing && !existing.deletedAt && currencyOf(existing) === currency) {
+    const moved = deleteInvoice(ws, id, now);
+    const edited = edit ? pin(edit(existing)) : existing;
+    return { ws: canonicalOf(edited) === canonicalOf(existing) ? moved : upsertInvoice(moved, edited, now), id: copyId };
+  }
+  const { currency: _from, exportLut: _export, deletedAt: _gone, ...rest } = invoice;
+  // The export mark moves with a foreign copy (US$ → €: still an export under the LUT); an INR copy never has one.
+  const base: Invoice = { ...rest, id: copyId, ...(isForeignCurrency(currency) && invoice.exportLut === true ? { exportLut: true } : {}) };
+  const at = Math.max(invoice.updatedAt, existing?.updatedAt ?? 0) + 1;
+  return { ws: upsertInvoice(deleteInvoice(ws, id, now), pin(edit ? edit(pin(base)) : base), at), id: copyId };
+}
+
+/**
+ * The live invoice a currency change moved `invoice` to: its copy (replacementInvoiceId), or, when that copy was
+ * moved on in turn, the live copy further down the chain. A copy the user deleted ends the chain: the user resolved
+ * the pair, or deleted the invoice, so nothing counts as moved (review round 5). Plan months never move.
+ */
+export function movedCopyOf(ws: Workspace, invoice: Invoice): Invoice | undefined {
+  if (!ws.intl || invoice.recurringId) return undefined;
+  const seen = new Set([invoice.id]);
+  let frontier = [invoice];
+  for (let hops = 0; frontier.length && hops < MAX_REPLACEMENT_HOPS; hops++) {
+    const next: Invoice[] = [];
+    for (const from of frontier) {
+      for (const currency of CURRENCIES) {
+        if (currency === currencyOf(from)) continue;
+        const copy = getInvoice(ws, replacementInvoiceId(from.id, currency));
+        if (!copy || copy.recurringId || currencyOf(copy) !== currency || seen.has(copy.id)) continue;
+        if (!copy.deletedAt) return copy;
+        seen.add(copy.id);
+        next.push(copy);
+      }
+    }
+    frontier = next;
+  }
+  return undefined;
 }
 
 /** Invoices linked by currency changes (replacementInvoiceId), tombstones included: id → family. Plan months never move. */
@@ -1619,8 +1667,9 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
 
 /**
  * Deletes again an invoice a currency change moved, when a stale write brought it back next to its copy (a reminder
- * or edit from an older tab or offline device, a restored backup from before the move): it is live, and a copy from
- * replacementInvoiceId exists (live, or deleted by the user since). Only while it has no payment and isn't void: a
+ * or edit from an older tab or offline device, a restored backup from before the move): it is live, and its copy
+ * (movedCopyOf, following later moves) is live. A copy the user deleted leaves it alone: the user kept this one, or a
+ * restore brought it back on purpose (review round 5). Only while it has no payment and isn't void: a
  * payment or void recorded on it is kept, and invoicesMovedTwice shows the pair instead. Written at updatedAt + 1
  * (deletedAt the same), never the clock, so every build's last-writer-wins merge keeps it and copies converge; it
  * only reads ids, so one pass is the fixed point. `ws` itself when nothing changes.
@@ -1632,12 +1681,7 @@ function repairMovedInvoices(ws: Workspace): Workspace {
     let out: Record<string, Invoice> | null = null;
     for (const invoice of Object.values(map)) {
       if (invoice.deletedAt || invoice.recurringId || invoice.payments.length || invoice.voided) continue;
-      const moved = CURRENCIES.some((currency) => {
-        if (currency === currencyOf(invoice)) return false;
-        const copy = getInvoice(ws, replacementInvoiceId(invoice.id, currency));
-        return Boolean(copy && currencyOf(copy) === currency);
-      });
-      if (!moved) continue;
+      if (!movedCopyOf(ws, invoice)) continue;
       const at = invoice.updatedAt + 1;
       out ??= { ...map };
       out[invoice.id] = { ...invoice, updatedAt: at, deletedAt: at };
