@@ -1453,6 +1453,19 @@ export function setClientCurrency(ws: Workspace, clientId: string, currency: Cur
 }
 
 /**
+ * The client an invoice edit saves onto, brought back when another tab or device deleted it while the sheet was open
+ * (the sheet brings the invoice itself back with withoutTombstone). An invoice in a foreign currency also brings back
+ * the client's billing currency when none is live (deleteClient tombstoned it), so the client isn't billed in INR
+ * afterwards (review round 5). A live client, or none: `ws` itself.
+ */
+export function reviveClient(ws: Workspace, clientId: string, currency: CurrencyCode, now: number): Workspace {
+  const client = own(ws.clients, clientId);
+  if (!client?.deletedAt) return ws;
+  const next = upsertClient(ws, withoutTombstone(client), now);
+  return isForeignCurrency(currency) && clientCurrency(next, clientId) === "INR" ? setClientCurrency(next, clientId, currency, now) : next;
+}
+
+/**
  * The business's clients-abroad settings, patched (one last-writer-wins record). The result goes through the
  * sanitizer's own rules (normalized fields, LUT fields only with the LUT on, empty per-currency sets dropped), so
  * what is kept in memory is exactly what the next load would read.

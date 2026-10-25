@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
-  nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, setClientCurrency,
+  nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, reviveClient, setClientCurrency,
   suggestedTone, upsertClient, upsertInvoice, upsertPlan, viewInvoice, whatsappLink, withoutTombstone, isUdyam, type Invoice, type PaymentMode, type ReminderLang,
   type ReminderTone, type Workspace,
 } from "../../lib/workspace/model";
@@ -116,9 +116,17 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
       ws2 = upsertClient(ws2, client, now);
       // A client first billed in a foreign currency keeps it as their default.
       if (foreign) ws2 = setClientCurrency(ws2, client.id, currency, now);
-    } else if (phone.trim() && phone.trim() !== client.phone) {
-      client = { ...client, phone: phone.trim() };
-      ws2 = upsertClient(ws2, client, now);
+    } else {
+      // An edit to an invoice whose client was deleted elsewhere while this sheet was open brings the client back with
+      // the invoice (and, for a foreign invoice, its billing currency), never a live invoice on a deleted client.
+      if (client.deletedAt) {
+        ws2 = reviveClient(ws2, client.id, currency, now);
+        client = ws2.clients[client.id];
+      }
+      if (phone.trim() && phone.trim() !== client.phone) {
+        client = { ...client, phone: phone.trim() };
+        ws2 = upsertClient(ws2, client, now);
+      }
     }
     // Not offered: a new invoice is unmarked, and an edit with the LUT off keeps the mark it has (a client with a GSTIN
     // under an active LUT loses it).

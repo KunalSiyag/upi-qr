@@ -165,13 +165,18 @@ function Workspace() {
   const [linkBusy, setLinkBusy] = useState<string | null>(null);
   // The monthly-billing row asking "Delete for good?" (foreign plans only).
   const [confirmPlan, setConfirmPlan] = useState<string | null>(null);
-  // "Keep" hands focus back to that plan's Delete button (Keep takes it when the confirm opens), never to <body>.
-  const planFocus = useRef<string | null>(null);
+  // Focus after the confirm closes, never <body>: "Keep" hands it back to that plan's Delete button (Keep takes it when
+  // the confirm opens); "Delete billing" moves it to the next plan's first button, else to "+ Add client" (the row, and
+  // the whole section with the last plan, unmount). The first selector that matches wins.
+  const planFocus = useRef<string[] | null>(null);
   useEffect(() => {
-    const id = planFocus.current;
-    if (!id || confirmPlan !== null) return;
+    const targets = planFocus.current;
+    if (!targets || confirmPlan !== null) return;
     planFocus.current = null;
-    document.querySelector<HTMLElement>(`[data-plan-delete="${CSS.escape(id)}"]`)?.focus();
+    for (const selector of targets) {
+      const el = document.querySelector<HTMLElement>(selector);
+      if (el) { el.focus(); return; }
+    }
   });
   const [upsell, setUpsell] = useState<null | "paylinks" | "businesses" | "business_paylink">(null);
   const [addOpen, setAddOpen] = useState(false);
@@ -1124,7 +1129,7 @@ function Workspace() {
                       // A foreign plan can be deleted (its invoices stay): while it is live its client can't be removed.
                       const deletable = currencyOf(plan) !== "INR";
                       return (
-                        <li key={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
+                        <li key={plan.id} data-plan-row={plan.id} className="flex flex-wrap items-center justify-between gap-2 px-4 py-3 text-sm">
                           <div className="min-w-0">
                             <p className="font-medium text-ink">{ws.clients[plan.clientId]?.name ?? tr("Client")} · <span className="tabular-nums">{formatMoney(plan.amountPaise, currencyOf(plan))}</span></p>
                             <p className="text-[13px] text-muted">
@@ -1150,12 +1155,17 @@ function Workspace() {
                                 <span className={`flex items-center gap-2 text-[13px] font-medium ${dangerText}`}>
                                   {tr("Delete for good?")}
                                   <button type="button" data-plan-delete-confirm="" className="inline-flex h-8 items-center rounded-[8px] bg-[#a8321d] px-2.5 text-white"
-                                    onClick={() => { setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay.")); }}>
+                                    onClick={() => {
+                                      const plans = allLiveRecurring(ws).map((p) => p.id);
+                                      const at = plans.indexOf(plan.id);
+                                      planFocus.current = [...plans.slice(at + 1), ...plans.slice(0, at).reverse()].map((id) => `[data-plan-row="${CSS.escape(id)}"] button`).concat("[data-add-client]");
+                                      setWs(deletePlan(ws, plan.id, Date.now())); setConfirmPlan(null); setFlash(tr("Monthly billing deleted. Existing invoices stay."));
+                                    }}>
                                     {/* Never a bare "Delete": e2e clicks the first button with that whole text (spec §5.9, review round 4). */}
                                     {tr("Delete billing")}
                                   </button>
                                   {/* Focus goes to the safe choice: a held Enter on Delete must never confirm the delete (review round 3). */}
-                                  <button type="button" data-plan-delete-keep="" autoFocus onClick={() => { planFocus.current = plan.id; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
+                                  <button type="button" data-plan-delete-keep="" autoFocus onClick={() => { planFocus.current = [`[data-plan-delete="${CSS.escape(plan.id)}"]`]; setConfirmPlan(null); }} className={ghostButton}>{tr("Keep")}</button>
                                 </span>
                               ) : (
                                 <button type="button" data-plan-delete={plan.id} className={`${ghostButton} hover:text-[#a8321d]`} onClick={() => setConfirmPlan(plan.id)}>{tr("Delete monthly billing")}</button>
@@ -1170,7 +1180,7 @@ function Workspace() {
               )}
               <div className="flex items-center justify-between gap-3">
                 <p className="text-[13px] text-muted">{tr(clients.length === 1 ? "{n} client" : "{n} clients", { n: clients.length })}</p>
-                {!readOnly && <button type="button" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>}
+                {!readOnly && <button type="button" data-add-client="" onClick={() => setSheet({ kind: "client" })} className={secondaryButton}>{tr("+ Add client")}</button>}
               </div>
               {clients.length === 0 ? (
                 <p className={`${card} p-10 text-center text-sm text-muted`}>{tr("Clients are added automatically when you create an invoice.")}</p>

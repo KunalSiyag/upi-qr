@@ -268,6 +268,9 @@ try {
   check("payment line shows ₹ credited", /US\$1,200\.50 · BANK[\s\S]*WISE-8811 · ₹99,840 credited/.test(await text()), (await text()).slice(0, 1500));
   await tab("Overview");
   check("INR earned this month", /INR earned this month: ₹99,840/.test(await text()));
+  // Review round 5 (§5.6): a fully paid currency leaves no "US$0.00 to collect" line behind.
+  const abroadPaid = await b.eval(`document.querySelector('[aria-label="Clients abroad"]')?.innerText ?? null`);
+  check("Clients abroad: a fully paid currency has no 'to collect' line", abroadPaid !== null && !/US\$|to collect/.test(abroadPaid), abroadPaid);
 
   // Reminder of an overdue USD invoice: bank block (USD override), export line, no UPI; the number as typed.
   await t(`__t.click(/^\\+ New invoice$/)`); await opened();
@@ -409,8 +412,12 @@ try {
     await sleep(100);
     await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete]').click(), true`);
     await sleep(100);
-    await b.eval(`${planRow("Plan Only Co")}.querySelector('[data-plan-delete-confirm]').click(), true`);
+    await t(`__t.btn(/^Delete billing$/, ${planRow("Plan Only Co")}).focus(), true`);
+    await enter("keyDown"); await enter("keyUp");
     await sleep(200);
+    // Review round 5: the row unmounts, so focus moves to the next plan's first button (Globex's), never <body>.
+    const afterConfirm = await b.eval("({ tag: document.activeElement?.tagName, row: document.activeElement?.closest('[data-plan-row]')?.textContent.includes('Globex LLC') ?? false })");
+    check("the delete confirm moves focus to the next plan, not <body>", afterConfirm.tag === "BUTTON" && afterConfirm.row, JSON.stringify(afterConfirm));
     const planGone = Object.values(JSON.parse(await sidecar()).intl.recurring).filter((p) => p.amountPaise === 8000);
     check("the plan is deleted (a tombstone in the sidecar) and leaves the list", planGone.length === 1 && !!planGone[0].deletedAt && !(await b.eval(`!!${planRow("Plan Only Co")}`))
       && /Monthly billing deleted\. Existing invoices stay\./.test(await text()) && /Globex LLC · US\$300\.00/.test(await text()), JSON.stringify(planGone));
@@ -813,6 +820,43 @@ try {
   await tab("Overview");
   const chaseWide = await chaseLayout();
   check("1280px: the foreign chase row keeps the invoice number on the due line too", chaseWide?.numberShown && !chaseWide.nameHasNumber, JSON.stringify(chaseWide));
+
+  // Review round 5: a book that holds only foreign invoices, both paid with no INR credited, and one paused US$ plan.
+  // The invoice counts (sync panel, backup nudge, checklist) see its invoices; Clients abroad has nothing to show; and
+  // deleting the only plan moves focus to "+ Add client" (the Monthly billing section unmounts).
+  {
+    const T = Date.now();
+    const [issued, due, paidOn] = [await iso(-30), await iso(-15), await iso(-20)];
+    const usd = (id, number) => ({ id, number, clientId: "cli_north001", issueDate: issued, dueDate: due, amountPaise: 50000, description: "", currency: "USD", reminders: [], voided: false, createdAt: T, updatedAt: T,
+      payments: [{ id: `pay_${id.slice(4)}`, amountPaise: 50000, date: paidOn, mode: "bank", reference: "WISE-1", createdAt: T }] });
+    const plan = { id: "rec_north001", clientId: "cli_north001", amountPaise: 50000, description: "", dayOfMonth: 1, dueAfterDays: 15, startMonth: issued.slice(0, 7), endMonth: "", paused: true, currency: "USD", createdAt: T, updatedAt: T };
+    const bookJson = { version: 1, business: { name: "Northwind Studio", upiId: "north@okaxis", phone: "", gstin: "", invoicePrefix: "NW-", updatedAt: T },
+      clients: { cli_north001: { id: "cli_north001", name: "Northwind Inc", phone: "", email: "", gstin: "", createdAt: T, updatedAt: T } }, invoices: {}, recurring: {} };
+    const intl = { invoices: { inv_north001: usd("inv_north001", "NW-1"), inv_north002: usd("inv_north002", "NW-2") }, recurring: { rec_north001: plan }, clients: { cli_north001: { currency: "USD", updatedAt: T } } };
+    await b.eval(`localStorage.clear(); localStorage.setItem('proupiqr-workspace-v1', ${JSON.stringify(JSON.stringify(bookJson))});
+      localStorage.setItem('proupiqr-intl-v1:biz_primary', ${JSON.stringify(JSON.stringify({ owner: null, intl }))}); true`);
+    await b.go(BASE + "/app/", 2500);
+    await b.waitFor("/Northwind Studio/.test(document.body.innerText)", 8000);
+    await tab("Overview");
+    page = await text();
+    check("foreign-only book: the backup nudge counts its invoices", /Keep these 2 invoices safe/.test(page), page.slice(0, 600));
+    const steps = await b.eval(`(() => { const s = document.querySelector('section[aria-labelledby=getting-started-title]'); if (!s) return null;
+      const done = (label) => [...s.querySelectorAll('li')].some((li) => li.textContent === label && !li.querySelector('button'));
+      return { invoice: done("Add an invoice you're waiting on"), payment: done("Record a payment you received") }; })()`);
+    check("foreign-only book: the checklist's invoice and payment steps are done", steps?.invoice && steps.payment, JSON.stringify(steps));
+    check("all foreign invoices paid, no INR credited: no Clients abroad section", !(await b.eval("!!document.querySelector('[aria-label=\"Clients abroad\"]')")));
+    await tab("Settings");
+    check("foreign-only book: the sync panel counts its invoices", /Your 2 invoices on this device are uploaded when you sign in/.test(await text()));
+    await tab("Clients");
+    await b.eval("document.querySelector('[data-plan-delete]').click(), true");
+    await sleep(100);
+    await t(`__t.btn(/^Delete billing$/).focus(), true`);
+    const enterKey = (type) => b.send("Input.dispatchKeyEvent", { type, key: "Enter", code: "Enter", windowsVirtualKeyCode: 13, nativeVirtualKeyCode: 13, ...(type === "keyDown" ? { text: "\r" } : {}) });
+    await enterKey("keyDown"); await enterKey("keyUp");
+    await sleep(200);
+    const lastPlan = await b.eval("({ section: !!document.querySelector('section[aria-labelledby=monthly-title]'), addClient: document.activeElement?.hasAttribute('data-add-client') ?? false })");
+    check("deleting the last plan moves focus to + Add client, not <body>", !lastPlan.section && lastPlan.addClient, JSON.stringify(lastPlan));
+  }
 
   check("no console errors", b.errors.length === 0, b.errors.join(" | "));
 } catch (error) {

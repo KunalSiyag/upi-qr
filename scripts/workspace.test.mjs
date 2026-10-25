@@ -356,6 +356,41 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     assert.equal(gone.clients.cli_globex01.deletedAt, X + 5);
     assert.equal(gone.intl.clients.cli_globex01.deletedAt, X + 5);
   }
+  // Review round 5: device B deletes a US$ invoice and then its client (which tombstones the billing currency); device
+  // A's edit sheet for that invoice was open, applies B's copy and saves. The invoice comes back (withoutTombstone) and
+  // so do the client and its billing currency (reviveClient, as InvoiceSheet.submit runs it), before and after repair.
+  {
+    let A = M.setClientCurrency(M.upsertClient(emptyWorkspace(), { ...cli("cli_acme0001", "Acme Ltd"), phone: "+1 415 555 0100" }, X), "cli_acme0001", "USD", X);
+    A = M.upsertInvoice(A, invoice("inv_usd00009", "INV-0009", "cli_acme0001", 120000, { currency: "USD" }), X);
+    const B = M.deleteClient(M.deleteInvoice(A, "inv_usd00009", X + DAY), "cli_acme0001", X + DAY + 1);
+    assert.ok(B.clients.cli_acme0001.deletedAt && B.intl.clients.cli_acme0001.deletedAt, "B deleted the client and its billing currency");
+    const seen = M.repairIntl(M.mergeWorkspaces(A, B), X + 2 * DAY);
+    const sheetSave = (ws, currency, now) => {
+      const existing = M.getInvoice(ws, "inv_usd00009") ?? M.getInvoice(ws, "inv_inr00009");
+      let ws2 = M.reviveClient(ws, existing.clientId, currency, now);
+      return M.upsertInvoice(ws2, { ...M.withoutTombstone(existing), amountPaise: 150000 }, now);
+    };
+    const saved = sheetSave(seen, "USD", X + 2 * DAY);
+    assert.ok(M.allLiveInvoices(saved).some((i) => i.id === "inv_usd00009"), "the invoice is back");
+    assert.ok(M.liveClients(saved).some((c) => c.id === "cli_acme0001"), "its client is back right after Save");
+    assert.equal(M.clientCurrency(saved, "cli_acme0001"), "USD", "…billed in USD");
+    for (const merged of [M.mergeWorkspaces(B, saved), M.mergeWorkspaces(saved, B)]) {
+      const server = M.pruneTombstones(M.repairIntl(merged, X + 3 * DAY), X + 3 * DAY);
+      assert.ok(!server.clients.cli_acme0001.deletedAt && M.clientCurrency(server, "cli_acme0001") === "USD", "after merge, repair and prune: live and USD");
+      assert.equal(M.canonicalJson(M.repairIntl(server, X + 3 * DAY)), M.canonicalJson(server), "repair changes nothing more");
+    }
+    // A live client, or an INR invoice: nothing to revive / no currency written.
+    assert.equal(M.reviveClient(A, "cli_acme0001", "EUR", X + 1), A, "a live client: unchanged");
+    assert.equal(M.reviveClient(A, "cli_nobody01", "USD", X + 1), A, "no client: unchanged");
+    let I = M.upsertClient(emptyWorkspace(), cli("cli_inr00009", "Rohan"), X);
+    I = M.upsertInvoice(I, invoice("inv_inr00009", "INV-0010", "cli_inr00009", 50000), X);
+    const IB = M.deleteClient(M.deleteInvoice(I, "inv_inr00009", X + DAY), "cli_inr00009", X + DAY + 1);
+    const inrSaved = sheetSave(M.mergeWorkspaces(I, IB), "INR", X + 2 * DAY);
+    assert.ok(!inrSaved.clients.cli_inr00009.deletedAt && inrSaved.intl === undefined, "an INR edit brings its client back and writes no intl");
+    // A client an older tab deleted (its billing currency entry still live, EUR): the revival keeps that currency.
+    const old = M.upsertClient(M.setClientCurrency(A, "cli_acme0001", "EUR", X + 1), { ...A.clients.cli_acme0001, deletedAt: X + 2 }, X + 2);
+    assert.equal(M.clientCurrency(M.reviveClient(old, "cli_acme0001", "USD", X + 3), "cli_acme0001"), "EUR");
+  }
   // Review round 3: a client whose only foreign record is a plan (a US$ retainer starting next month, no invoice yet).
   {
     const TP = Date.UTC(2026, 9, 20);
