@@ -543,6 +543,34 @@ try {
     check("…and nothing is revived or edited", tomb3.filter((i) => !i.deletedAt).map((i) => `${i.currency} ${i.amountPaise} ${i.description}`).join() === "EUR 8000 ", JSON.stringify(tomb3.map((i) => [i.currency, i.deletedAt, i.description])));
     await esc(); await closed();
 
+    // Review round 6: a currency change clears the prefilled amount and says so (also to screen readers); switching
+    // back to the invoice's own currency brings the amount back.
+    await t(`__t.click(/^\\+ New invoice$/)`); await opened();
+    await t(`__t.set('ws-client', 'Tomb Rupee Kumar'), __t.set('ws-currency', 'INR'), __t.set('ws-amount', '5000'), __t.set('ws-number', 'TOMB-4'), __t.set('ws-due', '${await iso(20)}'), __t.click(/^Add invoice$/, __t.dialog())`);
+    await closed();
+    const tomb4 = Object.values(JSON.parse(await book()).invoices).find((i) => i.number === "TOMB-4")?.id;
+    await openRow("TOMB-4");
+    await t(`__t.click(/^Edit$/)`); await opened();
+    const hint = () => b.eval("document.getElementById('ws-amount-hint')?.innerText.trim() ?? null");
+    check("no amount hint before a currency change", (await hint()) === "" && (await b.eval("document.getElementById('ws-amount').getAttribute('aria-describedby')")) === "ws-amount-hint"
+      && (await b.eval("document.getElementById('ws-amount-hint').getAttribute('aria-live')")) === "polite");
+    await t(`__t.set('ws-currency', 'USD')`);
+    check("a new currency clears the amount, with a hint", (await value("ws-amount")) === "" && (await hint()) === "Enter the amount in USD.");
+    await t(`__t.set('ws-currency', 'INR')`);
+    check("switching back restores the amount, and the hint goes", (await value("ws-amount")) === "5000.00" && (await hint()) === "" && /Amount \(₹\)/.test(await dialogText()));
+    // A payment recorded in another tab after a new currency was picked: the picker goes back to ₹ with the amount,
+    // locked, and the other edits still save.
+    await t(`__t.set('ws-currency', 'EUR')`);
+    await otherTabWrite("proupiqr-workspace-v1", `(raw) => { const v = JSON.parse(raw); const i = v.invoices['${tomb4}']; const now = Date.now();
+      i.payments.push({ id: 'pay_e2etab0001', amountPaise: 100000, date: '${await iso(0)}', mode: 'upi', reference: '', createdAt: now }); i.updatedAt = now; return JSON.stringify(v); }`);
+    await sleep(400);
+    check("a payment from another tab puts the currency back, locked", (await value("ws-currency")) === "INR" && (await b.eval("document.getElementById('ws-currency').disabled"))
+      && (await value("ws-amount")) === "5000.00" && /Currency can't be changed after a payment is recorded\./.test(await dialogText()));
+    await t(`__t.set('ws-desc', 'saved after the payment'), __t.click(/^Save changes$/, __t.dialog())`);
+    await closed();
+    const saved4 = JSON.parse(await book()).invoices[tomb4];
+    check("…and the other edits save, with the payment", saved4 && !saved4.deletedAt && saved4.description === "saved after the payment" && saved4.payments.length === 1 && saved4.amountPaise === 500000, JSON.stringify(saved4));
+
     // The double-billing notes (review round 5): a ₹ invoice a stale tab paid next to its US$ copy (both show "also
     // exists in another currency", and not the number note), and a plan month a stale copy billed after a currency
     // change (only that month shows "billed twice"). Records built with the model, written as another tab would.

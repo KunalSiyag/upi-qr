@@ -585,6 +585,7 @@ export const WS_HI: Record<string, string> = {
   "Enter the IBAN or account number (4 to 34 letters and digits).": "IBAN या खाता नंबर डालें (4 से 34 अक्षर और अंक)।",
   "Some details need fixing. See the messages above.": "कुछ जानकारी ठीक करनी है। ऊपर के संदेश देखें।",
   "This invoice was changed to {currency} in another tab or device, so these changes weren't saved. Close this and edit it again.": "इस इनवॉइस की मुद्रा किसी दूसरे टैब या डिवाइस में {currency} कर दी गई है, इसलिए ये बदलाव सेव नहीं हुए। इसे बंद करके फिर से बदलें।",
-  "This month is billed twice: a plan linked to this one by a currency change bills it too. Delete one of the two.": "यह महीना दो बार बिल हुआ है: करेंसी बदलने से जुड़ा एक और प्लान भी इसे बिल करता है। दोनों में से एक डिलीट करें।",
-  "This invoice also exists in another currency after a currency change. Keep one and delete the other.": "करेंसी बदलने के बाद यह इनवॉइस दूसरी करेंसी में भी मौजूद है। एक रखें और दूसरा डिलीट करें।",
+  "This month is billed twice: a plan linked to this one by a currency change bills it too. Delete one of the two.": "यह महीना दो बार बिल हुआ है: मुद्रा बदलने से जुड़ा एक और प्लान भी इसे बिल करता है। दोनों में से एक डिलीट करें।",
+  "This invoice also exists in another currency after a currency change. Keep one and delete the other.": "मुद्रा बदलने के बाद यह इनवॉइस दूसरी मुद्रा में भी मौजूद है। एक रखें और दूसरा डिलीट करें।",
+  "Enter the amount in {currency}.": "राशि {currency} में डालें।",
 };

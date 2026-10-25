@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   addDays, addPayment, allLiveInvoices, clientCurrency, currencyOf, findClient, getInvoice, internationalDigits, intlPayable, isIsoDate, liveClients, logReminder, newId,
   movedCopyOf, nextInvoiceNumber, parseRupeesToPaise, PAYMENT_MODES, recurringInvoiceId, reminderMessage, replaceInvoiceCurrency, setClientCurrency,
@@ -75,6 +75,18 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
   const showPicker = INTL_UI && intlPickers(ws);
   const lockedByPayment = Boolean(existing?.payments.length);
   const lockedByPlan = Boolean(existing?.recurringId);
+  const ownCurrency = existing ? currencyOf(existing) : undefined;
+  const ownAmount = existing ? minorToDecimal(existing.amountPaise) : "";
+  // A payment recorded in another tab or device while a new currency was picked here: the currency can't change any
+  // more, so the picker goes back to the invoice's own (with its amount, unless one was typed) and the other edits
+  // can still be saved (review round 6).
+  useEffect(() => {
+    if (!ownCurrency || !(lockedByPayment || lockedByPlan) || currency === ownCurrency) return;
+    setCurrency(ownCurrency);
+    if (!amountTyped) setAmount(ownAmount);
+  }, [lockedByPayment, lockedByPlan, ownCurrency, currency, amountTyped, ownAmount]);
+  // The amount was cleared for a new currency: say so, next to the field and to screen readers.
+  const reenterAmount = Boolean(ownCurrency && currency !== ownCurrency && !amountTyped && !amount.trim());
   // A client with an Indian GSTIN is not an export recipient: no export choice for them (§5.3, §6).
   const matched = clients.find((c) => c.name.trim().toLowerCase() === clientName.trim().toLowerCase());
   const showExport = foreign && settings?.exportUnderLut === true && !matched?.gstin.trim();
@@ -172,6 +184,7 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
       if (currencyOf(existing) !== currency) {
         const moved = replaceInvoiceCurrency(ws2, existing.id, currency, now, (copy) => money({ ...copy, ...edits }));
         if (moved) onSave(moved.ws, moved.id);
+        else setErrors({ form: tr("Currency can't be changed after a payment is recorded.") });
         return;
       }
       const base = withoutTombstone(getInvoice(ws2, existing.id) ?? existing);
@@ -205,24 +218,34 @@ export function InvoiceSheet({ ws, today, invoiceId, onSave, onClose }: {
             <input id="ws-phone" className={inputClass} value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="tel" autoComplete="off" maxLength={20} placeholder={foreign ? "+1 415 555 0100" : "98765 43210"} />
           </Field>
           {showPicker ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
-              <Field label={foreign ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-amount" error={errors.amount}>
-                <input id="ws-amount" className={inputClass} value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTyped(true); }} inputMode="decimal" placeholder={foreign ? "1,200.50" : "1500"} />
-              </Field>
-              <Field label={tr("Currency")} htmlFor="ws-currency">
-                <select id="ws-currency" className={inputClass} value={currency} disabled={lockedByPayment || lockedByPlan}
-                  onChange={(e) => {
-                    setCurrency(e.target.value as CurrencyCode);
-                    setCurrencyTouched(true);
-                    // An existing invoice's amount is in its old currency (₹90,000 is not US$90,000): enter it again.
-                    if (existing && !amountTyped) setAmount("");
-                  }}>
-                  {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
-                </select>
-              </Field>
-              {(lockedByPayment || lockedByPlan) && (
-                <p className="col-span-2 -mt-1 text-xs leading-5 text-muted">
-                  {lockedByPayment ? tr("Currency can't be changed after a payment is recorded.") : tr("This invoice comes from a monthly plan. Change the plan's currency instead.")}
+            <div>
+              <div className="grid grid-cols-[minmax(0,1fr)_7.5rem] gap-2">
+                <Field label={foreign ? tr("Amount ({currency})", { currency }) : tr("Amount (₹)")} htmlFor="ws-amount" error={errors.amount}>
+                  <input id="ws-amount" className={inputClass} value={amount} onChange={(e) => { setAmount(e.target.value); setAmountTyped(true); }} inputMode="decimal" placeholder={foreign ? "1,200.50" : "1500"}
+                    aria-describedby={existing ? "ws-amount-hint" : undefined} />
+                </Field>
+                <Field label={tr("Currency")} htmlFor="ws-currency">
+                  <select id="ws-currency" className={inputClass} value={currency} disabled={lockedByPayment || lockedByPlan}
+                    onChange={(e) => {
+                      setCurrency(e.target.value as CurrencyCode);
+                      setCurrencyTouched(true);
+                      // An existing invoice's amount is in its own currency (₹90,000 is not US$90,000): enter it again,
+                      // or get it back on switching back to that currency.
+                      if (existing && !amountTyped) setAmount(e.target.value === ownCurrency ? ownAmount : "");
+                    }}>
+                    {CURRENCIES.map((c) => <option key={c} value={c}>{CURRENCY_OPTION[c]}</option>)}
+                  </select>
+                </Field>
+                {(lockedByPayment || lockedByPlan) && (
+                  <p className="col-span-2 -mt-1 text-xs leading-5 text-muted">
+                    {lockedByPayment ? tr("Currency can't be changed after a payment is recorded.") : tr("This invoice comes from a monthly plan. Change the plan's currency instead.")}
+                  </p>
+                )}
+              </div>
+              {/* Always in the page (empty until needed), so screen readers announce the text when it appears. */}
+              {existing && (
+                <p id="ws-amount-hint" aria-live="polite" className="text-xs leading-5 text-muted">
+                  {reenterAmount && <span className="mt-1 block">{tr("Enter the amount in {currency}.", { currency })}</span>}
                 </p>
               )}
             </div>

@@ -891,6 +891,16 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.equal(re.id, moved.id);
       assert.equal(M.getInvoice(re.ws, moved.id).payments.length, 1, "the copy's payment stays");
       assert.ok(M.getInvoice(re.ws, "inv_usd00001").deletedAt);
+      // Review round 6: moving the old one again (Edit on it, next to its live copy) puts the sheet's edits on the live
+      // copy, at now; an edit that changes nothing leaves the copy as it is.
+      {
+        const edited = M.replaceInvoiceCurrency(reminded, "inv_usd00001", "EUR", X + 90, (copy) => ({ ...copy, description: "Edited" }));
+        assert.equal(edited.id, moved.id);
+        assert.deepEqual([M.getInvoice(edited.ws, moved.id).description, M.getInvoice(edited.ws, moved.id).updatedAt], ["Edited", X + 90], "the edit reaches the live copy");
+        assert.ok(M.getInvoice(edited.ws, "inv_usd00001").deletedAt);
+        const same = M.replaceInvoiceCurrency(reminded, "inv_usd00001", "EUR", X + 90, (copy) => ({ ...copy }));
+        assert.equal(M.getInvoice(same.ws, moved.id), M.getInvoice(reminded, moved.id), "an edit that changes nothing doesn't rewrite it");
+      }
       assert.equal(M.invoicesMovedTwice(W).size, 0, "nothing moved, nothing flagged");
 
       // Review round 5. A void recorded on the old id by a stale copy is kept, like a payment: both stay, both flagged.
@@ -929,19 +939,55 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
         assert.ok(!M.repairIntl(allGone, X + 61).invoices.inv_inr00001.deletedAt, "…and left alone once the € copy was deleted");
       }
       // Two devices make the same move; one records the client's payment on the copy before the other's move syncs.
-      // The copy is written at a time derived from the old invoice, so the later move never overwrites the payment.
+      // The bare copy is written at a time derived from the old invoice, so the same move again never overwrites it.
       {
         const sheetMove = (book, now, amount) => M.replaceInvoiceCurrency(book, "inv_inr00001", "USD", now, (copy) => ({ ...copy, amountPaise: amount, description: "Design" }));
-        const x = sheetMove(W, X + 100, 100_000);
-        assert.equal(M.getInvoice(x.ws, x.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 1, "the copy's time comes from the old invoice");
-        assert.deepEqual([M.getInvoice(x.ws, x.id).amountPaise, M.getInvoice(x.ws, x.id).currency, M.getInvoice(x.ws, x.id).description], [100_000, "USD", "Design"], "the edit is in the copy");
-        const paidX = M.addPayment(x.ws, x.id, { amountPaise: 100_000, date: "2026-10-20", mode: "bank", reference: "FIRA-778", inrCreditedPaise: 8_350_000 }, X + 200);
-        const y = sheetMove(W, X + 300, 100_000);
-        assert.equal(y.id, x.id);
+        const bare = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100);
+        assert.equal(M.getInvoice(bare.ws, bare.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 1, "the bare copy's time comes from the old invoice");
+        const paidX = M.addPayment(bare.ws, bare.id, { amountPaise: 100_000, date: "2026-10-20", mode: "bank", reference: "FIRA-778", inrCreditedPaise: 8_350_000 }, X + 200);
+        const y = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 300);
+        assert.equal(y.id, bare.id);
         for (const merged of [M.mergeWorkspaces(paidX, y.ws), M.mergeWorkspaces(y.ws, paidX)]) {
-          const copy = M.getInvoice(M.repairIntl(merged, X + 400), x.id);
+          const copy = M.getInvoice(M.repairIntl(merged, X + 400), bare.id);
           assert.deepEqual([copy.payments.length, copy.payments[0]?.inrCreditedPaise, Boolean(copy.deletedAt)], [1, 8_350_000, false], "the payment and its INR credited survive");
         }
+        // Review round 6: the sheet's edits are an ordinary edit at `now`, so a later amount typed on another device
+        // wins as any later edit does, even over a reminder logged in between on the first device.
+        const x = sheetMove(W, X + 100, 110_000);
+        assert.deepEqual([M.getInvoice(x.ws, x.id).updatedAt, M.getInvoice(x.ws, x.id).amountPaise, M.getInvoice(x.ws, x.id).description], [X + 100, 110_000, "Design"], "the edit is in the copy, at now");
+        const reminded = M.logReminder(x.ws, x.id, "whatsapp", X + 105);
+        const later = sheetMove(W, X + 200, 120_000);
+        for (const merged of [M.mergeWorkspaces(reminded, later.ws), M.mergeWorkspaces(later.ws, reminded)]) {
+          assert.equal(M.getInvoice(M.repairIntl(merged, X + 300), x.id).amountPaise, 120_000, "the later amount survives");
+        }
+        assert.equal(M.getInvoice(sheetMove(W, X - 50, 110_000).ws, x.id).updatedAt, W.invoices.inv_inr00001.updatedAt + 2, "an edit is never older than the bare copy");
+        // An edit that changes nothing leaves the bare copy at its derived time.
+        assert.equal(M.getInvoice(M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100, (copy) => ({ ...copy })).ws, x.id).updatedAt, X + 1);
+      }
+      // Review round 6: two devices move one US$ invoice to ₹ offline, each typing its own amount. The ₹ copy lives in
+      // the legacy map, whose merge breaks ties by argument order (the server and the client merge in opposite orders),
+      // so the copies must never tie: through the real sync and the client's merge, in both push orders, every copy
+      // ends with the same bytes.
+      {
+        const { memoryCloudStore, syncWorkspace } = await import("../src/lib/workspace/cloud.ts");
+        const toInr = (now, amount) => M.replaceInvoiceCurrency(W, "inv_usd00001", "INR", now, (copy) => ({ ...copy, amountPaise: amount })).ws;
+        for (const first of ["a", "b"]) {
+          const store = memoryCloudStore();
+          await syncWorkspace(store, "ws:doc:o", W, X + 10);
+          const devices = { a: toInr(X + 1_000, 8_000_000), b: toInr(X + 2_000, 8_500_000) };
+          const order = first === "a" ? ["a", "b", "a", "b"] : ["b", "a", "b", "a"];
+          for (const [i, d] of order.entries()) {
+            const reply = await syncWorkspace(store, "ws:doc:o", devices[d], X + 3_000 + i);
+            devices[d] = M.repairIntl(M.mergeWorkspaces(devices[d], reply.workspace), X + 3_000 + i);
+          }
+          const server = M.canonicalJson((await syncWorkspace(store, "ws:doc:o", devices.a, X + 4_000)).workspace);
+          assert.equal(M.canonicalJson(devices.a), server, `${first} first: device A converged`);
+          assert.equal(M.canonicalJson(devices.b), server, `${first} first: device B converged`);
+          assert.equal(M.sanitizeWorkspace(JSON.parse(server)).invoices[M.replacementInvoiceId("inv_usd00001", "INR")].amountPaise, 8_500_000, "the later amount");
+        }
+      }
+      {
+        const x = M.replaceInvoiceCurrency(W, "inv_inr00001", "USD", X + 100, (copy) => ({ ...copy, amountPaise: 100_000, description: "Design" }));
         // The edit can't change the copy's id or currency.
         const forced = M.replaceInvoiceCurrency(W, "inv_inr00001", "EUR", X + 100, (copy) => ({ ...copy, id: "inv_other", currency: "GBP" }));
         assert.deepEqual([forced.id, M.getInvoice(forced.ws, forced.id).currency, M.getInvoice(forced.ws, "inv_other")], [M.replacementInvoiceId("inv_inr00001", "EUR"), "EUR", undefined]);
@@ -988,6 +1034,15 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
       assert.ok(!M.generateRecurring(later, day, X + 24 + days * DAY).created.includes(recurringInvoiceId(plan.id, "2026-10")), `not billed again after ${days} days`);
     }
     assert.equal(M.getInvoice(M.pruneTombstones(tomb, X + 23 + 500 * DAY), recurringInvoiceId(plan.id, "2026-10")), undefined, "pruned once the month is past the backfill window");
+    // Review round 6: exactly at the window's edge. In September and October 2027 (October 2026 is 11 and 12 months
+    // back) the month can still be billed somewhere in the world, so the tombstone stays; in November it can't.
+    for (const at of ["2027-09-20", "2027-10-20", "2027-11-20"]) {
+      const t = Date.parse(`${at}T12:00:00Z`);
+      const later = M.pruneTombstones(tomb, t);
+      const kept = Boolean(M.getInvoice(later, recurringInvoiceId(plan.id, "2026-10"))?.deletedAt);
+      assert.equal(kept, at !== "2027-11-20", `${at}: the tombstone ${at === "2027-11-20" ? "is pruned" : "stays"}`);
+      assert.ok(!M.generateRecurring(later, at, t).created.includes(recurringInvoiceId(plan.id, "2026-10")), `${at}: never billed again`);
+    }
     assert.equal(M.replaceInvoiceCurrency(g.ws, recurringInvoiceId(plan.id, "2026-10"), "EUR", X + 25), null, "a plan month can't change currency");
     // A plan's currency change ends the old plan after its last month and starts a new one; nothing regenerates.
     // The amount is given in the new currency: a plan's minor units never carry across currencies.
@@ -2128,6 +2183,72 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     const stoppedNow = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-10" }, X + 57);
     assert.equal(M.planCanChangeCurrency(stoppedNow, M.getPlan(stoppedNow, "rec_plan0001")), false, "stopped after its last created month");
     assert.equal(M.planCanChangeCurrency(w, M.getPlan(w, "rec_plan0001")), true);
+    // Review round 6: the boundary. Months to October; ending in November leaves one to bill, ending in October none.
+    const untilNov = M.upsertPlan(w, { ...M.getPlan(w, "rec_plan0001"), endMonth: "2026-11" }, X + 58);
+    assert.equal(M.planCanChangeCurrency(untilNov, M.getPlan(untilNov, "rec_plan0001")), true, "one month left");
+
+    // Review round 6: a stray month is flagged as soon as it exists, while the plan that covers it hasn't billed it
+    // yet (it will): device A changed the plan to US$ in October, and a pre-intl copy billed ₹ November first.
+    {
+      const a = M.replacePlanCurrency(w, "rec_plan0001", "USD", X + 60, 60_000).ws;
+      const bNov = legacy.generateRecurring(legacy.sanitizeWorkspace(JSON.parse(JSON.stringify(w))), "2026-11-06", X + 61).ws;
+      const early = M.repairIntl(M.mergeWorkspaces(a, bNov), X + 62);
+      assert.equal(M.getInvoice(early, M.recurringInvoiceId(M.replacementPlanId("rec_plan0001", "USD"), "2026-11")), undefined, "(US$ November not billed yet)");
+      assert.deepEqual([...M.monthsBilledTwice(early)], [M.recurringInvoiceId("rec_plan0001", "2026-11")], "flagged before its sibling exists");
+    }
+
+    // Review round 6: a month a family note asked to delete stays deleted after its tombstone would have aged out.
+    {
+      const rid = M.recurringInvoiceId;
+      const at = (iso) => Date.parse(`${iso}T12:00:00Z`);
+      const usdPlan = { id: "rec_usdfam01", clientId: "cli_plan0001", amountPaise: 120_000, description: "Retainer", dayOfMonth: 5, dueAfterDays: 15, startMonth: "2026-08", endMonth: "", paused: false, currency: "USD", createdAt: X, updatedAt: X };
+      const u = M.generateRecurring(M.upsertPlan(w, usdPlan, X), "2026-10-10", at("2026-10-10")).ws;
+      const later = (book, deleted, iso) => {
+        const t = at(iso);
+        return M.generateRecurring(M.pruneTombstones(M.repairIntl(book, t), t), iso, t).ws;
+      };
+      // ₹ side: device A changed the US$ plan to ₹ (R starts November); device B, stale, billed US$ November and the
+      // client paid it. R's ₹ November (legacy map) is the month to delete.
+      {
+        const A = M.replacePlanCurrency(u, "rec_usdfam01", "INR", at("2026-10-11"), 10_000_000);
+        let B = M.generateRecurring(u, "2026-11-06", at("2026-11-06")).ws;
+        B = M.addPayment(B, rid("rec_usdfam01", "2026-11"), { amountPaise: 120_000, date: "2026-11-08", mode: "bank", reference: "" }, at("2026-11-08"));
+        let book = M.generateRecurring(M.repairIntl(M.mergeWorkspaces(A.ws, B), at("2026-11-09")), "2026-11-09", at("2026-11-09")).ws;
+        assert.deepEqual([...M.monthsBilledTwice(book)], [rid(A.id, "2026-11")], "(the unpaid ₹ month is flagged)");
+        book = M.deleteInvoice(book, rid(A.id, "2026-11"), at("2026-11-10"));
+        for (const iso of ["2027-02-15", "2027-06-15", "2027-10-15"]) {
+          const next = later(book, rid(A.id, "2026-11"), iso);
+          assert.ok(M.getInvoice(next, rid(A.id, "2026-11"))?.deletedAt, `${iso}: ₹ November stays deleted`);
+          assert.equal(M.monthsBilledTwice(next).size, 0, `${iso}: nothing flagged again`);
+        }
+      }
+      // Foreign side, ended plan: device B changed the plan to ₹ in October, billed ₹ November and the client paid it;
+      // device A billed US$ November and then made the same change, later, so the old plan ends in November. US$
+      // November is in the ended plan's own range; once today is more than a year past it, it must still not return.
+      {
+        let B = M.replacePlanCurrency(u, "rec_usdfam01", "INR", at("2026-10-11"), 10_000_000).ws;
+        B = M.generateRecurring(B, "2026-11-06", at("2026-11-06")).ws;
+        const R = M.replacementPlanId("rec_usdfam01", "INR");
+        B = M.addPayment(B, rid(R, "2026-11"), { amountPaise: 10_000_000, date: "2026-11-08", mode: "upi", reference: "" }, at("2026-11-08"));
+        const A = M.replacePlanCurrency(M.generateRecurring(u, "2026-11-06", at("2026-11-06")).ws, "rec_usdfam01", "INR", at("2026-11-20"), 10_000_000).ws;
+        let book = M.repairIntl(M.mergeWorkspaces(A, B), at("2026-11-21"));
+        assert.equal(M.planEnd(book, M.getPlan(book, "rec_usdfam01")), "2026-11", "(the later change wins: the old plan ends in November)");
+        assert.deepEqual([...M.monthsBilledTwice(book)], [rid("rec_usdfam01", "2026-11")], "(US$ November is flagged)");
+        book = M.deleteInvoice(book, rid("rec_usdfam01", "2026-11"), at("2026-11-22"));
+        for (const iso of ["2027-11-15", "2027-12-15", "2028-06-15"]) {
+          const next = later(book, rid("rec_usdfam01", "2026-11"), iso);
+          assert.ok(M.getInvoice(next, rid("rec_usdfam01", "2026-11"))?.deletedAt, `${iso}: US$ November stays deleted`);
+          assert.equal(M.monthsBilledTwice(next).size, 0, `${iso}: nothing flagged again`);
+        }
+      }
+      // An INR plan no currency change touched keeps the deployed 90-day rule in the legacy map, byte for byte.
+      {
+        const plain = M.deleteInvoice(u, rid("rec_plan0001", "2026-09"), at("2026-10-12"));
+        const t = at("2027-01-20");
+        assert.equal(M.pruneTombstones(plain, t).invoices[rid("rec_plan0001", "2026-09")], undefined, "pruned after 90 days");
+        assert.equal(M.canonicalJson(M.withoutIntl(M.pruneTombstones(plain, t))), M.canonicalJson(legacy.pruneTombstones(M.withoutIntl(plain), t)));
+      }
+    }
   }
 
   // An edit saved after another tab deleted the record while the sheet was open brings it back with the edits (as
@@ -2146,6 +2267,35 @@ assert.equal(canonicalJson(mergeWorkspaces(deviceA, deviceB)), canonicalJson(mer
     }
     const live = M.getInvoice(w, "inv_tomb0001");
     assert.equal(M.withoutTombstone(live), live, "a live record is returned as is");
+  }
+
+  // Review round 6: move detection stays cheap for an INR-heavy book that turned on clients abroad. repairIntl and
+  // invoicesMovedTwice run on every load, merge, sync and edit; with 5,000 ₹ invoices they cost ~16x a merge of the same
+  // book before the derived ids were cached (40 ms), ~2x after. Best of 7 against a merge timed alike, so a busy
+  // machine slows both.
+  {
+    const invoices = {};
+    for (let i = 0; i < 5000; i++) {
+      const id = `inv_perf${String(i).padStart(8, "0")}`;
+      invoices[id] = { id, number: `INV-${i}`, clientId: "cli_perf0001", issueDate: "2026-09-01", dueDate: "2026-09-15", amountPaise: 100000, description: "", payments: [], reminders: [], voided: false, createdAt: X, updatedAt: X };
+    }
+    const inr = { ...M.upsertClient(M.emptyWorkspace(), { ...client, id: "cli_perf0001" }, X), invoices };
+    const book = { ...inr, intl: { settings: { ...M.emptyIntlSettings(X), on: true }, invoices: {}, recurring: {}, clients: {} } };
+    const best = (fn) => {
+      fn();
+      let fastest = Infinity;
+      for (let k = 0; k < 7; k++) {
+        const t0 = performance.now();
+        fn();
+        fastest = Math.min(fastest, performance.now() - t0);
+      }
+      return fastest;
+    };
+    const merge = best(() => M.mergeWorkspaces(inr, inr));
+    for (const [name, fn] of [["repairIntl", () => M.repairIntl(book, X)], ["invoicesMovedTwice", () => M.invoicesMovedTwice(book)]]) {
+      const ms = best(fn);
+      assert.ok(ms < 5 * merge + 1, `${name}: ${ms.toFixed(2)} ms for 5,000 invoices (a merge takes ${merge.toFixed(2)} ms)`);
+    }
   }
 
   // WhatsApp and SMS dial the same number for a client abroad: the bracketed trunk prefix is dropped for both.

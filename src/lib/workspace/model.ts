@@ -931,19 +931,31 @@ export function pruneTombstones(ws: Workspace, now: number, maxAgeDays = 90): Wo
     recurring: Object.fromEntries(Object.entries(ws.recurring).filter(([, r]) => keep(r))),
   };
   if (!ws.intl) return pruned;
-  // A foreign plan month's tombstone stays while generateRecurring could still bill that month (the newest
-  // MAX_BACKFILL_MONTHS, one more for time zones): a month the user deleted, as monthsBilledTwice asks after a
-  // currency change, would otherwise come back as a new unpaid invoice (review round 5). The legacy maps keep the
-  // deployed rule, byte for byte (§1.8); old code prunes them the same way.
-  const oldest = monthIndex(new Date(now).toISOString().slice(0, 7)) - MAX_BACKFILL_MONTHS;
-  const billable = (invoice: Invoice) => {
-    const month = /M(\d{4})(\d{2})$/.exec(invoice.id);
-    return Boolean(invoice.recurringId && month && Number(month[1]) * 12 + Number(month[2]) - 1 >= oldest);
+  // A plan month's tombstone stays while generateRecurring could still bill that month: a month the user deleted, as
+  // monthsBilledTwice asks after a currency change, would otherwise come back as a new unpaid invoice with a new number
+  // (review rounds 5 and 6). generateRecurring bills a live plan's newest MAX_BACKFILL_MONTHS up to today or the
+  // plan's end, whichever is earlier (one month more here for time zones), so that window is measured from the
+  // plan's own last month: an ended plan (every plan a currency change replaced) keeps its window. A deleted or pruned
+  // plan bills nothing, and its months fall back to today's window. Foreign plan months always; INR plan months only
+  // when their plan is in a currency-change family, so an INR month a family note asked to delete stays deleted too.
+  // Every other legacy record keeps the deployed rule, byte for byte (§1.8): old code prunes them the same way.
+  const nowIndex = monthIndex(new Date(now).toISOString().slice(0, 7));
+  const plans = [...Object.values(ws.recurring), ...Object.values(ws.intl.recurring)];
+  const families = changeFamilies(plans, (id) => getPlan(ws, id), "replaces", (from, to) => from.clientId === to.clientId);
+  const billable = (invoice: Invoice, legacy: boolean) => {
+    if (!invoice.recurringId || (legacy && !families.has(invoice.recurringId))) return false;
+    const plan = getPlan(ws, invoice.recurringId);
+    const month = plan ? planMonthOf(plan, invoice) : (/M(\d{4})(\d{2})$/.exec(invoice.id)?.slice(1).join("-") ?? "");
+    if (!month) return false;
+    const end = plan && !plan.deletedAt ? planEnd(ws, plan) : "";
+    const last = end ? Math.min(nowIndex, monthIndex(end)) : nowIndex;
+    return monthIndex(month) >= last - MAX_BACKFILL_MONTHS;
   };
+  if (families.size) pruned.invoices = Object.fromEntries(Object.entries(ws.invoices).filter(([, i]) => keep(i) || billable(i, true)));
   // Pruning the last foreign tombstone returns the exact INR-only bytes.
   return withIntl(pruned, {
     ...(ws.intl.settings ? { settings: ws.intl.settings } : {}),
-    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i) || billable(i))),
+    invoices: Object.fromEntries(Object.entries(ws.intl.invoices).filter(([, i]) => keep(i) || billable(i, false))),
     recurring: Object.fromEntries(Object.entries(ws.intl.recurring).filter(([, r]) => keep(r))),
     clients: Object.fromEntries(Object.entries(ws.intl.clients).filter(([, c]) => keep(c))),
   });
@@ -1219,20 +1231,67 @@ function planMonthOf(plan: RecurringPlan, invoice: Invoice): string {
 const MAX_REPLACEMENT_HOPS = 16;
 const monthBefore = (month: string) => monthFromIndex(monthIndex(month) - 1);
 
-/** 20 hex characters derived from `text` (three 32-bit FNV-1a lanes, murmur3 finaliser): the same on every device and server. */
-function hashHex20(text: string): string {
+const HEX = "0123456789abcdef";
+const fnvFinal = (h: number): string => {
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
   let out = "";
-  for (const seed of [0x811c9dc5, 0x2f6b7a1d, 0x9e3779b9]) {
-    let h = seed;
-    for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 0x01000193);
-    h ^= h >>> 16;
-    h = Math.imul(h, 0x85ebca6b);
-    h ^= h >>> 13;
-    h = Math.imul(h, 0xc2b2ae35);
-    h ^= h >>> 16;
-    out += (h >>> 0).toString(16).padStart(8, "0");
+  for (let shift = 28; shift >= 0; shift -= 4) out += HEX[(h >>> shift) & 15];
+  return out;
+};
+
+/**
+ * The 20 hex characters derived from `${kind} ${id} ${currency}` for every currency, in CURRENCIES order (three 32-bit
+ * FNV-1a lanes, murmur3 finaliser): the same on every device and server. The lanes are run over the shared prefix once.
+ */
+function hashAll(kind: string, id: string, currencies: readonly string[] = CURRENCIES): string[] {
+  const prefix = `${kind} ${id} `;
+  let a = 0x811c9dc5, b = 0x2f6b7a1d, c = 0x9e3779b9;
+  for (let i = 0; i < prefix.length; i++) {
+    const k = prefix.charCodeAt(i);
+    a = Math.imul(a ^ k, 0x01000193);
+    b = Math.imul(b ^ k, 0x01000193);
+    c = Math.imul(c ^ k, 0x01000193);
   }
-  return out.slice(0, 20);
+  return currencies.map((currency) => {
+    let [x, y, z] = [a, b, c];
+    for (let i = 0; i < currency.length; i++) {
+      const k = currency.charCodeAt(i);
+      x = Math.imul(x ^ k, 0x01000193);
+      y = Math.imul(y ^ k, 0x01000193);
+      z = Math.imul(z ^ k, 0x01000193);
+    }
+    return (fnvFinal(x) + fnvFinal(y) + fnvFinal(z)).slice(0, 20);
+  });
+}
+
+/**
+ * Derived ids are pure, and repairIntl, invoicesMovedTwice and monthsBilledTwice look up every record's on each load,
+ * merge and edit, so they are kept per id (all currencies at once, the finished id strings, keyed by the record's own
+ * id string so neither lookup hashes a new string). Bounded: cleared when full (review round 6: a book with 5,000 INR
+ * invoices and a clients-abroad section paid ~40 ms per call).
+ */
+const DERIVED_CACHE_MAX = 40_000;
+const derivedCache = { moves: new Map<string, string[]>(), replaces: new Map<string, string[]>() };
+/** The ids changes of `id` to each currency create, in CURRENCIES order. */
+function derivedIds(kind: "moves" | "replaces", id: string): readonly string[] {
+  const cache = derivedCache[kind];
+  let all = cache.get(id);
+  if (!all) {
+    if (cache.size >= DERIVED_CACHE_MAX) cache.clear();
+    const prefix = kind === "moves" ? "inv_" : "rec_";
+    all = hashAll(kind, id).map((hex) => prefix + hex);
+    cache.set(id, all);
+  }
+  return all;
+}
+
+function derivedId(kind: "moves" | "replaces", id: string, currency: CurrencyCode): string {
+  const index = CURRENCIES.indexOf(currency);
+  return index >= 0 ? derivedIds(kind, id)[index] : (kind === "moves" ? "inv_" : "rec_") + hashAll(kind, id, [currency])[0];
 }
 
 /**
@@ -1242,7 +1301,7 @@ function hashHex20(text: string): string {
  * two. The target currency is part of it, so an INR and a foreign replacement never share an id across the two maps.
  */
 export function replacementPlanId(planId: string, currency: CurrencyCode): string {
-  return `rec_${hashHex20(`replaces ${planId} ${currency}`)}`;
+  return derivedId("replaces", planId, currency);
 }
 
 /** The plans currency changes of `plan` created, tombstones included (at most one per currency). Empty without intl. */
@@ -1291,13 +1350,13 @@ function planCovers(ws: Workspace, plan: RecurringPlan, month: string): boolean 
 }
 
 /**
- * Records linked by currency changes, grouped: `derive(id, currency)` is the id a change of `id` to `currency`
- * creates, so a link is read from the ids alone (no copy can rewrite it). Returns the family of every linked record
+ * Records linked by currency changes, grouped: derivedIds(kind, id) are the ids changes of `id` create (`kind`
+ * "moves" for invoices, replacementInvoiceId; "replaces" for plans, replacementPlanId), so a link is read from the ids alone (no copy can rewrite it). Returns the family of every linked record
  * (record id → a representative id of its family); a record no change touched is left out. Tombstones count, so a
  * family survives one of its records being deleted.
  */
 function changeFamilies<T extends { id: string; currency?: CurrencyCode }>(
-  records: T[], get: (id: string) => T | undefined, derive: (id: string, currency: CurrencyCode) => string, linked: (from: T, to: T) => boolean,
+  records: T[], get: (id: string) => T | undefined, kind: "moves" | "replaces", linked: (from: T, to: T) => boolean,
 ): Map<string, string> {
   const parent = new Map<string, string>();
   const find = (id: string): string => {
@@ -1307,9 +1366,11 @@ function changeFamilies<T extends { id: string; currency?: CurrencyCode }>(
     return root;
   };
   for (const record of records) {
-    for (const currency of CURRENCIES) {
+    const derived = derivedIds(kind, record.id);
+    for (let i = 0; i < CURRENCIES.length; i++) {
+      const currency = CURRENCIES[i];
       if (currency === currencyOf(record)) continue;
-      const next = get(derive(record.id, currency));
+      const next = get(derived[i]);
       if (!next || currencyOf(next) !== currency || !linked(record, next)) continue;
       if (!parent.has(record.id)) parent.set(record.id, record.id);
       if (!parent.has(next.id)) parent.set(next.id, next.id);
@@ -1407,7 +1468,7 @@ const monthAfter = (month: string) => monthFromIndex(monthIndex(month) + 1);
  * copy, and two devices making the same change make one invoice.
  */
 export function replacementInvoiceId(invoiceId: string, currency: CurrencyCode): string {
-  return `inv_${hashHex20(`moves ${invoiceId} ${currency}`)}`;
+  return derivedId("moves", invoiceId, currency);
 }
 
 /**
@@ -1415,10 +1476,13 @@ export function replacementInvoiceId(invoiceId: string, currency: CurrencyCode):
  * and fields, in `currency`; `edit` (the invoice sheet's changes) shapes the copy, never its id or currency. Only
  * while it has no payments, and never for a plan month (null): a plan month's id is recurringInvoiceId(plan, month),
  * and once its tombstone is pruned generateRecurring would bill that month again.
- * The copy is written at a time derived from the records (the old invoice's updatedAt + 1, past a deleted copy's),
- * never the clock: two devices making the same change write it at the same time, so anything one of them recorded on
- * it since (a payment, the INR credited, an edit) is newer and wins the merge (review round 5). A live copy from the
- * same change on another device is kept as it is (its payments too), never overwritten; the edit is applied to it.
+ * The bare copy is written at a time derived from the records (the old invoice's updatedAt + 1, past a deleted
+ * copy's), never the clock: two devices making the same change write the same bytes at the same time, so anything
+ * one of them recorded on it since (a payment, the INR credited) is newer and wins the merge (review round 5). The
+ * edit, when it changes the copy, is an ordinary edit at `now` (review round 6): a later amount typed on another
+ * device wins as any later edit does, and two devices' different edits never tie at one derived time (the legacy
+ * map's merge breaks ties by argument order, so an INR copy would never converge). A live copy from the same change
+ * on another device is kept as it is (its payments too), never overwritten; the edit is applied to it.
  */
 export function replaceInvoiceCurrency(
   ws: Workspace, id: string, currency: CurrencyCode, now: number, edit?: (copy: Invoice) => Invoice,
@@ -1441,7 +1505,10 @@ export function replaceInvoiceCurrency(
   // The export mark moves with a foreign copy (US$ → €: still an export under the LUT); an INR copy never has one.
   const base: Invoice = { ...rest, id: copyId, ...(isForeignCurrency(currency) && invoice.exportLut === true ? { exportLut: true } : {}) };
   const at = Math.max(invoice.updatedAt, existing?.updatedAt ?? 0) + 1;
-  return { ws: upsertInvoice(deleteInvoice(ws, id, now), pin(edit ? edit(pin(base)) : base), at), id: copyId };
+  const bare = pin(base);
+  const edited = edit ? pin(edit(bare)) : bare;
+  const changed = canonicalOf(edited) !== canonicalOf(bare);
+  return { ws: upsertInvoice(deleteInvoice(ws, id, now), edited, changed ? Math.max(now, at + 1) : at), id: copyId };
 }
 
 /**
@@ -1450,15 +1517,27 @@ export function replaceInvoiceCurrency(
  * the pair, or deleted the invoice, so nothing counts as moved (review round 5). Plan months never move.
  */
 export function movedCopyOf(ws: Workspace, invoice: Invoice): Invoice | undefined {
+  return movedCopyIn(ws, invoice, invoiceIds(ws));
+}
+
+/** Every invoice id in both maps, tombstones included: a set probe is far cheaper than two own-key lookups. */
+function invoiceIds(ws: Workspace): Set<string> {
+  return new Set(ws.intl ? [...Object.keys(ws.invoices), ...Object.keys(ws.intl.invoices)] : Object.keys(ws.invoices));
+}
+
+function movedCopyIn(ws: Workspace, invoice: Invoice, ids: Set<string>): Invoice | undefined {
   if (!ws.intl || invoice.recurringId) return undefined;
-  const seen = new Set([invoice.id]);
+  let seen: Set<string> | undefined;
   let frontier = [invoice];
   for (let hops = 0; frontier.length && hops < MAX_REPLACEMENT_HOPS; hops++) {
     const next: Invoice[] = [];
     for (const from of frontier) {
-      for (const currency of CURRENCIES) {
-        if (currency === currencyOf(from)) continue;
-        const copy = getInvoice(ws, replacementInvoiceId(from.id, currency));
+      const derived = derivedIds("moves", from.id);
+      for (let i = 0; i < CURRENCIES.length; i++) {
+        const currency = CURRENCIES[i];
+        if (!ids.has(derived[i]) || currency === currencyOf(from)) continue;
+        const copy = getInvoice(ws, derived[i]);
+        seen ??= new Set([invoice.id]);
         if (!copy || copy.recurringId || currencyOf(copy) !== currency || seen.has(copy.id)) continue;
         if (!copy.deletedAt) return copy;
         seen.add(copy.id);
@@ -1474,7 +1553,8 @@ export function movedCopyOf(ws: Workspace, invoice: Invoice): Invoice | undefine
 function invoiceFamilies(ws: Workspace): Map<string, string> {
   if (!ws.intl) return new Map();
   const records = [...Object.values(ws.invoices), ...Object.values(ws.intl.invoices)].filter((invoice) => !invoice.recurringId);
-  return changeFamilies(records, (id) => getInvoice(ws, id), replacementInvoiceId, () => true);
+  const ids = invoiceIds(ws);
+  return changeFamilies(records, (id) => (ids.has(id) ? getInvoice(ws, id) : undefined), "moves", () => true);
 }
 
 /**
@@ -1548,7 +1628,7 @@ export function monthsBilledTwice(ws: Workspace): Set<string> {
   const out = new Set<string>();
   if (!ws.intl) return out;
   const plans = [...Object.values(ws.recurring), ...Object.values(ws.intl.recurring)];
-  const families = changeFamilies(plans, (id) => getPlan(ws, id), replacementPlanId, (from, to) => from.clientId === to.clientId);
+  const families = changeFamilies(plans, (id) => getPlan(ws, id), "replaces", (from, to) => from.clientId === to.clientId);
   if (!families.size) return out;
   const members = new Map<string, RecurringPlan[]>();
   for (const plan of plans) {
@@ -1677,11 +1757,12 @@ export function repairIntl(ws: Workspace, _now: number): Workspace {
 function repairMovedInvoices(ws: Workspace): Workspace {
   const intl = ws.intl;
   if (!intl) return ws;
+  const ids = invoiceIds(ws);
   const fix = (map: Record<string, Invoice>): Record<string, Invoice> | null => {
     let out: Record<string, Invoice> | null = null;
     for (const invoice of Object.values(map)) {
       if (invoice.deletedAt || invoice.recurringId || invoice.payments.length || invoice.voided) continue;
-      if (!movedCopyOf(ws, invoice)) continue;
+      if (!movedCopyIn(ws, invoice, ids)) continue;
       const at = invoice.updatedAt + 1;
       out ??= { ...map };
       out[invoice.id] = { ...invoice, updatedAt: at, deletedAt: at };
