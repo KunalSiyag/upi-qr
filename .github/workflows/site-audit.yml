@@ -70,6 +70,9 @@ jobs:
       - name: MCP server (Claude connector) tests
         run: npm run test:mcp
 
+      - name: Invoice generator engine tests
+        run: npm run test:invoice
+
       - name: Sponsor data checks
         run: npm run test:sponsors
 
