@@ -1,0 +1,80 @@
+---
+/**
+ * One sponsored card (src/data/sponsors.ts). Static HTML only: no script, pixel or cookie. Until the placement is
+ * booked it shows the house card that links to /sponsor/ (en/hi/ta/te/mr homepages only). The wrapper is a div, not
+ * an aside: WaitlistCard is the page's <aside> and waitlist-e2e finds it that way.
+ */
+import { activeSponsor, sponsorHref, type SponsorPlacement } from "../data/sponsors";
+import type { SiteLang } from "../lib/locale";
+
+interface Props {
+  placement: SponsorPlacement;
+  lang: SiteLang;
+  class?: string;
+}
+
+const { placement, lang, class: className = "" } = Astro.props;
+
+const COPY: Partial<Record<SiteLang, { sponsored: string; house: string; title: string; body: string; cta: string }>> = {
+  en: {
+    sponsored: "Sponsored",
+    house: "Advertise here",
+    title: "Reach shop owners and freelancers",
+    body: "Put your brand beside India's free UPI QR generator. One sponsor at a time, clearly labelled.",
+    cta: "Sponsor this spot",
+  },
+  hi: {
+    sponsored: "प्रायोजित",
+    house: "यहाँ विज्ञापन दें",
+    title: "दुकानदारों और फ्रीलांसरों तक पहुँचें",
+    body: "भारत के मुफ़्त UPI QR जनरेटर के साथ अपना ब्रांड दिखाएँ। एक समय में एक ही स्पॉन्सर, साफ़ लेबल के साथ।",
+    cta: "इस जगह को स्पॉन्सर करें",
+  },
+  ta: {
+    sponsored: "ஸ்பான்சர்",
+    house: "இங்கே விளம்பரம் செய்யுங்கள்",
+    title: "கடை உரிமையாளர்கள், ஃப்ரீலான்சர்களைச் சென்றடையுங்கள்",
+    body: "இந்தியாவின் இலவச UPI QR ஜெனரேட்டர் அருகில் உங்கள் பிராண்ட். ஒரே நேரத்தில் ஒரு ஸ்பான்சர் மட்டும், தெளிவான லேபிளுடன்.",
+    cta: "இந்த இடத்தை ஸ்பான்சர் செய்யுங்கள்",
+  },
+  te: {
+    sponsored: "స్పాన్సర్డ్",
+    house: "ఇక్కడ ప్రకటన ఇవ్వండి",
+    title: "దుకాణదారులు, ఫ్రీలాన్సర్లను చేరుకోండి",
+    body: "భారతదేశపు ఉచిత UPI QR జనరేటర్ పక్కన మీ బ్రాండ్. ఒకసారి ఒకే స్పాన్సర్, స్పష్టమైన లేబుల్‌తో.",
+    cta: "ఈ స్థానాన్ని స్పాన్సర్ చేయండి",
+  },
+  mr: {
+    sponsored: "प्रायोजित",
+    house: "इथे जाहिरात करा",
+    title: "दुकानदार आणि फ्रीलान्सरपर्यंत पोहोचा",
+    body: "भारताच्या मोफत UPI QR जनरेटरशेजारी तुमचा ब्रँड. एका वेळी एकच स्पॉन्सर, स्पष्ट लेबलसह.",
+    cta: "ही जागा स्पॉन्सर करा",
+  },
+};
+
+const sponsor = activeSponsor(placement, lang);
+const copy = COPY[lang];
+const card = "block rounded-[12px] bg-white p-4 shadow-card transition hover:shadow-pop focus-visible:outline focus-visible:outline-2 focus-visible:outline-leaf";
+---
+
+{sponsor ? (
+  <div class={className} data-sponsor-slot={placement} data-sponsor={sponsor.id}>
+    <a href={sponsorHref(sponsor, placement)} rel="sponsored noopener" target="_blank" class={card}>
+      <span class="text-xs font-medium text-muted">{(copy ?? COPY.en)!.sponsored}</span>
+      {sponsor.logo && <img src={sponsor.logo} alt="" width="160" height="48" loading="lazy" decoding="async" class="mt-2 h-8 w-auto max-w-[160px] object-contain object-left" />}
+      <span class="mt-2 block text-base font-semibold text-ink">{sponsor.name}</span>
+      <span class="mt-1 block text-sm leading-6 text-charcoal">{sponsor.tagline}</span>
+      <span class="mt-3 block text-sm font-semibold text-leaf">{new URL(sponsor.href).hostname.replace(/^www\./, "")} →</span>
+    </a>
+  </div>
+) : copy ? (
+  <div class={className} data-sponsor-slot={placement} data-sponsor="house">
+    <a href="/sponsor/" class={card}>
+      <span class="text-xs font-medium text-muted">{copy.house}</span>
+      <span class="mt-2 block text-base font-semibold text-ink">{copy.title}</span>
+      <span class="mt-1 block text-sm leading-6 text-charcoal">{copy.body}</span>
+      <span class="mt-3 block text-sm font-semibold text-leaf">{copy.cta} →</span>
+    </a>
+  </div>
+) : null}

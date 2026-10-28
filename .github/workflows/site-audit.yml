@@ -73,6 +73,9 @@ jobs:
       - name: Invoice generator engine tests
         run: npm run test:invoice
 
+      - name: Sponsor data checks
+        run: npm run test:sponsors
+
       - name: RSS validity
         run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"
 
