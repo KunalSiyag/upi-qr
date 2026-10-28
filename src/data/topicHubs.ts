@@ -456,7 +456,7 @@ export const TOPIC_HUBS: TopicHub[] = [
         tools: [
           { href: "/quotation-generator/", name: "Quotation / estimate generator", description: "Price quotes with validity dates, terms, and optional advance QR." },
           { href: "/proforma-invoice-generator/", name: "Proforma invoice generator", description: "Advance-payment documents with buyer PO reference." },
-          { href: "/invoice-generator/", name: "Invoice PDF generator", description: "GST-ready invoices with country templates and an embedded UPI QR." },
+          { href: "/invoice-generator/", name: "Invoice PDF generator", description: "GST, VAT and export invoices for 50 countries, with an embedded UPI QR or payment link." },
           { href: "/payment-tracker/", name: "Invoice payment tracker", description: "See who owes you, send WhatsApp reminders, and mark UPI payments received." },
           { href: "/payment-reminder-generator/", name: "Payment reminder generator", description: "Friendly, professional, or firm overdue copy for WhatsApp, SMS, email." },
           { href: "/receipt-generator/", name: "Payment receipt generator", description: "PAID-stamped receipts with mode, UTR, and UPI QR." },

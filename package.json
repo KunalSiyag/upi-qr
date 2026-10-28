@@ -13,6 +13,7 @@
     "security:check": "node --experimental-strip-types scripts/security-regression.test.mjs",
     "test:e2e": "node scripts/e2e/run.mjs",
     "test:mcp": "node --experimental-strip-types scripts/mcp.test.mjs",
+    "test:invoice": "node --experimental-strip-types scripts/invoice.test.mjs",
     "launch:check": "node scripts/launch-check.mjs",
     "razorpay:plans": "node scripts/razorpay-plans.mjs",
     "dodo:products": "node scripts/dodo-products.mjs",

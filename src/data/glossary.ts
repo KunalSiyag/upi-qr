@@ -400,7 +400,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
       { question: "Inter-state vs intra-state invoices?", answer: "Same document; inter-state shows IGST, intra-state splits into CGST + SGST." }
     ],
     related: [
-      { href: "/invoice-generator/", label: "Generate tax invoices with country templates" },
+      { href: "/invoice-generator/", label: "Generate GST, VAT and export invoices" },
       { href: "/credit-note-generator/", label: "Need to correct one? Credit notes" }
     ]
   },

@@ -85,14 +85,14 @@ try {
     await b.send("Network.setBlockedURLs", { urls: [] });
   }
 
-  // Non-INR templates hide the button.
-  await b.eval("const d = JSON.parse(localStorage.getItem('proupiqr-invoice-draft')); d.templateId = 'us-sales'; localStorage.setItem('proupiqr-invoice-draft', JSON.stringify(d)); true");
+  // Non-INR invoices hide the button: picking the United States switches the invoice to USD.
   await b.go(BASE + "/invoice-generator/", 1500);
   await b.eval("document.getElementById('invoice-tool').scrollIntoView(); true");
-  await b.waitFor("[...document.querySelectorAll('button')].some(b => /Download PDF/.test(b.textContent))", 10000);
-  await t("__t.click(/USA/)");
+  await b.waitFor("!!document.querySelector('[data-invoice-country]')", 10000);
+  await b.eval("const sel = document.querySelector('[data-invoice-country]'); Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(sel, 'US'); sel.dispatchEvent(new Event('change', { bubbles: true })); true");
   await sleep(300);
-  check("Track payment hidden for non-INR templates", !(await b.eval("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))")));
+  check("Track payment hidden for non-INR invoices", (await b.eval("document.querySelector('[data-invoice-currency]').value")) === "USD"
+    && !(await b.eval("[...document.querySelectorAll('button')].some(b => /Track payment/.test(b.textContent))")));
   // Review round 3: pages where the button can't render never download the tracker code.
   const trackerFetched = "performance.getEntriesByType('resource').some(e => /\\/_astro\\/localStore\\.[^/]+\\.js$/.test(e.name))";
   for (const [path, label] of [["/de/invoice-generator/", "non-INR invoice template (€)"], ["/es/receipt-generator/", "non-INR receipt page (€)"]]) {

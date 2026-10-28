@@ -13,11 +13,23 @@ const faqs = [
   },
   {
     question: "Does it support currencies and tax systems outside India?",
-    answer: "Yes. Pick a country template at the top of the builder: India GST (₹ with CGST/SGST split), US Sales Tax ($), UK VAT (£), EU VAT (€), UAE VAT (AED), Australia GST (A$), or a generic no-tax global template. Amounts format in the local currency and the tax line relabels automatically; non-INR templates swap the UPI QR for a bank payment details block."
+    answer: "Yes. Pick your country (50 of them, including the UK, every EU country, the US, Canada, Australia, the UAE, Singapore and Japan) and the invoice follows its rules: the right tax name and rates, your tax ID label, the correct title such as Tax invoice or VAT invoice, and the legal notes for small businesses and clients abroad. You can bill in 37 currencies and print the invoice in 14 languages. Rupee invoices carry a UPI QR; other currencies show your bank details and an optional PayPal, Wise or Stripe payment link with its own QR."
+  },
+  {
+    question: "Does it work out CGST, SGST and IGST automatically?",
+    answer: "Yes. Pick the client's state as the place of supply. If it matches your state (read from your GSTIN), the invoice splits GST into CGST and SGST; if it differs, it charges IGST. Each line can have its own rate and HSN/SAC code, and the invoice shows the taxable value, tax for each rate, the amount in words and the reverse-charge line that Rule 46 asks for."
+  },
+  {
+    question: "Can I make an export invoice for a foreign client from India?",
+    answer: "Yes. Set the client to another country and the currency to USD, EUR, GBP or any other. Add your LUT ARN to export without IGST: the invoice prints the Rule 46 endorsement and 0% IGST. Without an LUT it charges IGST and says so. An optional exchange rate prints the rupee value you report in your GST return."
+  },
+  {
+    question: "How does it handle VAT reverse charge and small-business exemptions?",
+    answer: "For an EU seller billing a business in another EU country, choose Another EU country: VAT drops to 0% and the invoice prints the reverse-charge note (Art. 196 of the VAT Directive) in your language, with the client's VAT ID. If you are not VAT-registered, the invoice adds the note your country expects, such as § 19 UStG in Germany or art. 293 B du CGI in France. Rates are suggestions, so check them against your own situation."
   },
   {
     question: "Is the invoice data uploaded to a server?",
-    answer: "No. The invoice draft and QR generation run in your browser. Drafts are saved locally on your device so you can continue numbering invoices without creating an account."
+    answer: "No. The invoice draft, your logo, signature and saved clients stay in your browser's local storage, and the QR codes are made on your device. Use Next invoice to continue numbering without creating an account."
   },
   {
     question: "Who should use this UPI invoice generator?",
@@ -42,8 +54,12 @@ const schema = {
       "featureList": [
         "Invoice PDF generator",
         "Embedded UPI QR code",
-        "Country templates: India GST, US, UK, EU, UAE, Australia",
-        "GST and discount calculation",
+        "Tax rules for 50 countries: GST, VAT, sales tax, HST",
+        "CGST/SGST or IGST from the place of supply, HSN/SAC per line",
+        "Export invoices under LUT, EU reverse charge, small-business notes",
+        "37 currencies and 14 invoice languages",
+        "Logo, signature, saved clients and invoice numbering",
+        "Payment links with QR codes for clients abroad",
         "Local browser draft saving",
         "Print and save as PDF"
       ],
@@ -63,7 +79,8 @@ const schema = {
       "description": "Generate a printable invoice with a UPI payment QR in your browser.",
       "step": [
         { "@type": "HowToStep", "name": "Enter business and customer details" },
-        { "@type": "HowToStep", "name": "Add items, GST, discount, and due date" },
+        { "@type": "HowToStep", "name": "Pick your country, currency and where the client is" },
+        { "@type": "HowToStep", "name": "Add items, tax rates, discount, and payment terms" },
         { "@type": "HowToStep", "name": "Review the auto-generated UPI QR" },
         { "@type": "HowToStep", "name": "Print or save the invoice as PDF" }
       ]
@@ -87,7 +104,7 @@ const schema = {
         <div class="max-w-4xl">
           <p class="inline-flex text-sm font-semibold text-leaf">Merchant toolkit</p>
           <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Free UPI invoice generator with QR code PDF</h1>
-          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Create a professional invoice, calculate GST, VAT, or sales tax with country templates for India, US, UK, EU, UAE, and Australia — then embed a UPI payment QR and save as PDF for WhatsApp, email, or client billing.</p>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Make a professional invoice for any country: GST with CGST/SGST or IGST, export invoices under LUT, VAT with reverse charge, sales tax, and HST. Bill in 37 currencies, add your logo and a UPI QR or payment link, and save as PDF for WhatsApp, email or client billing.</p>
           <div class="mt-7 flex flex-wrap gap-3">
             <a href="#invoice-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Create invoice PDF</a>
             <a href="#roadmap" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">See API roadmap</a>
