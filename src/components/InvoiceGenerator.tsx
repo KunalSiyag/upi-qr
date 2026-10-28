@@ -1,14 +1,64 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { safeToPng, downloadDataUrl, notifyExportError } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
 import { loadBridge, prefetchBridge, prefetchBridgeWhenIdle } from "../lib/workspace/bridgeLoader";
-import { DOC_DATE_LOCALE, defaultInvoiceTemplateId, displayCurrency, type DocLang, withCurrencyDeep } from "../data/documentLang";
-import { INVOICE_COPY, invoiceDocTitle } from "../data/invoiceI18n";
+import { DOC_DATE_LOCALE, DOC_LANG_OPTIONS, collectStrings, isDocLang, type DocLang } from "../data/documentLang";
+import { INVOICE_COPY, fill, invoiceDocTitle, type InvoiceCopy } from "../data/invoiceI18n";
+import {
+  FX_DIGITS, addDays, amountInWords, computeInvoice, minorDigits, nextInvoiceNumber, parseAmount, parsePlain, parseQty, parseRate, toInrPaise,
+  type Minor,
+} from "../lib/invoice/core";
+import {
+  COUNTRIES, INDIA_STATES, INVOICE_CURRENCIES, countryByCode, countryFromTimeZone, defaultRate, gstinState, regionByCode, taxPlan, validGstin,
+  type ClientWhere, type Country, type SellerStatus, type SupplyKind,
+} from "../lib/invoice/regimes";
 
-type InvoiceItem = { id: number; name: string; qty: string; price: string };
+type Item = { id: number; name: string; hsn: string; qty: string; unit: string; price: string; rate: string };
+type Client = { name: string; address: string; email: string; taxId: string; where: ClientWhere; region: string; country: string };
+type Draft = {
+  v: 2;
+  country: string;
+  status: SellerStatus;
+  kind: SupplyKind;
+  currency: string;
+  /** "" follows the page language; set only when the user picks one. */
+  paperLang: DocLang | "";
+  name: string;
+  address: string;
+  email: string;
+  phone: string;
+  taxId: string;
+  pan: string;
+  sellerRegion: string;
+  upiId: string;
+  client: Client;
+  invoiceNo: string;
+  invoiceDate: string;
+  supplyDate: string;
+  terms: string;
+  dueDate: string;
+  po: string;
+  items: Item[];
+  discountKind: "amount" | "percent";
+  discount: string;
+  extraLabel: string;
+  extraRate: string;
+  paid: string;
+  roundOff: boolean;
+  lutArn: string;
+  reverseCharge: boolean;
+  fxRate: string;
+  bank: string;
+  payUrl: string;
+  notes: string;
+  termsText: string;
+};
+type Assets = { logo: string; signature: string };
 
 const draftKey = "proupiqr-invoice-draft";
+const assetsKey = "proupiqr-invoice-assets";
+const clientsKey = "proupiqr-invoice-clients";
 const TRACK_LABEL: Partial<Record<DocLang, string>> = {
   en: "Track payment",
   hi: "पेमेंट ट्रैक करें",
@@ -16,8 +66,29 @@ const TRACK_LABEL: Partial<Record<DocLang, string>> = {
   te: "చెల్లింపు ట్రాక్ చేయండి",
   mr: "पेमेंट ट्रॅक करा",
 };
-
+const DECIMAL_COMMA = new Set<DocLang>(["es", "pt", "fr", "de", "id", "it"]);
+const TERMS = ["0", "7", "15", "30", "45", "60", "custom"];
+/** The language's own default country, before any draft or time-zone guess. */
+const LANG_COUNTRY: Partial<Record<DocLang, string>> = { es: "ES", fr: "FR", de: "DE", it: "IT", pt: "BR", id: "ID", ar: "AE", ja: "JP", zh: "CN" };
+/** v1 drafts (country templates) → country codes. */
+const V1_TEMPLATE: Record<string, string> = {
+  "in-gst": "IN", "us-sales": "US", "uk-vat": "GB", "eu-vat": "DE", "ae-vat": "AE", "au-gst": "AU", "br-nf": "BR", "id-ppn": "ID", "jp-tax": "JP", "cn-vat": "CN", global: "XX",
+};
+const BANK_HINT: Record<string, string> = {
+  IN: "Account name, A/c no., IFSC, bank and branch",
+  US: "Account name, routing (ABA) no., account no., bank",
+  GB: "Account name, sort code, account no.",
+  AU: "Account name, BSB, account no.",
+  CA: "Account name, institution, transit and account no.",
+  NZ: "Account name, account no.",
+};
 const EXPORT_TIMEOUT_MS = 20000;
+const UPI_NOTES = collectStrings(INVOICE_COPY, "defaultNotes").map((n) => n.trim());
+
+const field = "mt-1.5 w-full min-w-0 rounded-[10px] border border-hairline bg-white px-3 py-2 text-sm text-ink outline-none transition focus:border-leaf focus:ring-2 focus:ring-leaf/15";
+const bad = "border-coral focus:border-coral focus:ring-coral/15";
+const labelCls = "block text-sm font-medium text-charcoal";
+const secondaryButton = "rounded-[10px] bg-white px-4 py-2 text-sm font-semibold text-ink ring-1 ring-hairline transition hover:bg-fog disabled:opacity-50";
 
 function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   return new Promise<T>((resolve, reject) => {
@@ -29,167 +100,287 @@ function withTimeout<T>(promise: Promise<T>, label: string): Promise<T> {
   });
 }
 
-type InvoiceTemplate = {
-  id: string;
-  flag: string;
-  label: string;
-  currency: string;
-  locale: string;
-  taxLabel: string;
-  taxIdLabel: string;
-  defaultTax: string;
-  docTitle: string;
-  splitTax?: boolean;
-};
-
-export const invoiceTemplates: InvoiceTemplate[] = [
-  { id: "in-gst", flag: "🇮🇳", label: "India · GST ₹", currency: "INR", locale: "en-IN", taxLabel: "GST", taxIdLabel: "GSTIN", defaultTax: "18", docTitle: "Tax invoice", splitTax: true },
-  { id: "us-sales", flag: "🇺🇸", label: "USA · Sales Tax $", currency: "USD", locale: "en-US", taxLabel: "Sales Tax", taxIdLabel: "EIN / Tax ID", defaultTax: "0", docTitle: "Invoice" },
-  { id: "uk-vat", flag: "🇬🇧", label: "UK · VAT £", currency: "GBP", locale: "en-GB", taxLabel: "VAT", taxIdLabel: "VAT Reg. No.", defaultTax: "20", docTitle: "VAT invoice" },
-  { id: "eu-vat", flag: "🇪🇺", label: "EU · VAT €", currency: "EUR", locale: "en-IE", taxLabel: "VAT", taxIdLabel: "VAT ID", defaultTax: "19", docTitle: "VAT invoice" },
-  { id: "ae-vat", flag: "🇦🇪", label: "UAE · VAT د.إ", currency: "AED", locale: "en-AE", taxLabel: "VAT", taxIdLabel: "TRN", defaultTax: "5", docTitle: "Tax invoice" },
-  { id: "au-gst", flag: "🇦🇺", label: "Australia · GST A$", currency: "AUD", locale: "en-AU", taxLabel: "GST", taxIdLabel: "ABN", defaultTax: "10", docTitle: "Tax invoice" },
-  { id: "br-nf", flag: "🇧🇷", label: "Brazil · ISS R$", currency: "BRL", locale: "pt-BR", taxLabel: "ISS", taxIdLabel: "CNPJ", defaultTax: "0", docTitle: "Invoice" },
-  { id: "id-ppn", flag: "🇮🇩", label: "Indonesia · PPN Rp", currency: "IDR", locale: "id-ID", taxLabel: "PPN", taxIdLabel: "NPWP", defaultTax: "11", docTitle: "Tax invoice" },
-  { id: "jp-tax", flag: "🇯🇵", label: "Japan · 消費税 ¥", currency: "JPY", locale: "ja-JP", taxLabel: "消費税", taxIdLabel: "T-number", defaultTax: "10", docTitle: "Invoice" },
-  { id: "cn-vat", flag: "🇨🇳", label: "China · VAT ¥", currency: "CNY", locale: "zh-CN", taxLabel: "增值税", taxIdLabel: "税号", defaultTax: "13", docTitle: "Tax invoice" },
-  { id: "global", flag: "🌍", label: "Global · No Tax", currency: "USD", locale: "en-001", taxLabel: "Tax", taxIdLabel: "Tax ID", defaultTax: "0", docTitle: "Invoice" }
-];
-
-const TEMPLATE_SYMBOL: Record<string, string> = {
-  INR: "₹",
-  USD: "$",
-  GBP: "£",
-  EUR: "€",
-  AED: "د.إ",
-  AUD: "A$",
-  BRL: "R$",
-  IDR: "Rp",
-  JPY: "¥",
-  CNY: "¥",
-};
-
-function makeMoney(locale: string, currency: string) {
-  return (value: number) => new Intl.NumberFormat(locale, { style: "currency", currency, maximumFractionDigits: 2 }).format(value || 0);
-}
-
-function formatDate(iso: string, locale: string) {
-  const date = new Date(iso);
-  if (!iso || isNaN(date.getTime())) return iso;
-  try {
-    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric" }).format(date);
-  } catch {
-    return iso;
-  }
+function todayIso() {
+  const now = new Date();
+  return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 }
 
 function isValidUpiId(upiId: string) {
   return /^[a-zA-Z0-9.\-_]{2,256}@[a-zA-Z]{2,64}$/.test(upiId.trim());
 }
 
-function buildUpiUrl(upiId: string, payee: string, amount: number, note: string) {
+function minorToDecimal(minor: Minor, digits: number) {
+  if (digits === 0) return String(minor);
+  const scale = 10 ** digits;
+  return `${Math.floor(minor / scale)}.${String(minor % scale).padStart(digits, "0")}`;
+}
+
+/** https only, no credentials, at most 300 characters; "" otherwise. */
+function safeHttpsUrl(value: string) {
+  const text = value.trim();
+  if (!text || text.length > 300) return "";
+  try {
+    const url = new URL(text);
+    return url.protocol === "https:" && !url.username && !url.password ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function buildUpiUrl(upiId: string, payee: string, paise: Minor, note: string) {
   const params = new URLSearchParams({ pa: upiId.trim(), pn: payee.trim() || "Merchant", cu: "INR" });
-  if (amount > 0) params.set("am", amount.toFixed(2));
+  if (paise > 0) params.set("am", minorToDecimal(paise, 2));
   if (note.trim()) params.set("tn", note.trim());
   return `upi://pay?${params.toString()}`;
 }
 
-const today = new Date().toISOString().slice(0, 10);
+function paperLocale(paperLang: DocLang, country: Country) {
+  if (paperLang !== "en") return DOC_DATE_LOCALE[paperLang];
+  return country.locale.startsWith("en") ? country.locale : "en-GB";
+}
 
-const initialItems: InvoiceItem[] = [
-  { id: 1, name: INVOICE_COPY.en.defaultItem1, qty: "1", price: "4999" },
-  { id: 2, name: INVOICE_COPY.en.defaultItem2, qty: "1", price: "999" }
-];
+function makeMoney(locale: string, currency: string) {
+  const digits = minorDigits(currency);
+  let nf: Intl.NumberFormat;
+  try {
+    nf = new Intl.NumberFormat(locale, { style: "currency", currency, minimumFractionDigits: digits, maximumFractionDigits: digits });
+  } catch {
+    nf = new Intl.NumberFormat("en", { style: "currency", currency: "USD" });
+  }
+  // A decimal string keeps the exact minor units (Intl formats numeric strings without a float round trip).
+  return (minor: Minor) => nf.format(minorToDecimal(Math.max(0, minor), digits) as unknown as number);
+}
+
+function formatDate(iso: string, locale: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso)) return iso;
+  try {
+    return new Intl.DateTimeFormat(locale, { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" }).format(new Date(`${iso}T00:00:00Z`));
+  } catch {
+    return iso;
+  }
+}
+
+function sampleItems(copy: InvoiceCopy, rate: string): Item[] {
+  return [
+    { id: 1, name: copy.defaultItem1, hsn: "", qty: "1", unit: "", price: "4999", rate },
+    { id: 2, name: copy.defaultItem2, hsn: "", qty: "1", unit: "", price: "999", rate },
+  ];
+}
+
+function freshDraft(lang: DocLang, code: string): Draft {
+  const country = countryByCode(code);
+  const copy = INVOICE_COPY[lang] ?? INVOICE_COPY.en;
+  const today = todayIso();
+  return {
+    v: 2, country: country.code, status: country.statuses[0], kind: "services", currency: country.currency, paperLang: "",
+    name: "ABC Solutions", address: "", email: "", phone: "", taxId: "", pan: "", sellerRegion: "", upiId: "merchant@upi",
+    client: { name: "Client Name", address: "", email: "", taxId: "", where: "domestic", region: "", country: "" },
+    invoiceNo: "INV-0001", invoiceDate: today, supplyDate: "", terms: "15", dueDate: addDays(today, 15), po: "",
+    items: sampleItems(copy, defaultRate(country)),
+    discountKind: "amount", discount: "0", extraLabel: "", extraRate: "", paid: "", roundOff: false, lutArn: "", reverseCharge: false, fxRate: "",
+    bank: "", payUrl: "", notes: country.currency === "INR" ? copy.defaultNotes : "", termsText: "",
+  };
+}
+
+const str = (v: unknown, fallback = "") => (typeof v === "string" ? v : fallback);
+
+/** Reads a saved draft (v2, or the v1 country-template shape) into a complete v2 draft. */
+function readDraft(raw: unknown, lang: DocLang): Draft | null {
+  if (!raw || typeof raw !== "object") return null;
+  const d = raw as Record<string, unknown>;
+  if (d.v === 2) {
+    const base = freshDraft(lang, str(d.country, "IN"));
+    const country = countryByCode(base.country);
+    const client = (d.client && typeof d.client === "object" ? d.client : {}) as Record<string, unknown>;
+    const items = Array.isArray(d.items) ? d.items.filter((i) => i && typeof i === "object").map((i: Record<string, unknown>, n: number) => ({
+      id: typeof i.id === "number" ? i.id : n + 1, name: str(i.name), hsn: str(i.hsn), qty: str(i.qty, "1"), unit: str(i.unit), price: str(i.price, "0"), rate: str(i.rate, defaultRate(country)),
+    })) : [];
+    const where = (["domestic", "eu", "abroad"] as const).find((w) => w === client.where) ?? "domestic";
+    return {
+      ...base,
+      status: country.statuses.find((s) => s === d.status) ?? base.status,
+      kind: d.kind === "goods" ? "goods" : "services",
+      currency: INVOICE_CURRENCIES.includes(str(d.currency)) ? str(d.currency) : country.currency,
+      paperLang: isDocLang(str(d.paperLang)) ? (d.paperLang as DocLang) : "",
+      name: str(d.name), address: str(d.address), email: str(d.email), phone: str(d.phone), taxId: str(d.taxId), pan: str(d.pan), sellerRegion: str(d.sellerRegion), upiId: str(d.upiId),
+      client: { name: str(client.name), address: str(client.address), email: str(client.email), taxId: str(client.taxId), where: where === "eu" && !country.eu ? "abroad" : where, region: str(client.region), country: str(client.country) },
+      invoiceNo: str(d.invoiceNo), invoiceDate: str(d.invoiceDate, base.invoiceDate), supplyDate: str(d.supplyDate), terms: TERMS.includes(str(d.terms)) ? str(d.terms) : "custom",
+      dueDate: str(d.dueDate, base.dueDate), po: str(d.po), items: items.length ? items : base.items,
+      discountKind: d.discountKind === "percent" ? "percent" : "amount", discount: str(d.discount, "0"), extraLabel: str(d.extraLabel), extraRate: str(d.extraRate), paid: str(d.paid),
+      roundOff: d.roundOff === true, lutArn: str(d.lutArn), reverseCharge: d.reverseCharge === true, fxRate: str(d.fxRate),
+      bank: str(d.bank), payUrl: str(d.payUrl), notes: str(d.notes), termsText: str(d.termsText),
+    };
+  }
+  // v1: { templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items[{name, qty, price}] }
+  if (typeof d.templateId !== "string" && typeof d.merchant !== "string") return null;
+  const base = freshDraft(lang, V1_TEMPLATE[str(d.templateId)] ?? "IN");
+  const rate = str(d.gstPercent, defaultRate(countryByCode(base.country)));
+  const items = Array.isArray(d.items) ? d.items.filter((i) => i && typeof i === "object").map((i: Record<string, unknown>, n: number) => ({
+    id: typeof i.id === "number" ? i.id : n + 1, name: str(i.name), hsn: "", qty: str(i.qty, "1"), unit: "", price: str(i.price, "0"), rate,
+  })) : [];
+  return {
+    ...base,
+    name: str(d.merchant, base.name), taxId: str(d.taxId), upiId: str(d.upiId, base.upiId), bank: str(d.bankDetails),
+    client: { ...base.client, name: str(d.customer, base.client.name) },
+    invoiceNo: str(d.invoiceNo, base.invoiceNo), invoiceDate: str(d.invoiceDate, base.invoiceDate), terms: "custom", dueDate: str(d.dueDate, base.dueDate),
+    discount: str(d.discount, "0"), notes: str(d.notes), items: items.length ? items : base.items,
+  };
+}
+
+function readJson(key: string): unknown {
+  try {
+    const text = localStorage.getItem(key);
+    return text ? JSON.parse(text) : null;
+  } catch {
+    return null;
+  }
+}
+
+/** Downscales an uploaded image so drafts stay small in localStorage. */
+function readImage(file: File, maxW: number, maxH: number): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Unreadable image"));
+      img.onload = () => {
+        const scale = Math.min(1, maxW / img.width, maxH / img.height);
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL("image/png"));
+      };
+      img.src = String(reader.result);
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function Section({ title, children, open = true }: { title: string; children: ReactNode; open?: boolean }) {
+  return (
+    <details open={open} className="group border-t border-hairline py-4 first:border-t-0">
+      <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-ink">
+        {title}
+        <span aria-hidden="true" className="text-muted transition group-open:rotate-180">⌄</span>
+      </summary>
+      <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">{children}</div>
+    </details>
+  );
+}
 
 export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
-  const t = withCurrencyDeep(INVOICE_COPY[lang] ?? INVOICE_COPY.en, lang);
-  const [templateId, setTemplateId] = useState(() => defaultInvoiceTemplateId(lang));
-  const [merchant, setMerchant] = useState("ABC Solutions");
-  const [taxId, setTaxId] = useState("");
-  const [upiId, setUpiId] = useState("merchant@upi");
-  const [bankDetails, setBankDetails] = useState("");
-  const [customer, setCustomer] = useState("Client Name");
-  const [invoiceNo, setInvoiceNo] = useState("INV-0001");
-  const [invoiceDate, setInvoiceDate] = useState(today);
-  const [dueDate, setDueDate] = useState(today);
-  const [gstPercent, setGstPercent] = useState(() => {
-    const id = defaultInvoiceTemplateId(lang);
-    return invoiceTemplates.find((item) => item.id === id)?.defaultTax ?? "18";
-  });
-  const [discount, setDiscount] = useState("0");
-  const [notes, setNotes] = useState(() => (INVOICE_COPY[lang] ?? INVOICE_COPY.en).defaultNotes);
-  const [items, setItems] = useState<InvoiceItem[]>(() => {
-    const copy = INVOICE_COPY[lang] ?? INVOICE_COPY.en;
-    return [
-      { id: 1, name: copy.defaultItem1, qty: "1", price: "4999" },
-      { id: 2, name: copy.defaultItem2, qty: "1", price: "999" },
-    ];
-  });
+  const t = INVOICE_COPY[lang] ?? INVOICE_COPY.en;
+  const decimalComma = DECIMAL_COMMA.has(lang);
+  const [draft, setDraft] = useState<Draft>(() => freshDraft(lang, LANG_COUNTRY[lang] ?? "IN"));
+  const [assets, setAssets] = useState<Assets>({ logo: "", signature: "" });
+  const [savedClients, setSavedClients] = useState<Client[]>([]);
+  const [clientSavedFlash, setClientSavedFlash] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const [qrDataUrl, setQrDataUrl] = useState("");
+  const [linkQrDataUrl, setLinkQrDataUrl] = useState("");
 
-  const template = invoiceTemplates.find((item) => item.id === templateId) ?? invoiceTemplates[0];
-  const dateLocale = lang === "en" ? template.locale : DOC_DATE_LOCALE[lang];
-  const money = useMemo(() => makeMoney(template.locale, template.currency), [template]);
-  const docTitle = invoiceDocTitle(template.docTitle, t);
+  const update = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
+  /** The sample note mentions UPI: it follows the currency, while a note the user wrote is kept. */
+  const noteFor = (notes: string, currency: string) => {
+    const sample = UPI_NOTES.includes(notes.trim());
+    if (currency === "INR") return notes.trim() ? notes : t.defaultNotes;
+    return sample ? "" : notes;
+  };
+  const updateClient = (patch: Partial<Client>) => setDraft((d) => ({ ...d, client: { ...d.client, ...patch } }));
 
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem(draftKey);
-      if (!saved) return;
-      const draft = JSON.parse(saved);
-      const savedTpl = invoiceTemplates.find((item) => item.id === draft.templateId);
-      const langCurrency = displayCurrency(lang).code;
-      const useSavedTpl = Boolean(savedTpl && savedTpl.currency === langCurrency);
-      const nextTplId = useSavedTpl && savedTpl ? savedTpl.id : defaultInvoiceTemplateId(lang);
-      setTemplateId(nextTplId);
-      setMerchant(draft.merchant ?? "ABC Solutions");
-      setTaxId(draft.taxId ?? "");
-      setUpiId(draft.upiId ?? "merchant@upi");
-      setBankDetails(draft.bankDetails ?? "");
-      setCustomer(draft.customer ?? "Client Name");
-      setInvoiceNo(draft.invoiceNo ?? "INV-0001");
-      setInvoiceDate(draft.invoiceDate ?? today);
-      setDueDate(draft.dueDate ?? today);
-      setGstPercent(
-        useSavedTpl
-          ? (draft.gstPercent ?? savedTpl?.defaultTax ?? "18")
-          : (invoiceTemplates.find((item) => item.id === nextTplId)?.defaultTax ?? "18")
-      );
-      setDiscount(draft.discount ?? "0");
-      setNotes(draft.notes ?? "");
-      setItems(Array.isArray(draft.items) && draft.items.length ? draft.items : initialItems);
-    } catch {
-      // Ignore broken local drafts and keep the built-in sample invoice.
+    const saved = readDraft(readJson(draftKey), lang);
+    if (saved) setDraft(saved);
+    else if (lang === "en") {
+      // First visit: start from the seller's own country when the time zone tells us.
+      let zone = "";
+      try { zone = Intl.DateTimeFormat().resolvedOptions().timeZone ?? ""; } catch { /* no Intl time zone */ }
+      const guess = countryFromTimeZone(zone);
+      if (guess && guess !== "IN") setDraft(freshDraft(lang, guess));
     }
+    const a = readJson(assetsKey) as Partial<Assets> | null;
+    if (a) setAssets({ logo: str(a.logo), signature: str(a.signature) });
+    const c = readJson(clientsKey);
+    if (Array.isArray(c)) setSavedClients(c.filter((x) => x && typeof x === "object" && typeof x.name === "string").slice(0, 50));
+    setLoaded(true);
   }, []);
 
-  const totals = useMemo(() => {
-    const subtotal = items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0);
-    const discountValue = Math.max(0, Number(discount) || 0);
-    const taxable = Math.max(0, subtotal - discountValue);
-    const gst = taxable * Math.max(0, Number(gstPercent) || 0) / 100;
-    const total = taxable + gst;
-    return { subtotal, discountValue, taxable, gst, total };
-  }, [items, gstPercent, discount]);
-
-  const paymentNote = `${invoiceNo} - ${customer}`.slice(0, 80);
-  const upiUrl = useMemo(() => buildUpiUrl(upiId, merchant, totals.total, paymentNote), [upiId, merchant, totals.total, paymentNote]);
+  useEffect(() => {
+    if (!loaded) return;
+    try { localStorage.setItem(draftKey, JSON.stringify(draft)); } catch { /* storage full or blocked */ }
+  }, [draft, loaded]);
 
   useEffect(() => {
-    QRCode.toDataURL(upiUrl, { margin: 2, width: 360, errorCorrectionLevel: "H", color: { dark: "#113b2c", light: "#ffffff" } })
+    if (!loaded) return;
+    try { localStorage.setItem(assetsKey, JSON.stringify(assets)); } catch { /* storage full or blocked */ }
+  }, [assets, loaded]);
+
+  const country = countryByCode(draft.country);
+  const paperLang: DocLang = draft.paperLang || lang;
+  const p = INVOICE_COPY[paperLang] ?? INVOICE_COPY.en;
+  const locale = paperLocale(paperLang, country);
+  const money = useMemo(() => makeMoney(locale, draft.currency), [locale, draft.currency]);
+  const percent = useMemo(() => {
+    const nf = new Intl.NumberFormat(locale, { style: "percent", maximumFractionDigits: 5 });
+    return (rateK: number) => nf.format(rateK / 100000);
+  }, [locale]);
+  const isIndia = country.code === "IN";
+  const sellerRegion = isIndia ? (gstinState(draft.taxId) || draft.sellerRegion) : "";
+  const plan = taxPlan(country, {
+    status: draft.status, where: draft.client.where, kind: draft.kind, sellerRegion, clientRegion: draft.client.region,
+    lutArn: draft.lutArn, reverseCharge: draft.reverseCharge,
+  });
+  const taxed = plan.split !== "none";
+  // "USt." on a German invoice, "TVA" on a French one; IGST and Canada's HST keep their own names.
+  const taxName = plan.split === "single" && plan.taxLabel === country.tax && country.localTax?.lang === paperLang ? country.localTax.name : plan.taxLabel;
+  const docTitle = invoiceDocTitle(plan.title, p);
+  const dueDate = draft.terms === "custom" ? draft.dueDate : addDays(draft.invoiceDate, Number(draft.terms)) || draft.invoiceDate;
+  const inr = draft.currency === "INR";
+
+  const parsed = useMemo(() => {
+    const amount = (text: string) => parseAmount(text, draft.currency, decimalComma);
+    const lines = draft.items.map((item) => ({
+      qty: parseQty(item.qty.trim() || "0", decimalComma),
+      price: amount(item.price.trim() || "0"),
+      rate: parseRate(item.rate.trim() || "0"),
+    }));
+    const discount = draft.discountKind === "percent" ? parseRate(draft.discount.trim() || "0") : amount(draft.discount.trim() || "0");
+    const paid = amount(draft.paid.trim() || "0");
+    const extraRate = parseRate(draft.extraRate.trim() || "0");
+    const fx = draft.fxRate.trim() ? parsePlain(draft.fxRate, FX_DIGITS) : 0;
+    const invalid = lines.some((l) => l.qty === null || l.price === null || l.rate === null) || discount === null || paid === null || extraRate === null || fx === null;
+    return { lines, discount: discount ?? 0, paid: paid ?? 0, extraRate: extraRate ?? 0, fx: fx ?? 0, invalid };
+  }, [draft.items, draft.discount, draft.discountKind, draft.paid, draft.extraRate, draft.fxRate, draft.currency, decimalComma]);
+
+  const totals = useMemo(() => computeInvoice({
+    lines: parsed.lines.map((l) => ({ qtyMilli: l.qty ?? 0, priceMinor: l.price ?? 0, rateK: plan.zero ? 0 : (l.rate ?? 0) })),
+    discount: draft.discountKind === "percent" ? { kind: "percent", rateK: parsed.discount } : { kind: "amount", minor: parsed.discount },
+    split: plan.split,
+    extraRateK: plan.zero || !draft.extraLabel.trim() ? 0 : parsed.extraRate,
+    paidMinor: parsed.paid,
+    roundTo: inr && draft.roundOff ? 100 : 0,
+  }), [parsed, plan.split, plan.zero, draft.discountKind, draft.extraLabel, inr, draft.roundOff]);
+
+  const payUrl = safeHttpsUrl(draft.payUrl);
+  const paymentNote = `${draft.invoiceNo} - ${draft.client.name}`.slice(0, 80);
+  const upiUrl = useMemo(() => buildUpiUrl(draft.upiId, draft.name, totals.balance, paymentNote), [draft.upiId, draft.name, totals.balance, paymentNote]);
+  const showUpi = inr && draft.upiId.trim() !== "";
+
+  useEffect(() => {
+    if (!showUpi) { setQrDataUrl(""); return; }
+    QRCode.toDataURL(upiUrl, { margin: 1, width: 360, errorCorrectionLevel: "M", color: { dark: "#1c1d1f", light: "#ffffff" } })
       .then(setQrDataUrl)
       .catch(() => setQrDataUrl(""));
-  }, [upiUrl]);
+  }, [upiUrl, showUpi]);
 
   useEffect(() => {
-    localStorage.setItem(draftKey, JSON.stringify({ templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items }));
-  }, [templateId, merchant, taxId, upiId, bankDetails, customer, invoiceNo, invoiceDate, dueDate, gstPercent, discount, notes, items]);
-
-  const selectTemplate = (nextId: string) => {
-    setTemplateId(nextId);
-    const next = invoiceTemplates.find((t) => t.id === nextId);
-    if (next) setGstPercent(next.defaultTax);
-  };
+    if (!payUrl) { setLinkQrDataUrl(""); return; }
+    QRCode.toDataURL(payUrl, { margin: 1, width: 300, errorCorrectionLevel: "M", color: { dark: "#1c1d1f", light: "#ffffff" } })
+      .then(setLinkQrDataUrl)
+      .catch(() => setLinkQrDataUrl(""));
+  }, [payUrl]);
 
   const invoiceRef = useRef<HTMLDivElement | null>(null);
   const [downloadPdfState, setDownloadPdfState] = useState<"idle" | "busy" | "error">("idle");
@@ -198,51 +389,128 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   const [bridgeBusy, setBridgeBusy] = useState(false);
   // The tracker's storage code is fetched when the page is idle (after the first edit unless this device has a
   // payment book), so "Track payment" needs no network later.
-  // Only while that button renders (rupee templates): other currencies never download it.
-  useEffect(() => (template.currency === "INR" ? prefetchBridgeWhenIdle() : undefined), [template.currency]);
+  // Only while that button renders (rupee invoices): other currencies never download it.
+  useEffect(() => (inr ? prefetchBridgeWhenIdle() : undefined), [inr]);
 
-  const updateItem = (id: number, field: keyof InvoiceItem, value: string) => {
-    setItems((current) => current.map((item) => item.id === id ? { ...item, [field]: value } : item));
+  /* ---------- builder actions ---------- */
+
+  const selectCountry = (code: string) => {
+    const next = countryByCode(code);
+    setDraft((d) => ({
+      ...d,
+      country: next.code,
+      status: next.statuses.includes(d.status) ? d.status : next.statuses[0],
+      currency: next.currency,
+      taxId: next.code === d.country ? d.taxId : "",
+      sellerRegion: "",
+      client: { ...d.client, where: d.client.where === "eu" && !next.eu ? "abroad" : d.client.where, region: "" },
+      notes: noteFor(d.notes, next.currency),
+      items: d.items.map((item) => ({ ...item, rate: defaultRate(next) })),
+      extraLabel: "",
+      extraRate: "",
+      roundOff: next.currency === "INR" ? d.roundOff : false,
+    }));
   };
 
-  const addItem = () => setItems((current) => [...current, { id: Date.now(), name: t.newItem, qty: "1", price: "0" }]);
+  const selectClientRegion = (code: string) => {
+    const region = regionByCode(country, code);
+    setDraft((d) => ({
+      ...d,
+      client: { ...d.client, region: code },
+      ...(region?.rate ? { items: d.items.map((item) => ({ ...item, rate: region.rate ?? item.rate })), extraLabel: region.extra?.label ?? "", extraRate: region.extra?.rate ?? "" } : {}),
+    }));
+  };
 
-  const removeItem = (id: number) => setItems((current) => current.length > 1 ? current.filter((item) => item.id !== id) : current);
+  const updateItem = (id: number, patch: Partial<Item>) =>
+    setDraft((d) => ({ ...d, items: d.items.map((item) => (item.id === id ? { ...item, ...patch } : item)) }));
+  const addItem = () => setDraft((d) => ({
+    ...d,
+    items: [...d.items, { id: Date.now(), name: t.newItem, hsn: "", qty: "1", unit: "", price: "0", rate: d.items[d.items.length - 1]?.rate ?? defaultRate(country) }],
+  }));
+  const removeItem = (id: number) => setDraft((d) => (d.items.length > 1 ? { ...d, items: d.items.filter((item) => item.id !== id) } : d));
+
+  const nextInvoice = () => {
+    const today = todayIso();
+    setDraft((d) => ({ ...d, invoiceNo: nextInvoiceNumber(d.invoiceNo), invoiceDate: today, supplyDate: "", dueDate: d.terms === "custom" ? today : d.dueDate, paid: "", po: "" }));
+  };
+
+  const saveClient = () => {
+    if (!draft.client.name.trim()) return;
+    const next = [draft.client, ...savedClients.filter((c) => c.name.trim().toLowerCase() !== draft.client.name.trim().toLowerCase())].slice(0, 50);
+    setSavedClients(next);
+    try { localStorage.setItem(clientsKey, JSON.stringify(next)); } catch { /* storage full or blocked */ }
+    setClientSavedFlash(true);
+    setTimeout(() => setClientSavedFlash(false), 1500);
+  };
+
+  const pickClient = (index: string) => {
+    const c = savedClients[Number(index)];
+    if (!c) return;
+    setDraft((d) => ({ ...d, client: { ...c, where: c.where === "eu" && !country.eu ? "abroad" : c.where } }));
+    if (c.region && country.regions) selectClientRegion(c.region);
+  };
+
+  const uploadImage = async (kind: keyof Assets, file: File | undefined) => {
+    if (!file) return;
+    try {
+      const dataUrl = await readImage(file, kind === "logo" ? 360 : 420, kind === "logo" ? 180 : 140);
+      setAssets((a) => ({ ...a, [kind]: dataUrl }));
+    } catch (err) {
+      console.error("Image upload failed:", err);
+      notifyExportError("Couldn't read that image. Try a PNG or JPG.");
+    }
+  };
+
+  /* ---------- warnings ---------- */
+
+  const warnings: string[] = [];
+  if (parsed.invalid) warnings.push(t.warnBadNumber);
+  if (draft.status === "registered" && country.statuses.includes("unregistered") && !draft.taxId.trim()) warnings.push(fill(t.warnTaxId, { taxId: country.taxId, tax: country.localTax?.lang === lang ? country.localTax.name : country.tax }));
+  if (isIndia && draft.taxId.trim() && !validGstin(draft.taxId)) warnings.push(t.warnGstin);
+  if (plan.india && !/^[A-Za-z0-9/-]{1,16}$/.test(draft.invoiceNo.trim())) warnings.push(t.warnInvoiceNo);
+  if (isIndia && plan.india && draft.taxId.trim() && draft.client.where === "domestic" && !draft.client.region) warnings.push(t.warnPlaceOfSupply);
+  if (country.eu && draft.client.where === "eu" && draft.status === "registered" && !draft.client.taxId.trim()) warnings.push(t.warnClientVat);
+  if (draft.payUrl.trim() && !payUrl) warnings.push(t.warnBadLink);
+  if (inr && draft.upiId.trim() && (!isValidUpiId(draft.upiId) || draft.upiId.trim() === "merchant@upi")) warnings.push(t.sampleWarning);
+  if (!draft.bank.trim() && !payUrl && !(inr && draft.upiId.trim())) warnings.push(t.warnNoPayment);
+
+  /* ---------- exports ---------- */
 
   function safeInvoiceNo() {
-    return (invoiceNo || "invoice")
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, "-")
-      .replace(/^-|-$/g, "");
+    return (draft.invoiceNo || "invoice").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "invoice";
   }
 
-  async function renderPaperToPng() {
+  /** A4 at 800px wide is 1131px tall: blocks that would straddle a page edge move to the next page. */
+  function keepBlocksWhole(clone: HTMLElement, pageHeight: number) {
+    const blocks = [...clone.querySelectorAll<HTMLElement>("[data-keep]")];
+    for (const block of blocks) {
+      const top = block.getBoundingClientRect().top - clone.getBoundingClientRect().top;
+      const bottom = top + block.offsetHeight;
+      const page = Math.floor(top / pageHeight);
+      if (block.offsetHeight >= pageHeight - 72 || Math.floor((bottom - 1) / pageHeight) === page) continue;
+      const push = (page + 1) * pageHeight - top + 36;
+      if (block.tagName === "TR") {
+        const spacer = document.createElement("tr");
+        spacer.innerHTML = `<td colspan="8" style="height:${push}px;padding:0;border:0"></td>`;
+        block.parentElement?.insertBefore(spacer, block);
+      } else {
+        block.style.marginTop = `${(parseFloat(getComputedStyle(block).marginTop) || 0) + push}px`;
+      }
+    }
+  }
+
+  async function renderPaperToPng(paged = false) {
     if (!invoiceRef.current) throw new Error("Invoice preview not ready");
-    const el = invoiceRef.current;
-
-    const clone = el.cloneNode(true) as HTMLDivElement;
-    clone.style.position = "fixed";
-    clone.style.left = "0";
-    clone.style.top = "0";
-    clone.style.zIndex = "-9999";
-    clone.style.opacity = "0";
-    clone.style.pointerEvents = "none";
-    clone.style.width = "800px";
-    clone.style.minWidth = "800px";
-    clone.style.maxWidth = "800px";
-    clone.style.padding = "36px";
-    clone.style.boxSizing = "border-box";
-    clone.style.height = "auto";
-    clone.style.boxShadow = "none";
-    clone.style.border = "none";
-    clone.style.borderRadius = "0";
-
+    const clone = invoiceRef.current.cloneNode(true) as HTMLDivElement;
+    Object.assign(clone.style, {
+      position: "fixed", left: "0", top: "0", zIndex: "-9999", opacity: "0", pointerEvents: "none",
+      width: "800px", minWidth: "800px", maxWidth: "800px", padding: "36px", boxSizing: "border-box", height: "auto",
+      boxShadow: "none", border: "none", borderRadius: "0",
+    });
     document.body.appendChild(clone);
     await new Promise((resolve) => setTimeout(resolve, 250));
-
-    const measuredHeight = clone.offsetHeight;
-    const targetHeight = measuredHeight || 1100;
-
+    if (paged) keepBlocksWhole(clone, Math.round((800 * 297) / 210));
+    const targetHeight = clone.offsetHeight || 1100;
     try {
       const dataUrl = await safeToPng(clone, {
         cacheBust: true,
@@ -250,23 +518,10 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         width: 800,
         height: targetHeight,
         style: {
-          opacity: "1",
-          transform: "none",
-          transformOrigin: "top left",
-          width: "800px",
-          height: `${targetHeight}px`,
-          maxWidth: "800px",
-          maxHeight: `${targetHeight}px`,
-          minWidth: "800px",
-          minHeight: `${targetHeight}px`,
-          margin: "0",
-          padding: "36px",
-          boxSizing: "border-box",
-          backgroundColor: "#ffffff",
-          boxShadow: "none",
-          border: "none",
-          borderRadius: "0"
-        }
+          opacity: "1", transform: "none", transformOrigin: "top left", width: "800px", height: `${targetHeight}px`, maxWidth: "800px",
+          maxHeight: `${targetHeight}px`, minWidth: "800px", minHeight: `${targetHeight}px`, margin: "0", padding: "36px",
+          boxSizing: "border-box", backgroundColor: "#ffffff", boxShadow: "none", border: "none", borderRadius: "0",
+        },
       });
       return { dataUrl, targetHeight };
     } finally {
@@ -279,19 +534,15 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
     try {
       setDownloadPdfState("busy");
       const { jsPDF } = await withTimeout(import("jspdf"), "PDF engine");
-      const { dataUrl, targetHeight } = await renderPaperToPng();
-
-      const pxToMm = 0.2646;
-      const widthMm = 800 * pxToMm;
-      const heightMm = targetHeight * pxToMm;
-
-      const pdf = new jsPDF({
-        orientation: widthMm < heightMm ? "portrait" : "landscape",
-        unit: "mm",
-        format: [widthMm, heightMm]
-      });
-
-      pdf.addImage(dataUrl, "PNG", 0, 0, widthMm, heightMm);
+      const { dataUrl, targetHeight } = await renderPaperToPng(true);
+      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const heightMm = (targetHeight * 210) / 800;
+      const pages = Math.max(1, Math.ceil(heightMm / 297 - 0.002));
+      for (let i = 0; i < pages; i++) {
+        if (i) pdf.addPage();
+        pdf.addImage(dataUrl, "PNG", 0, -i * 297, 210, heightMm, "invoice", "FAST");
+      }
+      pdf.setProperties({ title: `${docTitle} ${draft.invoiceNo}`, author: draft.name, creator: "Pro UPI QR (proupiqr.in)" });
       pdf.save(`${safeInvoiceNo()}.pdf`);
       setDownloadPdfState("idle");
       trackProductEvent("export_pdf", "invoice");
@@ -312,7 +563,6 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
     try {
       setDownloadPngState("busy");
       const { dataUrl } = await renderPaperToPng();
-
       downloadDataUrl(dataUrl, `${safeInvoiceNo()}.png`);
       setDownloadPngState("idle");
       trackProductEvent("export_png", "invoice");
@@ -336,10 +586,10 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       setBridgeBusy(false);
     }
     const { trackDocument, workspaceReturnUrl } = bridge;
-    const description = items.map((item) => item.name).filter(Boolean).join(", ");
+    const description = draft.items.map((item) => item.name).filter(Boolean).join(", ");
     const result = trackDocument({
-      merchant, upiId, customer, invoiceNo, invoiceDate, dueDate,
-      totalPaise: Math.round(totals.total * 100), description,
+      merchant: draft.name, upiId: draft.upiId, customer: draft.client.name, invoiceNo: draft.invoiceNo, invoiceDate: draft.invoiceDate, dueDate,
+      totalPaise: totals.total, description,
     });
     if (!result) {
       notifyExportError("Add a customer name, invoice number, date, and amount before tracking.");
@@ -351,32 +601,28 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
   }
 
   function buildShareMessage() {
-    return `*${docTitle} — ${merchant || t.yourBusiness}*\n` +
+    return `*${docTitle} — ${draft.name || p.yourBusiness}*\n` +
       `----------------------------\n` +
-      `*${t.shareInvoiceNo}:* ${invoiceNo}\n` +
-      `*${t.shareCustomer}:* ${customer}\n` +
-      `*${t.shareTotal}:* ${money(totals.total)}\n` +
-      `*${t.shareDue}:* ${formatDate(dueDate, dateLocale)}\n\n` +
-      (template.currency === "INR" ? `*${t.sharePayUpi}:* ${upiId || "yourname@upi"}\n${t.shareQr}\n\n` : "") +
-      t.shareVia;
+      `*${p.shareInvoiceNo}:* ${draft.invoiceNo}\n` +
+      `*${p.shareCustomer}:* ${draft.client.name}\n` +
+      `*${p.shareTotal}:* ${money(totals.balance)}\n` +
+      `*${p.shareDue}:* ${formatDate(dueDate, locale)}\n\n` +
+      (showUpi ? `*${p.sharePayUpi}:* ${draft.upiId}\n${p.shareQr}\n\n` : "") +
+      (payUrl ? `*${p.payOnline}:* ${payUrl}\n\n` : "") +
+      p.shareVia;
   }
 
   async function shareOnWhatsapp() {
     if (shareState === "busy") return;
     try {
       setShareState("busy");
-
       let sharedVisually = false;
       if (navigator.share && navigator.canShare) {
         try {
           const { dataUrl } = await renderPaperToPng();
           const file = await dataUrlToPngFile(dataUrl, `${safeInvoiceNo()}.png`);
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({
-              files: [file],
-              title: `${docTitle} ${invoiceNo}`,
-              text: buildShareMessage()
-            });
+            await navigator.share({ files: [file], title: `${docTitle} ${draft.invoiceNo}`, text: buildShareMessage() });
             sharedVisually = true;
             trackProductEvent("share", "invoice");
           }
@@ -388,7 +634,6 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           console.warn("Native share unavailable, falling back to download + WhatsApp.", err);
         }
       }
-
       if (!sharedVisually) {
         try {
           const { dataUrl } = await renderPaperToPng();
@@ -399,7 +644,6 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         window.open(`https://api.whatsapp.com/send?text=${encodeURIComponent(buildShareMessage())}`, "_blank");
         trackProductEvent("share", "invoice");
       }
-
       setShareState("idle");
     } catch (err) {
       console.error("WhatsApp share failed:", err);
@@ -407,31 +651,48 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
     }
   }
 
+  /* ---------- render ---------- */
+
+  // The builder names the tax the way the page's language does ("TVA" on /fr/ for France), like the paper.
+  const builderTax = country.localTax?.lang === lang ? country.localTax.name : country.tax;
+  // India's hint is translated (its pages are indexed in hi/ta/te/mr); other countries' hints are English.
+  const rateHint = isIndia ? t.hintIndiaRates : country.rateHint;
+  const statusLabel = (s: SellerStatus) => s === "registered" ? fill(t.statusRegistered, { tax: builderTax }) : s === "composition" ? t.statusComposition : t.statusUnregistered;
+  const termsLabel = (term: string) => term === "0" ? t.termsReceipt : term === "custom" ? t.termsCustom : fill(t.termsNet, { n: term });
+  const stateName = (code: string) => INDIA_STATES.find((s) => s.code === code)?.name ?? "";
+  const placeOfSupply = isIndia && plan.india
+    ? draft.client.where === "domestic"
+      ? (draft.client.region ? `${stateName(draft.client.region)} (${draft.client.region})` : "")
+      : (draft.client.country.trim() || "Outside India") + " (96)"
+    : "";
+  const showHsn = isIndia && (plan.india || draft.items.some((i) => i.hsn.trim()));
+  const amountPlaceholder = decimalComma ? "0,00" : "0.00";
+  const curInput = (text: string) => parseAmount(text.trim() || "0", draft.currency, decimalComma) === null;
+  const fxPaise = isIndia && !inr && parsed.fx > 0 ? toInrPaise(totals.total, draft.currency, parsed.fx) : 0;
+  const inrMoney = useMemo(() => makeMoney("en-IN", "INR"), []);
+  const extraShown = taxed && !plan.zero && draft.extraLabel.trim() !== "" && totals.extraTax > 0;
+  const clientTaxLabel = draft.client.where === "abroad" ? "Client tax ID / VAT no." : country.clientTaxId;
+  const bare = (label: string) => label.replace(/[:：]\s*$/, "");
+
   return (
-    <div className="grid gap-8 lg:grid-cols-[0.92fr_1.08fr]">
-      <div className="no-print rounded-[14px] border border-white/75 bg-white/90 p-5 shadow-[0_18px_48px_rgba(17,59,44,0.08)]">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-forest/5 pb-4">
+    <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
+      <div className="no-print min-w-0 rounded-[14px] bg-white p-5 shadow-card">
+        <div className="flex flex-col gap-3 border-b border-hairline pb-4">
           <div>
             <p className="text-sm font-semibold text-leaf">{t.eyebrow}</p>
-            <h2 className="mt-1 text-2xl font-black text-forest">{t.heading}</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-ink">{t.heading}</h2>
           </div>
           <div className="flex flex-wrap gap-2">
-            <button
-              onClick={shareOnWhatsapp}
-              disabled={shareState === "busy"}
-              title={t.whatsapp}
-              className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] disabled:opacity-50 transition inline-flex items-center gap-1.5 shadow-sm"
-            >
-              {shareState === "busy" ? t.preparing : `${t.whatsapp}`}
+            <button onClick={downloadInvoicePdf} disabled={downloadPdfState === "busy"} className="rounded-[10px] bg-forest px-4 py-2 text-sm font-semibold text-white transition hover:bg-graphite disabled:opacity-50">
+              {downloadPdfState === "busy" ? t.generating : t.downloadPdf}
             </button>
-            <button
-              onClick={downloadInvoicePdf}
-              disabled={downloadPdfState === "busy"}
-              className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition"
-            >
-              {downloadPdfState === "busy" ? t.generating : `${t.downloadPdf}`}
+            <button onClick={shareOnWhatsapp} disabled={shareState === "busy"} title={t.whatsapp} className="rounded-[10px] bg-[#25D366] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#1da851] disabled:opacity-50">
+              {shareState === "busy" ? t.preparing : t.whatsapp}
             </button>
-            {template.currency === "INR" && (
+            <button onClick={downloadInvoicePng} disabled={downloadPngState === "busy"} className={secondaryButton}>
+              {downloadPngState === "busy" ? t.generating : t.downloadPng}
+            </button>
+            {inr && (
               <button
                 onClick={() => void trackPayment()}
                 onPointerEnter={prefetchBridge}
@@ -440,126 +701,421 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                 disabled={bridgeBusy}
                 aria-busy={bridgeBusy}
                 title={TRACK_LABEL[lang] ?? TRACK_LABEL.en}
-                className="rounded-[7px] border border-forest/15 bg-white px-4 py-2 text-xs font-bold text-forest hover:bg-fog disabled:opacity-50 transition"
+                className={secondaryButton}
               >
-                {`${TRACK_LABEL[lang] ?? TRACK_LABEL.en}`}
+                {TRACK_LABEL[lang] ?? TRACK_LABEL.en}
               </button>
             )}
-            <button
-              onClick={downloadInvoicePng}
-              disabled={downloadPngState === "busy"}
-              className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition"
-            >
-              {downloadPngState === "busy" ? t.generating : `${t.downloadPng}`}
-            </button>
           </div>
         </div>
 
+        {warnings.length > 0 && (
+          <ul className="mt-4 space-y-1.5 rounded-[12px] bg-amber-50 px-4 py-3 text-sm text-amber-900" aria-live="polite">
+            {[...new Set(warnings)].map((w) => <li key={w}>{w}</li>)}
+          </ul>
+        )}
 
-        <div className="mt-6">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.countryTemplate}</p>
-          <div className="mt-2 flex flex-wrap gap-2">
-            {invoiceTemplates.map((tpl) => (
-              <button
-                key={tpl.id}
-                type="button"
-                onClick={() => selectTemplate(tpl.id)}
-                aria-pressed={tpl.id === templateId}
-                className={`rounded-[7px] border px-3.5 py-1.5 text-xs font-bold transition ${tpl.id === templateId ? "border-leaf bg-leaf text-white shadow-sm" : "border-forest/10 bg-cream text-forest hover:border-leaf/40"}`}
-              >
-                {tpl.flag} {tpl.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="mt-6 grid gap-4 sm:grid-cols-2">
-          <label className="text-sm font-bold text-forest">{t.businessName}<input value={merchant} onChange={(e) => setMerchant(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{template.taxIdLabel} {t.taxIdOptional}<input value={taxId} onChange={(e) => setTaxId(e.target.value)} placeholder={`${template.taxIdLabel} shown on invoice`} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.upiId}{template.currency !== "INR" && t.upiInrOnly}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.customer}<input value={customer} onChange={(e) => setCustomer(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.invoiceNumber}<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.invoiceDate}<input type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.dueDate}<input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{template.taxLabel} %<input type="number" value={gstPercent} onChange={(e) => setGstPercent(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">{t.discount} {TEMPLATE_SYMBOL[template.currency] ?? template.currency}<input type="number" value={discount} onChange={(e) => setDiscount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        </div>
-
-        <div className="mt-6 space-y-3">
-          <div className="flex items-center justify-between"><h3 className="font-black text-forest">{t.lineItems}</h3><button onClick={addItem} className="text-sm font-bold text-leaf">{t.addItem}</button></div>
-          {items.map((item) => (
-            <div key={item.id} className="grid gap-2 rounded-2xl bg-cream p-3 sm:grid-cols-[1fr_72px_100px_28px]">
-              <input aria-label="Item name" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <input aria-label="Quantity" type="number" value={item.qty} onChange={(e) => updateItem(item.id, "qty", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <input aria-label="Price" type="number" value={item.price} onChange={(e) => updateItem(item.id, "price", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/60 hover:text-red-600" aria-label="Remove item">×</button>
+        <Section title={t.sectionCountry}>
+          <label className={labelCls}>{t.country}
+            <select value={country.code} onChange={(e) => selectCountry(e.target.value)} className={field} data-invoice-country>
+              {COUNTRIES.map((c) => <option key={c.code} value={c.code}>{c.name}</option>)}
+            </select>
+          </label>
+          <label className={labelCls}>{t.taxStatus}
+            <select value={draft.status} onChange={(e) => update({ status: e.target.value as SellerStatus })} className={field} disabled={country.statuses.length < 2}>
+              {country.statuses.map((s) => <option key={s} value={s}>{statusLabel(s)}</option>)}
+            </select>
+          </label>
+          <label className={labelCls}>{t.currency}
+            <select value={draft.currency} onChange={(e) => update({ currency: e.target.value, roundOff: e.target.value === "INR" ? draft.roundOff : false, notes: noteFor(draft.notes, e.target.value) })} className={field} data-invoice-currency>
+              {INVOICE_CURRENCIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </label>
+          <label className={labelCls}>{t.paperLanguage}
+            <select value={paperLang} onChange={(e) => update({ paperLang: e.target.value as DocLang })} className={field}>
+              {DOC_LANG_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
+            </select>
+          </label>
+          <fieldset className="sm:col-span-2">
+            <legend className={labelCls}>{t.supplyKind}</legend>
+            <div className="mt-1.5 flex gap-2">
+              {(["services", "goods"] as const).map((k) => (
+                <button key={k} type="button" aria-pressed={draft.kind === k} onClick={() => update({ kind: k })}
+                  className={`rounded-[7px] px-3 py-1.5 text-sm font-medium ring-1 transition ${draft.kind === k ? "bg-ink text-white ring-ink" : "bg-white text-ink ring-hairline hover:bg-fog"}`}>
+                  {k === "services" ? t.kindServices : t.kindGoods}
+                </button>
+              ))}
             </div>
-          ))}
+          </fieldset>
+          {(rateHint || country.eInvoice) && (
+            <p className="text-sm leading-6 text-muted sm:col-span-2">{[rateHint, country.eInvoice].filter(Boolean).join(" ")}</p>
+          )}
+        </Section>
+
+        <Section title={t.sectionBusiness}>
+          <label className={labelCls}>{t.businessName}<input value={draft.name} onChange={(e) => update({ name: e.target.value })} className={field} /></label>
+          {(draft.status !== "unregistered" || !country.statuses.includes("unregistered")) && (
+            <label className={labelCls}>{country.taxId}
+              <input value={draft.taxId} onChange={(e) => update({ taxId: isIndia ? e.target.value.toUpperCase() : e.target.value })} className={`${field} ${isIndia && draft.taxId.trim() && !validGstin(draft.taxId) ? bad : ""}`} />
+            </label>
+          )}
+          <label className={`${labelCls} sm:col-span-2`}>{t.address}<textarea value={draft.address} onChange={(e) => update({ address: e.target.value })} rows={2} className={field} /></label>
+          <label className={labelCls}>{t.email}<input type="email" value={draft.email} onChange={(e) => update({ email: e.target.value })} className={field} /></label>
+          <label className={labelCls}>{t.phone}<input type="tel" value={draft.phone} onChange={(e) => update({ phone: e.target.value })} className={field} /></label>
+          {isIndia && (
+            <label className={labelCls}>PAN
+              <input value={draft.pan} maxLength={10} onChange={(e) => update({ pan: e.target.value.toUpperCase().replace(/\s/g, "") })} className={`${field} font-mono ${draft.pan && !/^[A-Z]{5}\d{4}[A-Z]$/.test(draft.pan) ? bad : ""}`} />
+            </label>
+          )}
+          {isIndia && plan.india && !gstinState(draft.taxId) && (
+            <label className={labelCls}>{t.yourState}
+              <select value={draft.sellerRegion} onChange={(e) => update({ sellerRegion: e.target.value })} className={field}>
+                <option value="">—</option>
+                {INDIA_STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
+          {inr && <label className={labelCls}>{t.upiId}<input value={draft.upiId} onChange={(e) => update({ upiId: e.target.value })} className={field} /></label>}
+          <div className={labelCls}>{t.logo}
+            <div className="mt-1.5 flex items-center gap-3">
+              {assets.logo && <img src={assets.logo} alt="" className="h-10 max-w-[120px] object-contain" />}
+              <label className={`${secondaryButton} cursor-pointer`}>
+                {t.addLogo}
+                <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" onChange={(e) => { void uploadImage("logo", e.target.files?.[0]); e.target.value = ""; }} />
+              </label>
+              {assets.logo && <button type="button" onClick={() => setAssets((a) => ({ ...a, logo: "" }))} className="text-sm font-medium text-muted hover:text-ink">{t.removeImage}</button>}
+            </div>
+          </div>
+        </Section>
+
+        <Section title={t.sectionClient}>
+          {savedClients.length > 0 && (
+            <label className={`${labelCls} sm:col-span-2`}>{t.savedClients}
+              <select value="" onChange={(e) => pickClient(e.target.value)} className={field}>
+                <option value="">{t.chooseClient}</option>
+                {savedClients.map((c, i) => <option key={`${c.name}-${i}`} value={i}>{c.name}</option>)}
+              </select>
+            </label>
+          )}
+          <label className={labelCls}>{t.customer}<input value={draft.client.name} onChange={(e) => updateClient({ name: e.target.value })} className={field} /></label>
+          <label className={labelCls}>{t.clientWhere}
+            <select value={draft.client.where} onChange={(e) => updateClient({ where: e.target.value as ClientWhere })} className={field} data-invoice-where>
+              <option value="domestic">{t.whereDomestic} ({country.code === "XX" ? "—" : country.name})</option>
+              {country.eu && <option value="eu">{t.whereEu}</option>}
+              <option value="abroad">{t.whereAbroad}</option>
+            </select>
+          </label>
+          {isIndia && plan.india && draft.client.where === "domestic" && (
+            <label className={labelCls}>{t.placeOfSupply}
+              <select value={draft.client.region} onChange={(e) => updateClient({ region: e.target.value })} className={field} data-invoice-pos>
+                <option value="">—</option>
+                {INDIA_STATES.map((s) => <option key={s.code} value={s.code}>{s.name}</option>)}
+              </select>
+            </label>
+          )}
+          {country.code === "CA" && draft.client.where === "domestic" && (
+            <label className={labelCls}>{t.province}
+              <select value={draft.client.region} onChange={(e) => selectClientRegion(e.target.value)} className={field}>
+                <option value="">—</option>
+                {country.regions?.map((r) => <option key={r.code} value={r.code}>{r.name}</option>)}
+              </select>
+            </label>
+          )}
+          {draft.client.where !== "domestic" && (
+            <label className={labelCls}>{t.clientCountry}<input value={draft.client.country} onChange={(e) => updateClient({ country: e.target.value })} className={field} /></label>
+          )}
+          <label className={labelCls}>{clientTaxLabel}
+            <input value={draft.client.taxId} onChange={(e) => updateClient({ taxId: e.target.value })} className={field} />
+          </label>
+          <label className={labelCls}>{t.email}<input type="email" value={draft.client.email} onChange={(e) => updateClient({ email: e.target.value })} className={field} /></label>
+          <label className={`${labelCls} sm:col-span-2`}>{t.address}<textarea value={draft.client.address} onChange={(e) => updateClient({ address: e.target.value })} rows={2} className={field} /></label>
+          <div className="sm:col-span-2">
+            <button type="button" onClick={saveClient} disabled={!draft.client.name.trim()} className={secondaryButton}>{clientSavedFlash ? t.clientSaved : t.saveClient}</button>
+          </div>
+        </Section>
+
+        <Section title={t.sectionDetails}>
+          <label className={labelCls}>{t.invoiceNumber}
+            <div className="flex gap-2">
+              <input value={draft.invoiceNo} onChange={(e) => update({ invoiceNo: e.target.value })} className={`${field} font-mono`} />
+              <button type="button" onClick={nextInvoice} className={`${secondaryButton} mt-1.5 whitespace-nowrap`}>{t.nextInvoice}</button>
+            </div>
+          </label>
+          <label className={labelCls}>{t.invoiceDate}<input type="date" value={draft.invoiceDate} onChange={(e) => update({ invoiceDate: e.target.value })} className={field} /></label>
+          <label className={labelCls}>{t.paymentTerms}
+            <select value={draft.terms} onChange={(e) => update({ terms: e.target.value, dueDate: e.target.value === "custom" ? dueDate : draft.dueDate })} className={field}>
+              {TERMS.map((term) => <option key={term} value={term}>{termsLabel(term)}</option>)}
+            </select>
+          </label>
+          <label className={labelCls}>{t.dueDate}
+            <input type="date" value={dueDate} disabled={draft.terms !== "custom"} onChange={(e) => update({ dueDate: e.target.value })} className={`${field} disabled:bg-fog disabled:text-muted`} />
+          </label>
+          <label className={labelCls}>{t.supplyDate}<input type="date" value={draft.supplyDate} onChange={(e) => update({ supplyDate: e.target.value })} className={field} /></label>
+          <label className={labelCls}>{t.poNumber}<input value={draft.po} onChange={(e) => update({ po: e.target.value })} className={field} /></label>
+          {isIndia && plan.india && draft.client.where !== "domestic" && (
+            <label className={`${labelCls} sm:col-span-2`}>{t.lutArn}
+              <input value={draft.lutArn} onChange={(e) => update({ lutArn: e.target.value.toUpperCase() })} className={`${field} font-mono`} placeholder="AD270425001234X" />
+              <span className="mt-1 block text-xs font-normal text-muted">{t.lutHelp}</span>
+            </label>
+          )}
+          {isIndia && !inr && (
+            <label className={`${labelCls} sm:col-span-2`}>{fill(t.fxRate, { cur: draft.currency })}
+              <input inputMode="decimal" value={draft.fxRate} onChange={(e) => update({ fxRate: e.target.value })} className={`${field} ${draft.fxRate.trim() && parsePlain(draft.fxRate, FX_DIGITS) === null ? bad : ""}`} placeholder={decimalComma ? "84,10" : "84.10"} />
+              <span className="mt-1 block text-xs font-normal text-muted">{t.fxHelp}</span>
+            </label>
+          )}
+          {isIndia && plan.india && draft.client.where === "domestic" && draft.status === "registered" && (
+            <label className="flex items-center gap-2 text-sm text-charcoal sm:col-span-2">
+              <input type="checkbox" checked={draft.reverseCharge} onChange={(e) => update({ reverseCharge: e.target.checked })} className="h-4 w-4 accent-leaf" />
+              {t.reverseChargeInput}
+            </label>
+          )}
+        </Section>
+
+        <div className="border-t border-hairline py-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-ink">{t.lineItems}</h3>
+            <button type="button" onClick={addItem} className="text-sm font-semibold text-leaf">{t.addItem}</button>
+          </div>
+          <div className="mt-3 space-y-2">
+            {draft.items.map((item, index) => {
+              const line = parsed.lines[index];
+              const small = "block text-xs font-medium text-muted";
+              const priceSpan = showHsn ? (taxed ? "sm:col-span-3" : "sm:col-span-6") : (taxed ? "sm:col-span-4" : "sm:col-span-8");
+              return (
+                <div key={item.id} className="grid grid-cols-2 gap-2 rounded-[12px] bg-fog p-2.5 sm:grid-cols-12" data-invoice-item>
+                  <div className="col-span-2 flex gap-2 sm:col-span-12">
+                    <input aria-label={t.description} placeholder={t.description} value={item.name} onChange={(e) => updateItem(item.id, { name: e.target.value })} className={`${field} mt-0 flex-1`} />
+                    <button type="button" onClick={() => removeItem(item.id)} aria-label={t.removeItem} className="w-9 shrink-0 rounded-[10px] text-lg text-muted transition hover:bg-white hover:text-coral">×</button>
+                  </div>
+                  {showHsn && <label className={`${small} sm:col-span-2`}>{t.hsn}<input value={item.hsn} onChange={(e) => updateItem(item.id, { hsn: e.target.value })} className={`${field} mt-1 font-mono`} /></label>}
+                  <label className={`${small} sm:col-span-2`}>{t.qty}<input inputMode="decimal" value={item.qty} onChange={(e) => updateItem(item.id, { qty: e.target.value })} className={`${field} mt-1 ${line?.qty === null ? bad : ""}`} /></label>
+                  <label className={`${small} sm:col-span-2`}>{t.unit}<input value={item.unit} placeholder={draft.kind === "services" ? "hrs" : "pcs"} onChange={(e) => updateItem(item.id, { unit: e.target.value })} className={`${field} mt-1`} /></label>
+                  <label className={`${small} ${priceSpan}`}>{t.price} ({draft.currency})<input inputMode="decimal" placeholder={amountPlaceholder} value={item.price} onChange={(e) => updateItem(item.id, { price: e.target.value })} className={`${field} mt-1 ${line?.price === null ? bad : ""}`} /></label>
+                  {taxed && (
+                    <label className={`${small} ${showHsn ? "sm:col-span-3" : "sm:col-span-4"}`}>{plan.taxLabel} %
+                      <input list={`rates-${country.code}`} inputMode="decimal" value={plan.zero ? "0" : item.rate} disabled={plan.zero} onChange={(e) => updateItem(item.id, { rate: e.target.value })} className={`${field} mt-1 disabled:bg-white/60 disabled:text-muted ${line?.rate === null ? bad : ""}`} />
+                    </label>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <datalist id={`rates-${country.code}`}>{country.rates.map((r) => <option key={r} value={r} />)}</datalist>
         </div>
 
-        <label className="mt-5 block text-sm font-bold text-forest">{t.invoiceNotes}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        <label className="mt-4 block text-sm font-bold text-forest">{template.currency === "INR" ? t.bankOptional : t.bankRequired}<textarea value={bankDetails} onChange={(e) => setBankDetails(e.target.value)} rows={3} placeholder={template.currency === "INR" ? t.bankPlaceholderInr : t.bankPlaceholderIntl} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-        {template.currency === "INR" && !isValidUpiId(upiId) && <p className="mt-3 rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-800">{t.sampleWarning}</p>}
+        <Section title={t.sectionAdjust} open={false}>
+          <label className={labelCls}>{t.discountType}
+            <select value={draft.discountKind} onChange={(e) => update({ discountKind: e.target.value as Draft["discountKind"] })} className={field}>
+              <option value="amount">{t.discountFixed} ({draft.currency})</option>
+              <option value="percent">{t.discountPercent} (%)</option>
+            </select>
+          </label>
+          <label className={labelCls}>{t.discount}
+            <input inputMode="decimal" value={draft.discount} onChange={(e) => update({ discount: e.target.value })} className={`${field} ${(draft.discountKind === "percent" ? parseRate(draft.discount.trim() || "0") === null : curInput(draft.discount)) ? bad : ""}`} />
+          </label>
+          <label className={labelCls}>{t.amountPaidInput}
+            <input inputMode="decimal" value={draft.paid} placeholder={amountPlaceholder} onChange={(e) => update({ paid: e.target.value })} className={`${field} ${curInput(draft.paid) ? bad : ""}`} />
+          </label>
+          {inr && (
+            <label className="flex items-center gap-2 self-end pb-2 text-sm text-charcoal">
+              <input type="checkbox" checked={draft.roundOff} onChange={(e) => update({ roundOff: e.target.checked })} className="h-4 w-4 accent-leaf" />
+              {t.roundOffInput}
+            </label>
+          )}
+          {taxed && !isIndia && (
+            <>
+              <label className={labelCls}>{t.extraTax}: {t.extraTaxName}<input value={draft.extraLabel} placeholder="QST" onChange={(e) => update({ extraLabel: e.target.value })} className={field} /></label>
+              <label className={labelCls}>{t.extraTax} %<input inputMode="decimal" value={draft.extraRate} placeholder="9.975" onChange={(e) => update({ extraRate: e.target.value })} className={`${field} ${parseRate(draft.extraRate.trim() || "0") === null ? bad : ""}`} /></label>
+              <p className="text-xs leading-5 text-muted sm:col-span-2">{t.extraTaxHelp}</p>
+            </>
+          )}
+        </Section>
+
+        <Section title={t.sectionPayment}>
+          <label className={`${labelCls} sm:col-span-2`}>{t.payLink}
+            <input type="url" inputMode="url" value={draft.payUrl} placeholder="https://paypal.me/yourname" onChange={(e) => update({ payUrl: e.target.value })} className={`${field} ${draft.payUrl.trim() && !payUrl ? bad : ""}`} />
+            <span className="mt-1 block text-xs font-normal text-muted">{t.payLinkHelp}</span>
+          </label>
+          <label className={`${labelCls} sm:col-span-2`}>{inr ? t.bankOptional : t.bankRequired}
+            <textarea value={draft.bank} onChange={(e) => update({ bank: e.target.value })} rows={3} placeholder={BANK_HINT[country.code] ?? (country.eu ? "Account name, IBAN, BIC" : t.bankPlaceholderIntl)} className={field} />
+          </label>
+        </Section>
+
+        <Section title={t.sectionNotes} open={false}>
+          <label className={`${labelCls} sm:col-span-2`}>{t.invoiceNotes}<textarea value={draft.notes} onChange={(e) => update({ notes: e.target.value })} rows={2} className={field} /></label>
+          <label className={`${labelCls} sm:col-span-2`}>{t.termsInput}<textarea value={draft.termsText} placeholder={t.termsPlaceholder} onChange={(e) => update({ termsText: e.target.value })} rows={2} className={field} /></label>
+          <div className={`${labelCls} sm:col-span-2`}>{t.signature}
+            <div className="mt-1.5 flex items-center gap-3">
+              {assets.signature && <img src={assets.signature} alt="" className="h-10 max-w-[160px] object-contain" />}
+              <label className={`${secondaryButton} cursor-pointer`}>
+                {t.addSignature}
+                <input type="file" accept="image/png,image/jpeg,image/webp" className="sr-only" onChange={(e) => { void uploadImage("signature", e.target.files?.[0]); e.target.value = ""; }} />
+              </label>
+              {assets.signature && <button type="button" onClick={() => setAssets((a) => ({ ...a, signature: "" }))} className="text-sm font-medium text-muted hover:text-ink">{t.removeImage}</button>}
+            </div>
+          </div>
+        </Section>
       </div>
 
-      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-9" lang={lang}>
-        <header className="flex flex-col gap-5 border-b-2 border-forest pb-6 sm:flex-row sm:items-start sm:justify-between">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{docTitle} · {template.flag} {template.currency}</p>
-            <h2 className="mt-2 text-3xl font-black text-forest">{merchant || t.yourBusiness}</h2>
-            {taxId && <p className="mt-1 text-sm font-semibold text-forest/65">{template.taxIdLabel}: {taxId}</p>}
-            <p className="mt-2 text-sm font-semibold text-forest/65">UPI: {upiId || "yourname@upi"}</p>
+      <article ref={invoiceRef} className="invoice-paper mx-auto w-full max-w-[820px] self-start rounded-[14px] bg-white p-6 text-[13px] leading-5 text-ink shadow-card md:p-9" lang={paperLang} dir={paperLang === "ar" ? "rtl" : undefined} data-invoice-paper>
+        <header data-keep className="flex flex-col gap-6 border-b border-ink pb-5 sm:flex-row sm:items-start sm:justify-between">
+          <div className="min-w-0">
+            {assets.logo && <img src={assets.logo} alt="" className="mb-3 max-h-14 max-w-[200px] object-contain" />}
+            <p className="text-lg font-semibold">{draft.name || p.yourBusiness}</p>
+            {draft.address && <p className="mt-1 whitespace-pre-line text-charcoal">{draft.address}</p>}
+            {(draft.email || draft.phone) && <p className="mt-1 text-charcoal">{[draft.email, draft.phone].filter(Boolean).join(" · ")}</p>}
+            {draft.taxId && draft.status !== "unregistered" && <p className="mt-1 text-charcoal">{country.taxId}: <span className="font-mono">{draft.taxId}</span></p>}
+            {isIndia && draft.pan && <p className="text-charcoal">PAN: <span className="font-mono">{draft.pan}</span></p>}
+            {plan.india && sellerRegion && <p className="text-charcoal">{p.stateCodeLabel}: {stateName(sellerRegion)} ({sellerRegion})</p>}
           </div>
-          <div className="rounded-2xl bg-mint p-4 text-right">
-            <p className="text-sm font-black text-forest">{invoiceNo}</p>
-            <p className="mt-1 text-xs font-semibold text-forest/65">{t.issued} {formatDate(invoiceDate, dateLocale)}</p>
-            <p className="text-xs font-semibold text-forest/65">{t.due} {formatDate(dueDate, dateLocale)}</p>
+          <div className="shrink-0 sm:text-right">
+            <p className="text-2xl font-semibold tracking-tight" data-invoice-title>{docTitle}</p>
+            <dl className="mt-2 grid grid-cols-[auto_auto] gap-x-4 gap-y-0.5 text-charcoal sm:justify-end">
+              <dt>{p.invoiceNoLabel}</dt><dd className="font-mono text-ink">{draft.invoiceNo}</dd>
+              <dt>{bare(p.issued)}</dt><dd className="text-ink">{formatDate(draft.invoiceDate, locale)}</dd>
+              {draft.supplyDate && <><dt>{p.supplyDateLabel}</dt><dd className="text-ink">{formatDate(draft.supplyDate, locale)}</dd></>}
+              <dt>{bare(p.due)}</dt><dd className="text-ink">{formatDate(dueDate, locale)}</dd>
+              {draft.po && <><dt>{p.poLabel}</dt><dd className="text-ink">{draft.po}</dd></>}
+            </dl>
           </div>
         </header>
 
-        <section className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.billTo}</p><p className="mt-2 text-lg font-black text-forest">{customer || t.customerFallback}</p></div>
-          <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{t.amountPayable}</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
+        <section data-keep className="mt-5 grid gap-5 sm:grid-cols-[1fr_auto]">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-muted">{p.billTo}</p>
+            <p className="mt-1 text-base font-semibold">{draft.client.name || p.customerFallback}</p>
+            {draft.client.address && <p className="mt-0.5 whitespace-pre-line text-charcoal">{draft.client.address}</p>}
+            {draft.client.where !== "domestic" && draft.client.country && <p className="text-charcoal">{draft.client.country}</p>}
+            {draft.client.email && <p className="text-charcoal">{draft.client.email}</p>}
+            {draft.client.taxId && <p className="text-charcoal">{clientTaxLabel.replace(/^Client /, "")}: <span className="font-mono">{draft.client.taxId}</span></p>}
+            {placeOfSupply && <p className="mt-1 text-charcoal">{p.placeOfSupplyLabel}: {placeOfSupply}</p>}
+          </div>
+          <div className="rounded-[12px] bg-fog px-5 py-4 sm:min-w-[220px] sm:text-right">
+            <p className="text-xs font-medium text-muted">{totals.paid > 0 ? p.balanceDue : p.amountPayable}</p>
+            <p className="mt-1 text-2xl font-semibold tracking-tight" data-invoice-total>{money(totals.balance)}</p>
+            <p className="mt-0.5 text-xs text-muted">{bare(p.due)} {formatDate(dueDate, locale)}</p>
+          </div>
         </section>
 
-        <div className="mt-6 overflow-hidden rounded-2xl border border-forest/10">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-mint text-xs uppercase tracking-[0.14em] text-forest/70"><tr><th className="p-3">{t.item}</th><th className="p-3 text-right">{t.qty}</th><th className="p-3 text-right">{t.rate}</th><th className="p-3 text-right">{t.amount}</th></tr></thead>
-            <tbody>{items.map((item) => { const amount = (Number(item.qty) || 0) * (Number(item.price) || 0); return <tr key={item.id} className="border-t border-forest/10"><td className="p-3 font-semibold text-forest">{item.name}</td><td className="p-3 text-right">{item.qty}</td><td className="p-3 text-right">{money(Number(item.price) || 0)}</td><td className="p-3 text-right font-bold">{money(amount)}</td></tr>; })}</tbody>
-          </table>
+        <div className="mt-6 overflow-x-auto">
+        <table className="w-full border-collapse text-start">
+          <thead>
+            <tr className="border-b border-ink text-xs font-medium text-muted">
+              <th className="py-2 pe-2 text-start font-medium">{p.item}</th>
+              {showHsn && <th className="px-2 py-2 text-start font-medium">{p.hsn}</th>}
+              <th className="px-2 py-2 text-end font-medium">{p.qty}</th>
+              <th className="px-2 py-2 text-end font-medium">{p.rate}</th>
+              {taxed && <th className="px-2 py-2 text-end font-medium">{p.taxCol}</th>}
+              <th className="py-2 ps-2 text-end font-medium">{p.amount}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {draft.items.map((item, index) => {
+              const line = parsed.lines[index];
+              const rateK = plan.zero ? 0 : (line?.rate ?? 0);
+              return (
+                <tr key={item.id} data-keep className="border-b border-hairline align-top">
+                  <td className="py-2.5 pe-2 font-medium">{item.name}</td>
+                  {showHsn && <td className="px-2 py-2.5 font-mono text-charcoal">{item.hsn}</td>}
+                  <td className="whitespace-nowrap px-2 py-2.5 text-end tabular-nums">{item.qty}{item.unit ? ` ${item.unit}` : ""}</td>
+                  <td className="whitespace-nowrap px-2 py-2.5 text-end tabular-nums">{money(line?.price ?? 0)}</td>
+                  {taxed && <td className="whitespace-nowrap px-2 py-2.5 text-end tabular-nums">{percent(rateK)}</td>}
+                  <td className="whitespace-nowrap py-2.5 ps-2 text-end font-medium tabular-nums">{money(totals.lineAmounts[index] ?? 0)}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
         </div>
 
-        <section className="mt-6 grid gap-6 sm:grid-cols-[1fr_260px]">
-          <div className="rounded-2xl border border-dashed border-forest/20 p-4">
-            {template.currency === "INR" ? (
-              <>
-                <p className="text-sm font-black text-forest">{t.paymentQr}</p>
-                <div className="mt-3 flex items-center gap-4">{qrDataUrl && <img src={qrDataUrl} alt={t.paymentQr} className="h-32 w-32 rounded-xl border border-forest/10" />}<p className="text-sm leading-6 text-forest/70">{t.scanHelp}</p></div>
-                {bankDetails && <p className="mt-3 whitespace-pre-line border-t border-dashed border-forest/15 pt-3 text-xs leading-5 text-forest/70"><strong className="text-forest">{t.bankDetails}</strong>{"\n"}{bankDetails}</p>}
-              </>
-            ) : (
-              <>
-                <p className="text-sm font-black text-forest">{t.paymentDetails}</p>
-                {bankDetails ? <p className="mt-3 whitespace-pre-line text-sm leading-6 text-forest/75">{bankDetails}</p> : <p className="mt-3 rounded-xl bg-amber-50 p-3 text-xs leading-5 font-semibold text-amber-800">{t.addBankWarning}</p>}
-              </>
+        <section data-keep className="mt-5 grid gap-6 sm:grid-cols-[1fr_280px]">
+          <div className="order-2 space-y-4 sm:order-1">
+            {(showUpi || payUrl || draft.bank) && (
+              <div className="rounded-[12px] ring-1 ring-hairline p-4">
+                <p className="font-semibold">{p.paymentDetails}</p>
+                <div className="mt-3 flex flex-wrap gap-5">
+                  {showUpi && qrDataUrl && (
+                    <div className="flex items-start gap-3">
+                      <img src={qrDataUrl} alt={p.paymentQr} className="h-28 w-28" data-invoice-upi-qr />
+                      <div className="max-w-[180px] text-xs leading-5 text-charcoal">
+                        <p className="font-semibold text-ink">{p.paymentQr}</p>
+                        <p className="font-mono">{draft.upiId}</p>
+                        <p className="mt-1">{p.scanHelp}</p>
+                      </div>
+                    </div>
+                  )}
+                  {payUrl && linkQrDataUrl && (
+                    <div className="flex items-start gap-3">
+                      <img src={linkQrDataUrl} alt={p.payOnline} className="h-24 w-24" />
+                      <div className="max-w-[200px] text-xs leading-5 text-charcoal">
+                        <p className="font-semibold text-ink">{p.payOnline}</p>
+                        <p className="break-all text-leaf">{payUrl}</p>
+                        <p className="mt-1">{p.scanToPayLink}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                {draft.bank && <p className="mt-3 whitespace-pre-line border-t border-hairline pt-3 text-xs leading-5 text-charcoal"><span className="font-semibold text-ink">{bare(p.bankDetails)}</span>{"\n"}{draft.bank}</p>}
+              </div>
+            )}
+            {(isIndia || inr) && (
+              <p className="text-xs text-charcoal" data-invoice-words><span className="font-medium text-ink">{p.amountInWordsLabel}:</span> {amountInWords(totals.total, draft.currency)}</p>
             )}
           </div>
-          <div className="space-y-2 text-sm">
-            <div className="flex justify-between"><span>{t.subtotal}</span><strong>{money(totals.subtotal)}</strong></div>
-            <div className="flex justify-between"><span>{t.discountLabel}</span><strong>- {money(totals.discountValue)}</strong></div>
-            {template.splitTax && (Number(gstPercent) || 0) > 0 ? (
-              <>
-                <div className="flex justify-between"><span>CGST ({(Number(gstPercent) || 0) / 2}%)</span><strong>{money(totals.gst / 2)}</strong></div>
-                <div className="flex justify-between"><span>SGST ({(Number(gstPercent) || 0) / 2}%)</span><strong>{money(totals.gst / 2)}</strong></div>
-              </>
-            ) : (
-              <div className="flex justify-between"><span>{template.taxLabel} ({Number(gstPercent) || 0}%)</span><strong>{money(totals.gst)}</strong></div>
+
+          <dl className="order-1 space-y-1.5 tabular-nums sm:order-2">
+            <div className="flex justify-between gap-4"><dt className="text-charcoal">{p.subtotal}</dt><dd>{money(totals.subtotal)}</dd></div>
+            {totals.discount > 0 && (
+              <div className="flex justify-between gap-4"><dt className="text-charcoal">{p.discountLabel}{draft.discountKind === "percent" ? ` (${percent(parsed.discount)})` : ""}</dt><dd>−{money(totals.discount)}</dd></div>
             )}
-            <div className="mt-3 flex justify-between border-t-2 border-forest pt-3 text-lg text-forest"><span className="font-black">{t.total}</span><strong>{money(totals.total)}</strong></div>
-          </div>
+            {taxed && totals.discount > 0 && <div className="flex justify-between gap-4"><dt className="text-charcoal">{p.taxableValue}</dt><dd>{money(totals.taxable)}</dd></div>}
+            {taxed && totals.groups.flatMap((g) => g.parts.map((part) => (
+              <div key={`${g.rateK}-${part.kind}`} className="flex justify-between gap-4" data-invoice-tax={part.kind}>
+                <dt className="text-charcoal">{part.kind === "cgst" ? "CGST" : part.kind === "sgst" ? "SGST" : part.kind === "igst" ? "IGST" : taxName} {percent(part.rateK)}{totals.groups.length > 1 ? <span className="text-muted"> · {money(g.baseMinor)}</span> : null}</dt>
+                <dd>{money(part.minor)}</dd>
+              </div>
+            )))}
+            {extraShown && <div className="flex justify-between gap-4"><dt className="text-charcoal">{draft.extraLabel} {percent(parsed.extraRate)}</dt><dd>{money(totals.extraTax)}</dd></div>}
+            {totals.roundOff !== 0 && <div className="flex justify-between gap-4"><dt className="text-charcoal">{p.roundOffLabel}</dt><dd>{totals.roundOff < 0 ? "−" : "+"}{money(Math.abs(totals.roundOff))}</dd></div>}
+            <div className="flex justify-between gap-4 border-t border-ink pt-2 text-base font-semibold"><dt>{p.total}</dt><dd>{money(totals.total)}</dd></div>
+            {totals.paid > 0 && (
+              <>
+                <div className="flex justify-between gap-4"><dt className="text-charcoal">{p.amountPaidLabel}</dt><dd>−{money(totals.paid)}</dd></div>
+                <div className="flex justify-between gap-4 font-semibold"><dt>{p.balanceDue}</dt><dd>{money(totals.balance)}</dd></div>
+              </>
+            )}
+            {fxPaise > 0 && (
+              <p className="pt-1 text-xs text-muted">{fill(p.inrValue, { rate: draft.fxRate.trim(), cur: draft.currency })}: <span className="text-ink">{inrMoney(fxPaise)}</span></p>
+            )}
+          </dl>
         </section>
 
-        <footer className="mt-6 rounded-2xl bg-cream p-4 text-sm leading-6 text-forest/70"><strong className="text-forest">{t.notes}</strong> {notes}</footer>
+        {(plan.notes.length > 0 || (plan.india && !plan.zero && draft.status === "registered" && draft.client.where === "domestic")) && (
+          <section data-keep className="mt-5 space-y-1 text-xs leading-5 text-charcoal" data-invoice-legal>
+            {plan.notes.map((note) => <p key={note}>{note}</p>)}
+            {plan.india && draft.status === "registered" && draft.client.where === "domestic" && !draft.reverseCharge && (
+              <p>{fill(p.reverseChargeLine, { answer: p.no })}</p>
+            )}
+          </section>
+        )}
+
+        {(draft.notes || draft.termsText) && (
+          <section data-keep className="mt-5 space-y-2 border-t border-hairline pt-4 text-xs leading-5 text-charcoal">
+            {draft.notes && <p className="whitespace-pre-line"><span className="font-medium text-ink">{bare(p.notes)}:</span> {draft.notes}</p>}
+            {draft.termsText && <p className="whitespace-pre-line"><span className="font-medium text-ink">{p.termsLabel}:</span> {draft.termsText}</p>}
+          </section>
+        )}
+
+        {(assets.signature || (plan.india && draft.status !== "unregistered")) && (
+          <section data-keep className="mt-6 flex justify-end">
+            <div className="min-w-[200px] text-center text-xs text-charcoal">
+              <p>{fill(p.forBusiness, { name: draft.name || p.yourBusiness })}</p>
+              {assets.signature ? <img src={assets.signature} alt="" className="mx-auto my-2 max-h-14 max-w-[200px] object-contain" /> : <div className="h-12" />}
+              <p className="border-t border-hairline pt-1">{p.authorisedSignatory}</p>
+            </div>
+          </section>
+        )}
       </article>
     </div>
   );
