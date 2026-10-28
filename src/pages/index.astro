@@ -5,6 +5,7 @@ import AffiliateProducts from "../components/AffiliateProducts.astro";
 import TemplateThumb from "../components/TemplateThumb.astro";
 import Testimonials from "../components/Testimonials.astro";
 import ReviewInvite from "../components/ReviewInvite.astro";
+import SponsorSlot from "../components/SponsorSlot.astro";
 import { getCollection } from "astro:content";
 import { guidePath } from "../data/internalLinks";
 import { TOPIC_HUBS, pickFeaturedPosts } from "../data/topicHubs";
@@ -273,23 +274,27 @@ const presets = [
   <main>
     <section class="px-4 pb-14 pt-8 md:px-6 md:pt-14 lg:px-8">
       <div class="mx-auto max-w-7xl">
-        <div class="max-w-4xl">
-          <h1 class="text-[2.75rem] font-black leading-[0.95] tracking-[-0.03em] text-obsidian sm:text-6xl lg:text-7xl">
-            Free UPI QR Code Generator
-          </h1>
-          <p class="mt-4 max-w-2xl text-lg leading-8 md:text-xl">
-            Enter your UPI ID and download a universal payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
-          </p>
-          <ul class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px] font-medium">
-            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Free · no signup</li>
-            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Local in-browser QR</li>
-            <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>20+ merchant tools</li>
-            <li><a href="/reviews/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">Read reviews</a></li>
-          </ul>
-        </div>
+        <div class="grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-x-12">
+          <div class="max-w-4xl">
+            <h1 class="text-[2.75rem] font-black leading-[0.95] tracking-[-0.03em] text-obsidian sm:text-6xl lg:text-7xl">
+              Free UPI QR Code Generator
+            </h1>
+            <p class="mt-4 max-w-2xl text-lg leading-8 md:text-xl">
+              Enter your UPI ID and download a universal payment QR that works on PhonePe, Google Pay, Paytm, and BHIM. No signup. Optional amount. Print a counter standee when you need one.
+            </p>
+            <ul class="mt-4 flex flex-wrap items-center gap-x-6 gap-y-2 text-[15px] font-medium">
+              <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Free · no signup</li>
+              <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>Local in-browser QR</li>
+              <li class="flex items-center gap-2"><svg class="h-[18px] w-[18px] text-leaf" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M5 12l5 5L20 7" /></svg>20+ merchant tools</li>
+              <li><a href="/reviews/" class="font-semibold text-forest underline underline-offset-4 hover:text-leaf">Read reviews</a></li>
+            </ul>
+          </div>
 
-        <div id="generator" class="mt-8 scroll-mt-20">
-          <GeneratorForm client:load />
+          <SponsorSlot placement="home-hero" lang="en" class="order-3 mt-8 lg:order-none lg:mt-1" />
+
+          <div id="generator" class="mt-8 scroll-mt-20 lg:col-span-2">
+            <GeneratorForm client:load />
+          </div>
         </div>
 
         <div class="mt-12 grid gap-10 border-t border-forest/10 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">
