@@ -1,0 +1,156 @@
+---
+export const prerender = false;
+import "../../styles/global.css";
+import { authenticatedUserId } from "../../lib/apiSecurity";
+import { sponsorBillingConfig } from "../../lib/billing/config";
+import { parseAdminIds } from "../../lib/metricsCore";
+import { bookingPrice, isShowing, spotsPaid, type Booking } from "../../lib/sponsors/core";
+import { sponsorStore } from "../../lib/sponsors/kvStore";
+import { decideBooking, SponsorBusyError } from "../../lib/sponsors/service";
+import { SPONSOR_EXCLUSIONS, SPONSOR_TIERS } from "../../data/sponsors";
+
+// Sponsor bookings: review paid first bookings, take running ones down. ADMIN_USER_IDS only; everyone else gets 404.
+const headers = { "Cache-Control": "no-store", "X-Robots-Tag": "noindex, nofollow" };
+Astro.response.headers.set("Cache-Control", "no-store");
+Astro.response.headers.set("X-Robots-Tag", "noindex, nofollow");
+Astro.response.headers.set("Referrer-Policy", "same-origin");
+const userId = authenticatedUserId(Astro.locals);
+const admins = parseAdminIds((import.meta.env.ADMIN_USER_IDS as string | undefined) ?? process.env.ADMIN_USER_IDS);
+if (!userId || !admins.has(userId)) return new Response("Not found", { status: 404, headers });
+
+const store = sponsorStore();
+const config = sponsorBillingConfig();
+let flash = Astro.url.searchParams.get("done") ?? "";
+let error = "";
+
+if (Astro.request.method === "POST") {
+  const form = await Astro.request.formData();
+  const id = String(form.get("id") ?? "");
+  const action = String(form.get("action") ?? "");
+  if (!config) error = "Dodo isn't configured, so refunds and cancellations can't run.";
+  else if (action !== "approve" && action !== "reject" && action !== "remove" && action !== "settle") error = "Unknown action.";
+  else {
+    try {
+      const result = await decideBooking(store, config, id, action, Date.now());
+      if (!result) error = "That booking can't take this action any more (refresh to see its state).";
+      else return Astro.redirect(`/admin/sponsors/?done=${encodeURIComponent(`${result.name}: ${result.status}`)}`, 303);
+    } catch (e) {
+      error = e instanceof SponsorBusyError
+        ? "Another change to sponsor bookings was running. Try again in a moment."
+        : "Your decision is saved, but Dodo didn't confirm the refund or cancellation yet. Use \"Retry with Dodo\" below.";
+    }
+  }
+}
+
+const now = Date.now();
+let bookings: Booking[] = [];
+const logos = new Map<string, string>();
+try {
+  bookings = (await store.all()).sort((a, b) => b.createdAt - a.createdAt);
+  for (const b of bookings.filter((x) => x.status === "review" || isShowing(x, now))) {
+    const logo = await store.getLogo(b.id);
+    if (logo) logos.set(b.id, `data:${logo.type};base64,${logo.bytes.toString("base64")}`);
+  }
+} catch {
+  error ||= "Couldn't read bookings from KV.";
+}
+const review = bookings.filter((b) => b.status === "review");
+const running = bookings.filter((b) => b.status === "approved" && isShowing(b, now));
+const history = bookings.filter((b) => !review.includes(b) && !running.includes(b) && b.status !== "checkout").slice(0, 40);
+const owing = bookings.filter((b) => b.refundsOwed.length > 0 || b.cancelOwed);
+const unpaid = bookings.filter((b) => b.status === "checkout").length;
+const rupees = (paise: number) => `₹${new Intl.NumberFormat("en-IN").format(paise / 100)}`;
+const when = (b: Booking) => b.paidUntil ? `paid until ${new Date(b.paidUntil).toISOString().slice(0, 10)}${b.renews ? ", renews" : ", not renewing"}` : "monthly";
+const button = "rounded-[10px] px-4 py-2 text-sm font-semibold";
+---
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Sponsors · Pro UPI QR</title>
+  </head>
+  <body class="min-h-screen bg-fog px-4 py-8 font-sans text-ink">
+    <main class="mx-auto max-w-5xl">
+      <h1 class="text-3xl font-semibold tracking-tight">Sponsor bookings</h1>
+      <p class="mt-1 text-sm text-muted">
+        Logo tiles paid for: {spotsPaid("tile", bookings, now)} of {SPONSOR_TIERS.tile.spots}. Featured card: {spotsPaid("featured", bookings, now) ? "taken" : "free"}.
+        {unpaid > 0 && ` ${unpaid} unpaid checkout${unpaid === 1 ? "" : "s"} (they expire after 7 days).`}
+        {!config && " Online booking is closed: set DODO_PRODUCT_SPONSOR_FEATURED and DODO_PRODUCT_SPONSOR_TILE."}
+      </p>
+      {flash && <p class="mt-4 rounded-[10px] bg-white p-3 text-sm ring-1 ring-hairline" data-admin-flash>{flash}</p>}
+      {error && <p class="mt-4 rounded-[10px] bg-coral/15 p-3 text-sm font-semibold text-[#a8321d]" data-admin-error>{error}</p>}
+
+      {owing.length > 0 && (
+        <section class="mt-8 rounded-[12px] bg-white p-4 shadow-card" aria-labelledby="owing-title" data-owing>
+          <h2 id="owing-title" class="text-lg font-semibold text-[#a8321d]">Waiting on Dodo ({owing.length})</h2>
+          <p class="mt-1 text-sm text-muted">Refunds or cancellations Dodo hasn't confirmed. Retrying never refunds twice: it skips anything Dodo already shows as done.</p>
+          <ul class="mt-3 grid gap-2">
+            {owing.map((b) => (
+              <li class="flex flex-wrap items-center gap-3 text-sm" data-booking={b.id}>
+                <span class="flex-1"><span class="font-semibold">{b.name}</span> <span class="text-muted">· {b.refundsOwed.length ? `refund ${b.refundsOwed.join(", ")}` : ""}{b.refundsOwed.length && b.cancelOwed ? " · " : ""}{b.cancelOwed ? `cancel ${b.cancelOwed}` : ""}</span></span>
+                <form method="post"><input type="hidden" name="id" value={b.id} /><input type="hidden" name="action" value="settle" /><button class={`${button} bg-forest text-white hover:bg-graphite`}>Retry with Dodo</button></form>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      <section class="mt-8" aria-labelledby="review-title">
+        <h2 id="review-title" class="text-lg font-semibold">Waiting for review ({review.length})</h2>
+        <p class="mt-1 text-sm text-muted">Paid first bookings. Check the copy, the logo and the landing page against the rules. Reject refunds the full payment and ends a tile subscription.</p>
+        <details class="mt-2 text-sm text-muted"><summary class="cursor-pointer">Brands we don't accept</summary><ul class="mt-2 list-disc pl-5">{SPONSOR_EXCLUSIONS.map((x) => <li>{x}</li>)}</ul></details>
+        {review.length === 0 && <p class="mt-3 text-sm text-muted">Nothing to review.</p>}
+        <ul class="mt-3 grid gap-3">
+          {review.map((b) => (
+            <li class="rounded-[12px] bg-white p-4 shadow-card" data-booking={b.id}>
+              <div class="flex gap-4">
+                {logos.get(b.id) && <img src={logos.get(b.id)} alt="" width="56" height="56" class="h-14 w-14 rounded-[10px] object-contain ring-1 ring-hairline" />}
+                <div class="min-w-0">
+                  <p class="text-base font-semibold">{b.name} <span class="text-sm font-normal text-muted">· {SPONSOR_TIERS[b.tier].name} · {rupees(bookingPrice(b.tier))}/month</span></p>
+                  {b.tagline && <p class="mt-1 text-sm">{b.tagline}</p>}
+                  <p class="mt-1 break-all text-sm"><a href={b.href} rel="noopener noreferrer nofollow" target="_blank" class="font-semibold text-leaf underline underline-offset-4">{b.href}</a></p>
+                  <p class="mt-1 text-xs text-muted">{b.email} · paid {b.paidAt ? new Date(b.paidAt).toISOString().slice(0, 16).replace("T", " ") : "?"} UTC · {when(b)}</p>
+                  {b.note && <p class="mt-1 text-xs font-semibold text-[#a8321d]">{b.note}</p>}
+                </div>
+              </div>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <form method="post"><input type="hidden" name="id" value={b.id} /><input type="hidden" name="action" value="approve" /><button class={`${button} bg-forest text-white hover:bg-graphite`}>Approve</button></form>
+                <form method="post"><input type="hidden" name="id" value={b.id} /><input type="hidden" name="action" value="reject" /><button class={`${button} bg-[#a8321d] text-white`}>Reject and refund</button></form>
+              </div>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="mt-10" aria-labelledby="running-title">
+        <h2 id="running-title" class="text-lg font-semibold">Running and scheduled ({running.length})</h2>
+        {running.length === 0 && <p class="mt-3 text-sm text-muted">No sponsors yet.</p>}
+        <ul class="mt-3 divide-y divide-hairline rounded-[12px] bg-white shadow-card">
+          {running.map((b) => (
+            <li class="flex flex-wrap items-center gap-3 p-4" data-booking={b.id}>
+              {logos.get(b.id) && <img src={logos.get(b.id)} alt="" width="32" height="32" class="h-8 w-8 rounded-[7px] object-contain" />}
+              <div class="min-w-0 flex-1">
+                <p class="text-sm font-semibold">{b.name} <span class="font-normal text-muted">· {SPONSOR_TIERS[b.tier].name}{isShowing(b, now) ? " · showing now" : " · scheduled"}</span></p>
+                <p class="text-xs text-muted">{when(b)} · {b.email}</p>
+              </div>
+              <form method="post"><input type="hidden" name="id" value={b.id} /><input type="hidden" name="action" value="remove" /><button class={`${button} bg-white ring-1 ring-hairline hover:bg-fog`}>Take down</button></form>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-2 text-xs text-muted">Take down hides it now and stops a tile's renewal. It doesn't refund: refund part of the payment in the Dodo dashboard if that's fair.</p>
+      </section>
+
+      <section class="mt-10" aria-labelledby="history-title">
+        <h2 id="history-title" class="text-lg font-semibold">History</h2>
+        <ul class="mt-3 divide-y divide-hairline rounded-[12px] bg-white text-sm shadow-card">
+          {history.length === 0 && <li class="p-4 text-muted">Nothing yet.</li>}
+          {history.map((b) => (
+            <li class="p-4"><span class="font-semibold">{b.name}</span> <span class="text-muted">· {SPONSOR_TIERS[b.tier].name} · {b.status}{b.note ? ` · ${b.note}` : ""} · {when(b)}</span></li>
+          ))}
+        </ul>
+      </section>
+    </main>
+  </body>
+</html>

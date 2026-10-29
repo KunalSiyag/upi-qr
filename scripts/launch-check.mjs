@@ -132,8 +132,25 @@ else {
   }
   console.log("    Webhook URL: https://www.proupiqr.in/api/billing/dodo-webhook/");
   console.log("      exactly this: www and the trailing slash (proupiqr.in and the no-slash path redirect, and a redirect is a failed delivery)");
-  console.log("    Events: subscription.active, renewed, on_hold, failed, cancelled, expired, plan_changed, updated");
+  console.log("    Events: subscription.active, renewed, on_hold, failed, cancelled, expired, plan_changed, updated;");
+  console.log("      for sponsor bookings also payment.succeeded, payment.failed, refund.succeeded, dispute.opened");
   console.log("    Test and live mode each have their own API key, products and webhook secret; all four must come from the same mode.");
+}
+
+section("Sponsor bookings (/sponsor/, same Dodo account and webhook)");
+{
+  const keys = ["DODO_PRODUCT_SPONSOR_FEATURED", "DODO_PRODUCT_SPONSOR_TILE"];
+  const set = keys.filter((k) => val(k));
+  if (!dodoOn) warn("Online sponsor booking is closed until Dodo Payments is configured; /sponsor/ asks sponsors to email instead");
+  else if (set.length === 0) warn("Online sponsor booking is closed — create the products with npm run dodo:sponsor-products -- --env FILE --create, then set DODO_PRODUCT_SPONSOR_FEATURED and DODO_PRODUCT_SPONSOR_TILE");
+  else if (set.length < keys.length) fail(`Sponsor products half-configured: missing ${keys.filter((k) => !val(k)).join(", ")}`);
+  else {
+    for (const key of keys) if (!/^pdt_[A-Za-z0-9]{8,40}$/.test(val(key))) fail(`${key} should be a Dodo product id (pdt_…)`);
+    const ids = [...keys, "DODO_PRODUCT_MONTHLY", "DODO_PRODUCT_YEARLY"].map(val);
+    if (new Set(ids).size !== ids.length) fail("The sponsor and Pro product ids must all differ: a shared id sends Pro's subscription events to sponsorships, where they're dropped (booking stays closed until fixed)");
+    ok("Sponsor products set: /sponsor/ takes bookings; review paid ones at /admin/sponsors/ (needs ADMIN_USER_IDS)");
+    if (!val("ADMIN_USER_IDS")) fail("ADMIN_USER_IDS is empty: nobody can approve sponsor bookings at /admin/sponsors/");
+  }
 }
 
 section("Pro billing (Razorpay — optional fallback)");

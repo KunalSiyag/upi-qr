@@ -1,9 +1,10 @@
 import { razorpayConfig, type RazorpayConfig } from "./razorpay.ts";
 import { dodoConfig, type DodoConfig } from "./dodo.ts";
 import { dodoProvider, razorpayProvider, type BillingProviders } from "./provider.ts";
+import { sponsorDodoConfig, type SponsorDodoConfig } from "../sponsors/dodo.ts";
 
 const RAZORPAY_KEYS = ["RAZORPAY_KEY_ID", "RAZORPAY_KEY_SECRET", "RAZORPAY_WEBHOOK_SECRET", "RAZORPAY_PLAN_MONTHLY", "RAZORPAY_PLAN_YEARLY"] as const;
-const DODO_KEYS = ["DODO_PAYMENTS_API_KEY", "DODO_PAYMENTS_WEBHOOK_KEY", "DODO_PAYMENTS_ENVIRONMENT", "DODO_PRODUCT_MONTHLY", "DODO_PRODUCT_YEARLY"] as const;
+const DODO_KEYS = ["DODO_PAYMENTS_API_KEY", "DODO_PAYMENTS_WEBHOOK_KEY", "DODO_PAYMENTS_ENVIRONMENT", "DODO_PRODUCT_MONTHLY", "DODO_PRODUCT_YEARLY", "DODO_API_BASE"] as const;
 
 function serverEnv(keys: readonly string[]): Record<string, string | undefined> {
   const env: Record<string, string | undefined> = {};
@@ -19,6 +20,11 @@ export function billingConfig(): RazorpayConfig | null {
 /** Dodo Payments settings from server env; null unless all are set. */
 export function dodoBillingConfig(): DodoConfig | null {
   return dodoConfig(serverEnv(DODO_KEYS));
+}
+
+/** Self-serve sponsor booking: Dodo plus the two sponsor products; null keeps /sponsor/ on "email us". */
+export function sponsorBillingConfig(): SponsorDodoConfig | null {
+  return sponsorDodoConfig(dodoBillingConfig(), serverEnv(["DODO_PRODUCT_SPONSOR_FEATURED", "DODO_PRODUCT_SPONSOR_TILE"]));
 }
 
 /**

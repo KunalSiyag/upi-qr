@@ -21,6 +21,8 @@ export interface DodoConfig {
   webhookKey: string;
   environment: "test_mode" | "live_mode";
   products: Record<BillingInterval, string>;
+  /** Test mode only: a loopback fake of the Dodo API (scripts/e2e/fake-dodo.mjs). */
+  apiBase?: string;
 }
 
 type Env = Record<string, string | undefined>;
@@ -33,11 +35,13 @@ export function dodoConfig(env: Env): DodoConfig | null {
   const yearly = env.DODO_PRODUCT_YEARLY?.trim();
   if (!apiKey || !webhookKey || !monthly || !yearly) return null;
   const environment = env.DODO_PAYMENTS_ENVIRONMENT?.trim() === "live_mode" ? "live_mode" : "test_mode";
-  return { apiKey, webhookKey, environment, products: { monthly, yearly } };
+  const apiBase = env.DODO_API_BASE?.trim();
+  const fake = environment === "test_mode" && apiBase && /^http:\/\/(127\.0\.0\.1|localhost):\d{2,5}$/.test(apiBase) ? apiBase : undefined;
+  return { apiKey, webhookKey, environment, products: { monthly, yearly }, ...(fake ? { apiBase: fake } : {}) };
 }
 
-export const dodoBaseUrl = (config: Pick<DodoConfig, "environment">): string =>
-  config.environment === "live_mode" ? "https://live.dodopayments.com" : "https://test.dodopayments.com";
+export const dodoBaseUrl = (config: Pick<DodoConfig, "environment" | "apiBase">): string =>
+  config.apiBase ?? (config.environment === "live_mode" ? "https://live.dodopayments.com" : "https://test.dodopayments.com");
 
 const ID = {
   sub: /^sub_[A-Za-z0-9]{8,40}$/,
@@ -133,7 +137,7 @@ export function parseDodoWebhook(rawBody: string, config: Pick<DodoConfig, "prod
 
 /* ---------- API ---------- */
 
-async function call<T>(config: DodoConfig, fetchImpl: typeof fetch, method: string, path: string, body?: unknown): Promise<T> {
+export async function dodoRequest<T>(config: DodoConfig, fetchImpl: typeof fetch, method: string, path: string, body?: unknown): Promise<T> {
   const response = await fetchImpl(`${dodoBaseUrl(config)}${path}`, {
     method,
     headers: { Authorization: `Bearer ${config.apiKey}`, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
@@ -147,7 +151,7 @@ async function call<T>(config: DodoConfig, fetchImpl: typeof fetch, method: stri
 
 /** One Dodo customer per account, tagged with our hashed owner id so every subscription event names its account. */
 export async function createDodoCustomer(config: DodoConfig, input: { owner: string; email: string; name: string }, fetchImpl: typeof fetch = fetch): Promise<string> {
-  const customer = await call<{ customer_id?: unknown }>(config, fetchImpl, "POST", "/customers", {
+  const customer = await dodoRequest<{ customer_id?: unknown }>(config, fetchImpl, "POST", "/customers", {
     email: input.email,
     name: input.name || input.email,
     metadata: { owner: input.owner, product: "proupiqr-pro" },
@@ -162,7 +166,7 @@ export async function createDodoCheckout(
   input: { interval: BillingInterval; owner: string; customerId: string; returnUrl: string; cancelUrl: string; trialDays?: number },
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ id: string; url: string }> {
-  const session = await call<{ session_id?: unknown; checkout_url?: unknown }>(config, fetchImpl, "POST", "/checkouts", {
+  const session = await dodoRequest<{ session_id?: unknown; checkout_url?: unknown }>(config, fetchImpl, "POST", "/checkouts", {
     product_cart: [{ product_id: config.products[input.interval], quantity: 1 }],
     customer: { customer_id: input.customerId },
     metadata: { owner: input.owner, product: "proupiqr-pro", interval: input.interval },
@@ -202,10 +206,10 @@ export async function fetchDodoSubscription(config: DodoConfig, id: string, now:
   const createdAt = Math.floor(now / 1000) * 1000 - 1000;
   let subscriptionId = id;
   if (ID.cks.test(id)) {
-    const session = await call<{ payment_id?: unknown }>(config, fetchImpl, "GET", `/checkouts/${id}`);
+    const session = await dodoRequest<{ payment_id?: unknown }>(config, fetchImpl, "GET", `/checkouts/${id}`);
     let found: string | null = null;
     if (typeof session.payment_id === "string" && ID.pay.test(session.payment_id)) {
-      const payment = await call<{ subscription_id?: unknown }>(config, fetchImpl, "GET", `/payments/${session.payment_id}`);
+      const payment = await dodoRequest<{ subscription_id?: unknown }>(config, fetchImpl, "GET", `/payments/${session.payment_id}`);
       if (typeof payment.subscription_id === "string") found = payment.subscription_id;
     }
     if (!found) {
@@ -216,7 +220,7 @@ export async function fetchDodoSubscription(config: DodoConfig, id: string, now:
     subscriptionId = found;
   }
   if (!ID.sub.test(subscriptionId)) throw new Error("Invalid subscription id");
-  const sub = await call<unknown>(config, fetchImpl, "GET", `/subscriptions/${subscriptionId}`);
+  const sub = await dodoRequest<unknown>(config, fetchImpl, "GET", `/subscriptions/${subscriptionId}`);
   const parsed = parseDodoSubscription(sub, "subscription.fetched", createdAt, config);
   if (!parsed || parsed.event.subscriptionId !== subscriptionId) throw new Error("Unexpected subscription from Dodo");
   return parsed;
@@ -227,7 +231,7 @@ async function newestProSubscription(config: DodoConfig, hint: DodoLookupHint, c
   if (!hint.customerId || !ID.cus.test(hint.customerId) || !hint.since) return null;
   // A few minutes of slack for clock differences between us and Dodo.
   const since = new Date(hint.since - 10 * 60_000).toISOString();
-  const page = await call<{ items?: unknown }>(config, fetchImpl, "GET", `/subscriptions?customer_id=${hint.customerId}&created_at_gte=${encodeURIComponent(since)}&page_size=20`);
+  const page = await dodoRequest<{ items?: unknown }>(config, fetchImpl, "GET", `/subscriptions?customer_id=${hint.customerId}&created_at_gte=${encodeURIComponent(since)}&page_size=20`);
   const products = new Set(Object.values(config.products));
   const ours = (Array.isArray(page.items) ? page.items : [])
     .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && products.has((item as Record<string, unknown>).product_id as string))
@@ -241,14 +245,14 @@ async function newestProSubscription(config: DodoConfig, hint: DodoLookupHint, c
 
 export async function cancelDodoAtPeriodEnd(config: DodoConfig, subscriptionId: string, fetchImpl: typeof fetch = fetch): Promise<void> {
   if (!ID.sub.test(subscriptionId)) throw new Error("Invalid subscription id");
-  await call(config, fetchImpl, "PATCH", `/subscriptions/${subscriptionId}`, { cancel_at_next_billing_date: true });
+  await dodoRequest(config, fetchImpl, "PATCH", `/subscriptions/${subscriptionId}`, { cancel_at_next_billing_date: true });
 }
 
 /** Dodo's hosted portal: payment method, invoices, cancellation. */
 export async function dodoPortalLink(config: DodoConfig, customerId: string, returnUrl: string, fetchImpl: typeof fetch = fetch): Promise<string> {
   if (!ID.cus.test(customerId)) throw new Error("Invalid customer id");
   // The SDK sends return_url as a query parameter, not in the body.
-  const session = await call<{ link?: unknown }>(config, fetchImpl, "POST", `/customers/${customerId}/customer-portal/session?return_url=${encodeURIComponent(returnUrl)}`);
+  const session = await dodoRequest<{ link?: unknown }>(config, fetchImpl, "POST", `/customers/${customerId}/customer-portal/session?return_url=${encodeURIComponent(returnUrl)}`);
   if (typeof session.link !== "string") throw new Error("Unexpected portal session from Dodo");
   return session.link;
 }

@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 import { GeneratorForm } from "../../components/GeneratorForm";
 import TemplateThumb from "../../components/TemplateThumb.astro";
 import SponsorSlot from "../../components/SponsorSlot.astro";
+import SponsorStrip from "../../components/SponsorStrip.astro";
 
 const title = "मुफ्त UPI QR कोड जनरेटर — यूनिवर्सल QR";
 const description =
@@ -215,11 +216,13 @@ const presets = [
             </ul>
           </div>
 
-          <SponsorSlot placement="home-hero" lang="hi" class="order-3 mt-8 lg:order-none lg:mt-1" />
+          <SponsorSlot lang="hi" class="order-3 mt-8 lg:order-none lg:mt-1" />
 
           <div id="generator" class="mt-8 scroll-mt-20 lg:col-span-2">
             <GeneratorForm client:load lang="hi" />
           </div>
+
+          <SponsorStrip lang="hi" class="order-4 mt-8 lg:order-none lg:col-span-2" />
         </div>
 
         <div class="mt-12 grid gap-10 border-t border-forest/10 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">

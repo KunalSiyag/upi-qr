@@ -658,4 +658,24 @@ assert.doesNotMatch(middleware, /BEGIN PUBLIC KEY/);
   }
 }
 
-console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, and multi-business guards passed");
+// Sponsorships: sponsor copy never becomes markup, the public list never carries emails or Dodo ids, sponsors can't
+// load anything of their own, the admin page is owner-only, and the fake-Dodo override can't reach live billing.
+{
+  const spots = readFileSync(join(projectRoot, "src/scripts/sponsorSpots.ts"), "utf8");
+  assert.ok(!/innerHTML|insertAdjacentHTML|outerHTML|document\.write/.test(spots), "sponsorSpots.ts must build sponsor DOM with textContent only");
+  assert.ok(spots.includes('startsWith("https://")') && spots.includes('startsWith("/api/v1/sponsors/logo/spb_")'), "sponsorSpots.ts must check sponsor links and logo paths");
+  const sponsorCore = readFileSync(join(projectRoot, "src/lib/sponsors/core.ts"), "utf8");
+  const publicView = sponsorCore.slice(sponsorCore.indexOf("export interface PublicSponsor {"), sponsorCore.indexOf("export interface PublicSponsors"));
+  assert.ok(!/email|payment|session|subscription/i.test(publicView), "PublicSponsor must not carry emails or Dodo ids");
+  const statusRoute = readFileSync(join(projectRoot, "src/pages/api/v1/sponsors/[id].ts"), "utf8");
+  assert.ok(!/b\.email|paymentId|sessionId|subscriptionId|\.\.\.b\b/.test(statusRoute.slice(statusRoute.indexOf("jsonResponse({ id"))), "sponsor status replies must list their fields (no email or Dodo ids)");
+  const logoRoute = readFileSync(join(projectRoot, "src/pages/api/v1/sponsors/logo/[id].ts"), "utf8");
+  assert.ok(logoRoute.includes('"X-Content-Type-Options": "nosniff"') && logoRoute.includes("sandbox"), "sponsor logos must be served with nosniff and a sandbox CSP");
+  assert.ok(!sponsorCore.includes("image/svg"), "sponsor logos must never accept SVG");
+  const adminSponsors = readFileSync(join(projectRoot, "src/pages/admin/sponsors.astro"), "utf8");
+  assert.ok(adminSponsors.indexOf("admins.has(userId)") > -1 && adminSponsors.indexOf("admins.has(userId)") < adminSponsors.indexOf("Astro.request.method === \"POST\""), "/admin/sponsors/ must check ADMIN_USER_IDS before handling a POST");
+  const dodoClient = readFileSync(join(projectRoot, "src/lib/billing/dodo.ts"), "utf8");
+  assert.ok(/environment === "test_mode" && apiBase && \/\^http:\\\/\\\/\(127\\\.0\\\.0\\\.1\|localhost\)/.test(dodoClient), "DODO_API_BASE must be honoured only in test mode and only on loopback");
+}
+
+console.log("[security] URL validation, money parsing, route ownership guards, and removed demo paths, early-access, workspace-sync, pay-link, billing, push, admin, MCP, multi-business and sponsor guards passed");
