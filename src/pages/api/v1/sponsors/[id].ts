@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ params }) => {
   try {
     const b = await bookingStatus(sponsorStore(), sponsorBillingConfig(), id, Date.now());
     if (!b) return jsonResponse({ error: "Not found." }, 404);
-    return jsonResponse({ id: b.id, tier: b.tier, months: b.months, name: b.name, status: b.status, start: b.start, end: b.end, paidUntil: b.paidUntil });
+    return jsonResponse({ id: b.id, tier: b.tier, name: b.name, status: b.status, paidUntil: b.paidUntil, renews: b.renews });
   } catch {
     return jsonResponse({ error: "Unavailable right now." }, 503);
   }

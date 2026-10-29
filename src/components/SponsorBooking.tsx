@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { SPONSOR_EXCLUSIONS, SPONSOR_PERIOD_DAYS, SPONSOR_TIERS, type SponsorTier } from "../data/sponsors";
+import { SPONSOR_EXCLUSIONS, SPONSOR_TIERS, type SponsorTier } from "../data/sponsors";
 
 /**
  * Self-serve sponsor booking on /sponsor/: pick the featured card or a logo tile, add the copy and a logo, pay on
@@ -10,7 +10,6 @@ import { SPONSOR_EXCLUSIONS, SPONSOR_PERIOD_DAYS, SPONSOR_TIERS, type SponsorTie
 interface Availability {
   open: boolean;
   tilesFree: number;
-  featuredNextStart: string;
   featuredBookable: boolean;
 }
 
@@ -19,15 +18,12 @@ interface Status {
   tier: SponsorTier;
   name: string;
   status: string;
-  start: string | null;
-  end: string | null;
 }
 
 const input = "mt-1 block w-full rounded-[10px] bg-white px-3 py-2.5 text-base text-ink ring-1 ring-hairline outline-none transition focus:ring-2 focus:ring-leaf";
 const label = "block text-sm font-semibold text-ink";
 const hint = "mt-1 text-xs text-muted";
 const rupees = (paise: number) => `₹${new Intl.NumberFormat("en-IN").format(paise / 100)}`;
-const longDate = (day: string) => new Date(`${day}T00:00:00Z`).toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 /** Fits any image into a 128×128 transparent PNG (data URL), or explains why it can't. */
 async function logoPng(file: File): Promise<string> {
@@ -84,9 +80,9 @@ function BookingProgress({ id }: { id: string }) {
 
   const message = missing ? "We couldn't find this booking. If you paid, email us and we'll sort it out."
     : !status || status.status === "checkout" ? "Confirming your payment with Dodo Payments…"
-    : status.status === "review" ? `Paid, thank you. We check every first booking against our rules and reply within a day. ${status.tier === "featured" ? "Your 30-day periods start when we approve it." : "Your tile appears as soon as we approve it."} If we can't run it, you get a full refund.`
-    : status.status === "approved" ? (status.tier === "featured" && status.start ? `Approved. Your featured card runs from ${longDate(status.start)} to ${longDate(status.end ?? status.start)}.` : "Approved. Your logo tile is live on the homepage.")
-    : status.status === "soldout" ? "Every logo tile was taken by the time your payment arrived, so we've refunded it in full."
+    : status.status === "review" ? `Paid, thank you. We check every first booking against our rules and reply within a day. ${status.tier === "featured" ? "Your featured card" : "Your tile"} appears as soon as we approve it. If we can't run it, you get a full refund.`
+    : status.status === "approved" ? `Approved. Your ${status.tier === "featured" ? "featured card" : "logo tile"} is live on the homepage.`
+    : status.status === "soldout" ? `${status.tier === "featured" ? "The featured card was" : "Every logo tile was"} taken by the time your payment arrived, so we've refunded it in full.`
     : status.status === "rejected" ? "We couldn't run this booking, so we've refunded it in full."
     : "This booking has ended.";
   return (
@@ -102,7 +98,6 @@ export function SponsorBooking({ email }: { email: string }) {
   const [returned, setReturned] = useState<string | null>(null);
   const [availability, setAvailability] = useState<Availability | null>(null);
   const [tier, setTier] = useState<SponsorTier>("featured");
-  const [months, setMonths] = useState(1);
   const [name, setName] = useState("");
   const [tagline, setTagline] = useState("");
   const [href, setHref] = useState("https://");
@@ -118,12 +113,12 @@ export function SponsorBooking({ email }: { email: string }) {
     if (id && /^spb_[a-f0-9]{32}$/.test(id)) setReturned(id);
     fetch("/api/v1/sponsors/", { credentials: "omit" })
       .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setAvailability(data ? { open: Boolean(data.open), tilesFree: Number(data.tilesFree) || 0, featuredNextStart: String(data.featuredNextStart ?? ""), featuredBookable: Boolean(data.featuredBookable) } : { open: false, tilesFree: 0, featuredNextStart: "", featuredBookable: false }))
-      .catch(() => setAvailability({ open: false, tilesFree: 0, featuredNextStart: "", featuredBookable: false }));
+      .then((data) => setAvailability(data ? { open: Boolean(data.open), tilesFree: Number(data.tilesFree) || 0, featuredBookable: Boolean(data.featuredBookable) } : { open: false, tilesFree: 0, featuredBookable: false }))
+      .catch(() => setAvailability({ open: false, tilesFree: 0, featuredBookable: false }));
   }, []);
 
   const unavailable = availability && (tier === "tile" ? availability.tilesFree <= 0 : !availability.featuredBookable);
-  const total = SPONSOR_TIERS[tier].paise * (tier === "featured" ? months : 1);
+  const total = SPONSOR_TIERS[tier].paise;
   const host = useMemo(() => { try { return new URL(href).hostname.replace(/^www\./, ""); } catch { return ""; } }, [href]);
 
   const pickLogo = async (file: File | undefined) => {
@@ -147,7 +142,7 @@ export function SponsorBooking({ email }: { email: string }) {
       const res = await fetch("/api/v1/sponsors/checkout/", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ tier, months, name, tagline, href, email: contact, logo, agree, company: honeypot.current?.value ?? "" }),
+        body: JSON.stringify({ tier, name, tagline, href, email: contact, logo, agree, company: honeypot.current?.value ?? "" }),
       });
       const data = await res.json().catch(() => ({})) as { url?: string; error?: string; field?: string };
       if (res.ok && data.url) { location.assign(data.url); return; }
@@ -181,27 +176,18 @@ export function SponsorBooking({ email }: { email: string }) {
                 <label key={t} className={`cursor-pointer rounded-[12px] bg-white p-4 ring-1 transition ${tier === t ? "ring-2 ring-leaf" : "ring-hairline hover:ring-ink/30"}`}>
                   <input type="radio" name="tier" value={t} checked={tier === t} onChange={() => setTier(t)} className="sr-only" />
                   <span className="block text-base font-semibold text-ink">{SPONSOR_TIERS[t].name}</span>
-                  <span className="mt-1 block text-sm text-charcoal">{SPONSOR_TIERS[t].label} {t === "featured" ? `per ${SPONSOR_PERIOD_DAYS} days, paid upfront` : "a month, cancel any time"}</span>
+                  <span className="mt-1 block text-sm text-charcoal">{SPONSOR_TIERS[t].label} a month, cancel any time</span>
                   <span className="mt-2 block text-xs text-muted" data-availability={t}>
                     {!availability ? "Checking availability…"
-                      : full ? (t === "tile" ? "All tiles taken" : "Booked as far ahead as we sell")
+                      : full ? (t === "tile" ? "All tiles taken" : "Taken right now")
                       : t === "tile" ? `${availability.tilesFree} of ${SPONSOR_TIERS.tile.spots} free`
-                      : `Earliest start ${longDate(availability.featuredNextStart)}`}
+                      : "Free now"}
                   </span>
                 </label>
               );
             })}
           </div>
         </fieldset>
-
-        {tier === "featured" && (
-          <div>
-            <label htmlFor="sp-months" className={label}>How long</label>
-            <select id="sp-months" value={months} onChange={(e) => setMonths(Number(e.target.value))} className={input}>
-              {[1, 2, 3].map((m) => <option key={m} value={m}>{m * SPONSOR_PERIOD_DAYS} days · {rupees(SPONSOR_TIERS.featured.paise * m)}</option>)}
-            </select>
-          </div>
-        )}
 
         <div>
           <label htmlFor="sp-name" className={label}>Brand name</label>
@@ -241,7 +227,7 @@ export function SponsorBooking({ email }: { email: string }) {
           <ul className="mt-2 list-disc space-y-1 pl-5">
             <li>We review every first booking within a day. If we can't run it, you get a full refund.</li>
             <li>We don't accept: {SPONSOR_EXCLUSIONS.join("; ").toLowerCase()}.</li>
-            <li>{tier === "featured" ? `The featured card runs for ${months * SPONSOR_PERIOD_DAYS} days from its start date. Once it has started it can't be refunded.` : "Tiles renew every month until you cancel: email us any time and it stays up until the paid month ends."}</li>
+            <li>It renews every month until you cancel: email us any time and it stays up until the paid month ends. A month that has started can't be refunded.</li>
           </ul>
           <label className="mt-3 flex cursor-pointer items-start gap-2">
             <input type="checkbox" checked={agree} onChange={(e) => setAgree(e.target.checked)} className="mt-1 h-4 w-4 shrink-0 accent-[#1c1d1f]" />
@@ -250,10 +236,10 @@ export function SponsorBooking({ email }: { email: string }) {
           {fieldError("agree")}
         </div>
 
-        {(error?.field === "form" || error?.field === "tier" || error?.field === "months") && <p role="alert" className="text-sm font-semibold text-[#a8321d]">{error.text}</p>}
+        {(error?.field === "form" || error?.field === "tier") && <p role="alert" className="text-sm font-semibold text-[#a8321d]">{error.text}</p>}
         <div className="flex flex-wrap items-center gap-4">
           <button type="submit" disabled={busy || Boolean(unavailable)} className="rounded-[10px] bg-forest px-6 py-3 text-sm font-semibold text-white transition hover:bg-graphite disabled:opacity-50">
-            {busy ? "Opening payment…" : `Continue to payment · ${rupees(total)}`}
+            {busy ? "Opening payment…" : `Continue to payment · ${rupees(total)}/month`}
           </button>
           <p className="text-xs text-muted">Paid securely on Dodo Payments. GST included; add your GSTIN there for the invoice.</p>
         </div>

@@ -2,8 +2,8 @@ import { dodoRequest, type DodoConfig } from "../billing/dodo.ts";
 import { SPONSOR_PRODUCT, type Booking, type SponsorEvent, type SponsorProducts } from "./core.ts";
 
 /**
- * Dodo Payments calls for sponsorships, on the same account and webhook as Pro. The featured card is a one-time
- * product bought by quantity (30-day periods); a logo tile is a monthly subscription. Shapes checked 2026-10
+ * Dodo Payments calls for sponsorships, on the same account and webhook as Pro. Both the featured card and a logo
+ * tile are monthly subscriptions. Shapes checked 2026-10
  * against Dodo's API reference: POST /checkouts, GET /checkouts/{id}, GET /payments/{id} (refund_status, refunds[]),
  * POST /refunds, GET and PATCH /subscriptions/{id} { status: "cancelled" }.
  */
@@ -34,7 +34,7 @@ export async function createSponsorCheckout(
   fetchImpl: typeof fetch = fetch,
 ): Promise<{ id: string; url: string }> {
   const session = await dodoRequest<{ session_id?: unknown; checkout_url?: unknown }>(config.dodo, fetchImpl, "POST", "/checkouts", {
-    product_cart: [{ product_id: config.products[booking.tier], quantity: booking.tier === "featured" ? booking.months : 1 }],
+    product_cart: [{ product_id: config.products[booking.tier], quantity: 1 }],
     customer: { email: booking.email, name: booking.name },
     metadata: { product: SPONSOR_PRODUCT, booking: booking.id, tier: booking.tier },
     billing_currency: "INR",

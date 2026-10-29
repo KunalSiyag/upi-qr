@@ -3,7 +3,7 @@ import BaseLayout from "../layouts/BaseLayout.astro";
 import { SponsorBooking } from "../components/SponsorBooking";
 import { BUSINESS } from "../data/business";
 import { LOCALIZED_TOOLS } from "../data/localizedTools";
-import { SPONSOR_EXCLUSIONS, SPONSOR_PERIOD_DAYS, SPONSOR_REACH, SPONSOR_TIERS } from "../data/sponsors";
+import { SPONSOR_EXCLUSIONS, SPONSOR_REACH, SPONSOR_TIERS } from "../data/sponsors";
 
 const title = "Sponsor Pro UPI QR — Reach Indian Shops and Freelancers";
 const description =
@@ -24,10 +24,10 @@ const reach = [
 const tiers = [
   {
     name: featured.name,
-    price: `${featured.label} per ${SPONSOR_PERIOD_DAYS} days`,
+    price: `${featured.label} a month`,
     spots: "One sponsor at a time",
     where: featured.where,
-    points: [`Book ${SPONSOR_PERIOD_DAYS}, ${SPONSOR_PERIOD_DAYS * 2} or ${SPONSOR_PERIOD_DAYS * 3} days, paid upfront.`, "Bookings queue: yours starts on the next free date.", "Book again any time to extend."],
+    points: ["Renews monthly; cancel whenever you like.", "Yours for as long as you renew: nobody can book it from under you.", "When it's taken, the next sponsor can book once it ends."],
   },
   {
     name: tile.name,
@@ -51,7 +51,7 @@ const faqs = [
   },
   {
     question: "How does booking work?",
-    answer: "Choose a placement, add your brand name, link and logo (and one line for the featured card), and pay on Dodo Payments' checkout. We review every first booking within a day. Once approved it goes live by itself: a tile straight away, the featured card on its start date.",
+    answer: "Choose a placement, add your brand name, link and logo (and one line for the featured card), and pay on Dodo Payments' checkout. We review every first booking within a day. Once approved it goes live straight away and stays up for as long as you renew.",
   },
   {
     question: "What if you don't approve my booking?",
@@ -59,7 +59,7 @@ const faqs = [
   },
   {
     question: "What if another brand offers more for the featured card?",
-    answer: "Prices are fixed and published here, and a paid booking is never moved or cancelled for someone else. Featured bookings run in the order they were approved; if prices change, they change for new bookings only.",
+    answer: "Prices are fixed and published here, and a paid booking is never moved or cancelled for someone else. The featured card stays with its sponsor for as long as they renew; if prices change, they change for new bookings only.",
   },
   {
     question: "How do I measure results?",

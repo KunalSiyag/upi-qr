@@ -15,8 +15,6 @@ const check = checker();
 const kv = (path, body) => fetch(`${KV}/__admin/${path}`, { method: "POST", body: JSON.stringify(body) }).then((r) => r.json());
 const dodo = (path, body) => fetch(`${DODO}/__admin/${path}`, { method: body ? "POST" : "GET", body: body ? JSON.stringify(body) : undefined }).then((r) => r.json());
 const booking = async (id) => { const v = (await kv("get", { key: `${PREFIX}b:${id}` })).value; return v ? JSON.parse(v) : null; };
-const istDay = (ms) => new Date(ms + 330 * 60_000).toISOString().slice(0, 10);
-const addDays = (day, n) => { const d = new Date(`${day}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); };
 
 const b64u = (v) => Buffer.from(typeof v === "string" ? v : JSON.stringify(v)).toString("base64url");
 function sessionToken(userId) {
@@ -81,9 +79,8 @@ try {
   await b.go(`${DEV}/sponsor/#book`, 5000);
   await b.eval("document.getElementById('book').scrollIntoView(); true");
   check("/sponsor/: booking form is open", await b.waitFor("Boolean(document.querySelector('[data-sponsor-form]'))", 15000));
-  check("/sponsor/: availability shown", await b.waitFor("/Earliest start/.test(document.querySelector('[data-availability=featured]')?.textContent ?? '')"));
+  check("/sponsor/: availability shown", await b.waitFor("/Free now/.test(document.querySelector('[data-availability=featured]')?.textContent ?? '')"));
   const setValue = (id, value) => b.eval(`(() => { const el = document.getElementById(${JSON.stringify(id)}); const proto = el.tagName === 'SELECT' ? HTMLSelectElement.prototype : HTMLInputElement.prototype; Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, ${JSON.stringify(value)}); el.dispatchEvent(new Event(el.tagName === 'SELECT' ? 'change' : 'input', { bubbles: true })); return true; })()`);
-  await setValue("sp-months", "2");
   await setValue("sp-name", "Acme Soundbox");
   await setValue("sp-line", "Payment alerts that speak every UPI payment out loud.");
   await setValue("sp-href", "https://acme.example.com/soundbox");
@@ -97,7 +94,7 @@ try {
   await b.eval("document.querySelector('[data-sponsor-form]').scrollIntoView(); true");
   await sleep(300);
   await b.shot("sponsors-form.png");
-  check("/sponsor/: total is two periods (₹6,000)", /₹6,000/.test(await b.eval("document.querySelector('[data-sponsor-form] button[type=submit]').textContent")));
+  check("/sponsor/: button shows the monthly price (₹3,000/month)", /₹3,000\/month/.test(await b.eval("document.querySelector('[data-sponsor-form] button[type=submit]').textContent")));
   await b.eval("document.querySelector('[data-sponsor-form] button[type=submit]').click(); true");
   check("/sponsor/: rules must be accepted first", await b.waitFor("/Confirm the booking rules/.test(document.body.innerText)"));
   await b.eval("document.querySelector('[data-sponsor-form] input[type=checkbox]').click(); true");
@@ -109,7 +106,7 @@ try {
   const created = (await dodo("calls")).filter((c) => c.path === "/checkouts");
   const featuredCheckout = created[0]?.body;
   const fid = featuredCheckout?.metadata?.booking;
-  check("checkout: two featured periods, prefilled email, our metadata", featuredCheckout?.product_cart?.[0]?.product_id === FEATURED && featuredCheckout.product_cart[0].quantity === 2
+  check("checkout: one featured month, prefilled email, our metadata", featuredCheckout?.product_cart?.[0]?.product_id === FEATURED && featuredCheckout.product_cart[0].quantity === 1
     && featuredCheckout.customer.email === "ads@acme.example.com" && featuredCheckout.metadata.product === "proupiqr-sponsor" && /^spb_[a-f0-9]{32}$/.test(fid ?? ""), JSON.stringify(featuredCheckout));
   check("checkout: no coupon box, INR only", featuredCheckout?.feature_flags?.allow_discount_code === false && featuredCheckout.billing_currency === "INR");
   check("checkout: returns to the booking's status page", featuredCheckout?.return_url === `${DEV}/sponsor/?booking=${fid}#book`);
@@ -121,7 +118,7 @@ try {
   /* ---------- Payment webhook → review ---------- */
   const unsigned = await fetch(`${DEV}/api/billing/dodo-webhook/`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ type: "payment.succeeded", data: { payment_id: "pay_X", metadata: { product: "proupiqr-sponsor", booking: fid } } }) });
   check("unsigned sponsor webhook → 401", unsigned.status === 401);
-  res = await paid(fid, fb.sessionId, { payment: "pay_E2eFeatured000001", amount: 600_000, product: FEATURED, quantity: 2 });
+  res = await paid(fid, fb.sessionId, { payment: "pay_E2eFeatured000001", amount: 300_000, product: FEATURED, quantity: 1, subscription: "sub_E2eFeatured00001" });
   const body = await res.json();
   check("signed payment → booking waits for review", res.status === 200 && body.status === "review", JSON.stringify(body));
   fb = await booking(fid);
@@ -144,12 +141,14 @@ try {
   res = await adminPage("user_e2eadmin", { id: fid, action: "approve" });
   check("approve → redirect back", res.status === 303);
   fb = await booking(fid);
-  const today = istDay(Date.now());
-  check("approved: runs 60 days from today", fb.status === "approved" && fb.start === today && fb.end === addDays(today, 59), JSON.stringify({ s: fb.status, start: fb.start, end: fb.end }));
+  const month = fb.paidUntil - fb.paidAt;
+  check("approved: runs a month and renews", fb.status === "approved" && fb.renews === true && month > 29 * 86_400_000 && month <= 31 * 86_400_000, JSON.stringify({ s: fb.status, paidUntil: fb.paidUntil, renews: fb.renews }));
 
   const pub = await (await fetch(`${DEV}/api/v1/sponsors/`)).json();
   check("public API: featured sponsor with UTM-tagged link", pub.featured?.name === "Acme Soundbox" && pub.featured.href === "https://acme.example.com/soundbox?utm_source=proupiqr&utm_medium=sponsor&utm_campaign=home-featured");
-  check("public API: next featured start is after this booking", pub.featuredNextStart === addDays(today, 60));
+  check("public API: featured card shown as taken", pub.featuredBookable === false && !("featuredNextStart" in pub));
+  res = await api({ ...tileBody("Second Featured"), tier: "featured", tagline: "Another line for the card." });
+  check("a second featured booking is refused while the card is taken", res.status === 409 && /taken/.test((await res.json()).error ?? ""));
   check("public API: no emails or payment ids", !/@|pay_|cks_/.test(JSON.stringify(pub)));
 
   await b.go(`${DEV}/`, 4000);

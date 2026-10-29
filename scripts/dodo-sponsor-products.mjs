@@ -5,7 +5,7 @@
 //   npm run dodo:sponsor-products -- --env .env.preview.local --create            # create missing (test mode)
 //   npm run dodo:sponsor-products -- --env .env.production.local --create --live  # live mode needs --live
 //
-// Featured card: a one-time product bought by quantity (one per 30-day period). Logo tile: monthly subscription.
+// Both tiers are monthly subscriptions: the featured card (one spot) and a logo tile (eight spots).
 import { existsSync, readFileSync } from "node:fs";
 import { isAbsolute, join } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -15,14 +15,12 @@ const ROOT = new URL("../", import.meta.url).pathname;
 const PRODUCT = "proupiqr-sponsor";
 const base = (environment) => (environment === "live_mode" ? "https://live.dodopayments.com" : "https://test.dodopayments.com");
 
-/** Exactly `amount` paise, INR, tax-inclusive, nothing that would charge less; one-time for featured, monthly for tiles. */
+/** Exactly `amount` paise a month, INR, tax-inclusive, no trial and nothing that would charge less. */
 export function matchesSponsorPrice(product, tier, amount) {
   const p = product?.price_detail ?? product?.price;
   if (!p || p.price !== amount || p.currency !== "INR" || p.tax_inclusive !== true) return false;
   if (Number(p.discount_bps) > 0 || Number(p.discount) > 0 || p.purchasing_power_parity === true || p.pay_what_you_want === true) return false;
-  return tier === "featured"
-    ? p.type === "one_time_price"
-    : p.type === "recurring_price" && p.payment_frequency_interval === "Month" && Number(p.payment_frequency_count) === 1 && !(Number(p.trial_period_days) > 0);
+  return p.type === "recurring_price" && p.payment_frequency_interval === "Month" && Number(p.payment_frequency_count) === 1 && !(Number(p.trial_period_days) > 0);
 }
 
 async function listProducts(environment, headers, fetchImpl) {
@@ -48,16 +46,14 @@ export async function findOrCreateSponsorProducts({ apiKey, environment, create 
     const found = existing.find((p) => p?.metadata?.product === PRODUCT && p?.metadata?.tier === tier && matchesSponsorPrice(p, tier, paise));
     if (found) { result[tier] = { id: found.product_id, created: false }; continue; }
     if (!create) { result[tier] = null; continue; }
-    const price = tier === "featured"
-      ? { type: "one_time_price", price: paise, currency: "INR", tax_inclusive: true, purchasing_power_parity: false }
-      : { type: "recurring_price", price: paise, currency: "INR", tax_inclusive: true, payment_frequency_count: 1, payment_frequency_interval: "Month", subscription_period_count: 10, subscription_period_interval: "Year", purchasing_power_parity: false };
+    const price = { type: "recurring_price", price: paise, currency: "INR", tax_inclusive: true, payment_frequency_count: 1, payment_frequency_interval: "Month", subscription_period_count: 10, subscription_period_interval: "Year", purchasing_power_parity: false };
     const res = await fetchImpl(`${base(environment)}/products`, {
       method: "POST",
       headers,
       body: JSON.stringify({
         name: `Pro UPI QR sponsor: ${name.toLowerCase()}`,
         description: tier === "featured"
-          ? "The featured sponsor card on the proupiqr.in homepages for 30 days per unit. Prices include GST."
+          ? "The featured sponsor card on the proupiqr.in homepages, billed monthly. Prices include GST."
           : "A logo tile in the \"Supported by\" strip on the proupiqr.in homepages, billed monthly. Prices include GST.",
         tax_category: "digital_products",
         price,
@@ -98,7 +94,7 @@ async function main() {
     console.error("DODO_PAYMENTS_ENVIRONMENT is live_mode. Re-run with --create --live to create live products (creating a product charges no one).");
     process.exit(1);
   }
-  console.log(`Dodo Payments ${environment === "live_mode" ? "LIVE" : "test"} mode · featured ${SPONSOR_TIERS.featured.label} per 30 days, tile ${SPONSOR_TIERS.tile.label}/month (GST included)`);
+  console.log(`Dodo Payments ${environment === "live_mode" ? "LIVE" : "test"} mode · featured ${SPONSOR_TIERS.featured.label}/month, tile ${SPONSOR_TIERS.tile.label}/month (GST included)`);
   const products = await findOrCreateSponsorProducts({ apiKey, environment, create });
   let missing = 0;
   for (const [tier, product] of Object.entries(products)) {

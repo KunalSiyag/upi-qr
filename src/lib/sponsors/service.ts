@@ -4,7 +4,7 @@ import {
   applySponsorEvent,
   BOOKING_ID,
   decide,
-  featuredBookable,
+  featuredFree,
   newBooking,
   newBookingId,
   parseSponsorWebhook,
@@ -69,8 +69,8 @@ export async function startBooking(
   if (input.tier === "tile" && tilesPaid(all, now) >= SPONSOR_TIERS.tile.spots) {
     return { ok: false, status: 409, error: "All logo tiles are taken right now. Try again later or book the featured card." };
   }
-  if (input.tier === "featured" && !featuredBookable(all, now)) {
-    return { ok: false, status: 409, error: "The featured card is booked as far ahead as we sell. Try a logo tile." };
+  if (input.tier === "featured" && !featuredFree(all, now)) {
+    return { ok: false, status: 409, error: "The featured card is taken right now. Try again when it frees up, or book a logo tile." };
   }
   const booking = newBooking(input, newBookingId(), now);
   const back = `${origin}/sponsor/?booking=${booking.id}`;

@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import { createHmac } from "node:crypto";
 import {
-  addDays, applySponsorEvent, BOOKING_ID, bookingPrice, decide, featuredNextStart, isShowing, istDay, needsReview, newBooking,
+  applySponsorEvent, BOOKING_ID, bookingPrice, decide, featuredFree, isShowing, needsReview, newBooking, spotsPaid,
   parseSponsorWebhook, publicSponsors, sniffLogo, sponsorHref, tilesPaid, validateBookingInput,
 } from "../src/lib/sponsors/core.ts";
 import { memorySponsorStore } from "../src/lib/sponsors/store.ts";
@@ -15,7 +15,7 @@ import { findOrCreateSponsorProducts, matchesSponsorPrice } from "./dodo-sponsor
 const PNG = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(40, 1)]);
 const products = { featured: "pdt_SponsorFeatured0001", tile: "pdt_SponsorTile00000001" };
 const NOW = Date.parse("2026-11-01T06:00:00Z"); // 1 Nov, 11:30 IST
-const raw = (over = {}) => ({ tier: "featured", months: 2, name: "Acme Soundbox", tagline: "Payment alerts for every counter.", href: "https://acme.example.com/soundbox?ref=x", email: "Ads@Acme.example.com", logo: PNG.toString("base64"), agree: true, ...over });
+const raw = (over = {}) => ({ tier: "featured", name: "Acme Soundbox", tagline: "Payment alerts for every counter.", href: "https://acme.example.com/soundbox?ref=x", email: "Ads@Acme.example.com", logo: PNG.toString("base64"), agree: true, ...over });
 
 /* ---------- Input ---------- */
 {
@@ -26,9 +26,6 @@ const raw = (over = {}) => ({ tier: "featured", months: 2, name: "Acme Soundbox"
   assert.equal(validateBookingInput(raw({ logo: `data:image/png;base64,${PNG.toString("base64")}` })).ok, true, "data URL prefix accepted");
   const bad = (over, field) => { const r = validateBookingInput(raw(over)); assert.equal(r.ok, false, JSON.stringify(over)); assert.equal(r.field, field); };
   bad({ tier: "banner" }, "tier");
-  bad({ months: 4 }, "months");
-  bad({ months: 0 }, "months");
-  bad({ months: "1.5" }, "months");
   bad({ name: "A" }, "name");
   bad({ name: "x".repeat(41) }, "name");
   bad({ name: "Acme‮evil" }, "name");
@@ -41,29 +38,28 @@ const raw = (over = {}) => ({ tier: "featured", months: 2, name: "Acme Soundbox"
   bad({ logo: Buffer.from("<svg xmlns='http://www.w3.org/2000/svg'/>").toString("base64") }, "logo");
   bad({ logo: Buffer.concat([PNG, Buffer.alloc(70_000)]).toString("base64") }, "logo");
   bad({ agree: false }, "agree");
-  const tile = validateBookingInput(raw({ tier: "tile", months: 3, tagline: "" }));
-  assert.ok(tile.ok && tile.value.months === 1 && tile.value.tagline === "", "tiles: one month, no line");
+  const tile = validateBookingInput(raw({ tier: "tile", tagline: "Ignored" }));
+  assert.ok(tile.ok && tile.value.tagline === "", "tiles have no line");
   assert.equal(sniffLogo(Buffer.from([0xff, 0xd8, 0xff, 0xe0])), "image/jpeg");
   assert.equal(sniffLogo(Buffer.concat([Buffer.from("RIFF"), Buffer.alloc(4), Buffer.from("WEBPVP8 ")])), "image/webp");
-  assert.equal(bookingPrice("featured", 3), 900_000);
-  assert.equal(bookingPrice("tile", 1), 99_900);
-  assert.equal(SPONSOR_TIERS.featured.paise, 300_000, "featured card ₹3,000 (owner decision 2026-10-29)");
+  assert.equal(bookingPrice("featured"), 300_000);
+  assert.equal(bookingPrice("tile"), 99_900);
+  assert.equal(SPONSOR_TIERS.featured.paise, 300_000, "featured card ₹3,000 a month (owner decisions 2026-10-29 and 2026-10-30)");
 }
 
-/* ---------- Dates, availability and scheduling ---------- */
+/* ---------- Availability ---------- */
 const input = (over = {}) => { const r = validateBookingInput(raw(over)); assert.ok(r.ok); return r.value; };
 const booking = (over = {}, id = `spb_${Math.random().toString(16).slice(2).padEnd(32, "0").slice(0, 32)}`) => ({ ...newBooking(input(over), id, NOW - 60_000) });
 {
-  assert.equal(istDay(Date.parse("2026-10-31T18:29:00Z")), "2026-10-31");
-  assert.equal(istDay(Date.parse("2026-10-31T18:30:00Z")), "2026-11-01");
-  assert.equal(addDays("2026-12-31", 1), "2027-01-01");
-
-  const a = { ...booking(), status: "approved", approvedAt: NOW - 1, start: "2026-10-20", end: "2026-11-18" };
-  assert.equal(featuredNextStart([a], NOW), "2026-11-19");
-  const waiting = { ...booking({ months: 1 }), status: "review" };
-  assert.equal(featuredNextStart([a, waiting], NOW), "2026-12-19", "paid bookings in review hold their 30 days");
+  // The featured card is one monthly spot: whoever has it paid for (in review or running) holds it.
+  const a = { ...booking(), status: "approved", approvedAt: NOW - 1, paidUntil: NOW + 10 * 86_400_000, renews: true };
+  assert.equal(featuredFree([a], NOW), false);
+  assert.equal(featuredFree([{ ...a, status: "review" }], NOW), false, "a paid booking in review holds it");
+  assert.equal(featuredFree([{ ...a, status: "checkout" }], NOW), true, "an unpaid checkout doesn't");
+  assert.equal(featuredFree([{ ...a, renews: false, paidUntil: NOW - 1 }], NOW), true, "free once a cancelled month ends");
   assert.ok(isShowing(a, NOW));
-  assert.ok(!isShowing(a, Date.parse("2026-11-18T18:30:00Z")), "ends after its last IST day");
+  assert.ok(isShowing(a, NOW + 11 * 86_400_000), "two days' grace for a late renewal webhook");
+  assert.ok(!isShowing(a, NOW + 13 * 86_400_000));
 
   const t = (status, over = {}) => ({ ...booking({ tier: "tile", tagline: "" }), status, paidUntil: NOW + 86_400_000, renews: true, approvedAt: NOW - 5, ...over });
   const tiles = [t("approved"), t("review"), t("checkout", { createdAt: NOW - 60_000 }), t("rejected"), t("approved", { paidUntil: NOW - 3 * 86_400_000 })];
@@ -77,6 +73,8 @@ const booking = (over = {}, id = `spb_${Math.random().toString(16).slice(2).padE
   assert.match(view.featured.logo, /^\/api\/v1\/sponsors\/logo\/spb_[a-f0-9]{32}\/$/);
   assert.equal(view.tiles.length, 1);
   assert.equal(view.tilesFree, 6);
+  assert.equal(view.featuredBookable, false);
+  assert.equal("featuredNextStart" in view, false);
   assert.ok(!JSON.stringify(view).includes("@"), "no email in the public view");
   assert.throws(() => sponsorHref("http://acme.example.com/", "home-tile"));
 }
@@ -97,7 +95,7 @@ const booking = (over = {}, id = `spb_${Math.random().toString(16).slice(2).padE
 /* ---------- Dodo webhooks ---------- */
 const payment = (b, over = {}) => JSON.stringify({
   type: "payment.succeeded", timestamp: new Date(NOW).toISOString(),
-  data: { payment_id: "pay_TestPayment000001", status: "succeeded", checkout_session_id: b.sessionId, subscription_id: null, total_amount: bookingPrice(b.tier, b.months), currency: "INR", product_cart: [{ product_id: products[b.tier], quantity: b.tier === "featured" ? b.months : 1 }], metadata: { product: "proupiqr-sponsor", booking: b.id }, ...over },
+  data: { payment_id: "pay_TestPayment000001", status: "succeeded", checkout_session_id: b.sessionId, subscription_id: null, total_amount: bookingPrice(b.tier), currency: "INR", product_cart: [{ product_id: products[b.tier], quantity: 1 }], metadata: { product: "proupiqr-sponsor", booking: b.id }, ...over },
 });
 {
   assert.equal(parseSponsorWebhook(JSON.stringify({ type: "subscription.active", data: { subscription_id: "sub_Pro0000000001", product_id: "pdt_ProMonthly", metadata: { owner: "a".repeat(32) } } }), products), null, "Pro events are not ours");
@@ -114,15 +112,25 @@ const payment = (b, over = {}) => JSON.stringify({
 
   r = applySponsorEvent(b, parseSponsorWebhook(payment(b, { total_amount: 100 }), products), [b], products, NOW);
   assert.equal(r.booking.status, "review");
-  assert.match(r.booking.note, /expected INR 6000/, "a wrong amount never goes live on its own");
-  r = applySponsorEvent(b, parseSponsorWebhook(payment(b, { product_cart: [{ product_id: products.featured, quantity: 1 }] }), products), [b], products, NOW);
-  assert.match(r.booking.note, /1 months, booked 2/);
+  assert.match(r.booking.note, /expected INR 3000/, "a wrong amount never goes live on its own");
+  r = applySponsorEvent(b, parseSponsorWebhook(payment(b, { product_cart: [{ product_id: products.featured, quantity: 2 }] }), products), [b], products, NOW);
+  assert.match(r.booking.note, /Paid for 2 at once/);
+  r = applySponsorEvent(b, parseSponsorWebhook(payment(b, { product_cart: [{ product_id: products.tile, quantity: 1 }] }), products), [b], products, NOW);
+  assert.match(r.booking.note, /unexpected product/, "a featured booking paid at the tile product goes to review");
 
-  const prior = { ...booking(), status: "approved", approvedAt: NOW - 10, start: "2026-10-01", end: "2026-10-30" };
+  // A returning sponsor whose earlier featured month ended is approved straight away and runs for the paid month.
+  const prior = { ...booking(), status: "approved", approvedAt: NOW - 40 * 86_400_000, paidUntil: NOW - 10 * 86_400_000, renews: false };
   r = applySponsorEvent(b, ev, [prior, b], products, NOW);
   assert.equal(r.booking.status, "approved", "returning sponsor with the same copy is approved automatically");
-  assert.equal(r.booking.start, "2026-11-01");
-  assert.equal(r.booking.end, "2026-12-30", "two periods of 30 days");
+  assert.equal(r.booking.paidUntil, NOW + 30 * 86_400_000);
+  assert.ok(isShowing(r.booking, NOW));
+
+  // The featured card taken (someone else's running month) when a payment lands: refunded and the subscription ended.
+  const holder = { ...booking({ name: "Other Brand" }), status: "approved", approvedAt: NOW - 5, paidUntil: NOW + 86_400_000, renews: true };
+  const late = applySponsorEvent(b, parseSponsorWebhook(payment(b, { subscription_id: "sub_Featured00000001" }), products), [holder, b], products, NOW).booking;
+  assert.equal(late.status, "soldout");
+  assert.match(late.note, /featured card was taken/);
+  assert.deepEqual([late.refundsOwed, late.cancelOwed], [["pay_TestPayment000001"], "sub_Featured00000001"]);
 
   const again = applySponsorEvent(r.booking, ev, [prior, r.booking], products, NOW + 1);
   assert.equal(again.booking.status, "approved");
@@ -260,7 +268,8 @@ const payment = (b, over = {}) => JSON.stringify({
   assert.ok(started.ok);
   assert.ok(BOOKING_ID.test(started.booking.id));
   const checkout = calls.find((c) => c.path === "/checkouts").body;
-  assert.deepEqual(checkout.product_cart, [{ product_id: products.featured, quantity: 2 }]);
+  assert.deepEqual(checkout.product_cart, [{ product_id: products.featured, quantity: 1 }]);
+  assert.equal((await startBooking(store, config, input({ name: "Second Featured" }), "https://www.proupiqr.in", NOW, fake)).ok, true, "unpaid checkouts don't block the featured card");
   assert.deepEqual(checkout.metadata, { product: "proupiqr-sponsor", booking: started.booking.id, tier: "featured" });
   assert.equal(checkout.customer.email, "ads@acme.example.com");
   assert.equal(checkout.return_url, `https://www.proupiqr.in/sponsor/?booking=${started.booking.id}#book`);
@@ -330,27 +339,30 @@ const payment = (b, over = {}) => JSON.stringify({
   await handleSponsorWebhook(store, config, renewal, sign(renewal), NOW, fake);
   assert.equal(await store.bookingFor("pay_TileRenewal00001"), tile.booking.id);
 
-  // Two featured approvals at once: the lock gives them consecutive dates, never the same ones.
-  const f1 = { ...booking({ months: 1 }), status: "review", paidAt: NOW };
-  const f2 = { ...booking({ months: 1 }), status: "review", paidAt: NOW };
+  // Two featured payments landing at once: the lock lets one take the spot; the other is refunded, never both shown.
   const s2 = memorySponsorStore();
+  const f1 = { ...booking({ name: "First Featured" }), sessionId: "cks_Featured00000001" };
+  const f2 = { ...booking({ name: "Second Featured" }), sessionId: "cks_Featured00000002" };
   await s2.put(f1);
   await s2.put(f2);
-  const [a1, a2] = await Promise.all([decideBooking(s2, config, f1.id, "approve", NOW, fake), decideBooking(s2, config, f2.id, "approve", NOW, fake)]);
-  assert.notEqual(a1.start, a2.start, JSON.stringify([a1.start, a2.start]));
-  assert.ok(a1.end < a2.start || a2.end < a1.start, "no overlap");
+  const pay = (b, n) => JSON.stringify({ type: "payment.succeeded", data: { payment_id: `pay_FeaturedRace0000${n}`, status: "succeeded", checkout_session_id: b.sessionId, subscription_id: `sub_FeaturedRace0000${n}`, total_amount: 300_000, currency: "INR", product_cart: [{ product_id: products.featured, quantity: 1 }], metadata: { product: "proupiqr-sponsor", booking: b.id } } });
+  const [p1, p2] = [pay(f1, 1), pay(f2, 2)];
+  const both = await Promise.all([handleSponsorWebhook(s2, config, p1, sign(p1), NOW, fake), handleSponsorWebhook(s2, config, p2, sign(p2), NOW, fake)]);
+  assert.deepEqual(both.map((x) => x.body.status).sort(), ["review", "soldout"]);
+  assert.equal(spotsPaid("featured", await s2.all(), NOW), 1);
 }
 
 /* ---------- Dodo product setup (npm run dodo:sponsor-products) ---------- */
 {
-  const one = { price_detail: { type: "one_time_price", price: 300_000, currency: "INR", tax_inclusive: true } };
+  const featuredMonthly = { price_detail: { type: "recurring_price", price: 300_000, currency: "INR", tax_inclusive: true, payment_frequency_interval: "Month", payment_frequency_count: 1 } };
   const monthly = { price_detail: { type: "recurring_price", price: 99_900, currency: "INR", tax_inclusive: true, payment_frequency_interval: "Month", payment_frequency_count: 1 } };
-  assert.ok(matchesSponsorPrice(one, "featured", 300_000));
-  assert.ok(!matchesSponsorPrice({ price_detail: { ...one.price_detail, tax_inclusive: false } }, "featured", 300_000), "GST must be included");
-  assert.ok(!matchesSponsorPrice({ price_detail: { ...one.price_detail, pay_what_you_want: true } }, "featured", 300_000));
+  assert.ok(matchesSponsorPrice(featuredMonthly, "featured", 300_000));
+  assert.ok(!matchesSponsorPrice({ price_detail: { ...featuredMonthly.price_detail, type: "one_time_price" } }, "featured", 300_000), "the featured card is monthly now, not one-time");
+  assert.ok(!matchesSponsorPrice({ price_detail: { ...featuredMonthly.price_detail, tax_inclusive: false } }, "featured", 300_000), "GST must be included");
+  assert.ok(!matchesSponsorPrice({ price_detail: { ...featuredMonthly.price_detail, trial_period_days: 7 } }, "featured", 300_000), "no trials");
   assert.ok(matchesSponsorPrice(monthly, "tile", 99_900));
   assert.ok(!matchesSponsorPrice({ price_detail: { ...monthly.price_detail, payment_frequency_interval: "Year" } }, "tile", 99_900));
-  assert.ok(!matchesSponsorPrice(monthly, "featured", 99_900), "a subscription is not the featured product");
+  assert.ok(!matchesSponsorPrice(monthly, "featured", 300_000), "the tile's price is not the featured card's");
 
   const created = [];
   const fakeDodo = async (url, init = {}) => {
@@ -365,7 +377,7 @@ const payment = (b, over = {}) => JSON.stringify({
   const made = await findOrCreateSponsorProducts({ apiKey: "k", environment: "test_mode", create: true, fetchImpl: fakeDodo });
   assert.deepEqual(made.featured, { id: "pdt_Newfeatured", created: true });
   assert.equal(created.length, 1);
-  assert.deepEqual(created[0].price, { type: "one_time_price", price: 300_000, currency: "INR", tax_inclusive: true, purchasing_power_parity: false });
+  assert.deepEqual(created[0].price, { type: "recurring_price", price: 300_000, currency: "INR", tax_inclusive: true, payment_frequency_count: 1, payment_frequency_interval: "Month", subscription_period_count: 10, subscription_period_interval: "Year", purchasing_power_parity: false });
   assert.deepEqual(created[0].metadata, { product: "proupiqr-sponsor", tier: "featured" });
 }
 

@@ -1,6 +1,6 @@
 import { createHash, randomBytes } from "node:crypto";
 import { normalizeEmail, safePublicHttpsUrl } from "../apiSecurity.ts";
-import { FEATURED_BOOK_AHEAD_DAYS, SPONSOR_PERIOD_DAYS, SPONSOR_TIERS, type SponsorTier } from "../../data/sponsors.ts";
+import { SPONSOR_PERIOD_DAYS, SPONSOR_TIERS, type SponsorTier } from "../../data/sponsors.ts";
 
 /**
  * Self-serve sponsorships: a booking is created with its copy and logo, paid through Dodo Payments, approved by the
@@ -13,17 +13,15 @@ export const SPONSOR_PRODUCT = "proupiqr-sponsor";
 export type BookingStatus =
   | "checkout" // created, not paid (expires after a day)
   | "review" // paid, waiting for the owner
-  | "approved" // paid and approved: shows while its dates (featured) or paid period (tile) run
+  | "approved" // paid and approved: shows while its subscription runs
   | "rejected" // the owner said no; refunded
   | "removed" // taken down by the owner after going live
   | "refunded" // refunded or disputed outside our flow
-  | "soldout"; // paid for a tile after the last one went; refunded
+  | "soldout"; // paid after the last spot of its tier went; refunded
 
 export interface Booking {
   id: string;
   tier: SponsorTier;
-  /** Featured: 30-day periods bought (1–3). Tiles: 1. */
-  months: number;
   name: string;
   /** Featured card only. */
   tagline: string;
@@ -39,10 +37,7 @@ export interface Booking {
   sessionId: string | null;
   paymentId: string | null;
   subscriptionId: string | null;
-  /** Featured: first and last IST day shown (inclusive), set on approval. */
-  start: string | null;
-  end: string | null;
-  /** Tile: shown until this instant (the subscription's next billing date). */
+  /** Shown until this instant (the subscription's next billing date). */
   paidUntil: number | null;
   renews: boolean;
   /** Newest subscription event applied (webhooks can arrive out of order). */
@@ -64,27 +59,16 @@ export type LogoType = "image/png" | "image/jpeg" | "image/webp";
 export const BOOKING_ID = /^spb_[a-f0-9]{32}$/;
 /** Unpaid bookings outlive Dodo's checkout session (a day) by a margin, so a late payment still finds its booking. */
 export const UNPAID_TTL_SECONDS = 7 * 24 * 60 * 60;
-/** Renewal webhooks can be late; a renewing tile stays up this long past its billing date. */
-export const TILE_GRACE_MS = 2 * 86_400_000;
+/** Renewal webhooks can be late; a renewing sponsorship stays up this long past its billing date. */
+export const GRACE_MS = 2 * 86_400_000;
 export const MAX_LOGO_BYTES = 64 * 1024;
 
 export const newBookingId = (): string => `spb_${randomBytes(16).toString("hex")}`;
-
-/* ---------- Dates (IST calendar days) ---------- */
-
-export const istDay = (now: number): string => new Date(now + 330 * 60_000).toISOString().slice(0, 10);
-
-export function addDays(day: string, days: number): string {
-  const d = new Date(`${day}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + days);
-  return d.toISOString().slice(0, 10);
-}
 
 /* ---------- Input ---------- */
 
 export interface BookingInput {
   tier: SponsorTier;
-  months: number;
   name: string;
   tagline: string;
   href: string;
@@ -109,10 +93,6 @@ export function sniffLogo(bytes: Buffer): LogoType | null {
 export function validateBookingInput(raw: Record<string, unknown>): InputResult {
   const tier = raw.tier === "featured" || raw.tier === "tile" ? raw.tier : null;
   if (!tier) return { ok: false, field: "tier", error: "Choose the featured card or a logo tile." };
-  const months = tier === "tile" ? 1 : Number(raw.months);
-  if (!Number.isInteger(months) || months < 1 || months > SPONSOR_TIERS[tier].maxMonths) {
-    return { ok: false, field: "months", error: `Book 1 to ${SPONSOR_TIERS[tier].maxMonths} months.` };
-  }
   const name = clean(raw.name);
   if (name.length < 2 || name.length > 40 || CONTROL.test(name)) return { ok: false, field: "name", error: "Name: 2 to 40 characters." };
   const tagline = tier === "featured" ? clean(raw.tagline) : "";
@@ -131,7 +111,7 @@ export function validateBookingInput(raw: Record<string, unknown>): InputResult 
   const type = sniffLogo(bytes);
   if (!type || bytes.length > MAX_LOGO_BYTES) return { ok: false, field: "logo", error: "Logo: a PNG, JPEG or WebP under 64 KB." };
   if (raw.agree !== true) return { ok: false, field: "agree", error: "Confirm the booking rules first." };
-  return { ok: true, value: { tier, months, name, tagline, href, email, logo: { type, bytes } } };
+  return { ok: true, value: { tier, name, tagline, href, email, logo: { type, bytes } } };
 }
 
 export const logoHash = (bytes: Buffer): string => createHash("sha256").update(bytes).digest("hex");
@@ -140,7 +120,6 @@ export function newBooking(input: BookingInput, id: string, now: number): Bookin
   return {
     id,
     tier: input.tier,
-    months: input.months,
     name: input.name,
     tagline: input.tagline,
     href: input.href,
@@ -154,10 +133,8 @@ export function newBooking(input: BookingInput, id: string, now: number): Bookin
     sessionId: null,
     paymentId: null,
     subscriptionId: null,
-    start: null,
-    end: null,
     paidUntil: null,
-    renews: input.tier === "tile",
+    renews: true,
     eventAt: 0,
     refundsOwed: [],
     cancelOwed: null,
@@ -167,8 +144,8 @@ export function newBooking(input: BookingInput, id: string, now: number): Bookin
   };
 }
 
-/** What a booking costs, in paise (GST included). */
-export const bookingPrice = (tier: SponsorTier, months: number): number => SPONSOR_TIERS[tier].paise * months;
+/** What a booking costs each month, in paise (GST included). */
+export const bookingPrice = (tier: SponsorTier): number => SPONSOR_TIERS[tier].paise;
 
 /* ---------- Availability and scheduling ---------- */
 
@@ -184,51 +161,23 @@ export function needsReview(booking: Booking, all: Booking[]): boolean {
 }
 
 /**
- * Tiles that are paid for: waiting for review or running. Unpaid checkouts hold nothing (holding let a few unpaid
- * checkouts block every tile); two people paying for the last tile at once is settled when the payment lands.
+ * Spots of a tier that are paid for: waiting for review or running. Unpaid checkouts hold nothing (holding let a few
+ * unpaid checkouts block every spot); two people paying for the last spot at once is settled when the payment lands.
  */
-export function tilesPaid(all: Booking[], now: number, except?: string): number {
-  return all.filter((b) => b.tier === "tile" && b.id !== except && (b.status === "review" || (b.status === "approved" && tileRunning(b, now)))).length;
+export function spotsPaid(tier: SponsorTier, all: Booking[], now: number, except?: string): number {
+  return all.filter((b) => b.tier === tier && b.id !== except && (b.status === "review" || (b.status === "approved" && running(b, now)))).length;
 }
 
-const tileRunning = (b: Booking, now: number): boolean => b.paidUntil !== null && now < b.paidUntil + (b.renews ? TILE_GRACE_MS : 0);
+export const tilesPaid = (all: Booking[], now: number, except?: string): number => spotsPaid("tile", all, now, except);
+export const featuredFree = (all: Booking[], now: number): boolean => spotsPaid("featured", all, now) < SPONSOR_TIERS.featured.spots;
 
-export function featuredNextStart(all: Booking[], now: number, except?: string): string {
-  const today = istDay(now);
-  let next = today;
-  for (const b of all) {
-    if (b.tier !== "featured" || b.id === except || b.status !== "approved" || !b.end) continue;
-    const after = addDays(b.end, 1);
-    if (after > next) next = after;
-  }
-  const waiting = all.filter((b) => b.tier === "featured" && b.id !== except && b.status === "review");
-  return addDays(next, waiting.reduce((days, b) => days + b.months * SPONSOR_PERIOD_DAYS, 0));
+const running = (b: Booking, now: number): boolean => b.paidUntil !== null && now < b.paidUntil + (b.renews ? GRACE_MS : 0);
+
+export function approve(booking: Booking, now: number, note: string): Booking {
+  return { ...booking, status: "approved", approvedAt: now, note, updatedAt: now };
 }
 
-export function featuredBookable(all: Booking[], now: number): boolean {
-  return featuredNextStart(all, now) <= addDays(istDay(now), FEATURED_BOOK_AHEAD_DAYS);
-}
-
-/** Approve: a featured booking takes the next free dates after the ones already scheduled. */
-export function approve(booking: Booking, all: Booking[], now: number, note: string): Booking {
-  const next: Booking = { ...booking, status: "approved", approvedAt: now, note, updatedAt: now };
-  if (booking.tier === "featured") {
-    const others = all.filter((b) => b.id !== booking.id && b.status === "approved");
-    const start = featuredNextStart(others, now);
-    next.start = start;
-    next.end = addDays(start, booking.months * SPONSOR_PERIOD_DAYS - 1);
-  }
-  return next;
-}
-
-export function isShowing(b: Booking, now: number): boolean {
-  if (b.status !== "approved") return false;
-  if (b.tier === "featured") {
-    const today = istDay(now);
-    return b.start !== null && b.end !== null && b.start <= today && today <= b.end;
-  }
-  return tileRunning(b, now);
-}
+export const isShowing = (b: Booking, now: number): boolean => b.status === "approved" && running(b, now);
 
 /* ---------- What the homepage and /sponsor/ read ---------- */
 
@@ -244,7 +193,7 @@ export interface PublicSponsors {
   featured: PublicSponsor | null;
   tiles: PublicSponsor[];
   tilesFree: number;
-  featuredNextStart: string;
+  /** The featured card is free to book (nobody has it paid for or running). */
   featuredBookable: boolean;
 }
 
@@ -264,14 +213,14 @@ export function publicSponsors(all: Booking[], now: number): PublicSponsors {
   const view = (b: Booking, placement: "home-featured" | "home-tile"): PublicSponsor => ({
     id: b.id, name: b.name, tagline: b.tagline, href: sponsorHref(b.href, placement), logo: logoPath(b.id),
   });
-  const featured = all.find((b) => b.tier === "featured" && isShowing(b, now));
-  const tiles = all.filter((b) => b.tier === "tile" && isShowing(b, now)).sort((a, b) => (a.approvedAt ?? 0) - (b.approvedAt ?? 0));
+  const showing = (tier: SponsorTier) => all.filter((b) => b.tier === tier && isShowing(b, now)).sort((a, b) => (a.approvedAt ?? 0) - (b.approvedAt ?? 0));
+  const featured = showing("featured")[0];
+  const tiles = showing("tile");
   return {
     featured: featured ? view(featured, "home-featured") : null,
     tiles: tiles.slice(0, SPONSOR_TIERS.tile.spots).map((b) => view(b, "home-tile")),
     tilesFree: Math.max(0, SPONSOR_TIERS.tile.spots - tilesPaid(all, now)),
-    featuredNextStart: featuredNextStart(all, now),
-    featuredBookable: featuredBookable(all, now),
+    featuredBookable: featuredFree(all, now),
   };
 }
 
@@ -391,7 +340,7 @@ export function applySponsorEvent(booking: Booking, event: SponsorEvent, all: Bo
   const b: Booking = { ...booking, refundsOwed: booking.refundsOwed ?? [], cancelOwed: booking.cancelOwed ?? null, updatedAt: now };
   if (event.type === "refund") {
     if (!event.ends || CLOSED.includes(b.status)) return { booking, paid: false };
-    // Hidden from now on, and a tile stops renewing (otherwise it would be charged every month while hidden).
+    // Hidden from now on, and it stops renewing (otherwise it would be charged every month while hidden).
     return { booking: owe({ ...b, status: "refunded", renews: false, closedAt: now, note: event.reason }, null, b.renews ? b.subscriptionId : null), paid: false };
   }
 
@@ -403,7 +352,7 @@ export function applySponsorEvent(booking: Booking, event: SponsorEvent, all: Bo
       if (event.nextBilling) b.paidUntil = event.nextBilling;
       b.renews = !event.cancelAtEnd;
       if (CLOSED.includes(b.status)) return { booking: owe({ ...b, renews: false }, null, event.subscriptionId), paid: false };
-      if (b.status === "checkout") return markPaid(b, all, now, event.productId === products.tile ? null : "Subscription for an unexpected product");
+      if (b.status === "checkout") return markPaid(b, all, now, event.productId === products[b.tier] ? null : "Subscription for an unexpected product");
       return { booking: b, paid: false };
     }
     b.renews = false;
@@ -423,14 +372,13 @@ export function applySponsorEvent(booking: Booking, event: SponsorEvent, all: Bo
     const neverRan = b.status === "rejected" || b.status === "soldout";
     const afterClose = event.createdAt === null || b.closedAt === null || event.createdAt >= b.closedAt;
     const owed = CLOSED.includes(b.status) && charged && (neverRan || afterClose);
-    return { booking: owed ? owe(b, event.paymentId, b.tier === "tile" ? b.subscriptionId : null) : b, paid: false };
+    return { booking: owed ? owe(b, event.paymentId, b.subscriptionId) : b, paid: false };
   }
-  const expected = bookingPrice(b.tier, b.months);
+  const expected = bookingPrice(b.tier);
   // A subscription's first payment may carry no product list; the subscription event checks its product instead.
-  const cartless = b.tier === "tile" && event.productId === null && event.subscriptionId !== null;
-  const product = b.tier === "featured" ? products.featured : products.tile;
-  const problem = !cartless && event.productId !== product ? "Paid for an unexpected product"
-    : !cartless && event.quantity !== (b.tier === "featured" ? b.months : 1) ? `Paid for ${event.quantity} months, booked ${b.months}`
+  const cartless = event.productId === null && event.subscriptionId !== null;
+  const problem = !cartless && event.productId !== products[b.tier] ? "Paid for an unexpected product"
+    : !cartless && event.quantity !== 1 ? `Paid for ${event.quantity} at once, booked 1`
     : event.currency !== "INR" || event.amount !== expected ? `Paid ${event.currency} ${event.amount / 100}, expected INR ${expected / 100}`
     : null;
   return markPaid(b, all, now, problem);
@@ -438,20 +386,21 @@ export function applySponsorEvent(booking: Booking, event: SponsorEvent, all: Bo
 
 function markPaid(b: Booking, all: Booking[], now: number, problem: string | null): Applied {
   b.paidAt = now;
-  if (b.tier === "tile" && b.paidUntil === null) b.paidUntil = now + SPONSOR_PERIOD_DAYS * 86_400_000;
-  if (b.tier === "tile" && tilesPaid(all, now, b.id) >= SPONSOR_TIERS.tile.spots) {
-    const soldout = { ...b, status: "soldout" as const, renews: false, closedAt: now, note: "All tiles were taken when the payment arrived; refunded" };
+  if (b.paidUntil === null) b.paidUntil = now + SPONSOR_PERIOD_DAYS * 86_400_000;
+  if (spotsPaid(b.tier, all, now, b.id) >= SPONSOR_TIERS[b.tier].spots) {
+    const taken = b.tier === "tile" ? "All tiles were taken" : "The featured card was taken";
+    const soldout = { ...b, status: "soldout" as const, renews: false, closedAt: now, note: `${taken} when the payment arrived; refunded` };
     return { booking: owe(soldout, b.paymentId, b.subscriptionId), paid: true };
   }
   if (problem) return { booking: { ...b, status: "review", note: problem }, paid: true };
   if (needsReview(b, all)) return { booking: { ...b, status: "review", note: "" }, paid: true };
-  return { booking: approve(b, all, now, "Returning sponsor, same copy and link: approved automatically"), paid: true };
+  return { booking: approve(b, now, "Returning sponsor, same copy and link: approved automatically"), paid: true };
 }
 
 /** The owner's decision on a booking. Reject refunds; remove takes a running booking down (no automatic refund). */
 export function decide(booking: Booking, action: "approve" | "reject" | "remove", all: Booking[], now: number): Booking | null {
   const b: Booking = { ...booking, refundsOwed: booking.refundsOwed ?? [], cancelOwed: booking.cancelOwed ?? null, updatedAt: now };
-  if (action === "approve" && b.status === "review") return approve(b, all, now, "Approved");
+  if (action === "approve" && b.status === "review") return approve(b, now, "Approved");
   if (action === "reject" && b.status === "review") return owe({ ...b, status: "rejected", renews: false, closedAt: now, note: "Rejected and refunded" }, b.paymentId, b.subscriptionId);
   if (action === "remove" && b.status === "approved") return owe({ ...b, status: "removed", renews: false, closedAt: now, note: "Taken down" }, null, b.subscriptionId);
   return null;
