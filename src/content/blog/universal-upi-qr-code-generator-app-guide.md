@@ -23,7 +23,7 @@ When generating a payment QR code for your bank account, security and privacy ar
 |---|---|---|
 | **App Download** | ❌ Zero download required | ⚠️ Requires 25MB–80MB storage space |
 | **Permissions** | 🛡️ Zero permissions (No contacts, storage, or camera access) | ⚠️ Often requests contacts, location & storage access |
-| **Advertisements** | 🚫 No banner, video or pop-up ads (one labelled sponsor card on the homepage) | ⚠️ Frequently crammed with banner & video ads |
+| **Advertisements** | 🚫 No banner, video or pop-up ads (labelled sponsor card and logo strip on the homepage only) | ⚠️ Frequently crammed with banner & video ads |
 | **Account Signup** | 🚫 No login or phone number required | ⚠️ Requires account creation & OTP verification |
 | **Data Privacy** | 🔒 100% Local (Client-side QR generation) | ⚠️ Uploads payment details to third-party servers |
 | **Cost** | 💚 100% Permanent Free | ⚠️ Subscription popups for high-res exports |

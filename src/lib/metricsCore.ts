@@ -21,6 +21,9 @@ export const METRICS = [
   "mcp_tool_call",
   "business_added",
   "business_limit",
+  "sponsor_checkout",
+  "sponsor_paid",
+  "sponsor_orphan",
 ] as const;
 export type MetricName = (typeof METRICS)[number];
 
@@ -43,6 +46,9 @@ export const METRIC_LABELS: Record<MetricName, string> = {
   mcp_tool_call: "Tool calls from AI assistants (Claude connector at /mcp/)",
   business_added: "Businesses added beyond the first",
   business_limit: "Add-business attempts blocked by the plan",
+  sponsor_checkout: "Sponsor checkouts started (/sponsor/)",
+  sponsor_paid: "Sponsor bookings paid (review them at /admin/sponsors/)",
+  sponsor_orphan: "Sponsor payments with no booking (refunded automatically)",
 };
 
 export const metricKey = (name: MetricName, day: string) => `metrics:${name}:${day}`;

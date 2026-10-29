@@ -13,6 +13,7 @@ import { connect } from "node:net";
 import { existsSync, readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
+import { createServer } from "node:http";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..", "..");
@@ -20,12 +21,12 @@ const STATIC_DIR = join(ROOT, ".vercel", "output", "static");
 const SUITES = [
   "waitlist-e2e", "workspace-e2e", "bridge-e2e", "sync-e2e", "paylink-ui-e2e",
   "plan-ui-e2e", "activation-e2e", "statement-e2e", "recurring-e2e", "hindi-e2e", "conversion-e2e", "pwa-e2e", "push-ui-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e",
-  "books-server-e2e", "books-client-e2e", "books-e2e", "currency-e2e",
+  "books-server-e2e", "books-client-e2e", "books-e2e", "currency-e2e", "sponsors-e2e",
 ];
 const PROD = process.argv.includes("--prod");
 const only = process.argv.slice(2).filter((a) => a !== "--prod");
 // --prod runs the server-backed suites against the real production bundle (scripts/e2e/prod-server.mjs).
-const SERVER_SUITES = ["waitlist-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e", "books-server-e2e", "load-paypage", "load-digest"];
+const SERVER_SUITES = ["sponsors-e2e", "waitlist-e2e", "paylink-e2e", "billing-e2e", "push-e2e", "metrics-e2e", "statement-link-e2e", "mcp-e2e", "books-server-e2e", "load-paypage", "load-digest"];
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 // Another project's dev server may hold :4321 (it happened); take the first port nothing answers on.
 const portBusy = (port) => new Promise((resolve) => {
@@ -74,6 +75,8 @@ function stopAll() {
   spawnSync("npx", ["astro", "dev", "stop"], { cwd: ROOT, stdio: "ignore" });
   for (const child of children) child.kill();
 }
+/** A port the OS says is free right now (for helper servers that must be told their port up front). */
+const ephemeralPort = () => new Promise((resolve) => { const s = createServer().listen(0, "127.0.0.1", () => { const { port } = s.address(); s.close(() => resolve(port)); }); });
 // SIGTERM too: a harness or `timeout` stops runs that way.
 for (const [signal, code] of [["SIGINT", 130], ["SIGTERM", 143]]) process.on(signal, () => { stopAll(); process.exit(code); });
 
@@ -82,6 +85,10 @@ let passed = 0;
 try {
   start("node", [join(HERE, "fake-upstash.mjs")]);
   start("python3", ["-m", "http.server", "4400", "--directory", STATIC_DIR]);
+  // Sponsor checkouts, refunds and cancellations go to a fake of the Dodo API on a free port.
+  const dodoPort = await ephemeralPort();
+  start("node", [join(HERE, "fake-dodo.mjs"), String(dodoPort)]);
+  process.env.E2E_DODO_BASE = `http://127.0.0.1:${dodoPort}`;
   const serverEnv = {
     KV_REST_API_URL: "http://127.0.0.1:8799",
     KV_REST_API_TOKEN: "test-token",
@@ -94,6 +101,10 @@ try {
     DODO_PAYMENTS_WEBHOOK_KEY: process.env.E2E_DODO_WEBHOOK_KEY,
     DODO_PRODUCT_MONTHLY: "pdt_E2eMonthly000000000",
     DODO_PRODUCT_YEARLY: "pdt_E2eYearly0000000000",
+    DODO_PRODUCT_SPONSOR_FEATURED: "pdt_E2eSponsorFeatured01",
+    DODO_PRODUCT_SPONSOR_TILE: "pdt_E2eSponsorTile000001",
+    DODO_API_BASE: process.env.E2E_DODO_BASE,
+    ADMIN_USER_IDS: "user_e2eadmin",
     VAPID_PUBLIC_KEY: process.env.E2E_VAPID_PUBLIC_KEY,
     VAPID_PRIVATE_KEY: process.env.E2E_VAPID_PRIVATE_KEY,
     CRON_SECRET: process.env.E2E_CRON_SECRET,
@@ -111,6 +122,7 @@ try {
     start(join(ROOT, "node_modules", ".bin", "astro"), ["dev", "--port", String(port), "--ignore-lock"], serverEnv);
   }
   await waitFor("http://127.0.0.1:8799/__admin/health");
+  await waitFor(`${process.env.E2E_DODO_BASE}/__admin/calls`);
   await waitFor("http://localhost:4400/app/");
   await waitFor(`${process.env.DEV_BASE}/pricing/`);
   if (PROD) {

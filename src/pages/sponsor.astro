@@ -1,16 +1,18 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import { SponsorBooking } from "../components/SponsorBooking";
 import { BUSINESS } from "../data/business";
 import { LOCALIZED_TOOLS } from "../data/localizedTools";
-import { PLACEMENTS, SPONSOR_EXCLUSIONS, SPONSOR_REACH } from "../data/sponsors";
+import { SPONSOR_EXCLUSIONS, SPONSOR_PERIOD_DAYS, SPONSOR_REACH, SPONSOR_TIERS } from "../data/sponsors";
 
 const title = "Sponsor Pro UPI QR — Reach Indian Shops and Freelancers";
 const description =
-  "Sponsor the homepage of Pro UPI QR, the free UPI QR and invoice toolkit for Indian shops and freelancers. One labelled sponsor at a time, no tracking scripts.";
+  "Sponsor the homepage of Pro UPI QR, the free UPI QR and invoice toolkit for Indian shops and freelancers: a featured card or a logo tile, labelled, no tracking.";
 const pageUrl = "https://www.proupiqr.in/sponsor/";
 const number = (n: number) => new Intl.NumberFormat("en-IN").format(n);
 const mailto = `mailto:${BUSINESS.emails.support}?subject=${encodeURIComponent("Sponsorship enquiry")}`;
 const link = "font-semibold text-leaf underline underline-offset-4";
+const { featured, tile } = SPONSOR_TIERS;
 
 const reach = [
   { value: number(SPONSOR_REACH.weeklyImpressions), label: "times our pages showed in Google search in one week" },
@@ -19,11 +21,21 @@ const reach = [
   { value: String(LOCALIZED_TOOLS.length), label: "free tools in English, Hindi, Tamil, Telugu and Marathi" },
 ];
 
-const offer = [
-  "Your name, one line in your words and an optional logo, in a card labelled \"Sponsored\".",
-  "One sponsor per placement at a time, booked by the week or the month.",
-  "A plain link with rel=\"sponsored\" and utm_source=proupiqr, so your own analytics count every visit.",
-  "We read the copy and the landing page before it goes live. Claims must be true and checkable.",
+const tiers = [
+  {
+    name: featured.name,
+    price: `${featured.label} per ${SPONSOR_PERIOD_DAYS} days`,
+    spots: "One sponsor at a time",
+    where: featured.where,
+    points: [`Book ${SPONSOR_PERIOD_DAYS}, ${SPONSOR_PERIOD_DAYS * 2} or ${SPONSOR_PERIOD_DAYS * 3} days, paid upfront.`, "Bookings queue: yours starts on the next free date.", "Book again any time to extend."],
+  },
+  {
+    name: tile.name,
+    price: `${tile.label} a month`,
+    spots: `${tile.spots} tiles`,
+    where: tile.where,
+    points: ["Renews monthly; cancel whenever you like.", "Live as soon as we've approved it.", "Your price stays the same for as long as you renew."],
+  },
 ];
 
 const never = [
@@ -35,19 +47,27 @@ const never = [
 const faqs = [
   {
     question: "Where does the sponsor appear?",
-    answer: `${PLACEMENTS["home-hero"].where} It is a single card with a "Sponsored" label, and the tools themselves stay free and unchanged.`,
+    answer: `${featured.name}: ${featured.where} ${tile.name}: ${tile.where} Both are labelled, and the tools themselves stay free and unchanged.`,
+  },
+  {
+    question: "How does booking work?",
+    answer: "Choose a placement, add your brand name, link and logo (and one line for the featured card), and pay on Dodo Payments' checkout. We review every first booking within a day. Once approved it goes live by itself: a tile straight away, the featured card on its start date.",
+  },
+  {
+    question: "What if you don't approve my booking?",
+    answer: "You get a full refund. We decline anything on our exclusion list, misleading claims, and landing pages that ask for payment details or PINs.",
+  },
+  {
+    question: "What if another brand offers more for the featured card?",
+    answer: "Prices are fixed and published here, and a paid booking is never moved or cancelled for someone else. Featured bookings run in the order they were approved; if prices change, they change for new bookings only.",
   },
   {
     question: "How do I measure results?",
-    answer: "Every sponsor link carries utm_source=proupiqr, utm_medium=sponsor and utm_campaign=home-hero. Your own analytics show the visits and what they did next. We don't run tracking of our own on the card.",
-  },
-  {
-    question: "What does a placement cost?",
-    answer: `Rates depend on the dates and the length of the booking. Email ${BUSINESS.emails.support} with your brand, link and preferred weeks and we'll reply within ${BUSINESS.replyWithin}.`,
+    answer: "Every sponsor link carries utm_source=proupiqr and utm_medium=sponsor, with utm_campaign=home-featured or home-tile. Your own analytics show the visits and what they did next. We don't run tracking of our own on the placements.",
   },
   {
     question: "Which brands don't you accept?",
-    answer: `Our visitors are taking payments, so we keep the spot safe for them. We don't accept: ${SPONSOR_EXCLUSIONS.join("; ").toLowerCase()}.`,
+    answer: `Our visitors are taking payments, so we keep these spots safe for them. We don't accept: ${SPONSOR_EXCLUSIONS.join("; ").toLowerCase()}.`,
   },
 ];
 
@@ -90,10 +110,10 @@ const schema = {
         <p class="text-sm font-semibold text-leaf">Sponsor Pro UPI QR</p>
         <h1 class="mt-3 max-w-4xl text-4xl font-semibold leading-tight tracking-tight text-ink md:text-6xl">Put your brand in front of India's UPI merchants.</h1>
         <p class="mt-6 max-w-3xl text-lg leading-8 text-charcoal">
-          Shop owners, tutors, clinics and freelancers come to Pro UPI QR to make their payment QR, send invoices and receipts, and track who owes them. One sponsor at a time gets the card beside our homepage headline.
+          Shop owners, tutors, clinics and freelancers come to Pro UPI QR to make their payment QR, send invoices and receipts, and track who owes them. Book the featured card beside our homepage headline or a logo tile under the QR generator, online, in a few minutes.
         </p>
         <div class="mt-8 flex flex-wrap gap-3">
-          <a href={mailto} class="rounded-[10px] bg-forest px-6 py-3 text-sm font-semibold text-white transition hover:bg-graphite">Email us to book</a>
+          <a href="#book" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-semibold text-white transition hover:bg-graphite">Book a placement</a>
           <a href="/" class="rounded-[10px] bg-white px-6 py-3 text-sm font-semibold text-ink ring-1 ring-hairline transition hover:bg-fog">See the homepage</a>
         </div>
       </div>
@@ -114,34 +134,49 @@ const schema = {
       </div>
     </section>
 
-    <section class="px-4 pb-10 md:px-6 lg:px-8">
-      <div class="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
-        <div>
-          <h2 class="text-2xl font-semibold tracking-tight text-ink">What you get</h2>
-          <p class="mt-3 text-base leading-7 text-charcoal"><strong class="font-semibold text-ink">{PLACEMENTS["home-hero"].name}.</strong> {PLACEMENTS["home-hero"].where}</p>
-          <ul class="mt-4 divide-y divide-hairline border-y border-hairline text-base leading-7 text-charcoal">
-            {offer.map((item) => <li class="py-3">{item}</li>)}
-          </ul>
+    <section class="px-4 pb-10 md:px-6 lg:px-8" aria-labelledby="placements">
+      <div class="mx-auto max-w-5xl">
+        <h2 id="placements" class="text-2xl font-semibold tracking-tight text-ink md:text-3xl">Two placements</h2>
+        <div class="mt-6 grid gap-4 md:grid-cols-2">
+          {tiers.map((t) => (
+            <div class="rounded-[12px] bg-white p-6 shadow-card">
+              <h3 class="text-lg font-semibold text-ink">{t.name}</h3>
+              <p class="mt-1 text-2xl font-semibold tracking-tight text-ink">{t.price}</p>
+              <p class="text-sm text-muted">{t.spots} · GST included</p>
+              <p class="mt-4 text-base leading-7 text-charcoal">{t.where}</p>
+              <ul class="mt-4 divide-y divide-hairline border-y border-hairline text-sm leading-6 text-charcoal">
+                {t.points.map((p) => <li class="py-2">{p}</li>)}
+              </ul>
+            </div>
+          ))}
         </div>
-        <div>
-          <h2 class="text-2xl font-semibold tracking-tight text-ink">What we never do</h2>
-          <ul class="mt-4 divide-y divide-hairline border-y border-hairline text-base leading-7 text-charcoal">
-            {never.map((item) => <li class="py-3">{item}</li>)}
-          </ul>
-          <h3 class="mt-8 text-lg font-semibold text-ink">Brands we don't accept</h3>
-          <ul class="mt-3 list-disc space-y-1 pl-5 text-base leading-7 text-charcoal">
-            {SPONSOR_EXCLUSIONS.map((item) => <li>{item}</li>)}
-          </ul>
+      </div>
+    </section>
+
+    <section id="book" class="scroll-mt-20 px-4 pb-10 md:px-6 lg:px-8" aria-labelledby="book-title">
+      <div class="mx-auto max-w-5xl">
+        <h2 id="book-title" class="text-2xl font-semibold tracking-tight text-ink md:text-3xl">Book a placement</h2>
+        <p class="mt-2 max-w-3xl text-base leading-7 text-charcoal">Paid on Dodo Payments, who issue the GST invoice. Questions first? Email <a href={mailto} class={link}>{BUSINESS.emails.support}</a>.</p>
+        <div class="mt-6">
+          <SponsorBooking client:visible email={BUSINESS.emails.support} />
         </div>
       </div>
     </section>
 
     <section class="px-4 pb-10 md:px-6 lg:px-8">
-      <div class="mx-auto max-w-5xl rounded-[14px] bg-forest p-6 text-white md:p-10">
-        <h2 class="text-2xl font-semibold tracking-tight md:text-3xl">Book the spot</h2>
-        <p class="mt-3 max-w-3xl text-base leading-7 text-white/80">
-          Email <a href={mailto} class="font-semibold text-white underline underline-offset-4">{BUSINESS.emails.support}</a> with your brand, the link, one line of copy and the weeks you want. We reply within {BUSINESS.replyWithin} with dates and the rate.
-        </p>
+      <div class="mx-auto grid max-w-5xl gap-8 md:grid-cols-2">
+        <div>
+          <h2 class="text-2xl font-semibold tracking-tight text-ink">What we never do</h2>
+          <ul class="mt-4 divide-y divide-hairline border-y border-hairline text-base leading-7 text-charcoal">
+            {never.map((item) => <li class="py-3">{item}</li>)}
+          </ul>
+        </div>
+        <div>
+          <h2 class="text-2xl font-semibold tracking-tight text-ink">Brands we don't accept</h2>
+          <ul class="mt-4 list-disc space-y-1 pl-5 text-base leading-7 text-charcoal">
+            {SPONSOR_EXCLUSIONS.map((item) => <li>{item}</li>)}
+          </ul>
+        </div>
       </div>
     </section>
 

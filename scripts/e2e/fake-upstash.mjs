@@ -54,6 +54,12 @@ function evalScript(script, keys, args) {
     set(keys[1], Number(get(keys[1]) || 0) + 1);
     return 1;
   }
+  // Sponsor booking lock: release only if we still hold it.
+  if (script.includes("if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1])")) {
+    if (get(keys[0]) !== args[0]) return 0;
+    strings.delete(keys[0]); expiry.delete(keys[0]);
+    return 1;
+  }
   throw new Error("fake-upstash: unknown script");
 }
 
