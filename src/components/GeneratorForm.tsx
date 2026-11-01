@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
 import QRCode from "qrcode";
 import { downloadDataUrl, notifyExportError, safeToPng } from "../lib/export-image";
 import { trackProductEvent } from "../lib/productEvents";
@@ -275,9 +275,17 @@ export interface GeneratorFormProps {
     | "icici";
   lang?: GeneratorLang;
   fullScreen?: boolean;
+  /** Shown under the form card on large screens (the homepages put their sponsor strip there); omitted, nothing changes. */
+  children?: ReactNode;
 }
 
-export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: GeneratorFormProps = {}) {
+/** The form card plus what sits under it. Phones get no wrapper box (the preview still follows the form); large screens stack the two. */
+function FormStack({ below, children }: { below: ReactNode; children: ReactNode }) {
+  if (!below) return <>{children}</>;
+  return <div className="contents lg:flex lg:min-w-0 lg:flex-col">{children}{below}</div>;
+}
+
+export function GeneratorForm({ presetType, lang = "en", fullScreen = false, children }: GeneratorFormProps = {}) {
   const t = GENERATOR_COPY[lang] ?? GENERATOR_COPY.en;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const posterRef = useRef<HTMLDivElement | null>(null);
@@ -1704,6 +1712,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
       <canvas ref={canvasRef} style={{ display: "none" }} />
 
       {/* Form Inputs */}
+      <FormStack below={fullScreen ? null : children}>
       <div className={`w-full min-w-0 ${fullScreen ? 'lg:w-5/12 rounded-3xl border border-forest/10 bg-white p-4 md:p-5 lg:overflow-auto lg:max-h-[78dvh]' : 'rounded-[28px] bg-fog p-4 sm:p-6 md:p-7'}`}>
         {/* Simple QR · Advanced Poster · Customize (large screens; phones open Customize from the poster) */}
         <div role="group" className={`mb-4 flex w-full max-w-[380px] rounded-[10px] bg-white p-0.5 ring-1 ring-inset ring-hairline ${fullScreen ? 'text-sm' : ''}`}>
@@ -1938,6 +1947,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false }: G
           </p>
         )}
       </div>
+      </FormStack>
 
       {/* Preview Column */}
       {mode === "simple" ? (
