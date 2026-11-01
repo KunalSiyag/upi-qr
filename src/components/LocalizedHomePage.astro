@@ -56,10 +56,12 @@ const link = "font-semibold text-forest underline underline-offset-4 hover:text-
         <SponsorSlot lang={lang} class="order-3 mt-8 lg:order-none lg:mt-1" />
 
         <div id="generator" class="mt-8 scroll-mt-20 lg:col-span-2">
-          <GeneratorForm client:load lang={lang} />
+          <GeneratorForm client:load lang={lang}>
+            <div class="hidden lg:block"><SponsorStrip lang={lang} narrow class="mt-6" /></div>
+          </GeneratorForm>
         </div>
 
-        <SponsorStrip lang={lang} class="order-4 mt-8 lg:order-none lg:col-span-2" />
+        <SponsorStrip lang={lang} class="order-4 mt-8 lg:hidden" />
       </div>
 
       <div class="mt-12 grid gap-10 border-t border-forest/10 pt-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-16">

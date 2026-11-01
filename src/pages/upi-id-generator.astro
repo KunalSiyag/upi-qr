@@ -1,0 +1,305 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { UpiIdHelper } from "../components/UpiIdHelper";
+import { personSchema } from "../data/authors";
+import { KNOWN_HANDLES, UPI_ID_REVIEWED_ON, UPI_ID_SOURCES, reviewedLabel, sourceById } from "../lib/upi-id";
+
+const SITE = "https://www.proupiqr.in";
+const pageUrl = `${SITE}/upi-id-generator/`;
+const title = "UPI ID Generator: Name Ideas & Format Check (VPA)";
+const description =
+  "Get UPI ID name ideas from your name or shop, check that a UPI ID (VPA) is written correctly, and see which app each handle belongs to. Free, in your browser.";
+const reviewed = reviewedLabel(UPI_ID_REVIEWED_ON);
+
+const steps = [
+  { name: "Check the format", text: "Type a UPI ID and fix anything the checker flags." },
+  { name: "Pick a name idea", text: "Enter your name or shop name, choose a handle and copy an example ID." },
+  { name: "Add the ID in your UPI app", text: "Follow the app steps in the tool above. The app confirms whether the name is free." },
+];
+
+const faqs = [
+  {
+    question: "Can this page create a UPI ID for me?",
+    answer:
+      "No. A UPI ID exists only after your UPI app or bank sets it up against your bank account, and only that app can tell you whether a name is free. This page suggests well-formed names, checks how an ID is written and shows where each app keeps your IDs.",
+  },
+  {
+    question: "What is a UPI ID, or VPA?",
+    answer:
+      "A UPI ID, also called a Virtual Payment Address, is the address people pay, written like name@okicici or 9876543210@ybl. NPCI's app guidelines describe it as two parts: a prefix you can customise and a suffix, the handle, that the app sets. People can pay you with it instead of your bank account details.",
+  },
+  {
+    question: "How do I get a UPI ID?",
+    answer:
+      "Install a UPI app such as PhonePe, Google Pay, Paytm or BHIM, use the mobile number linked to your bank account and add that account. The app then gives you an ID. How much say you have depends on the app: Paytm does not let you type an ID and offers a list, Google Pay lists IDs for the account and you tap Add, and other apps may let you type the part before the @. For another ID on the same account, follow the app steps in the tool above.",
+  },
+  {
+    question: "Can this page tell me whether a UPI ID exists or whose it is?",
+    answer:
+      "No. It only checks how an ID is written. Your UPI app shows the payee name before you confirm a payment, so check the name there. To read the ID inside a QR code, use the UPI QR decoder.",
+  },
+  {
+    question: "Which handle will I get: @ybl, @oksbi or @ptyes?",
+    answer:
+      "The app you use sets the handle, and it follows the app and the bank behind it. @ybl, @ibl and @axl are PhonePe's, @okhdfcbank, @okicici, @oksbi and @okaxis are Google Pay's, and Paytm's terms name @ptyes, @pthdfc, @ptsbi and @ptaxis for new IDs. Any UPI app can pay an ID on any handle, so the handle does not change who can pay you. An ID belongs to the app that made it: Google Pay says IDs from other apps cannot be used in Google Pay.",
+  },
+  {
+    question: "Is the older @paytm handle still used?",
+    answer:
+      "Paytm's terms say all existing @paytm handles were assigned to Yes Bank from 15 March 2024, and Paytm says it is updating IDs from @paytm to @pthdfc, @ptaxis, @ptsbi or @ptyes. Open the Paytm app to see which ID it shows for you.",
+  },
+  {
+    question: "What characters can a UPI ID contain?",
+    answer:
+      "NPCI's public guidelines define only the two parts, a prefix you choose and a handle the app sets, and apps add their own rules for length and symbols. This checker flags only clear problems: spaces, anything other than exactly one @, nothing before or after the @, and characters other than letters, digits, dot, hyphen and underscore. If your app rejects a name that passes here, follow the app. This site's QR generator is stricter: it needs at least 2 characters before the @ and a letters-only handle.",
+  },
+  {
+    question: "How many UPI IDs can I have?",
+    answer:
+      "More than one, and the limit comes from the app. Google Pay allows up to 4 IDs for each bank account you add. Paytm's terms let one bank account carry several handles, and PhonePe says its users can use more than one ID across its handles. An ID belongs to the app that made it, so using a second app means a second ID.",
+  },
+  {
+    question: "Is it risky to share my UPI ID?",
+    answer:
+      "Sharing it is how people pay you: NPCI's app guidelines describe receiving money by sharing your UPI ID, and the ID is used in place of bank account details. Never share your UPI PIN or an OTP. NPCI's checklist for apps says only sending money needs the PIN, so a request to enter your PIN to receive money is a warning sign. An ID built from your mobile number shows that number to everyone who sees the ID.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": `${pageUrl}#webapp`,
+      "name": "UPI ID Generator: Name Ideas and Format Check",
+      "applicationCategory": "FinanceApplication",
+      "operatingSystem": "Any",
+      "url": pageUrl,
+      "description": description,
+      "inLanguage": "en-IN",
+      "dateModified": UPI_ID_REVIEWED_ON,
+      "author": personSchema(),
+      "publisher": { "@id": `${SITE}/#organization` },
+      "featureList": [
+        "Name ideas for a UPI ID from a name, shop name or mobile number",
+        "Format check for a UPI ID (VPA) with plain-language fixes",
+        "Handle guide for PhonePe, Google Pay, Paytm and BHIM with sources and a review date",
+        "Where each app keeps your UPI IDs and how to add another",
+        "Runs in the browser, nothing uploaded",
+      ],
+      "offers": { "@type": "Offer", "price": "0", "priceCurrency": "INR" },
+    },
+    {
+      "@type": "HowTo",
+      "@id": `${pageUrl}#howto`,
+      "name": "How to use the UPI ID generator",
+      "description": "Check the format of a UPI ID, pick a name idea and add the ID in your UPI app.",
+      "step": steps.map((step, index) => ({
+        "@type": "HowToStep",
+        "position": index + 1,
+        "name": step.name,
+        "text": step.text,
+      })),
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${pageUrl}#faq`,
+      "mainEntity": faqs.map((faq) => ({
+        "@type": "Question",
+        "name": faq.question,
+        "acceptedAnswer": { "@type": "Answer", "text": faq.answer },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${pageUrl}#breadcrumb`,
+      "itemListElement": [
+        { "@type": "ListItem", "position": 1, "name": "Home", "item": `${SITE}/` },
+        { "@type": "ListItem", "position": 2, "name": "All Tools", "item": `${SITE}/tools/` },
+        { "@type": "ListItem", "position": 3, "name": "UPI ID Generator", "item": pageUrl },
+      ],
+    },
+  ],
+};
+
+const handleRows = KNOWN_HANDLES.map((item) => ({ ...item, source: sourceById(item.source) }));
+
+const related = [
+  { href: "/upi-qr-scanner/", name: "UPI QR scanner", note: "Scan or paste a QR you were sent and read the UPI ID inside it." },
+  { href: "/upi-id-to-qr-code-generator/", name: "UPI ID to QR code generator", note: "Turn a UPI ID into a QR you can print or share." },
+  { href: "/upi-qr-decoder/", name: "UPI QR decoder", note: "Read the UPI ID hidden in any QR image." },
+  { href: "/upi-link-generator/", name: "UPI payment link", note: "Turn a UPI ID into a link for WhatsApp and SMS." },
+  { href: "/upi-qr-generators/", name: "UPI QR generators", note: "Presets for every app, bank and shop." },
+  { href: "/upi-errors-and-limits/", name: "UPI errors, limits and QR checks", note: "Error codes, bank limits and refund timelines in one place." },
+  { href: "/glossary/vpa/", name: "VPA in the glossary", note: "A short definition with related terms." },
+  { href: "/glossary/psp/", name: "PSP in the glossary", note: "Who stands behind a handle and routes the payment." },
+  { href: "/blog/understanding-upi-vpa-merchant-accounts/", name: "UPI VPA explained", note: "How VPAs, merchant accounts and handles fit together." },
+  { href: "/blog/how-to-change-upi-id-on-printed-qr-standee/", name: "Change the UPI ID on a printed standee", note: "What to do when the ID on your QR changes." },
+];
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-4 pt-8 md:px-6 md:pb-8 md:pt-12 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/70">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="/tools/" class="transition-colors hover:text-leaf">All Tools</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-bold text-forest" aria-current="page">UPI ID Generator</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">UPI tools</p>
+        <h1 class="mt-3 text-3xl font-black leading-tight tracking-tight text-forest md:text-5xl">UPI ID generator: name ideas and a format check</h1>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-charcoal md:mt-4 md:text-lg md:leading-8">
+          Only a UPI app or your bank can set up a UPI ID, so no website can create one for you. This page suggests well-formed names, checks how an ID is written and shows which app each handle belongs to.
+        </p>
+        <p class="mt-4 max-w-3xl rounded-[10px] bg-fog px-4 py-2.5 text-[13px] leading-5 text-charcoal md:mt-5 md:py-3 md:text-sm md:leading-6" data-upi-id-disclosure>
+          Format check only. This does not show that a UPI ID exists or who owns it: your UPI app shows the payee name before you pay. Independent tool, not affiliated with NPCI or any UPI app or bank (see the <a href="/disclaimer/" class="font-semibold text-leaf underline underline-offset-2">disclaimer</a>).
+        </p>
+      </div>
+    </section>
+
+    <section id="upi-id-tool" class="scroll-mt-28 px-4 py-6 md:px-6 lg:px-8">
+      <UpiIdHelper client:load />
+    </section>
+
+    <section class="px-4 pt-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-base leading-7 text-charcoal">
+          In full: it suggests well-formed names from your name or shop name, checks that an ID you already have is written correctly, shows which app and bank each handle belongs to, and points you to where your apps keep your IDs.
+        </p>
+      </div>
+    </section>
+
+    <section id="how-it-works" class="px-4 pb-4 pt-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest md:text-3xl">Three steps</h2>
+        <ol class="mt-5 list-decimal space-y-3 pl-5 text-base leading-7 text-charcoal marker:font-semibold marker:text-forest">
+          {steps.map((step) => (
+            <li><span class="font-semibold text-forest">{step.name}.</span> {step.text}</li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section id="scope" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">What this does and does not do</h2>
+        <div class="mt-5 grid gap-8 md:grid-cols-2">
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-charcoal">
+              <li>Check how a UPI ID is written and say what to fix.</li>
+              <li>Suggest well-formed names from a name or shop name and an optional mobile number.</li>
+              <li>Show which app and bank each handle belongs to, with the source and the review date.</li>
+              <li>Hand your ID and name to this site's QR generator when you press the button.</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does not</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-charcoal">
+              <li>Create, reserve or change a UPI ID. Only your UPI app or bank can.</li>
+              <li>Show whether an ID exists, who owns it or whether a payment would go through.</li>
+              <li>Contact any app, bank or NPCI, or send what you type to a server.</li>
+              <li>Save anything: no draft of your ID or name is kept in your browser.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="handles" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Handle guide</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest md:text-3xl">UPI handles and who issues them</h2>
+        <p class="mt-4 text-base leading-7 text-charcoal">
+          The handle is the part after the @. The app sets it, so it tells you which app and bank an ID was made through. Checked {reviewed}.
+        </p>
+        <div class="mt-5 rounded-[12px] border border-forest/10">
+          <table class="w-full text-left text-sm" data-upi-id-handles>
+            <caption class="sr-only">UPI handles, the app and bank they belong to, and the page that says so</caption>
+            <thead>
+              <tr class="border-b border-forest/10 text-charcoal">
+                <th scope="col" class="px-3 py-3 font-semibold sm:px-4">Handle</th>
+                <th scope="col" class="px-3 py-3 font-semibold sm:px-4">Issued through</th>
+                <th scope="col" class="px-3 py-3 font-semibold sm:px-4">Source</th>
+              </tr>
+            </thead>
+            <tbody>
+              {handleRows.map((row) => (
+                <tr class="border-t border-forest/10 first:border-t-0 align-top">
+                  <th scope="row" class="px-3 py-3 text-left font-mono font-semibold text-forest sm:px-4">
+                    @{row.handle}
+                    {row.legacy && <span class="ml-1 whitespace-nowrap rounded-[7px] bg-fog px-2 py-0.5 font-sans text-xs font-semibold text-charcoal">Older IDs</span>}
+                  </th>
+                  <td class="px-3 py-3 text-charcoal sm:px-4">{row.issuer}</td>
+                  <td class="px-3 py-3 sm:px-4">
+                    <a href={row.source.href} target="_blank" rel="noopener noreferrer nofollow" class="font-semibold text-leaf underline-offset-2 hover:underline">{row.source.short}</a>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-4 text-sm leading-6 text-charcoal">
+          Where a source names only the app, the bank is the one in the handle's name. @paytm is an older Paytm handle: Paytm's terms say existing @paytm handles were assigned to Yes Bank from 15 March 2024, and Paytm says IDs are being updated to @pthdfc, @ptaxis, @ptsbi or @ptyes. The list is not exhaustive: banks and apps add and retire handles, and SEBI's list of UPI apps alone shows many more, such as @idbi, @aubank and @icici. A handle that is not here is not wrong.
+        </p>
+      </div>
+    </section>
+
+    <section id="sources" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Sources and method</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest md:text-3xl">Where these facts come from</h2>
+        <p class="mt-4 text-base leading-7 text-charcoal">
+          The handle table, the app steps and the rules quoted on this page come from pages published by NPCI, SEBI or the apps themselves, read on {reviewed}. Where a page could not be opened or two pages disagreed, the claim was left out rather than guessed. Apps change menus and handles without notice, so your app has the final say.
+        </p>
+        <ul class="mt-5">
+          {UPI_ID_SOURCES.map((source) => (
+            <li class="border-t border-forest/10 py-3">
+              <a href={source.href} target="_blank" rel="noopener noreferrer nofollow" class="text-[15px] font-semibold text-leaf underline-offset-2 hover:underline">{source.label}</a>
+              <p class="mt-1 text-sm leading-6 text-charcoal">{source.used}</p>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-5 text-sm leading-6 text-charcoal" data-upi-id-reviewed>
+          Last reviewed {reviewed} by <a href="/authors/kunal-siyag/" class="font-semibold text-leaf underline underline-offset-2">Kunal Siyag</a>. The <a href="/accuracy-policy/" class="font-semibold text-leaf underline underline-offset-2">accuracy policy</a> explains how facts are checked and corrections are logged.
+        </p>
+      </div>
+    </section>
+
+    <section id="faq" class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">UPI ID questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-semibold text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-charcoal">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Related</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">More on UPI IDs</h2>
+        <ul class="mt-4">
+          {related.map((item) => (
+            <li class="border-t border-forest/10">
+              <a href={item.href} class="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between">
+                <span class="text-[15px] font-semibold text-forest hover:text-leaf">{item.name}</span>
+                <span class="text-sm text-charcoal">{item.note}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

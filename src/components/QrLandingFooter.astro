@@ -1,0 +1,78 @@
+---
+import { QR_LANDING_REVIEWED_ON, reviewedLabel, type LandingFaq, type LandingRelated, type LandingSource } from "../data/qrLandingPages";
+
+/**
+ * The closing sections shared by the two intent landing pages: sources and method with the
+ * review line, the FAQ (the page mirrors these same items in its FAQPage markup) and a short
+ * hairline list of related pages.
+ */
+interface Props {
+  sources: LandingSource[];
+  method: string;
+  faqHeading: string;
+  faqs: LandingFaq[];
+  relatedHeading: string;
+  related: LandingRelated[];
+}
+
+const { sources, method, faqHeading, faqs, relatedHeading, related } = Astro.props;
+const link = "font-semibold text-forest underline underline-offset-4 hover:text-leaf";
+---
+
+<section id="sources" aria-labelledby="sources-heading" class="px-4 py-10 md:px-6 lg:px-8">
+  <div class="mx-auto max-w-4xl">
+    <p class="text-sm font-semibold text-leaf">Sources and method</p>
+    <h2 id="sources-heading" class="mt-2 text-2xl font-black tracking-tight text-forest md:text-3xl">Where these facts come from</h2>
+    <ul class="mt-5 border-t border-forest/10">
+      {sources.map((source) => (
+        <li class="border-b border-forest/10 py-3 text-[15px] leading-6 text-charcoal">
+          <a href={source.href} target="_blank" rel="noopener noreferrer nofollow" class={link}>{source.label}<span class="sr-only"> (opens in a new tab)</span></a>
+          <span class="block text-forest/70">Used for {source.used}.</span>
+        </li>
+      ))}
+    </ul>
+    <p class="mt-4 max-w-3xl text-[15px] leading-7 text-charcoal">{method}</p>
+    <p class="mt-3 max-w-3xl text-[15px] leading-7 text-charcoal">
+      Last reviewed <time datetime={QR_LANDING_REVIEWED_ON}>{reviewedLabel()}</time> by <a href="/authors/kunal-siyag/" class={link}>Kunal Siyag</a>.
+      Read how we check facts in the <a href="/accuracy-policy/" class={link}>accuracy policy</a>. If you spot a mistake, write to <a href="mailto:feedback@proupiqr.in" class={link}>feedback@proupiqr.in</a> with the page and the source.
+    </p>
+  </div>
+</section>
+
+<section id="faq" aria-labelledby="faq-heading" class="px-4 py-10 md:px-6 lg:px-8">
+  <div class="mx-auto max-w-4xl">
+    <p class="text-sm font-semibold text-leaf">FAQ</p>
+    <h2 id="faq-heading" class="mt-2 text-2xl font-black tracking-tight text-forest md:text-3xl">{faqHeading}</h2>
+    <div class="mt-6 grid gap-3">
+      {faqs.map((faq) => (
+        <details class="group rounded-[10px] bg-fog px-5 py-4">
+          <summary class="flex cursor-pointer list-none items-start justify-between gap-6 text-base font-semibold text-forest md:text-lg [&::-webkit-details-marker]:hidden">
+            <span>{faq.question}</span>
+            <span class="mt-0.5 text-2xl leading-none text-forest transition-transform group-open:rotate-45" aria-hidden="true">+</span>
+          </summary>
+          <p class="mt-3 max-w-3xl text-base leading-7 text-charcoal">{faq.answer}</p>
+          {faq.more && (
+            <p class="mt-2 text-[15px] leading-6 text-charcoal">See also: <a href={faq.more.href} class={link}>{faq.more.label}</a></p>
+          )}
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<section id="related" aria-labelledby="related-heading" class="px-4 pb-16 pt-10 md:px-6 lg:px-8">
+  <div class="mx-auto max-w-4xl">
+    <p class="text-sm font-semibold text-leaf">Related</p>
+    <h2 id="related-heading" class="mt-2 text-2xl font-black tracking-tight text-forest">{relatedHeading}</h2>
+    <ul class="mt-4">
+      {related.map((item) => (
+        <li class="border-t border-forest/10">
+          <a href={item.href} class="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between sm:gap-6">
+            <span class="text-[15px] font-semibold text-forest hover:text-leaf">{item.name}</span>
+            <span class="text-sm text-forest/70 sm:text-right">{item.note}</span>
+          </a>
+        </li>
+      ))}
+    </ul>
+  </div>
+</section>

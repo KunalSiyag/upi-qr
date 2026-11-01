@@ -66,4 +66,6 @@ Not on this site. Decoding runs in the browser. Prefer that over random “QR to
 
 **[Decode a UPI QR now →](/upi-qr-decoder/)**
 
+Once you have the ID, the [UPI ID format check](/upi-id-generator/) shows which app its handle belongs to and whether it is written the usual way.
+
 Related: [Verify a QR before displaying](/blog/how-to-verify-upi-qr-code-before-displaying/) · [Is it safe to scan a UPI QR?](/blog/is-it-safe-to-scan-upi-qr-code/) · [QR not scanning fixes](/blog/upi-qr-code-not-scanning-troubleshooting/)

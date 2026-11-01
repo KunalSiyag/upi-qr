@@ -1,0 +1,406 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GstinChecker } from "../components/GstinChecker";
+import { personSchema } from "../data/authors";
+import {
+  GSTIN_CODE_NOTES,
+  GSTIN_LAYOUT_PATTERN,
+  GSTIN_REVIEWED_ON,
+  GSTIN_SOURCES,
+  GSTIN_STATES,
+  PAN_HOLDER_TYPES,
+  SAMPLE_GSTIN,
+} from "../lib/gstin";
+
+const title = "GSTIN Validator & Decoder: Check GST Number, State, PAN";
+const description =
+  "Check a GSTIN's format and check digit, read its state, PAN and entity number, or check a whole list at once. Free, in your browser. It can't confirm GST registration.";
+
+const pageUrl = "https://www.proupiqr.in/gstin-validator/";
+const reviewedLabel = new Date(`${GSTIN_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const steps = [
+  {
+    name: "Type or paste a GSTIN",
+    text: "Spaces, hyphens and lower case are tidied up for you. The sample button fills in a made-up number so you can see how the result reads.",
+  },
+  {
+    name: "Read the result",
+    text: "It says whether the layout and the check digit are fine, lists the exact positions that are not, and reads out the state or UT, the PAN, the holder type and the entity number.",
+  },
+  {
+    name: "Look the taxpayer up on the GST portal if you need to know who holds it",
+    text: "This page cannot show that a GSTIN is registered or whose it is. To check many numbers at once, paste a list, then copy the results or download them as CSV.",
+  },
+];
+
+const faqs = [
+  {
+    question: "What is a GSTIN?",
+    answer:
+      "A GSTIN is the 15-character GST identification number that India's GST system gives to a registered taxpayer. A business registered in several states gets a separate GSTIN for each one, because GST has no single registration for units in different states. You will usually find it on a supplier's invoices.",
+  },
+  {
+    question: "What do the 15 characters of a GSTIN mean?",
+    answer:
+      "Characters 1 and 2 are the state or UT code. Characters 3 to 12 are the PAN of the holder. Character 13 is the entity number, which counts the registrations under that PAN in that state (usually 1 to 9, then A to Z). Character 14 is usually the letter Z. Character 15 is a check digit worked out from the first 14. The GST Council's flyer describes the state code, the PAN, an entity code and a check sum; the finer points on the 13th and 14th characters come from public references.",
+  },
+  {
+    question: "Can this page tell me whether a GSTIN is active?",
+    answer:
+      "No. It only checks how the number is written. A GSTIN that passes is correctly formed; that does not show it is registered, active, suspended or cancelled, or whose it is. Use Search Taxpayer on the GST portal for that. It asks for a captcha and, without logging in, shows details such as the legal name, trade name, registration date and cancellation date where one applies. This page never contacts the portal.",
+  },
+  {
+    question: "Why does my GSTIN fail the check?",
+    answer:
+      "Usually a character was mistyped or two neighbours were swapped, the number was copied with a character missing or added, or the document it came from has a typing mistake. The result lists the positions that break the layout. If the layout is fine but the check digit does not match, at least one character is not what it should be, and this page cannot say which one. Copy the number again from the invoice or the registration certificate instead of guessing.",
+  },
+  {
+    question: "Is the 14th character always Z?",
+    answer:
+      "Most GSTINs have Z there, and the python-stdnum documentation describes it as fixed. Public explainers also say that C and D are used for tax collectors and tax deductors, and the government's e-invoice API schema takes any letter or digit in that place. So this page treats any other character in the 14th place as unusual, shows a note, and lets the check digit decide. It does not call a number wrong for that alone.",
+  },
+  {
+    question: "How do I find the PAN from a GSTIN?",
+    answer: `Take characters 3 to 12. In the sample ${SAMPLE_GSTIN} that is ${SAMPLE_GSTIN.slice(2, 12)}. The fourth letter of the PAN, which is the sixth character of the GSTIN, shows the holder type: P for an individual, C for a company, F for a firm or LLP, H for a Hindu undivided family, T for a trust, and A, B, G, J or L for the other types. For a sole proprietor, the PAN inside the GSTIN is the owner's personal PAN.`,
+  },
+  {
+    question: "What is the regex for GST number validation?",
+    answer: `For the layout this page checks, use ${GSTIN_LAYOUT_PATTERN} on the upper-case number: two digits, five letters, four digits, one letter, a digit or a letter, then two more letters or digits. It is written for the usual PAN-based GSTINs: special identifiers, such as a tax deductor registered on a TAN, can follow another layout. It does not insist on a Z in the 14th place, because some GSTINs carry C or D. A pattern cannot check the last character: that comes from the first 14 by the Luhn mod 36 method, so it takes a small calculation, not a pattern. A pattern also cannot tell you whether the state code is on the list or whether the GSTIN is registered.`,
+  },
+  {
+    question: "Does \"GST number\" mean the same in Canada, Australia or New Zealand?",
+    answer:
+      "No. This page reads India's 15-character GSTIN and nothing else. Canada's GST/HST account number is a 9-digit business number followed by RT and a 4-digit reference. New Zealand's GST number is the same as the IRD number. In Australia, a business's GST registration is listed on ABN Lookup. This page checks none of those, so use the tax authority's own tools.",
+  },
+  {
+    question: "Is the GSTIN I type sent anywhere?",
+    answer:
+      "No. The check runs in your browser. Nothing you type or paste is uploaded, saved in your browser, put in the web address or reported to analytics, and the page does not contact the GST portal. The one link that leaves this page goes to the portal and carries no number. Results disappear when you close or reload the page.",
+  },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": `${pageUrl}#webapp`,
+      name: "GSTIN Validator and Decoder by Pro UPI QR",
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "en-IN",
+      dateModified: GSTIN_REVIEWED_ON,
+      featureList: [
+        "GSTIN format and check digit check, with the exact positions that break the layout",
+        "Reads the state or UT, the PAN, the holder type and the entity number",
+        "List check for up to 500 GSTINs with copy and CSV download",
+        "Runs in the browser: nothing is uploaded or saved",
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+      author: personSchema(),
+      publisher: { "@id": "https://www.proupiqr.in/#organization" },
+    },
+    {
+      "@type": "HowTo",
+      "@id": `${pageUrl}#howto`,
+      name: "How to check a GSTIN",
+      step: steps.map((step, index) => ({ "@type": "HowToStep", position: index + 1, name: step.name, text: step.text })),
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${pageUrl}#faq`,
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "All Tools", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "GSTIN Validator", item: pageUrl },
+      ],
+    },
+  ],
+};
+
+const layout = [
+  { characters: "1-2", part: "State or UT code", sample: SAMPLE_GSTIN.slice(0, 2), note: "Two digits from the GST state and UT list below." },
+  { characters: "3-12", part: "PAN of the holder", sample: SAMPLE_GSTIN.slice(2, 12), note: "Five letters, four digits, one letter." },
+  { characters: "13", part: "Entity number", sample: SAMPLE_GSTIN[12], note: "Which registration this is under that PAN in that state: usually 1 to 9, then A to Z." },
+  { characters: "14", part: "Usually Z", sample: SAMPLE_GSTIN[13], note: "Other letters can appear. This page notes them instead of failing the number." },
+  { characters: "15", part: "Check digit", sample: SAMPLE_GSTIN[14], note: "Worked out from the first 14 characters, so a typing mistake usually breaks it." },
+];
+
+const stateNotes = [
+  { codes: "25", text: GSTIN_CODE_NOTES["25"] },
+  { codes: "28", text: GSTIN_CODE_NOTES["28"] },
+  { codes: "96 and 99", text: GSTIN_CODE_NOTES.special },
+  { codes: "Any other code", text: GSTIN_CODE_NOTES.unknown.replace("State code {code}", "This code") },
+];
+
+// The state table reads as one list; three tables keep it balanced on a wide screen and stacked on a phone.
+const perColumn = Math.ceil(GSTIN_STATES.length / 3);
+const stateColumns = [0, 1, 2].map((index) => GSTIN_STATES.slice(index * perColumn, (index + 1) * perColumn));
+
+const sourceFor = (word: string) => GSTIN_SOURCES.find((source) => source.label.includes(word))?.href ?? "";
+const official = GSTIN_SOURCES.filter((source) => source.official);
+const references = GSTIN_SOURCES.filter((source) => source.official === false);
+
+const related = [
+  { href: "/invoice-generator/", name: "GST invoice generator", note: "Make a GST tax invoice you can send as a PDF." },
+  { href: "/credit-note-generator/", name: "GST credit note generator", note: "Correct an invoice you have already issued." },
+  { href: "/debit-note-generator/", name: "GST debit note generator", note: "Add tax to an invoice that was billed too low." },
+  { href: "/amount-in-words/", name: "Amount in words converter", note: "Write the invoice total in words, in English or Hindi." },
+  { href: "/gst-calculator/", name: "GST calculator", note: "Add or remove GST and split CGST, SGST or IGST." },
+  { href: "/glossary/gstin/", name: "GSTIN in the glossary", note: "A short definition with related terms." },
+  { href: "/merchant-documents/", name: "Invoices and merchant documents", note: "Which document to send when, with a free generator for each." },
+  { href: "/blog/quotation-vs-estimate-vs-invoice-vs-receipt/", name: "Quotation, estimate, invoice and receipt", note: "What each document carries, including GSTINs." },
+];
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-8 pt-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/70">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="/tools/" class="transition-colors hover:text-leaf">All Tools</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-bold text-forest" aria-current="page">GSTIN Validator</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">GST tools</p>
+        <h1 class="mt-3 text-4xl font-black leading-tight tracking-tight text-forest md:text-5xl">GSTIN validator and decoder</h1>
+        <p class="mt-4 max-w-3xl text-lg leading-8 text-forest/75">
+          Paste a GSTIN, the 15-character number on an Indian GST registration, and this page checks how it is written, tests its check digit and reads what the characters say: the state or UT, the PAN inside it, the holder type and the entity number. You can check a whole list in one go. It runs in your browser, so nothing you type is sent anywhere.
+        </p>
+      </div>
+    </section>
+
+    <section id="gstin-tool" class="scroll-mt-28 px-4 py-6 md:px-6 lg:px-8">
+      <GstinChecker client:load />
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">How it works</h2>
+        <ol class="mt-5 space-y-4">
+          {steps.map((step, index) => (
+            <li class="flex gap-4">
+              <span class="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-fog text-sm font-semibold text-forest" aria-hidden="true">{index + 1}</span>
+              <div>
+                <p class="font-semibold text-forest">{step.name}</p>
+                <p class="mt-1 text-base leading-7 text-forest/75">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">What the 15 characters mean</h2>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">
+          The GST Council's registration flyer describes a GSTIN as a 15-digit number. The first two digits are the state code, the next ten are the PAN of the legal entity, the next two are an entity code and the last is a check sum. Public references, such as the python-stdnum documentation, add that the 13th character counts the registrations a PAN holder has in that state, running from 1 to 9 and then A to Z, and that the 14th is usually Z.
+        </p>
+        <div role="region" aria-label="The five parts of a GSTIN" tabindex="0" class="mt-6 overflow-x-auto">
+          <table class="w-full min-w-[34rem] text-left text-sm">
+            <caption class="sr-only">The five parts of a GSTIN, with the made-up sample {SAMPLE_GSTIN}</caption>
+            <thead>
+              <tr class="border-t border-forest/10 text-forest">
+                <th scope="col" class="py-3 pr-4 font-semibold">Characters</th>
+                <th scope="col" class="py-3 pr-4 font-semibold">Part</th>
+                <th scope="col" class="py-3 pr-4 font-semibold">In {SAMPLE_GSTIN}</th>
+                <th scope="col" class="py-3 font-semibold">What to know</th>
+              </tr>
+            </thead>
+            <tbody>
+              {layout.map((row) => (
+                <tr class="border-t border-forest/10 align-top">
+                  <td class="py-3 pr-4 font-mono text-forest">{row.characters}</td>
+                  <td class="py-3 pr-4 font-semibold text-forest">{row.part}</td>
+                  <td class="py-3 pr-4 font-mono text-forest" translate="no">{row.sample}</td>
+                  <td class="py-3 text-forest/75">{row.note}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-3 max-w-3xl text-sm leading-6 text-forest/75">
+          The sample is made up. Its PAN digits are 0000, and the Income Tax Department issues PAN digits from 0001 to 9999, so the sample's PAN falls outside the numbers it issues.
+        </p>
+
+        <h3 class="mt-10 text-lg font-semibold text-forest">The PAN's fourth letter shows who holds it</h3>
+        <p class="mt-2 max-w-3xl text-base leading-7 text-forest/75">
+          That letter is the sixth character of the GSTIN. The Income Tax Department's FAQ on how a PAN is formed lists these ten, and the public references below agree. python-stdnum's PAN module also lists a K and notes that it may have been discontinued. This page treats a K like any other letter outside the list: it shows a note, not an error.
+        </p>
+        <ul class="mt-4 grid gap-x-10 sm:grid-cols-2">
+          {PAN_HOLDER_TYPES.map((holder) => (
+            <li class="flex gap-4 border-t border-forest/10 py-2.5 text-sm">
+              <span class="w-6 shrink-0 font-mono font-semibold text-forest">{holder.letter}</span>
+              <span class="text-forest/75">{holder.name.charAt(0).toUpperCase() + holder.name.slice(1)}</span>
+            </li>
+          ))}
+        </ul>
+
+        <h3 class="mt-10 text-lg font-semibold text-forest">How the check digit catches typing mistakes</h3>
+        <p class="mt-2 max-w-3xl text-base leading-7 text-forest/75">
+          The last character is worked out from the first 14 with a method called Luhn mod 36, in which the digits count as 0 to 9 and the letters A to Z as 10 to 35. If any one of the 15 characters changes, the check digit stops fitting. Two neighbouring characters traded places are caught too, unless they are 0 and Z. Two mistakes in one number can cancel each other out about one time in 36.
+        </p>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">
+          A check digit has 36 possible values, so roughly one random 15-character string in 36 passes it. Passing shows that a number is well formed. It does not show that the number exists.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">What this page does and does not do</h2>
+        <div class="mt-5 grid gap-8 md:grid-cols-2">
+          <div>
+            <h3 class="text-lg font-semibold text-forest">It does</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-forest/75">
+              <li>Check the length, the characters allowed, the layout of the PAN part and the check digit.</li>
+              <li>Read out the state or UT, the PAN, the holder type and the entity number, and note anything unusual.</li>
+              <li>Run a bulk check on up to 500 GSTINs at a time, and let you copy the results or download them as CSV.</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-forest">It does not</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-forest/75">
+              <li>Show whether a GSTIN is registered, active or cancelled, or whose it is. Search Taxpayer on the GST portal does that.</li>
+              <li>Make GSTINs, show the check digit a number should have, or suggest a corrected number.</li>
+              <li>Read special identifiers, such as the registrations given to non-resident taxable persons or to tax deductors who registered on a TAN instead of a PAN (neither is based on an Indian PAN), or the UINs issued to some United Nations bodies and other organisations. They can show format problems here, so look them up on the GST portal.</li>
+              <li>Send or save anything you type.</li>
+            </ul>
+          </div>
+        </div>
+        <p class="mt-6 max-w-3xl text-base leading-7 text-forest/75">
+          This is an independent tool. It is not run or approved by GSTN or any tax department.{" "}
+          <a href="/disclaimer/" class="font-semibold text-leaf underline">Read the disclaimer</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="state-codes" class="scroll-mt-28 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">State and UT codes</h2>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">
+          These {GSTIN_STATES.length} codes appear in both government code lists: the{" "}
+          <a href={sourceFor("E-way bill")} target="_blank" rel="noopener noreferrer nofollow" class="font-semibold text-leaf underline">e-way bill state code list</a>{" "}
+          and the{" "}
+          <a href={sourceFor("E-invoice portal")} target="_blank" rel="noopener noreferrer nofollow" class="font-semibold text-leaf underline">e-invoice master codes</a>.
+          They are the only codes this page names. Any other code gets a note, never a failure on its own: the check digit decides.
+        </p>
+        <div class="mt-5 grid items-start gap-x-10 md:grid-cols-3">
+          {stateColumns.map((column) => (
+            <table class="w-full text-left text-sm">
+              <caption class="sr-only">State and UT codes {column[0].code} to {column[column.length - 1].code}</caption>
+              <thead class="sr-only">
+                <tr>
+                  <th scope="col">Code</th>
+                  <th scope="col">State or UT</th>
+                </tr>
+              </thead>
+              <tbody>
+                {column.map((state) => (
+                  <tr class="border-t border-forest/10">
+                    <th scope="row" class="w-9 py-2 pr-3 text-left align-top font-mono font-semibold text-forest">{state.code}</th>
+                    <td class="py-2 text-forest/75">{state.name}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          ))}
+        </div>
+        <h3 class="mt-8 text-lg font-semibold text-forest">Codes that are not in the list</h3>
+        <ul class="mt-3">
+          {stateNotes.map((item) => (
+            <li class="border-t border-forest/10 py-3 sm:flex sm:gap-6">
+              <span class="block shrink-0 font-semibold text-forest sm:w-36">{item.codes}</span>
+              <span class="block text-sm leading-6 text-forest/75">{item.text}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+
+    <section id="sources" class="scroll-mt-28 px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class="text-2xl font-black tracking-tight text-forest md:text-3xl">Sources and method</h2>
+        <p class="mt-3 text-sm font-semibold text-forest/75">
+          Last reviewed {reviewedLabel} by{" "}
+          <a href="/authors/kunal-siyag/" class="text-leaf underline">Kunal Siyag</a>
+          {" "}· <a href="/accuracy-policy/" class="text-leaf underline">Accuracy policy</a>
+        </p>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">
+          Government pages come first. The public references are cross-checks for details that no government page spells out. The flyer calls the last digit a check sum without describing the method, so the check digit follows the Luhn mod 36 method as python-stdnum implements it. We tested our code against python-stdnum's published sample, against GSTINs shown in public company listings (every one we tried fits) and, on tens of thousands of random strings, against a separate implementation. The two always agreed.
+        </p>
+        <h3 class="mt-8 text-lg font-semibold text-forest">Government pages</h3>
+        <ul class="mt-3">
+          {official.map((source) => (
+            <li class="border-t border-forest/10 py-3">
+              <a href={source.href} target="_blank" rel="noopener noreferrer nofollow" class="font-semibold text-leaf underline">{source.label}</a>
+              <span class="mt-1 block text-sm leading-6 text-forest/75">{source.used}</span>
+            </li>
+          ))}
+        </ul>
+        <h3 class="mt-8 text-lg font-semibold text-forest">Public references</h3>
+        <ul class="mt-3">
+          {references.map((source) => (
+            <li class="border-t border-forest/10 py-3">
+              <a href={source.href} target="_blank" rel="noopener noreferrer nofollow" class="font-semibold text-leaf underline">{source.label}</a>
+              <span class="mt-1 block text-sm leading-6 text-forest/75">{source.used}</span>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-6 max-w-3xl text-sm leading-6 text-forest/75">
+          The flyer gives no detail on characters 13 and 14, which is why those rest on the public references. The e-invoice schema accepts any letter or digit in the 14th place, so an unusual 14th character gets a note, not an error. If you spot a mistake, the <a href="/accuracy-policy/" class="font-semibold text-leaf underline">accuracy policy</a> says how to report it and how corrections are logged.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest md:text-3xl">GSTIN questions</h2>
+        <div class="mt-6 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-semibold text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 pt-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Related</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">Related tools and guides</h2>
+        <ul class="mt-4">
+          {related.map((item) => (
+            <li class="border-t border-forest/10">
+              <a href={item.href} class="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between">
+                <span class="text-[15px] font-semibold text-forest hover:text-leaf">{item.name}</span>
+                <span class="text-sm text-forest/70">{item.note}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

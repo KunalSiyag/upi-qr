@@ -1,0 +1,393 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../components/GeneratorForm";
+import QrLandingFooter from "../components/QrLandingFooter.astro";
+import { personSchema } from "../data/authors";
+import {
+  NPCI_BRAND_GUIDELINES,
+  NPCI_LINKING_SPEC,
+  QR_LANDING_REVIEWED_ON,
+  type LandingFaq,
+  type LandingRelated,
+} from "../data/qrLandingPages";
+
+const pageUrl = "https://www.proupiqr.in/payment-qr-code-generator/";
+const title = "Payment QR Code Generator: Free UPI QR for Shops & Freelancers";
+const description =
+  "Make a free payment QR code from your UPI ID, then choose where it goes: counter, table, invoice or WhatsApp. For UPI payments in India. No signup.";
+
+const link = "font-semibold text-forest underline underline-offset-4 hover:text-leaf";
+const h2 = "mt-2 text-2xl font-black tracking-tight text-forest md:text-3xl";
+
+/** The three visible steps; the HowTo markup repeats exactly these. */
+const steps = [
+  {
+    name: "Enter your UPI ID and business name",
+    text: "Copy your UPI ID from your UPI or bank app, paste it into the UPI ID box and type your shop or business name.",
+  },
+  {
+    name: "Pick a layout and add an amount if needed",
+    text: "Switch to Advanced Poster to choose a layout such as shop standee, restaurant table or freelancer card, and open Add amount & note (optional) for an amount or an invoice number.",
+  },
+  {
+    name: "Generate, test and place it",
+    text: "Click Generate UPI QR, scan it from a second phone and read the payee details, then download it to print, share or add to an invoice.",
+  },
+];
+
+/** What each kind of payment QR is, in the order a shop usually meets them. Facts only; no fees. */
+const options = [
+  {
+    name: "A QR printed from your UPI ID",
+    tag: "What this page makes",
+    rows: [
+      ["What it is", "A standard UPI QR that holds your UPI ID and name and, if you add them, an amount and a note."],
+      ["Set-up", "None beyond having a UPI ID. You make it in your browser."],
+      ["What you get", "Payments go from the payer's bank account to the account behind your UPI ID. There is no dashboard, report or speaker with it."],
+      ["Fits", "Counters, tables, fees and invoices where checking your bank or UPI app for credits is enough."],
+    ],
+  },
+  {
+    name: "A merchant QR from a bank, payment app or aggregator",
+    tag: "Issued by a provider",
+    rows: [
+      ["What it is", "A QR issued once a provider has onboarded you as a merchant. NPCI's brand guidelines call the acquiring bank, payee PSP or payment aggregator that directly onboards the merchant a partner."],
+      ["Set-up", "An application with the provider. The steps differ by provider."],
+      ["What you get", "A sticker or display in the provider's layout. NPCI's guidelines for these stickers call for the UPI ID as text, the line “Scan & Pay with any UPI app” and the month of issue. The provider may add reports or devices."],
+      ["Fits", "When you want what the provider adds, such as reports or a device, or a QR that carries the provider's branding."],
+    ],
+  },
+  {
+    name: "A soundbox",
+    tag: "A device, usually with a QR on it",
+    rows: [
+      ["What it is", "A small speaker that announces payments. NPCI's brand guidelines give soundbox QR stickers their own layouts."],
+      ["Set-up", "From the provider you buy or rent it from, linked to your account with that provider."],
+      ["What you get", "A spoken alert when a payment arrives on that account. It is an alert, not a record: your bank statement is the record."],
+      ["Fits", "Noisy counters, or shops where staff take payments and you are not at the till."],
+    ],
+  },
+];
+
+const faqs: LandingFaq[] = [
+  {
+    question: "What is a payment QR code?",
+    answer:
+      "For shops and freelancers in India it is usually a UPI QR: a code that opens the customer's UPI app with your UPI ID and name filled in, and sometimes an amount. Other kinds of payment QR exist, such as card-network codes, but this page covers UPI only.",
+  },
+  {
+    question: "Which should my shop use: a printed UPI QR, a bank merchant QR or a soundbox?",
+    answer:
+      "They do different jobs. A QR printed from your UPI ID takes payments into that account with no set-up. A merchant QR from a bank, payment app or aggregator comes with that provider's onboarding and whatever else it offers, such as reports or a device. A soundbox is a speaker that announces payments on its provider's account, so it works with that provider's QR.",
+    more: { href: "/merchant-setup/", label: "Merchant setup guides" },
+  },
+  {
+    question: "Do I need a payment gateway to accept QR payments?",
+    answer:
+      "No. A UPI QR takes payments into your bank account through the customer's UPI app. A gateway adds things a QR does not, such as a hosted checkout, card payments and automatic order confirmation, so an online store usually needs one. What UPI costs a merchant depends on rules that change, so use the UPI MDR calculator for current figures.",
+    more: { href: "/upi-mdr-calculator/", label: "UPI MDR calculator" },
+  },
+  {
+    question: "How do I know a customer has paid?",
+    answer:
+      "Look for the credit in your own bank or UPI app, or for the alert from your soundbox. Treat a customer's screen or a screenshot as unconfirmed until the credit shows in your account. Putting an invoice or order number in the note makes the payment easier to match later.",
+  },
+  {
+    question: "Can I use one QR for several counters or staff?",
+    answer:
+      "One QR credits one UPI ID, so several counters can share it. To tell them apart, make a separate QR for each counter with the counter number in the note, and match those notes in your statement if your bank or app shows them.",
+    more: { href: "/blog/how-to-generate-upi-qr-for-multiple-staff-counters/", label: "QR codes for several counters or staff" },
+  },
+  {
+    question: "How do I put an amount or an invoice number in the QR?",
+    answer:
+      "Switch to Advanced Poster, open Add amount & note and fill in the amount and a note such as the invoice number. Each different amount needs its own QR; the invoice generator makes one for you inside the PDF.",
+    more: { href: "/invoice-generator/", label: "Invoice generator" },
+  },
+  {
+    question: "Can customers from outside India pay with this QR?",
+    answer:
+      "This page is for UPI payments in India: amounts are in rupees and payers use UPI apps. If a client pays from abroad, bill in their currency with a payment link instead; the invoice generator can issue invoices in other currencies.",
+  },
+  {
+    question: "Is this the same QR that my bank or a payment app gives me?",
+    answer:
+      "No. This tool prints a standard UPI QR for a UPI ID you already have. It does not make you a merchant with a bank or provider, and it comes with no dashboard, settlement report or soundbox. It is an independent tool, not from NPCI, a bank or any UPI app.",
+  },
+];
+
+const related: LandingRelated[] = [
+  { href: "/upi-id-to-qr-code-generator/", name: "UPI ID to QR code generator", note: "What the link inside a UPI QR contains and how to check it." },
+  { href: "/print-upi-qr/", name: "Print UPI QR standees, stickers and posters", note: "The print hub: sizes, paper and ready layouts." },
+  { href: "/blog/how-to-accept-upi-payments-without-pos-machine/", name: "Accept UPI without a POS machine", note: "Counter set-up in minutes, and how it compares with a POS." },
+  { href: "/blog/how-to-generate-upi-qr-for-multiple-staff-counters/", name: "QR codes for several counters or staff", note: "Three ways to handle more than one till." },
+  { href: "/blog/upi-qr-for-freelancers-invoice-payments/", name: "UPI QR for freelancer invoices", note: "Putting a payment QR into a client invoice." },
+  { href: "/blog/upi-qr-code-for-restaurant-cloud-kitchen/", name: "UPI QR for restaurants and cloud kitchens", note: "Table, counter and delivery placements." },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": pageUrl + "#webapp",
+      name: "Payment QR Code Generator",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "en-IN",
+      dateModified: QR_LANDING_REVIEWED_ON,
+      featureList: [
+        "UPI payment QR code from a UPI ID, in the browser",
+        "Poster layouts for a counter, a table or a freelancer card",
+        "Optional amount and note for an invoice or a fixed fee",
+        "A plain comparison of a printed UPI QR, a provider merchant QR and a soundbox",
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+      author: personSchema(),
+      publisher: { "@id": "https://www.proupiqr.in/#organization" },
+    },
+    {
+      "@type": "HowTo",
+      "@id": pageUrl + "#howto",
+      name: "How to make a payment QR code for your shop",
+      step: steps.map((step, index) => ({ "@type": "HowToStep", position: index + 1, name: step.name, text: step.text })),
+    },
+    {
+      "@type": "FAQPage",
+      "@id": pageUrl + "#faq",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": pageUrl + "#breadcrumb",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "All Tools", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "Payment QR Code Generator", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-4 pt-8 md:px-6 md:pb-6 md:pt-12 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/70">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="/tools/" class="transition-colors hover:text-leaf">All Tools</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-bold text-forest" aria-current="page">Payment QR Code Generator</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">UPI QR tools</p>
+        <h1 class="mt-3 text-3xl font-black leading-tight tracking-tight text-forest md:text-5xl">Payment QR code generator for shops and freelancers</h1>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-charcoal md:mt-4 md:text-lg md:leading-8">
+          Make a payment QR code from your UPI ID so customers can pay you cashless, then decide where it goes: the counter, a table, an invoice or a WhatsApp chat.
+        </p>
+        <p class="mt-4 max-w-3xl rounded-[12px] bg-fog px-4 py-2.5 text-[13px] leading-5 text-charcoal md:mt-5 md:py-3 md:text-sm md:leading-6">
+          This page is for UPI payments in India: the payer scans with a UPI app and pays in rupees. It is not for card, PayPal or international payments. This is an independent tool, not from NPCI, a bank or a UPI app: see the <a href="/disclaimer/" class={link}>disclaimer</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="generator" aria-label="Payment QR code generator" class="scroll-mt-20 px-4 py-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <GeneratorForm client:load />
+      </div>
+    </section>
+
+    <section class="px-4 pt-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-base leading-7 text-charcoal">
+          Below the generator, a short guide compares a QR you print yourself with a bank-issued merchant QR and a soundbox, so you pick the right one for the job.
+        </p>
+      </div>
+    </section>
+
+    <section id="how-it-works" aria-labelledby="how-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 id="how-heading" class={h2}>How to make a payment QR code for your shop</h2>
+        <ol role="list" class="mt-5 grid gap-3">
+          {steps.map((step, index) => (
+            <li class="flex gap-4 rounded-[12px] bg-fog px-4 py-4">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-white text-sm font-semibold text-forest ring-1 ring-hairline" aria-hidden="true">{index + 1}</span>
+              <div>
+                <p class="text-base font-semibold text-forest">{step.name}</p>
+                <p class="mt-1 text-[15px] leading-6 text-charcoal">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+        <p class="mt-4 max-w-3xl text-[15px] leading-6 text-charcoal">
+          Not sure which UPI ID to use? See <a href="/upi-id-generator/" class={link}>where each app keeps your UPI ID</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="which-qr" aria-labelledby="which-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Pick the right one</p>
+        <h2 id="which-heading" class={h2}>Which payment QR do you need?</h2>
+        <p class="mt-4 max-w-3xl text-base leading-7 text-charcoal">
+          Three things get called a payment QR in a shop. They do different jobs, and the facts below are the ones that differ.
+        </p>
+        <div class="mt-6 grid gap-4">
+          {options.map((option) => (
+            <article class="rounded-[12px] bg-white p-5 shadow-card">
+              <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <h3 class="text-lg font-semibold leading-snug text-forest">{option.name}</h3>
+                <p class="text-sm font-semibold text-forest/70">{option.tag}</p>
+              </div>
+              <dl class="mt-4 grid gap-x-8 gap-y-4 sm:grid-cols-2">
+                {option.rows.map(([label, text]) => (
+                  <div>
+                    <dt class="text-sm font-semibold text-forest">{label}</dt>
+                    <dd class="mt-0.5 text-[15px] leading-6 text-charcoal">{text}</dd>
+                  </div>
+                ))}
+              </dl>
+            </article>
+          ))}
+        </div>
+        <div class="mt-6 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A QR printed from your own UPI ID is enough when all you need is for customers to pay into an account you already have. Personal accounts come with bank limits, so look at <a href="/upi-limits/" class={link}>bank-wise UPI limits</a> before you rely on one for heavy volume. A provider's QR is worth a look when you want its reports or devices. A soundbox announces payments that arrive through its provider's merchant account, so it usually goes with that provider's QR: a QR printed from your UPI ID still collects money, but the speaker may not announce it. The <a href="/glossary/soundbox/" class={link}>soundbox glossary entry</a> and the <a href="/blog/how-upi-soundboxes-work-and-their-safety/" class={link}>guide to how soundboxes work</a> cover the device side.
+          </p>
+          <p>
+            To set up a provider's merchant QR, start with the <a href="/merchant-setup/" class={link}>merchant setup hub</a>. It links the guides for <a href="/blog/phonepe-business-qr-code-activation/" class={link}>PhonePe Business</a>, <a href="/blog/google-pay-business-qr-code-activation/" class={link}>Google Pay for Business</a>, <a href="/blog/how-to-get-free-upi-qr-code-from-bank/" class={link}>a bank-issued QR</a> and a <a href="/blog/paytm-vs-phonepe-vs-gpay-which-qr-best-for-shop/" class={link}>comparison of the three apps</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="placement" aria-labelledby="placement-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Placement</p>
+        <h2 id="placement-heading" class={h2}>Where to put your payment QR</h2>
+        <div class="mt-5 grid gap-6 md:grid-cols-2">
+          <div>
+            <h3 class="text-lg font-semibold text-forest">At the counter</h3>
+            <p class="mt-2 text-[15px] leading-7 text-charcoal">
+              Put it where customers already stand or wait, at a height a phone can reach. Print your shop name and UPI ID as text above or below the QR: NPCI's own sticker layouts show the UPI ID that way. NPCI's layout rules for provider-issued stickers also say no other QR codes or stickers go beside the payment QR, and the habit keeps customers from scanning the wrong code. Check now and then that nothing has been stuck over yours: see the <a href="/blog/prevent-upi-qr-code-tampering-frauds/" class={link}>tampering guide</a>.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-forest">On a table</h3>
+            <p class="mt-2 text-[15px] leading-7 text-charcoal">
+              A table tent or counter card suits cafes and restaurants. In Advanced Poster the Restaurant Table layout has a field for a table number, but that label is only printed on the poster. If you want the table number to arrive with the payment, put it in the note field as well.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-forest">On an invoice</h3>
+            <p class="mt-2 text-[15px] leading-7 text-charcoal">
+              Enter the amount and put the invoice number in the note, so the client pays the exact total and you can match it later. The <a href="/invoice-generator/" class={link}>invoice generator</a> builds the PDF with a payment QR in it, so you do not have to paste images.
+            </p>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-forest">On WhatsApp or Instagram</h3>
+            <p class="mt-2 text-[15px] leading-7 text-charcoal">
+              Share the downloaded PNG, or post it on a status or in your bio. Someone looking at the QR on the phone they pay with cannot scan it with that phone's camera, so for a single customer in a chat a payment link is often easier: you can <a href="/upi-link-generator/" class={link}>make a UPI payment link</a> instead. The <a href="/blog/how-to-add-upi-qr-to-instagram-whatsapp-status/" class={link}>social sharing guide</a> has more.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="gateway" aria-labelledby="gateway-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">No gateway</p>
+        <h2 id="gateway-heading" class={h2}>Collecting without a payment gateway</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A UPI QR takes payments straight into your bank account through the customer's UPI app. There is no checkout page, no card option and no automatic order matching, which are the things a payment gateway provides. That makes a QR a good fit for a counter or for a client you invoice yourself, and a weak fit for an online store that needs each order confirmed automatically. The <a href="/blog/upi-qr-code-vs-payment-gateway/" class={link}>QR code versus gateway guide</a> compares the two.
+          </p>
+          <p>
+            What a UPI payment costs a merchant depends on rules that change, so this page quotes no figure. Use the <a href="/upi-mdr-calculator/" class={link}>UPI MDR calculator</a> for the current merchant discount rules and the <a href="/upi-calculator/" class={link}>UPI savings calculator</a> to compare UPI with a gateway for your own sales mix.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="print" aria-labelledby="print-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Printing</p>
+        <h2 id="print-heading" class={h2}>What to print</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            Choose a layout in Advanced Poster: shop standee, restaurant table, freelancer card and more. The <a href="/print-templates/" class={link}>print template gallery</a> lists paper sizes for counter cards and table tents, and the <a href="/qr-sticker-generator/" class={link}>QR sticker generator</a> fills an A4 sheet with several small codes. Print your business name, your UPI ID and the month you printed it, so an old or swapped sticker is easy to spot, and scan a printed proof from where customers will stand before you make a batch.
+          </p>
+          <p>
+            Before you put a printed code up, scan the proof on your phone with the <a href="/upi-qr-scanner/" class={link}>UPI QR scanner</a> to see the UPI ID and name it holds.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="invoices" aria-labelledby="invoices-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Freelancers</p>
+        <h2 id="invoices-heading" class={h2}>Invoices with a payment QR</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            For one client and one amount, put the amount in the QR and the invoice number in the note. If you invoice often, the <a href="/invoice-generator/" class={link}>invoice generator</a> builds the whole PDF for you. A UPI QR does not help a client who pays from abroad: for those invoices use another currency and a payment link, which the same generator supports.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="receipts" aria-labelledby="receipts-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">After payment</p>
+        <h2 id="receipts-heading" class={h2}>Receipts once you have been paid</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A receipt records a payment that has already reached your account. Use the <a href="/receipt-generator/" class={link}>receipt generator</a> only for money you have received, and keep your bank statement, which is the record. A receipt made here is not a bank or UPI-app record.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="scope" aria-labelledby="scope-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Scope</p>
+        <h2 id="scope-heading" class={h2}>What this tool does and does not do</h2>
+        <div class="mt-4 grid max-w-4xl gap-6 text-base leading-7 text-charcoal md:grid-cols-2">
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Print a standard UPI QR for a UPI ID you already have.</li>
+              <li>Offer poster layouts and a PNG download, made in your browser.</li>
+              <li>Carry an optional amount and note, such as an invoice number.</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does not</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Make you a merchant with a bank or provider, or add a dashboard or soundbox.</li>
+              <li>Confirm that a customer has paid. Your bank or UPI app shows the credit.</li>
+              <li>Take card or international payments, or send, receive or hold money.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <QrLandingFooter
+      sources={[NPCI_BRAND_GUIDELINES, NPCI_LINKING_SPEC]}
+      method="What this page says about partner-issued stickers and soundbox layouts is read from NPCI's guidelines document. The placement and printing advice is our own, not an NPCI requirement. This page quotes no fee, because merchant charges change: use the calculators linked above. We have not test-scanned every UPI app, so scan your QR with the apps your customers use."
+      faqHeading="Payment QR code questions"
+      faqs={faqs}
+      relatedHeading="More on payment QR codes"
+      related={related}
+    />
+  </main>
+</BaseLayout>

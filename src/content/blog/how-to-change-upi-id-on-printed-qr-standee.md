@@ -24,7 +24,7 @@ You cannot "edit" a printed QR — you **regenerate and reprint**.
 ## Step-by-Step Replacement
 
 1. **Deactivate old VPA** in banking app if possible, or remove old standee immediately.
-2. Confirm **new UPI ID** and **payee name** in bank app.
+2. Confirm **new UPI ID** and **payee name** in bank app. Paste the ID into the [UPI ID format check](/upi-id-generator/) to see how it is written before you print.
 3. Open [Pro UPI QR Generator](/) with new details.
 4. Download fresh PNG (same template as before for brand consistency).
 5. [Verify with ₹1 test](/blog/how-to-verify-upi-qr-code-before-displaying/) from two different UPI apps.

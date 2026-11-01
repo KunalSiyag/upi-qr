@@ -57,4 +57,6 @@ Many shops keep **one QR for UPI** and skip POS until card demand justifies MDR.
 
 **[Create your free shop UPI QR &rarr;](/)**
 
+Not sure which kind of QR you need? See [which payment QR suits a counter, a table or an invoice](/payment-qr-code-generator/).
+
 Related: [UPI QR without business account](/blog/how-to-create-upi-qr-without-business-account/) · [UPI vs payment gateway](/blog/upi-qr-code-vs-payment-gateway/)

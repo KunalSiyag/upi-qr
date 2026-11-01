@@ -45,3 +45,11 @@
 - P2M meaning in banking and UPI
 - Free UPI API without a payment gateway
 - Hindi: बिना बिजनेस अकाउंट मर्चेंट QR कैसे बनाएं
+
+## New tool clusters (2026-11)
+- UPI QR scanner (`/upi-qr-scanner/`): upi qr code scanner, upi scanner, scan upi qr code, upi id scanner (decoder keeps "verify upi id")
+- GSTIN validator (`/gstin-validator/`): gstin validator, gst number validator, gstin check digit, find pan from gstin, bulk gstin validator
+- Amount in words (`/amount-in-words/`): amount in words in indian rupees, rupees in words converter, amount in words for cheque/google sheets/hindi
+- UPI ID generator (`/upi-id-generator/`): upi id generator, vpa generator, free upi id number (format check and name ideas only)
+- UPI ID to QR (`/upi-id-to-qr-code-generator/`): upi to qr, vpa qr generator, upi id to qr code generator
+- Payment QR (`/payment-qr-code-generator/`): payment qr generator, payment qr code generator free, cashless qr code generator

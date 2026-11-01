@@ -51,6 +51,8 @@ It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) 
 
 - **Website**: https://www.proupiqr.in/
 - **Universal QR Generator**: https://www.proupiqr.in/universal-qr-generator/
+- **UPI ID to QR code generator**: https://www.proupiqr.in/upi-id-to-qr-code-generator/
+- **Payment QR code generator**: https://www.proupiqr.in/payment-qr-code-generator/
 - **Invoice QR Generator**: https://www.proupiqr.in/invoice-generator/
 - **Bulk CSV QR Builder**: https://www.proupiqr.in/bulk-qr/
 - **A4 QR Sticker Sheets**: https://www.proupiqr.in/qr-sticker-generator/
@@ -61,8 +63,12 @@ It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) 
 - **Print / standee hub**: https://www.proupiqr.in/print-upi-qr/
 - **Printable template gallery**: https://www.proupiqr.in/print-templates/
 - **UPI errors, limits, safety**: https://www.proupiqr.in/upi-errors-and-limits/
+- **UPI QR scanner and reader**: https://www.proupiqr.in/upi-qr-scanner/
+- **UPI ID generator: name ideas and format check**: https://www.proupiqr.in/upi-id-generator/
 - **Invoices & documents hub**: https://www.proupiqr.in/merchant-documents/
+- **Amount in words converter**: https://www.proupiqr.in/amount-in-words/
 - **Business calculators hub**: https://www.proupiqr.in/business-calculators/
+- **GSTIN validator and decoder** (format and check digit only, no registration lookup): https://www.proupiqr.in/gstin-validator/
 - **About**: https://www.proupiqr.in/about/
 - **Author — Kunal Siyag**: https://www.proupiqr.in/authors/kunal-siyag/
 - **Editorial policy**: https://www.proupiqr.in/editorial-policy/

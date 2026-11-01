@@ -55,4 +55,6 @@ Many restaurants push repeat customers to WhatsApp ordering with UPI QR to save 
 
 **[Generate restaurant table UPI QR &rarr;](/)**
 
+Choosing between a printed QR and a soundbox? See [which payment QR suits a counter or a table](/payment-qr-code-generator/).
+
 Related: [Print standee guide](/blog/how-to-create-print-upi-qr-code-standee/) · [Accept UPI without POS](/blog/how-to-accept-upi-payments-without-pos-machine/)

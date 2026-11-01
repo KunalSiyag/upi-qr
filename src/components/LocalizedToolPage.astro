@@ -31,6 +31,10 @@ import { MarginCalculator } from "./MarginCalculator";
 import { UpiLimitsChecker } from "./UpiLimitsChecker";
 import { UpiQrDecoder } from "./UpiQrDecoder";
 import { UpiLinkGenerator } from "./UpiLinkGenerator";
+import { UpiQrScanner } from "./UpiQrScanner";
+import { AmountWords } from "./AmountWords";
+import { GstinChecker } from "./GstinChecker";
+import { UpiIdHelper } from "./UpiIdHelper";
 import { SurveyQrGenerator } from "./SurveyQrGenerator";
 import { MerchantReconciliation } from "./MerchantReconciliation";
 import { MsmeReceivables } from "./MsmeReceivables";
@@ -142,6 +146,10 @@ const moreToolsLabel: Partial<Record<SupportedToolLanguage, string>> = {
         {tool.component === "limits" && <UpiLimitsChecker client:visible lang={lang} />}
         {tool.component === "decoder" && <UpiQrDecoder client:visible lang={lang} />}
         {tool.component === "upiLink" && <UpiLinkGenerator client:visible lang={lang} />}
+        {tool.component === "upiScanner" && <UpiQrScanner client:visible lang={lang} />}
+        {tool.component === "amountWords" && <AmountWords client:visible lang={lang} />}
+        {tool.component === "gstin" && <GstinChecker client:visible lang={lang} />}
+        {tool.component === "upiId" && <UpiIdHelper client:visible lang={lang} />}
         {tool.component === "survey" && <SurveyQrGenerator client:visible lang={lang} />}
         {tool.component === "merchantRecon" && <MerchantReconciliation client:visible lang={lang} />}
         {tool.component === "msmeReceivables" && <MsmeReceivables client:visible lang={lang} />}

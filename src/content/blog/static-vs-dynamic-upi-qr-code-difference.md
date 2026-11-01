@@ -88,4 +88,4 @@ While the code itself cannot be "hacked," fraudsters can print a different QR co
 ---
 
 ## Generate Your QR Code
-Ready to set up your payment counter or digital invoice? Use our free [UPI QR Code Generator](/) to create styled, high-resolution static or dynamic QR posters in under a minute.
+Ready to set up your payment counter or digital invoice? Use our free [UPI QR Code Generator](/) to create styled, high-resolution static or dynamic QR posters in under a minute. To see what the link inside a QR holds, read [what a UPI ID to QR code contains](/upi-id-to-qr-code-generator/).

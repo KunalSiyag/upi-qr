@@ -1,0 +1,369 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { GeneratorForm } from "../components/GeneratorForm";
+import QrLandingFooter from "../components/QrLandingFooter.astro";
+import { personSchema } from "../data/authors";
+import {
+  NPCI_BRAND_GUIDELINES,
+  NPCI_LINKING_SPEC,
+  QR_LANDING_REVIEWED_ON,
+  type LandingFaq,
+  type LandingRelated,
+} from "../data/qrLandingPages";
+
+const pageUrl = "https://www.proupiqr.in/upi-id-to-qr-code-generator/";
+const title = "UPI ID to QR Code Generator: Free VPA QR, No Signup";
+const description =
+  "Turn your UPI ID (VPA) into a QR code that PhonePe, Google Pay, Paytm and BHIM can scan. Add an optional amount and note, then download a PNG. Free, in your browser.";
+
+const link = "font-semibold text-forest underline underline-offset-4 hover:text-leaf";
+const chip = "rounded-[7px] bg-fog px-1.5 font-mono text-[13px] text-forest";
+const h2 = "mt-2 text-2xl font-black tracking-tight text-forest md:text-3xl";
+
+/** The three visible steps; the HowTo markup repeats exactly these. */
+const steps = [
+  {
+    name: "Enter your UPI ID and name",
+    text: "Copy your UPI ID from your UPI or bank app, paste it into the UPI ID box and type the name you want payers to see.",
+  },
+  {
+    name: "Add an amount if you need one",
+    text: "Switch to Advanced Poster and open Add amount & note (optional) to set an amount or a note. Leave the amount empty if each payer should type their own.",
+  },
+  {
+    name: "Generate, test and download",
+    text: "Click Generate UPI QR, scan it from a second phone and read the payee details, then download the PNG to print or share.",
+  },
+];
+
+/** The link this tool writes for these values; the e2e suite generates a QR from them and compares. */
+const exampleLink = "upi://pay?pa=yourshop%40bank&pn=YourShop&am=250&tn=Invoice-17&cu=INR";
+const parts = [
+  { code: "upi://pay", what: "The UPI link scheme. A phone hands any link that starts like this to a UPI app." },
+  { code: "pa=yourshop%40bank", what: "Payee address: the UPI ID. Inside a link the @ is written %40, and apps read it back as @. Required." },
+  { code: "pn=YourShop", what: "Payee name, which apps can show to the payer. NPCI's draft lists it as required, so the generator asks for it." },
+  { code: "am=250", what: "Amount in rupees. Optional. Leave it out and the payer types the amount; put it in and apps pre-fill it." },
+  { code: "tn=Invoice-17", what: "Transaction note, a short description of the payment. Optional." },
+  { code: "cu=INR", what: "Currency. INR is the only value NPCI's draft supports, and this tool always adds it." },
+];
+
+const faqs: LandingFaq[] = [
+  {
+    question: "How do I make a QR code from my UPI ID?",
+    answer:
+      "Paste your UPI ID into the UPI ID box above, type the name you want customers to see and click Generate UPI QR. The QR appears next to the form and you can download it as a PNG. To add an amount or a note, switch to Advanced Poster first.",
+  },
+  {
+    question: "What is a UPI ID, and where do I find mine?",
+    answer:
+      "A UPI ID, also called a VPA, is the address people use to pay you, written like name@handle. NPCI's brand guidelines ask UPI apps to show it on the home screen and under your profile next to your own QR, labelled UPI ID. If you cannot find it, ask your bank or the app's help centre.",
+    more: { href: "/glossary/vpa/", label: "VPA in the glossary" },
+  },
+  {
+    question: "Can I generate a QR code from my bank account number?",
+    answer:
+      "No. The link format in NPCI's draft specification has fields for a UPI address and a name, and none for an account number or IFSC. Open your bank's UPI app, set up UPI for the account and use the UPI ID it gives you.",
+    more: { href: "/blog/generate-qr-from-bank-account-number/", label: "QR code from a bank account number" },
+  },
+  {
+    question: "Do I have to enter a name?",
+    answer:
+      "Yes, the generator asks for one. NPCI's draft lists the payee name next to the UPI address as a required field. Type the name you want payers to expect, and check what their payment screen shows before you print.",
+  },
+  {
+    question: "What is inside the QR code?",
+    answer:
+      "One link that starts with upi://pay. After it come the UPI ID (pa), the name (pn), an amount (am) and a note (tn) if you added them, and the currency, INR (cu). No bank account number, IFSC or UPI PIN is in it. In Simple QR mode the link is shown in small type under the QR after you generate it; a long link is cut off on a phone, and the scanner and decoder pages show all of it.",
+  },
+  {
+    question: "Will it work in PhonePe, Google Pay, Paytm and BHIM?",
+    answer:
+      "It is a UPI link in the format NPCI's draft describes, and the draft says UPI apps must listen for these links from QR codes, so apps that follow the specification can read it. One detail: when a name has a space, this generator writes it as +, the usual web-form way, while the draft asks for %20, so a few apps may show such a name differently. We have not test-scanned every app, so scan your QR with the apps your customers use before you print.",
+  },
+  {
+    question: "Can I add an amount to the QR?",
+    answer:
+      "Yes. In Advanced Poster, open Add amount & note and enter an amount; the payer's app then pre-fills it. Leave it empty if customers should type their own. A printed fixed-amount QR asks for the same amount every time, so use it for one price or one invoice.",
+    more: { href: "/blog/how-to-generate-upi-qr-with-amount/", label: "UPI QR with a pre-filled amount" },
+  },
+  {
+    question: "Is my UPI ID uploaded or stored?",
+    answer:
+      "The QR is made in your browser, and your UPI ID, name, amount and note are not sent to our server. The form keeps a draft in this browser so you can come back to it; clear your browser data to remove it. At most an anonymous count that a QR was generated is recorded, never the details you typed.",
+  },
+  {
+    question: "What if I change my UPI ID or bank later?",
+    answer:
+      "A printed QR keeps pointing at the UPI ID it was made from. If that ID changes or is closed, generate a new QR and replace every printed copy.",
+    more: { href: "/blog/how-to-change-upi-id-on-printed-qr-standee/", label: "Change the UPI ID on a printed standee" },
+  },
+];
+
+const related: LandingRelated[] = [
+  { href: "/payment-qr-code-generator/", name: "Payment QR code generator", note: "Which kind of payment QR suits a counter, a table or an invoice." },
+  { href: "/upi-link-generator/", name: "Payment links for WhatsApp and SMS", note: "Send the same UPI ID as a tappable link instead of an image." },
+  { href: "/upi-qr-generators/", name: "UPI QR generators by app and bank", note: "PhonePe, Google Pay, Paytm, bank and shop layouts in one hub." },
+  { href: "/blog/extract-upi-id-from-qr-code/", name: "Read the UPI ID off a QR code", note: "Three ways to see what a printed code points to." },
+  { href: "/blog/static-vs-dynamic-upi-qr-code-difference/", name: "Static and dynamic UPI QR codes", note: "What changes when an amount goes into the code." },
+  { href: "/blog/is-it-safe-to-scan-upi-qr-code/", name: "Scam patterns around UPI QR codes", note: "What to watch for when you scan or display a code." },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": pageUrl + "#webapp",
+      name: "UPI ID to QR Code Generator",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "en-IN",
+      dateModified: QR_LANDING_REVIEWED_ON,
+      featureList: [
+        "UPI ID (VPA) to QR code in the browser",
+        "Optional amount and note",
+        "PNG download and printable poster layouts",
+        "Plain-language guide to the upi://pay link inside the QR",
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+      author: personSchema(),
+      publisher: { "@id": "https://www.proupiqr.in/#organization" },
+    },
+    {
+      "@type": "HowTo",
+      "@id": pageUrl + "#howto",
+      name: "How to turn a UPI ID into a QR code",
+      step: steps.map((step, index) => ({ "@type": "HowToStep", position: index + 1, name: step.name, text: step.text })),
+    },
+    {
+      "@type": "FAQPage",
+      "@id": pageUrl + "#faq",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": pageUrl + "#breadcrumb",
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "All Tools", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "UPI ID to QR Code Generator", item: pageUrl },
+      ],
+    },
+  ],
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-4 pt-8 md:px-6 md:pb-6 md:pt-12 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/70">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="/tools/" class="transition-colors hover:text-leaf">All Tools</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-bold text-forest" aria-current="page">UPI ID to QR Code Generator</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">UPI QR tools</p>
+        <h1 class="mt-3 text-3xl font-black leading-tight tracking-tight text-forest md:text-5xl">UPI ID to QR code generator</h1>
+        <p class="mt-3 max-w-3xl text-base leading-7 text-charcoal md:mt-4 md:text-lg md:leading-8">
+          Enter your name and UPI ID (also called a VPA) and get a QR code that PhonePe, Google Pay, Paytm, BHIM and other UPI apps can scan to pay you.
+        </p>
+        <p class="mt-4 max-w-3xl rounded-[12px] bg-fog px-4 py-2.5 text-[13px] leading-5 text-charcoal md:mt-5 md:py-3 md:text-sm md:leading-6">
+          Scan the finished QR from a second phone and read the payee details on the pay screen before you print or share it. This is an independent tool, not from NPCI, a bank or a UPI app: see the <a href="/disclaimer/" class={link}>disclaimer</a>.
+        </p>
+      </div>
+    </section>
+
+    <section id="generator" aria-label="UPI ID to QR code generator" class="scroll-mt-20 px-4 py-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <GeneratorForm client:load />
+      </div>
+    </section>
+
+    <section class="px-4 pt-6 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-base leading-7 text-charcoal">
+          The QR holds your UPI ID and name, plus an amount and a note if you add them. It is made in your browser, and your details are not uploaded.
+        </p>
+      </div>
+    </section>
+
+    <section id="how-it-works" aria-labelledby="how-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 id="how-heading" class={h2}>How to turn a UPI ID into a QR code</h2>
+        <ol role="list" class="mt-5 grid gap-3">
+          {steps.map((step, index) => (
+            <li class="flex gap-4 rounded-[12px] bg-fog px-4 py-4">
+              <span class="flex h-7 w-7 shrink-0 items-center justify-center rounded-[7px] bg-white text-sm font-semibold text-forest ring-1 ring-hairline" aria-hidden="true">{index + 1}</span>
+              <div>
+                <p class="text-base font-semibold text-forest">{step.name}</p>
+                <p class="mt-1 text-[15px] leading-6 text-charcoal">{step.text}</p>
+              </div>
+            </li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section id="upi-id" aria-labelledby="upi-id-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Your UPI ID</p>
+        <h2 id="upi-id-heading" class={h2}>What a UPI ID is and where to find yours</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A UPI ID, also called a virtual payment address or VPA, is the address people use to pay you. It looks like <code translate="no" class={chip}>name@handle</code>. NPCI's brand guidelines describe it as a single identifier for sending and receiving money directly between bank accounts: the part after the @ is set by the app where you set up UPI, and the part before it is a name you choose, such as your name or mobile number. The glossary has short entries for <a href="/glossary/vpa/" class={link}>VPA</a> and for <a href="/glossary/psp/" class={link}>PSP</a>, the provider behind the handle.
+          </p>
+          <p>
+            To find yours, look for the line labelled UPI ID on your UPI app's home screen or under your profile, next to your own QR code. NPCI's guidelines ask apps to show it there, although each app lays its screens out differently. If you cannot see it, check the linked bank account's details in the app or ask your bank. If the app lists more than one UPI ID, use the one tied to the account where you want the money to arrive.
+          </p>
+          <p>
+            Not sure how your ID is written? The <a href="/upi-id-generator/" class={link}>UPI ID format check</a> points out spaces, stray characters and a missing handle, and shows which app a handle belongs to.
+          </p>
+          <p>
+            A UPI ID is meant to be shared, because people need it to pay you. This generator never asks for your UPI PIN or an OTP, and no site that makes a QR for you needs either.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="whats-inside" aria-labelledby="inside-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">The payload</p>
+        <h2 id="inside-heading" class={h2}>What goes inside the QR</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A UPI QR is an ordinary QR code that stores one link in the format NPCI's UPI linking specification describes. The specification tells UPI apps to listen for these <code translate="no" class={chip}>upi://</code> links from QR codes, intents and other channels, so any app that follows it can read the same code. This is the link this tool writes for a made-up UPI ID, name, amount and note:
+          </p>
+        </div>
+        <p id="payload-example" class="mt-4 break-all rounded-[12px] bg-fog px-4 py-3 font-mono text-[13px] leading-6 text-forest"><code translate="no">{exampleLink}</code></p>
+        <dl class="mt-5 border-t border-forest/10">
+          {parts.map((part) => (
+            <div class="grid gap-1 border-b border-forest/10 py-3 sm:grid-cols-[14rem_minmax(0,1fr)] sm:gap-6">
+              <dt><code translate="no" class={chip + " break-all py-0.5"}>{part.code}</code></dt>
+              <dd class="text-[15px] leading-6 text-charcoal">{part.what}</dd>
+            </div>
+          ))}
+        </dl>
+        <div class="mt-5 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            After you click Generate in Simple QR mode, the link inside your own QR is shown in small type under the code (a long link is cut off on a phone; the scanner and decoder show all of it), so you can compare it with this example. The draft lists further fields, such as <code translate="no" class={chip}>tr</code> for a transaction reference and <code translate="no" class={chip}>mc</code> for a merchant code. This generator does not add them. It also puts no account number or IFSC in the QR: the link format has no field for either.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="amount" aria-labelledby="amount-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Amount</p>
+        <h2 id="amount-heading" class={h2}>Open-amount or fixed-amount QR?</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            Leave the amount empty and each payer types their own. NPCI's draft calls a code that holds only the payee address and name a static QR, and describes a code made per bill, with an amount and reference details, as dynamic. Add an amount here and the payer's app pre-fills it. The <a href="/blog/how-to-generate-upi-qr-with-amount/" class={link}>amount QR guide</a> walks through both.
+          </p>
+          <ul class="list-disc space-y-1 pl-5">
+            <li><strong class="font-semibold text-forest">Open amount</strong> suits a counter where bills differ, tips and donations.</li>
+            <li><strong class="font-semibold text-forest">Fixed amount</strong> suits one price, such as a class fee or a ticket, or one invoice.</li>
+          </ul>
+          <p>
+            A printed fixed-amount QR asks for the same amount every time, so make a new one for every different price. NPCI's draft says an app should not let the payer edit a pre-filled amount unless the code carries a minimum-amount rule, <code translate="no" class={chip}>mam</code>, but each app decides what it shows, so test yours. Put an order or invoice number in the note to make matching easier; whether the note appears beside the credit in your bank statement depends on your bank.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="test" aria-labelledby="test-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Before you print</p>
+        <h2 id="test-heading" class={h2}>Check the QR before you print it</h2>
+        <ol class="mt-4 max-w-3xl list-decimal space-y-3 pl-5 text-base leading-7 text-charcoal">
+          <li>Scan the on-screen QR from a second phone, in the UPI apps your customers use, and read the payee name and UPI ID on the pay screen. You do not have to pay to see them.</li>
+          <li>Open the image in our <a href="/upi-qr-decoder/" class={link}>QR decoder</a> to read the UPI ID, name and amount stored inside it. It runs in your browser. To test with a camera instead, use the <a href="/upi-qr-scanner/" class={link}>UPI QR scanner</a>.</li>
+          <li>Print one proof and scan the paper copy from the distance your customers will stand. If it will not scan, the <a href="/blog/upi-qr-code-not-scanning-troubleshooting/" class={link}>troubleshooting guide</a> lists the usual causes.</li>
+          <li>If you want proof that money reaches you, send a small payment from another account you own and look for the credit.</li>
+        </ol>
+      </div>
+    </section>
+
+    <section id="print" aria-labelledby="print-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Printing</p>
+        <h2 id="print-heading" class={h2}>Printing it at a useful size</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            Print the QR dark on white with a clear white border, on a matte surface, and large enough to scan from where customers stand. The right size depends on the distance and on the phone camera, so print a proof first. Our guides cover <a href="/blog/upi-qr-code-size-dimensions-printing-guide/" class={link}>QR size and print settings</a>, a <a href="/blog/how-to-create-print-upi-qr-code-standee/" class={link}>shop counter standee</a> and <a href="/blog/printable-upi-qr-sticker-sheet-guide/" class={link}>A4 sticker sheets</a>. The poster layouts are in Advanced Poster mode in the generator above.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="bank-account" aria-labelledby="bank-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Account number</p>
+        <h2 id="bank-heading" class={h2}>UPI ID or bank account number?</h2>
+        <div class="mt-4 max-w-3xl space-y-4 text-base leading-7 text-charcoal">
+          <p>
+            A UPI QR is built around a UPI ID. NPCI's draft link format has fields for the payee's UPI address and name; it has no field for an account number or IFSC. If you only know your account number, set up UPI for that account in your bank's UPI app first, then copy the UPI ID it gives you. Two guides walk through it: <a href="/blog/generate-qr-from-bank-account-number/" class={link}>QR code from a bank account number</a> and <a href="/blog/create-upi-qr-code-for-bank-account/" class={link}>UPI QR for SBI, HDFC and ICICI accounts</a>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section id="mistakes" aria-labelledby="mistakes-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Avoid these</p>
+        <h2 id="mistakes-heading" class={h2}>Common mistakes with a UPI ID QR</h2>
+        <ul class="mt-4 max-w-3xl list-disc space-y-3 pl-5 text-base leading-7 text-charcoal">
+          <li><strong class="font-semibold text-forest">Retyping instead of copying.</strong> One wrong letter sends payers to a different ID or to an error. Paste the ID from your app.</li>
+          <li><strong class="font-semibold text-forest">Guessing the handle.</strong> The part after the @ depends on the app where you set up UPI. Copy it as the app shows it.</li>
+          <li><strong class="font-semibold text-forest">Spaces.</strong> The generator rejects an ID that has a space inside it, so remove any you pasted by accident.</li>
+          <li><strong class="font-semibold text-forest">Capital letters.</strong> The generator keeps the ID exactly as you type it. Copy it the way your app shows it, then scan the result to confirm.</li>
+          <li><strong class="font-semibold text-forest">Publishing your mobile number without meaning to.</strong> The ID sits in the QR as plain text, so anyone who reads the code can see it. If you would rather not share your number, check whether your app lets you use another ID.</li>
+          <li><strong class="font-semibold text-forest">An ID you may close or change.</strong> A printed QR keeps pointing at the ID it was made from. If the ID changes, generate a new code and replace the old copies.</li>
+          <li><strong class="font-semibold text-forest">A personal ID for heavy shop volume.</strong> Your bank sets limits for personal accounts; check <a href="/upi-limits/" class={link}>bank-wise UPI limits</a> before you promise big collections.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="scope" aria-labelledby="scope-heading" class="px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Scope</p>
+        <h2 id="scope-heading" class={h2}>What this tool does and does not do</h2>
+        <div class="mt-4 grid max-w-4xl gap-6 text-base leading-7 text-charcoal md:grid-cols-2">
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Put your UPI ID, name and an optional amount and note into a standard UPI QR.</li>
+              <li>Make the QR in your browser and let you download it as a PNG or a poster.</li>
+              <li>Show the link inside the QR so you can read it.</li>
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-base font-semibold text-forest">It does not</h3>
+            <ul class="mt-2 list-disc space-y-1 pl-5">
+              <li>Create a UPI ID. Only your bank or a UPI app can set one up.</li>
+              <li>Show that an ID exists or whose it is. It checks only that the ID is written like name@handle; your UPI app's pay screen is where you confirm the payee.</li>
+              <li>Send, receive or hold money, or connect to your bank.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <QrLandingFooter
+      sources={[NPCI_LINKING_SPEC, NPCI_BRAND_GUIDELINES]}
+      method="The example link above is the one this tool writes, and an automated browser test decodes the generated QR image and compares it with that text. We have not test-scanned every UPI app, and app screens and menu names change, so scan your QR with the apps your customers use."
+      faqHeading="UPI ID to QR code questions"
+      faqs={faqs}
+      relatedHeading="More on UPI QR codes"
+      related={related}
+    />
+  </main>
+</BaseLayout>

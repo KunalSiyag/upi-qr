@@ -18,7 +18,7 @@ Understanding how these elements work, and choosing the right account type, is c
 
 A **Virtual Payment Address (VPA)**, commonly known as a **UPI ID**, is a unique identifier that links directly to your bank account. 
 
-Instead of sharing sensitive details like your bank account number, bank branch name, and IFSC code, you only need to share your VPA to receive money.
+Instead of sharing sensitive details like your bank account number, bank branch name, and IFSC code, you only need to share your VPA to receive money. Not sure an ID is written correctly? The [UPI ID format check](/upi-id-generator/) points out spaces, stray characters and a missing handle before you share it.
 
 ### How a VPA is structured:
 A VPA resembles an email address and consists of two parts:

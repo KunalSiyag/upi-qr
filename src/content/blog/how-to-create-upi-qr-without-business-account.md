@@ -24,7 +24,7 @@ No GST registration, no business KYC app, and no payment gateway signup is requi
 
 ## Step-by-Step: Personal UPI QR for a Small Shop
 
-1. Open your banking or UPI app and confirm your **primary UPI ID** and **registered payee name** (the name customers see before paying).
+1. Open your banking or UPI app and confirm your **primary UPI ID** and **registered payee name** (the name customers see before paying). Need to find the ID first? See [where each app keeps it](/upi-id-generator/).
 2. Go to [Pro UPI QR Generator](/).
 3. Enter the **Payee Name** exactly as shown in your bank app.
 4. Enter your **UPI ID / VPA**.
