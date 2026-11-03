@@ -257,8 +257,8 @@ try {
   }
 
   // Negative control: the detector must flag the old text-muted grey (4.41:1 on white).
-  await b.eval("(() => { const p = document.createElement('p'); p.id = '__neg'; p.className = 'text-muted text-sm'; p.textContent = 'negative control'; document.querySelector('main').appendChild(p); return true; })()");
-  check("the contrast check does flag text-muted (negative control)", (await lowContrast()).some(([, text]) => text === "negative control"));
+  await b.eval("(() => { const p = document.createElement('p'); p.id = '__neg'; p.className = 'text-sm'; p.style.color = '#6f7988'; p.textContent = 'negative control'; document.querySelector('main').appendChild(p); return true; })()");
+  check("the contrast check does flag the old muted grey #6f7988 (negative control)", (await lowContrast()).some(([, text]) => text === "negative control"));
   await b.eval("document.getElementById('__neg').remove(); true");
 
   // The QR hand-off
@@ -313,8 +313,8 @@ try {
   // ---- 4. hi, ta, te, mr -------------------------------------------------------------------------------------
   const locales = {
     hi: { h2: "UPI ID का फ़ॉर्मेट जांचें", ok: "फ़ॉर्मेट में कोई समस्या नहीं मिली", copy: "ID कॉपी करें", stamp: "1 नवंबर 2026", find: "अपनी UPI ID कहाँ मिलेगी और दूसरी कैसे जोड़ें", older: "पुरानी ID" },
-    ta: { h2: "UPI ID எப்படி எழுதப்பட்டுள்ளது எனச் சரிபார்க்கவும்", ok: "வடிவத்தில் எந்தச் சிக்கலும் இல்லை", copy: "ID-ஐ நகலெடு", stamp: "1 நவம்பர் 2026", find: "உங்கள் UPI ID எங்கே கிடைக்கும், இன்னொன்றை எப்படிச் சேர்ப்பது", older: "பழைய ID-கள்" },
-    te: { h2: "UPI ID ఎలా రాశారో తనిఖీ చేయండి", ok: "ఫార్మాట్‌లో ఎలాంటి సమస్యలు కనబడలేదు", copy: "IDని కాపీ చేయి", stamp: "1 నవంబర్ 2026", find: "మీ UPI ID ఎక్కడ దొరుకుతుంది, మరొకటి ఎలా జోడించాలి", older: "పాత IDలు" },
+    ta: { h2: "UPI ID எப்படி எழுதப்பட்டுள்ளது எனச் சரிபார்க்கவும்", ok: "வடிவத்தில் எந்தச் சிக்கலும் கண்டறியப்படவில்லை", copy: "ID-ஐ நகலெடு", stamp: "1 நவம்பர் 2026", find: "உங்கள் UPI ID எங்கே கிடைக்கும், இன்னொன்றை எப்படிச் சேர்ப்பது", older: "பழைய ID-கள்" },
+    te: { h2: "UPI ID ఎలా రాశారో తనిఖీ చేయండి", ok: "ఫార్మాట్‌లో ఎలాంటి సమస్యలు కనబడలేదు", copy: "IDని కాపీ చేయండి", stamp: "1 నవంబర్ 2026", find: "మీ UPI ID ఎక్కడ దొరుకుతుంది, మరొకటి ఎలా జోడించాలి", older: "పాత IDలు" },
     mr: { h2: "UPI ID कसा लिहिला आहे ते तपासा", ok: "फॉरमॅटमध्ये कोणतीही अडचण आढळली नाही", copy: "ID कॉपी करा", stamp: "1 नोव्हेंबर 2026", find: "तुमचा UPI ID कुठे मिळेल आणि दुसरा कसा जोडायचा", older: "जुने ID" },
   };
   for (const [lang, want] of Object.entries(locales)) {

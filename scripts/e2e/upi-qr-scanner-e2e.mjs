@@ -431,14 +431,14 @@ try {
   check("hi: the NPCI sample reads in Hindi", await A.read("upi://pay?pa=bivek@npci&pn=bivek%20rath&am=10&mode=05"));
   check("hi: the box for the expected ID is labelled in Hindi", /जिस UPI ID पर भुगतान करना है/.test(await a.eval("document.querySelector('label[for=\"' + document.querySelector('[data-scanner-expected]').id + '\"]').innerText")));
   await A.set("[data-scanner-expected]", "bivek@npci");
-  check("hi: result heading, kind and flags are Hindi", (await A.text("#scanner-result-heading")).trim() === "इस QR में क्या है" && /UPI पेमेंट लिंक/.test(await A.text("[data-scanner-kind]")) && /QR के अंदर लिखा नाम कोई जांचता नहीं/.test(await A.text("[data-scanner-result]")) && /आपके लिखे ID से मेल खाता है/.test(await A.text("[data-scanner-compare]")), await A.text("[data-scanner-result]").then((s) => s.slice(0, 200)));
+  check("hi: result heading, kind and flags are Hindi", (await A.text("#scanner-result-heading")).trim() === "इस QR में क्या है" && /UPI पेमेंट लिंक/.test(await A.text("[data-scanner-kind]")) && /QR के अंदर लिखा नाम कोई जांचता नहीं/.test(await A.text("[data-scanner-result]")) && /आपकी लिखी ID से मेल खाता है/.test(await A.text("[data-scanner-compare]")), await A.text("[data-scanner-result]").then((s) => s.slice(0, 200)));
   check("hi: amounts and IDs are not translated or converted", (await A.fields()).some((f) => f.key === "am" && f.value === "₹10.00") && (await A.fields()).some((f) => f.key === "pa" && f.value === "bivek@npci"));
   check("hi: the disclaimer link goes to the Hindi disclaimer", await a.eval("!!document.querySelector('a[href=\"/hi/disclaimer/\"]')"));
   await A.click("[data-scanner-again]");
   await A.click("[data-scanner-start]");
   check("hi: the camera works on the Hindi page too", await a.waitFor("!!document.querySelector('[data-scanner-result]')", 20000) && (await A.text("[data-scanner-status=camera]")).includes("QR कोड पढ़ लिया गया"));
   check("hi: no console errors", tolerant(a.errors).length === 0, a.errors.join(" | "));
-  for (const [lang, expected] of [["ta", "கேமராவைத் தொடங்கு"], ["te", "కెమెరా ప్రారంభించు"], ["mr", "कॅमेरा सुरू करा"]]) {
+  for (const [lang, expected] of [["ta", "கேமராவைத் தொடங்கு"], ["te", "కెమెరా ప్రారంభించండి"], ["mr", "कॅमेरा सुरू करा"]]) {
     check(`${lang}: hydrates and shows its own language`, (await A.open(`/${lang}/upi-qr-scanner/`)) && (await A.text("[data-scanner-start]")).trim() === expected, await A.text("[data-scanner-start]"));
     check(`${lang}: a read works in ${lang}`, (await A.read("upi://mandate?pa=shop@icici&pn=Shop&am=649")) && !/take money from your account/.test(await A.text("[data-scanner-result]")) && (await A.flags()).includes("mandate"));
   }
