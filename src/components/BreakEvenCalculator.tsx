@@ -150,7 +150,7 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-1 text-2xl font-black text-forest">Find Your Survival Point</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Analysis PDF"}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50">{pdfState === "busy" ? tr("Generating...") : "Analysis PDF"}</button>
             <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
@@ -188,9 +188,9 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         {calc.valid ? (
           <>
             <section className="mt-5 grid grid-cols-3 gap-3 text-center text-sm">
-              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Contribution / unit</p><p className="font-black text-forest">{money(calc.contribution)}</p></div>
-              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Fixed costs</p><p className="font-black text-forest">{money(Number(fixedCosts) || 0)}</p></div>
-              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Margin % on price</p><p className="font-black text-forest">{Math.round((calc.contribution / (Number(price) || 1)) * 100)}%</p></div>
+              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">Contribution / unit</p><p className="font-black text-forest">{money(calc.contribution)}</p></div>
+              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">Fixed costs</p><p className="font-black text-forest">{money(Number(fixedCosts) || 0)}</p></div>
+              <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">Margin % on price</p><p className="font-black text-forest">{Math.round((calc.contribution / (Number(price) || 1)) * 100)}%</p></div>
             </section>
 
             <section className="mt-4 rounded-2xl bg-forest p-5 text-white">
@@ -217,7 +217,7 @@ export function BreakEvenCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             )}
           </>
         ) : (
-          <p className="mt-6 text-center text-sm font-semibold text-forest/50">Enter your cost structure to see the break-even point.</p>
+          <p className="mt-6 text-center text-sm font-semibold text-forest/65">Enter your cost structure to see the break-even point.</p>
         )}
 
         <footer className="mt-5 text-center text-[10px] font-semibold uppercase tracking-widest text-forest/35">Assumes constant price and variable cost per unit · Pro UPI QR</footer>

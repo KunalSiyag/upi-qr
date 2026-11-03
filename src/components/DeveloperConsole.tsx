@@ -82,7 +82,7 @@ export function UpiPayButton() {
       {/* Configurator Card */}
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
         <h3 className="text-xl font-black text-forest">Widget configurator</h3>
-        <p className="mt-1 text-xs text-forest/60">No API key. The iframe loads <code className="font-mono">/embed/</code> with your VPA. Copy the snippet or the URL.</p>
+        <p className="mt-1 text-xs text-forest/65">No API key. The iframe loads <code className="font-mono">/embed/</code> with your VPA. Copy the snippet or the URL.</p>
 
         <form className="mt-6 grid gap-4 sm:grid-cols-2 w-full min-w-0">
           <label className="grid gap-1 min-w-0">
@@ -170,7 +170,7 @@ export function UpiPayButton() {
                 className={`border-b-2 px-3 sm:px-4 py-2 text-xs font-bold uppercase tracking-wider transition shrink-0 ${
                   activeTab === tab
                     ? "border-forest text-forest"
-                    : "border-transparent text-forest/50 hover:text-forest/70"
+                    : "border-transparent text-forest/65 hover:text-forest/70"
                 }`}
               >
                 {tab === "iframe"
@@ -202,15 +202,15 @@ export function UpiPayButton() {
 
       {/* Live Preview Container */}
       <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
-        <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-forest/50">Live Sandbox Preview</h4>
-        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl transition-all duration-300 w-full max-w-[340px] h-[480px]">
+        <h4 className="mb-4 text-xs font-black uppercase tracking-widest text-forest/65">Live Sandbox Preview</h4>
+        <div className="relative overflow-hidden rounded-3xl border border-black/5 bg-transparent shadow-xl w-full max-w-[340px] h-[480px]">
           <iframe
             src={embedPath}
             className="w-full h-full border-none bg-transparent overflow-hidden"
             title="UPI Payment Embed Widget Preview"
           />
         </div>
-        <p className="mt-4 text-[10px] text-center text-forest/50 max-w-xs leading-relaxed">
+        <p className="mt-4 text-[10px] text-center text-forest/65 max-w-xs leading-relaxed">
           Scan from PhonePe, GPay, Paytm, or BHIM. Amount {form.am ? `₹${form.am}` : "open"} to {form.pn}. This preview does not confirm a bank credit.
         </p>
         <div className="mt-3 flex flex-wrap justify-center gap-2">

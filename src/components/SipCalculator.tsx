@@ -146,7 +146,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Project Your SIP Growth")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Projection PDF")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50">{pdfState === "busy" ? tr("Generating...") : `${tr("Projection PDF")}`}</button>
             <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
@@ -165,8 +165,8 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
-          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/50">{tr("You invest")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.invested)}</p></div>
-          <div className="rounded-2xl bg-amber-100 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/55">{tr("Wealth gained")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.gains)}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/65">{tr("You invest")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.invested)}</p></div>
+          <div className="rounded-2xl bg-amber-100 p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/65">{tr("Wealth gained")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.gains)}</p></div>
           <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-[10px] font-black uppercase tracking-widest text-white/60">{tr("Maturity value")}</p><p className="mt-1 text-2xl font-black">{money(calc.futureValue)}</p></div>
         </div>
 
@@ -193,10 +193,10 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("SIP growth projection")}</p>
             <h2 className="mt-2 text-2xl font-black text-forest">{money(Number(monthly) || 0)} monthly for {Math.max(1, Math.round(calc.n / 12))} year(s)</h2>
-            <p className="text-xs font-semibold text-forest/60">Expected return {Number(rate) || 0}% per annum</p>
+            <p className="text-xs font-semibold text-forest/65">Expected return {Number(rate) || 0}% per annum</p>
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold text-forest/60">{tr("Maturity value")}</p>
+            <p className="text-[10px] font-bold text-forest/65">{tr("Maturity value")}</p>
             <p className="text-lg font-black text-forest">{money(calc.futureValue)}</p>
           </div>
         </header>
@@ -208,7 +208,7 @@ export function SipCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         )}
 
         <table className="mt-5 w-full text-left text-sm">
-          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/55"><th className="py-2">{tr("Year")}</th><th className="py-2 text-right">{tr("Total invested")}</th><th className="py-2 text-right">{tr("Portfolio value")}</th><th className="py-2 text-right">{tr("Gains")}</th></tr></thead>
+          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/65"><th className="py-2">{tr("Year")}</th><th className="py-2 text-right">{tr("Total invested")}</th><th className="py-2 text-right">{tr("Portfolio value")}</th><th className="py-2 text-right">{tr("Gains")}</th></tr></thead>
           <tbody>
             {calc.yearly.map((row) => (
               <tr key={row.year} className="border-b border-forest/5">

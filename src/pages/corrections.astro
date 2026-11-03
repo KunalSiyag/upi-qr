@@ -53,7 +53,7 @@ const schema = {
   {CORRECTIONS.map((entry) => (
     <section>
       <h2>{entry.title}</h2>
-      <p class="text-xs font-bold uppercase tracking-wider text-forest/50">{formatEnIn(new Date(`${entry.date}T00:00:00+05:30`))}</p>
+      <p class="text-xs font-bold uppercase tracking-wider text-forest/65">{formatEnIn(new Date(`${entry.date}T00:00:00+05:30`))}</p>
       <p>{entry.summary}</p>
       {entry.hrefs.length > 0 && (
         <p>

@@ -111,6 +111,36 @@ assert.match(vercelConfig, /Content-Security-Policy/);
 assert.match(vercelConfig, /frame-ancestors 'self'/);
 assert.doesNotMatch(vercelConfig, /medium\.com/i);
 
+// The camera stays blocked everywhere (the global Permissions-Policy says camera=()) except on the scanner routes, the
+// only rules allowed to say camera=(self). Vercel turns every header rule into a route and a later rule overrides an
+// earlier one for the same header: production shows it for /embed/, where Cross-Origin-Resource-Policy: cross-origin
+// beats the global same-origin. Sources are matched with Vercel's own sourceToRegex (path-to-regexp, strict, case-sensitive).
+{
+  const { createRequire } = await import("node:module");
+  const { sourceToRegex } = createRequire(import.meta.url)("@vercel/routing-utils");
+  const rules = JSON.parse(vercelConfig).headers;
+  const policyOf = (rule) => rule.headers.find((h) => h.key === "Permissions-Policy")?.value;
+  const globalPolicy = "camera=(), geolocation=(), microphone=()";
+  const scannerPolicy = "camera=(self), geolocation=(), microphone=()";
+  const globalIndex = rules.findIndex((rule) => rule.source === "/(.*)");
+  assert.equal(policyOf(rules[globalIndex]), globalPolicy, "the global Permissions-Policy keeps the camera blocked");
+  const withCamera = rules.filter((rule) => (policyOf(rule) ?? "").includes("camera=(self"));
+  assert.deepEqual(withCamera.map((rule) => rule.source), ["/upi-qr-scanner","/upi-qr-scanner/","/(hi|ta|te|mr|es|pt|fr|de|id|ar|it|ja|zh)/upi-qr-scanner","/(hi|ta|te|mr|es|pt|fr|de|id|ar|it|ja|zh)/upi-qr-scanner/"], "only the scanner routes allow the camera");
+  for (const rule of withCamera) {
+    assert.equal(policyOf(rule), scannerPolicy, rule.source);
+    assert.ok(rules.indexOf(rule) > globalIndex, `${rule.source} comes after the global rule, so it wins`);
+  }
+  assert.equal(rules.filter((rule) => policyOf(rule) !== undefined).length, 1 + withCamera.length, "no other rule sets Permissions-Policy");
+  const matches = (rule, path) => new RegExp(sourceToRegex(rule.source).src).test(path);
+  const effective = (path) => rules.reduce((value, rule) => (matches(rule, path) ? policyOf(rule) ?? value : value), undefined);
+  for (const path of ["/upi-qr-scanner/", "/upi-qr-scanner", "/hi/upi-qr-scanner/", "/hi/upi-qr-scanner", "/ta/upi-qr-scanner/", "/te/upi-qr-scanner/", "/mr/upi-qr-scanner/", "/es/upi-qr-scanner/", "/zh/upi-qr-scanner/"]) {
+    assert.equal(effective(path), scannerPolicy, `${path} may use the camera`);
+  }
+  for (const path of ["/", "/upi-qr-decoder/", "/hi/", "/hi/upi-qr-decoder/", "/embed/", "/app/", "/upi-qr-scanner/extra/", "/upi-qr-scanner-guide/", "/blog/upi-qr-scanner/", "/UPI-QR-SCANNER/", "/xx/upi-qr-scanner/"]) {
+    assert.equal(effective(path), globalPolicy, `${path} keeps the camera blocked`);
+  }
+}
+
 // Link schemes and Indexing API misuse risk a manual action: satellite syndication (Medium banned it),
 // bulk Indexing API submits (Google allows only job/livestream pages) and fake-Googlebot fetches stay deleted.
 for (const removed of ["scripts/syndicate-satellites.mjs", "index_pages.py", "scripts/warmup-crawlers.mjs"]) {

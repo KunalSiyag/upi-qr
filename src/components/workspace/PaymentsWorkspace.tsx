@@ -798,7 +798,7 @@ function Workspace() {
               type="button"
               onClick={() => { setTab(t.id); if (t.id !== "invoices") setClientFilter(null); }}
               aria-current={tab === t.id ? "page" : undefined}
-              className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-medium transition-colors duration-150 lg:px-2.5 ${tab === t.id ? "bg-white text-ink shadow-[0_1px_2px_rgba(28,40,64,0.06)] ring-1 ring-hairline" : "text-charcoal hover:bg-white/70 hover:text-ink"}`}
+              className={`flex shrink-0 items-center gap-2.5 whitespace-nowrap rounded-[8px] px-3 py-2 text-sm font-medium lg:px-2.5 ${tab === t.id ? "bg-white text-ink shadow-[0_1px_2px_rgba(28,40,64,0.06)] ring-1 ring-hairline" : "text-charcoal hover:bg-white/70 hover:text-ink"}`}
             >
               <span className={tab === t.id ? "text-ink" : "text-muted"}><Icon name={t.id} /></span>
               {tr(t.label)}
@@ -1044,7 +1044,7 @@ function Workspace() {
                 <div role="group" aria-label={tr("Filter invoices")} className="inline-flex rounded-[10px] bg-white p-0.5 ring-1 ring-hairline">
                   {(["unpaid", "overdue", "paid", "all"] as Filter[]).map((f) => (
                     <button key={f} type="button" onClick={() => setFilter(f)} aria-pressed={filter === f}
-                      className={`rounded-[8px] px-3 py-1.5 text-[13px] font-medium capitalize transition-colors duration-150 ${filter === f ? "bg-graphite text-white" : "text-charcoal hover:text-ink"}`}>
+                      className={`rounded-[8px] px-3 py-1.5 text-[13px] font-medium capitalize ${filter === f ? "bg-graphite text-white" : "text-charcoal hover:text-ink"}`}>
                       {tr(f)}
                     </button>
                   ))}
@@ -1388,7 +1388,7 @@ function Workspace() {
               const business = shelf.books[id].business;
               return (
                 <button key={id} type="button" data-pick-business={id} disabled={readOnlyIds.has(id)} onClick={() => placeDocument(id)}
-                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left transition-colors duration-150 first:rounded-t-[12px] last:rounded-b-[12px] hover:bg-fog disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent">
+                  className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left first:rounded-t-[12px] last:rounded-b-[12px] hover:bg-fog disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent">
                   <span className="min-w-0">
                     <span className="block truncate text-sm font-medium text-ink">{business.name || tr("Your business")}</span>
                     <span className="block truncate font-mono text-[12px] text-muted">{business.upiId || "—"}</span>
@@ -2011,7 +2011,7 @@ function SettingsPanel({ ws, shelf, active, restoreLimit, readOnlyIds, today, re
           {books && books.count > 1 && (
             <button type="button" className={secondaryButton} onClick={() => downloadText(`proupiqr-backup-all-${today}.json`, backupJson(shelf, "all"), "application/json")}>{tr("Download all businesses")}</button>
           )}
-          <label className={`${secondaryButton} cursor-pointer`}>
+          <label className={`${secondaryButton} cursor-pointer transition-[background-color,transform] duration-150 ease-out active:scale-[0.97]`}>
             {tr("Restore backup")}
             <input type="file" accept="application/json,.json" className="sr-only" onChange={restore} />
           </label>

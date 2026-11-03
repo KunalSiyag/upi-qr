@@ -1,0 +1,423 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { AmountWords, SheetsFunction } from "../components/AmountWords";
+import { personSchema } from "../data/authors";
+import { MAX_RUPEE_TEXT, WORDS_REVIEWED_ON, englishWords, formatIndian, hindiWords } from "../lib/words";
+
+const pageUrl = "https://www.proupiqr.in/amount-in-words/";
+const title = "Amount in Words Converter: Indian Rupees, Lakh and Crore";
+const description =
+  "Convert a rupee amount to words in the Indian system for cheques and invoices: lakh, crore, paise, English and Hindi. Free and private, it runs in your browser.";
+
+const reviewedLabel = new Date(`${WORDS_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  year: "numeric",
+  month: "long",
+  day: "numeric",
+});
+
+const steps = [
+  { name: "Type the amount", text: "Enter it in rupees. Commas, spaces, a leading ₹ or Rs. and a trailing /- are fine, and paise go after a dot." },
+  { name: "Choose the words", text: "Pick English or Hindi. For English, choose cheque style (Rupees … Only) or plain style (… Rupees Only), in Title Case or UPPER CASE." },
+  { name: "Check and copy", text: "Compare the figures shown above the words with your amount, then copy the words into your invoice or spreadsheet, or write them on the cheque." },
+];
+
+const scope = {
+  does: [
+    "Turns a typed rupee amount into English or Hindi words, with lakh, crore and paise.",
+    "Runs in your browser: the amount is not sent anywhere or stored.",
+    "Prints the same English words in cheque style as our invoice generator.",
+  ],
+  doesNot: [
+    "Check your figures, or promise that a bank will accept a cheque.",
+    "Write the words in Tamil, Telugu or Marathi. Those pages translate the screen only.",
+    "Give legal, tax or banking advice.",
+  ],
+};
+
+const numberNames = [
+  { name: "Thousand", figures: "1,000", meaning: "ten hundred" },
+  { name: "Lakh", figures: "1,00,000", meaning: "100 thousand" },
+  { name: "Crore", figures: "1,00,00,000", meaning: "100 lakh, or ten million" },
+  { name: "Arab", figures: "1,00,00,00,000", meaning: "100 crore, or one billion" },
+  { name: "Kharab", figures: "1,00,00,00,00,000", meaning: "100 arab, or 100 billion" },
+];
+
+// Every row comes from the same functions as the converter, so the table cannot drift from it.
+const exampleAmounts = [50n, 100n, 123450n, 1770000n, 10000000n, 12505050n, 12345678950n, 100000000000n];
+const examples = exampleAmounts.map((paise) => ({
+  figures: `₹${formatIndian(paise)}`,
+  cheque: englishWords(paise),
+  plain: englishWords(paise, "suffix"),
+  hindi: hindiWords(paise),
+}));
+
+const faqs: { question: string; answer: string; example?: { lang: string; text: string } }[] = [
+  {
+    question: "How do I write rupees in words in the Indian system?",
+    answer: `Say the crore, lakh and thousand groups in turn, then the hundreds and tens, and finish with Only. ₹1,25,050.50 reads ${englishWords(12505050n)}. The converter above does this for any amount up to ₹${MAX_RUPEE_TEXT}.`,
+  },
+  {
+    question: "Can it work as a number to words converter for plain numbers?",
+    answer: `It is built for rupee amounts, so the words always say Rupees and, when there are any, Paise. For a plain number in the Indian system, type it as an amount and choose plain style, which puts the number first: 1,25,050 reads "${englishWords(12505000n, "suffix")}", so leave off the last two words. Digits after a dot are read as paise, not as a decimal fraction.`,
+  },
+  {
+    question: "How do I write paise in words?",
+    answer: `Write the rupees, then "and", then the paise in words, then "Paise Only". For ₹1,234.50 that is "${englishWords(123450n)}". Below ₹1 there are no rupees to write: for 50 paise, cheque style reads "${englishWords(50n)}", while plain style starts with the paise and reads "${englishWords(50n, "suffix")}".`,
+  },
+  {
+    question: "Why do cheques say Only after the amount?",
+    answer:
+      "It closes the line so nothing can be added after the words. Bank guides give the same advice: start the words at the far left, end with Only, and draw a line through any blank space left on the line (Bank of Baroda and IndusInd Bank, linked under Sources).",
+  },
+  {
+    question: "What if the words and the figures on a cheque differ?",
+    answer:
+      "Section 18 of the Negotiable Instruments Act, 1881 says the amount stated in words is the one that counts. Banks still tell customers to make the two match, so do not rely on the rule to cover a mistake.",
+  },
+  {
+    question: "What is the difference between a lakh and a million?",
+    answer:
+      "A lakh is 1,00,000 (a hundred thousand), so a million is 10 lakh. A crore is 1,00,00,000, which is ten million. The Indian system groups the last three digits and then pairs of digits, which is why 12,34,56,789 reads Twelve Crore Thirty Four Lakh Fifty Six Thousand Seven Hundred Eighty Nine.",
+  },
+  {
+    question: "How do I write 1,00,000 in words?",
+    answer: `One Lakh. On a cheque in cheque style: ${englishWords(10000000n)}. In Hindi:`,
+    example: { lang: "hi", text: hindiWords(10000000n) },
+  },
+  {
+    question: "How do I write 1 crore in words?",
+    answer: `One Crore, written 1,00,00,000 (ten million). In cheque style: ${englishWords(1000000000n)}. In Hindi:`,
+    example: { lang: "hi", text: hindiWords(1000000000n) },
+  },
+  {
+    question: "Can I get the amount in words in Hindi?",
+    answer:
+      "Yes. Choose हिन्दी in the converter and ₹1,25,050.50 becomes the line below. The number names follow Unicode CLDR's Hindi rules, while रुपये, पैसे and मात्र (only) are our own wording. A few numbers have more than one accepted spelling, so compare the words with the form you are filling.",
+    example: { lang: "hi", text: hindiWords(12505050n) },
+  },
+  {
+    question: "How do I get the amount in words in Google Sheets or Excel?",
+    answer:
+      "For Google Sheets, paste the function from the section above into Apps Script and type =AMOUNT_IN_WORDS(A2) in a cell. We do not provide an Excel macro: convert the figure here and paste the words into the cell.",
+  },
+  {
+    question: "Does GST law require the amount in words on an invoice?",
+    answer:
+      "Rule 46 of the CGST Rules lists what a tax invoice must carry, and an amount in words is not on that list in the text we checked (CBIC's consolidated rules as amended to 1 June 2021). Many invoices print it anyway. The rule has been amended since, so check the current text on the CBIC site.",
+  },
+  {
+    question: "How large an amount can the converter write out?",
+    answer: `Up to 13 digits before the decimal point, which is ₹${MAX_RUPEE_TEXT}, with at most two decimals. From 100 crore up the crore count is read in full, for example ${englishWords(100000000000n)}.`,
+  },
+  {
+    question: "Is the amount I type sent anywhere?",
+    answer:
+      "No. The words are built in your browser from what you type, and the amount is not stored. If you press Copy, a count of that click for this tool is recorded, without the amount or the words.",
+  },
+];
+
+const sources = [
+  {
+    label: "Negotiable Instruments Act, 1881, section 18 (text as published by KnowYourGST)",
+    href: "https://www.knowyourgst.com/gstlaw/negotiable-instruments-act-1881/section-18-where-amount-is-stated-differently-in-figures-and-words-563/",
+  },
+  {
+    label: "CGST Rules, 2017, rule 46 on tax invoices (CBIC consolidated text as amended to 1 June 2021)",
+    href: "https://cbic-gst.gov.in/pdf/01062021-CGST-Rules-2017-Part-A-Rules.pdf",
+  },
+  {
+    label: "Unicode CLDR, Hindi number-name rules (common/rbnf/hi.xml)",
+    href: "https://github.com/unicode-org/cldr/blob/main/common/rbnf/hi.xml",
+  },
+  { label: "Indian numbering system, Wikipedia", href: "https://en.wikipedia.org/wiki/Indian_numbering_system" },
+  { label: "How to fill out a cheque, Bank of Baroda (10 March 2025)", href: "https://bankofbaroda.bank.in/banking-mantra/savings/articles/how-to-fill-out-a-cheque" },
+  { label: "How to fill a cheque correctly, IndusInd Bank (updated 22 August 2025)", href: "https://www.indusind.bank.in/iblogs/savings-account/how-to-fill-a-cheque/" },
+  {
+    label: "Delhi sessions court order on an uncertain amount in words, reported by SCC Online (2020)",
+    href: "https://www.scconline.com/blog/post/2020/08/06/delhi-court-for-application-of-s-138-of-ni-act-there-should-not-be-any-uncertainty-ambiguity-in-cheque-as-regards-to-amount-written-in-words/",
+  },
+  { label: "Custom functions in Google Sheets, Google Apps Script guide", href: "https://developers.google.com/apps-script/guides/sheets/functions" },
+];
+
+const related = [
+  { href: "/invoice-generator/", name: "Invoice generator", note: "Make a GST, VAT or export invoice with a UPI QR." },
+  { href: "/receipt-generator/", name: "Payment receipt generator", note: "Issue a receipt once the money has reached your account." },
+  { href: "/rent-receipt-generator/", name: "Rent receipt generator", note: "Monthly rent receipts that carry the amount in words." },
+  { href: "/salary-slip-generator/", name: "Salary slip generator", note: "Payslips that carry net pay in words." },
+  { href: "/cash-memo-generator/", name: "Cash memo generator", note: "Simple retail bills for the counter." },
+  { href: "/gst-calculator/", name: "GST calculator", note: "Work out the tax and the total before you write it out." },
+  { href: "/gstin-validator/", name: "GSTIN validator and decoder", note: "Check how a GSTIN is written before it goes on an invoice." },
+  { href: "/merchant-documents/", name: "Invoices, receipts and documents", note: "Every billing document in one place." },
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      "@id": `${pageUrl}#webapp`,
+      name: "Amount in Words Converter by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: pageUrl,
+      description,
+      inLanguage: "en-IN",
+      dateModified: WORDS_REVIEWED_ON,
+      author: personSchema(),
+      publisher: { "@id": "https://www.proupiqr.in/#organization" },
+      featureList: [
+        "Indian rupees in words with lakh, crore and paise",
+        "English cheque style and plain style, in Title Case or UPPER CASE",
+        "Hindi words from the Unicode CLDR number names",
+        "Amounts up to 13 digits before the decimal point",
+        "A tested Google Sheets function for the same words",
+        "Runs in the browser, nothing uploaded",
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" },
+    },
+    {
+      "@type": "HowTo",
+      "@id": `${pageUrl}#howto`,
+      name: "How to write a rupee amount in words",
+      description: "Type the amount, choose English or Hindi, check the figures and copy the words.",
+      step: steps.map((step, index) => ({ "@type": "HowToStep", position: index + 1, name: step.name, text: step.text })),
+    },
+    {
+      "@type": "FAQPage",
+      "@id": `${pageUrl}#faq`,
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.example ? `${faq.answer} ${faq.example.text}` : faq.answer },
+      })),
+    },
+    {
+      "@type": "BreadcrumbList",
+      "@id": `${pageUrl}#breadcrumb`,
+      itemListElement: [
+        { "@type": "ListItem", position: 1, name: "Home", item: "https://www.proupiqr.in/" },
+        { "@type": "ListItem", position: 2, name: "All Tools", item: "https://www.proupiqr.in/tools/" },
+        { "@type": "ListItem", position: 3, name: "Amount in Words Converter", item: pageUrl },
+      ],
+    },
+  ],
+};
+
+const h2 = "text-2xl font-black tracking-tight text-forest md:text-3xl";
+const body = "mt-4 max-w-3xl text-base leading-7 text-forest/75";
+const link = "font-semibold text-leaf underline underline-offset-2";
+const th = "py-3 pr-4 text-left text-sm font-semibold text-forest";
+const td = "py-3 pr-4 align-top text-sm leading-6 text-charcoal";
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="px-4 pb-8 pt-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/70">
+          <a href="/" class="transition-colors hover:text-leaf">Home</a>
+          <span aria-hidden="true">/</span>
+          <a href="/tools/" class="transition-colors hover:text-leaf">All Tools</a>
+          <span aria-hidden="true">/</span>
+          <span class="font-bold text-forest" aria-current="page">Amount in Words Converter</span>
+        </nav>
+        <p class="text-sm font-semibold text-leaf">Billing tools</p>
+        <h1 class="mt-3 text-4xl font-black leading-tight tracking-tight text-forest md:text-5xl">Amount in words converter for Indian rupees</h1>
+        <p class="mt-4 max-w-3xl text-lg leading-8 text-forest/75">
+          Type a rupee amount and get it written out the Indian way, with lakh, crore and paise, in English or Hindi. The words are built in your browser from the figures you type, so nothing is uploaded.
+        </p>
+        <p class="mt-3 max-w-3xl text-base font-semibold leading-7 text-forest" data-words-notice>Check that the words match the figures before you use them on a cheque.</p>
+      </div>
+    </section>
+
+    <section id="converter" class="scroll-mt-28 px-4 py-6 md:px-6 lg:px-8">
+      <AmountWords client:load />
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>How it works</h2>
+        <ol class="mt-5 list-decimal space-y-3 pl-5 text-base leading-7 text-forest/75">
+          {steps.map((step) => (
+            <li><strong class="font-semibold text-forest">{step.name}.</strong> {step.text}</li>
+          ))}
+        </ol>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>What this does and does not do</h2>
+        <div class="mt-5 grid gap-6 md:grid-cols-2">
+          <div>
+            <h3 class="text-lg font-semibold text-forest">It does</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-forest/75">
+              {scope.does.map((item) => <li>{item}</li>)}
+            </ul>
+          </div>
+          <div>
+            <h3 class="text-lg font-semibold text-forest">It does not</h3>
+            <ul class="mt-3 list-disc space-y-2 pl-5 text-base leading-7 text-forest/75">
+              {scope.doesNot.map((item) => <li>{item}</li>)}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>Indian numbering: thousand, lakh, crore</h2>
+        <p class={body}>
+          Indian numbering groups the last three digits and then pairs of digits, so one lakh is written 1,00,000 and one crore 1,00,00,000. A lakh is a hundred thousand and a crore is a hundred lakh, which is ten million. The table lists the names above a thousand.
+        </p>
+        <div class="mt-6 overflow-x-auto" role="region" aria-label="Indian number names" tabindex="0">
+          <table class="w-full min-w-[30rem] border-collapse">
+            <caption class="sr-only">Indian number names with their digits and meaning</caption>
+            <thead>
+              <tr class="border-t border-forest/10">
+                <th scope="col" class={th}>Name</th>
+                <th scope="col" class={th}>In figures</th>
+                <th scope="col" class={th}>Means</th>
+              </tr>
+            </thead>
+            <tbody>
+              {numberNames.map((row) => (
+                <tr class="border-t border-forest/10">
+                  <th scope="row" class="py-3 pr-4 text-left text-sm font-semibold text-forest">{row.name}</th>
+                  <td class={`${td} font-mono`}>{row.figures}</td>
+                  <td class={td}>{row.meaning}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p class={body}>
+          From 100 crore up, this converter reads the crore count in full: One Hundred Crore, One Thousand Crore, One Lakh Crore. It does not use arab or kharab, because a kharab (10,000 crore) is easy to mistake for a trillion, which is ten times larger. Hindi output follows the same rule.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>Worked examples</h2>
+        <p class={body}>Each row below is produced by the same code as the converter, so it matches what you get above.</p>
+        <div class="mt-6 overflow-x-auto" role="region" aria-label="Worked examples" tabindex="0">
+          <table class="w-full min-w-[52rem] border-collapse">
+            <caption class="sr-only">Amounts in cheque style, plain style and Hindi</caption>
+            <thead>
+              <tr class="border-t border-forest/10">
+                <th scope="col" class={th}>Amount</th>
+                <th scope="col" class={th}>Cheque style</th>
+                <th scope="col" class={th}>Plain style</th>
+                <th scope="col" class={th}>Hindi</th>
+              </tr>
+            </thead>
+            <tbody>
+              {examples.map((row) => (
+                <tr class="border-t border-forest/10">
+                  <th scope="row" class="py-3 pr-4 text-left align-top text-sm font-semibold text-forest">{row.figures}</th>
+                  <td class={td}>{row.cheque}</td>
+                  <td class={td}>{row.plain}</td>
+                  <td class={td} lang="hi">{row.hindi}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>Writing the amount in words on a cheque</h2>
+        <p class={body}>
+          The words carry the legal weight on a cheque. Under <a class={link} href={sources[0].href}>section 18 of the Negotiable Instruments Act, 1881</a>, if an amount is stated differently in figures and in words, the amount stated in words is the amount undertaken or ordered to be paid.
+        </p>
+        <p class={body}>Bank guides add a few habits that stop a cheque from being altered:</p>
+        <ul class="mt-3 max-w-3xl list-disc space-y-2 pl-5 text-base leading-7 text-forest/75">
+          <li>Start the words at the far left of the line and end with Only, so nothing can follow them (<a class={link} href={sources[5].href}>IndusInd Bank</a>, <a class={link} href={sources[4].href}>Bank of Baroda</a>).</li>
+          <li>Draw a line through any space left on the line, which both banks recommend.</li>
+          <li>Make the words match the figures exactly. Bank of Baroda's guide tells customers to check that the two agree.</li>
+          <li>Keep the words clear and complete. In a 2020 case <a class={link} href={sources[6].href}>reported by SCC Online</a>, a Delhi sessions court held that no section 138 offence was made out because the amount in words was not a certain sum.</li>
+        </ul>
+        <p class={body}>
+          For invoices, <a class={link} href={sources[1].href}>rule 46 of the CGST Rules</a> lists what a tax invoice must carry. An amount in words is not among the particulars it lists (CBIC text as amended to 1 June 2021), so the rule does not itself require it. Many invoices print it anyway.
+        </p>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-charcoal">
+          This is general information from an independent tool, not legal advice and not a bank or tax service. See the <a class={link} href="/disclaimer/">disclaimer</a>.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>Use it in Google Sheets</h2>
+        <p class={body}>
+          Google Sheets can call a short Apps Script function from any cell. It returns the same cheque-style English words as the converter, and it stops with an error message instead of guessing when an amount has more than two decimals or cannot be read. If a formula leaves extra decimals, wrap it first, for example ROUND(A2, 2).
+        </p>
+        <ol class="mt-4 max-w-3xl list-decimal space-y-2 pl-5 text-base leading-7 text-forest/75">
+          <li>In Google Sheets choose Extensions, then Apps Script.</li>
+          <li>Delete the code that is there, paste the function below and click Save.</li>
+          <li>In a cell type <code class="rounded-[7px] bg-fog px-1.5 py-0.5 font-mono text-sm text-forest">=AMOUNT_IN_WORDS(A2)</code> and press Enter. Steps as in <a class={link} href={sources[7].href}>Google's guide to custom functions</a>.</li>
+        </ol>
+        <div class="mt-6">
+          <SheetsFunction client:visible />
+        </div>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-charcoal">We do not provide an Excel macro. Convert the figure above and paste the words into the cell.</p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <h2 class={h2}>Sources and method</h2>
+        <p class={body}>
+          The figures you type are read as text and turned into whole paise, so no floating-point rounding is involved. The English words are the ones our invoice generator prints. Hindi number names come from the Unicode CLDR rules for Hindi: a table for 0 to 99, then सौ, हज़ार, लाख and करोड़. The wording around them, रुपये, पैसे and मात्र (only), is our own and is not part of CLDR, so compare it with the form you are filling. From 100 crore up, the crore count is read in full (एक सौ करोड़) where CLDR would say अरब or खरब.
+        </p>
+        <ul class="mt-5 max-w-3xl">
+          {sources.map((source) => (
+            <li class="border-t border-forest/10 py-3 text-sm leading-6">
+              <a class={link} href={source.href}>{source.label}</a>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-4 max-w-3xl text-sm leading-6 text-charcoal" data-words-reviewed>
+          Last reviewed {reviewedLabel} by <a class={link} href="/authors/kunal-siyag/">Kunal Siyag</a>. How we check facts and log changes: <a class={link} href="/accuracy-policy/">accuracy policy</a>.
+        </p>
+      </div>
+    </section>
+
+    <section class="px-4 py-12 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class={`mt-3 ${h2}`}>Amount in words questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-semibold text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/75">{faq.answer}</p>
+              {faq.example && <p class="mt-2 max-w-3xl text-base font-semibold leading-7 text-forest" lang={faq.example.lang}>{faq.example.text}</p>}
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-4xl">
+        <p class="text-sm font-semibold text-leaf">Related</p>
+        <h2 class="mt-3 text-2xl font-black tracking-tight text-forest">More billing tools</h2>
+        <ul class="mt-4">
+          {related.map((item) => (
+            <li class="border-t border-forest/10">
+              <a href={item.href} class="flex flex-col gap-1 py-4 sm:flex-row sm:items-baseline sm:justify-between">
+                <span class="text-[15px] font-semibold text-forest hover:text-leaf">{item.name}</span>
+                <span class="text-sm text-forest/70">{item.note}</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  </main>
+</BaseLayout>

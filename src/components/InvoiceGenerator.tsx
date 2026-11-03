@@ -261,7 +261,7 @@ function readImage(file: File, maxW: number, maxH: number): Promise<string> {
 function Section({ title, children, open = true }: { title: string; children: ReactNode; open?: boolean }) {
   return (
     <details open={open} className="group border-t border-hairline py-4 first:border-t-0">
-      <summary className="flex cursor-pointer list-none items-center justify-between text-base font-semibold text-ink">
+      <summary className="-my-4 flex cursor-pointer list-none items-center justify-between py-4 text-base font-semibold text-ink">
         {title}
         <span aria-hidden="true" className="text-muted transition group-open:rotate-180">⌄</span>
       </summary>
@@ -779,7 +779,7 @@ export function InvoiceGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className={labelCls}>{t.logo}
             <div className="mt-1.5 flex items-center gap-3">
               {assets.logo && <img src={assets.logo} alt="" className="h-10 max-w-[120px] object-contain" />}
-              <label className={`${secondaryButton} cursor-pointer`}>
+              <label className={`${secondaryButton} cursor-pointer active:scale-[0.97] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf`}>
                 {t.addLogo}
                 <input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" className="sr-only" onChange={(e) => { void uploadImage("logo", e.target.files?.[0]); e.target.value = ""; }} />
               </label>

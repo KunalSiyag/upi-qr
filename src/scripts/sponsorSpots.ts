@@ -45,7 +45,7 @@ function fillTiles(root: HTMLElement, tiles: PublicSponsor[], free: number) {
     a.rel = "sponsored noopener";
     a.target = "_blank";
     a.title = s.name;
-    a.className = "flex h-full min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-[10px] bg-white px-2 py-3 ring-1 ring-hairline transition hover:shadow-card";
+    a.className = "flex h-full min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-[10px] bg-white px-2 py-3 ring-1 ring-hairline transition ease-out hover:shadow-card active:scale-[0.97]";
     const img = document.createElement("img");
     img.src = s.logo;
     img.alt = "";
@@ -68,14 +68,15 @@ function fillTiles(root: HTMLElement, tiles: PublicSponsor[], free: number) {
 
 async function load() {
   const featured = document.querySelector<HTMLElement>("[data-sponsor-featured]");
-  const strip = document.querySelector<HTMLElement>("[data-sponsor-strip]");
-  if (!featured && !strip) return;
+  // The homepages carry two strips (one under the form on desktop, one after the featured card elsewhere); fill each.
+  const strips = [...document.querySelectorAll<HTMLElement>("[data-sponsor-strip]")];
+  if (!featured && !strips.length) return;
   try {
     const res = await fetch("/api/v1/sponsors/", { credentials: "omit" });
     if (!res.ok) return;
     const data = await res.json() as { featured?: PublicSponsor | null; tiles?: PublicSponsor[]; tilesFree?: number };
     if (featured && data.featured) fillFeatured(featured, data.featured);
-    if (strip) fillTiles(strip, Array.isArray(data.tiles) ? data.tiles : [], Number(data.tilesFree ?? 1));
+    for (const strip of strips) fillTiles(strip, Array.isArray(data.tiles) ? data.tiles : [], Number(data.tilesFree ?? 1));
   } catch {
     // Keep the house placements.
   }

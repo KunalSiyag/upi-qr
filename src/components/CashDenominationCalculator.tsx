@@ -190,7 +190,7 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
             <p className="text-sm font-semibold text-leaf">Night close</p>
             <h2 className="mt-1 text-2xl font-black text-forest">Count cash, then close the till</h2>
           </div>
-          <button onClick={clearAll} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600 transition">Clear all</button>
+          <button onClick={clearAll} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-red-400 hover:text-red-600">Clear all</button>
         </div>
 
         <div className="mt-5 space-y-2">
@@ -199,7 +199,7 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
               <span className={`flex h-10 w-11 shrink-0 items-center justify-center rounded-lg text-xs font-black sm:h-11 sm:w-14 ${row.type === "note" ? "bg-forest text-white" : "border border-forest/20 bg-white text-forest"}`}>
                 ₹{row.value}
               </span>
-              <span className="hidden min-w-[36px] text-[10px] font-bold uppercase tracking-wide text-forest/50 sm:block">{row.type}</span>
+              <span className="hidden min-w-[36px] text-[10px] font-bold uppercase tracking-wide text-forest/65 sm:block">{row.type}</span>
               <div className="ml-auto flex items-center gap-1">
                 <button onClick={() => setCount(row.index, (Number(counts[row.index]) || 0) - 1)} aria-label={`Remove one ₹${row.value} ${row.type}`} className="h-8 w-8 shrink-0 rounded-lg bg-white font-black text-forest hover:bg-graphite hover:text-white transition">−</button>
                 <input
@@ -266,16 +266,16 @@ export function CashDenominationCalculator({ lang = "en" }: { lang?: DocLang } =
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Cash denomination summary</p>
             <h2 className="mt-2 text-2xl font-black text-forest">{counterName || "Counter"}</h2>
-            {staffName && <p className="text-xs font-semibold text-forest/60">Counted by {staffName}</p>}
+            {staffName && <p className="text-xs font-semibold text-forest/65">Counted by {staffName}</p>}
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold text-forest/60">Shift date</p>
+            <p className="text-[10px] font-bold text-forest/65">Shift date</p>
             <p className="text-sm font-black text-forest">{shiftDate}</p>
           </div>
         </header>
 
         <table className="mt-4 w-full text-left text-sm">
-          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/55"><th className="py-2">Denomination</th><th className="py-2 text-center">×</th><th className="py-2 text-right">{tr("Amount")}</th></tr></thead>
+          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/65"><th className="py-2">Denomination</th><th className="py-2 text-center">×</th><th className="py-2 text-right">{tr("Amount")}</th></tr></thead>
           <tbody>
             {rows.map((row, idx) => row.count > 0 && (
               <tr key={`${row.value}-${idx}`} className="border-b border-forest/5">

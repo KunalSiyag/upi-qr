@@ -211,7 +211,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <label className="text-sm font-bold text-forest">{tr("Bill amount ₹")}<input type="number" value={totalBill} onChange={(e) => setTotalBill(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           )}
           <label className="text-sm font-bold text-forest">{tr("Your UPI ID (to receive)")}<input value={upiId} onChange={(e) => setUpiId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <p className="sm:col-span-2 text-[11px] leading-5 text-forest/55">Friends paying you back is person-to-person UPI — always ₹0 MDR, any amount. Shop QR is different. <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">Merchant MDR calculator</a></p>
+          <p className="sm:col-span-2 text-[11px] leading-5 text-forest/65">Friends paying you back is person-to-person UPI — always ₹0 MDR, any amount. Shop QR is different. <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">Merchant MDR calculator</a></p>
         </div>
 
         <div className="mt-5 flex flex-wrap gap-2">
@@ -224,7 +224,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
 
         <div className="mt-5 rounded-2xl bg-cream p-4">
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Service + tip")}</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Service + tip")}</p>
           <div className="mt-3 grid grid-cols-2 gap-3">
             <label className="text-xs font-bold text-forest">Service charge %
               <input type="number" value={servicePercent} onChange={(e) => setServicePercent(e.target.value)} className="mt-1 w-full rounded-xl border border-forest/10 px-3 py-2 text-sm font-bold" />
@@ -249,7 +249,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">
             People
             <div className="mt-2 flex items-center gap-2">
-              <button type="button" onClick={() => setCount(peopleCount - 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-graphite hover:text-white transition" aria-label="Remove person">−</button>
+              <button type="button" onClick={() => setCount(peopleCount - 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-graphite hover:text-white" aria-label="Remove person">−</button>
               <span className="w-10 text-center text-xl font-black text-forest">{peopleCount}</span>
               <button type="button" onClick={() => setCount(peopleCount + 1)} className="h-10 w-10 rounded-xl bg-mint text-lg font-black text-forest hover:bg-graphite hover:text-white transition" aria-label="Add person">+</button>
             </div>
@@ -270,13 +270,13 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         {mode === "items" && (
           <div className="mt-5 space-y-3">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">Dishes — tap who ate each</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">Dishes — tap who ate each</p>
             {items.map((item) => (
               <div key={item.id} className="rounded-2xl border border-forest/10 bg-cream p-3 space-y-2">
                 <div className="grid grid-cols-[1fr_110px_auto] gap-2">
                   <input value={item.name} onChange={(e) => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, name: e.target.value } : row))} placeholder="Dish" className="rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm font-semibold" />
                   <input type="number" value={item.amount} onChange={(e) => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, amount: e.target.value } : row))} placeholder={symbol} className="rounded-xl border border-forest/10 bg-white px-3 py-2 text-sm font-semibold" />
-                  <button type="button" onClick={() => setItems((cur) => cur.filter((row) => row.id !== item.id))} className="text-[11px] font-bold text-red-600" aria-label="Remove dish">✕</button>
+                  <button type="button" onClick={() => setItems((cur) => cur.filter((row) => row.id !== item.id))} className="-mx-2 px-2 text-[11px] font-bold text-red-600" aria-label="Remove dish">✕</button>
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {Array.from({ length: calc.n }, (_, i) => {
@@ -287,7 +287,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                         type="button"
                         aria-pressed={on}
                         onClick={() => setItems((cur) => cur.map((row) => row.id === item.id ? { ...row, assigned: row.assigned.map((v, j) => j === i ? !v : v) } : row))}
-                        className={`rounded-[7px] px-2.5 py-1 text-[11px] font-bold ${on ? "bg-leaf text-white" : "bg-white text-forest/50 border border-forest/10"}`}
+                        className={`rounded-[7px] px-2.5 py-1 text-[11px] font-bold ${on ? "bg-leaf text-white" : "bg-white text-forest/65 border border-forest/10"}`}
                       >
                         {names[i]?.trim() || `P${i + 1}`}
                       </button>
@@ -333,7 +333,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <p className="text-sm font-semibold text-leaf">{tr("Who owes what")}</p>
             <h2 className="mt-1 text-xl font-black text-forest">{money(calc.grandPaise)} across {calc.n}</h2>
           </div>
-          <button onClick={() => shareOnWhatsapp(null)} className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] transition inline-flex items-center gap-1.5 shadow-sm">
+          <button onClick={() => shareOnWhatsapp(null)} className="rounded-[7px] bg-[#25D366] px-4 py-2 text-xs font-bold text-white hover:bg-[#1da851] inline-flex items-center gap-1.5 shadow-sm">
             Share full split
           </button>
         </div>
@@ -362,7 +362,7 @@ export function SplitBillCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               {qrIndex === i && qrUrl && (
                 <div className="mt-3 flex flex-col items-center gap-2">
                   <img src={qrUrl} alt={`UPI QR for ${names[i] || `person ${i + 1}`}`} className="h-36 w-36 rounded-xl border border-forest/10 bg-white p-1" />
-                  <p className="text-[11px] font-semibold text-forest/60">Scan with GPay, PhonePe, Paytm or BHIM</p>
+                  <p className="text-[11px] font-semibold text-forest/65">Scan with GPay, PhonePe, Paytm or BHIM</p>
                 </div>
               )}
             </div>

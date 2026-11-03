@@ -148,7 +148,7 @@ END:VCARD`;
                   key={t.id}
                   type="button"
                   onClick={() => setTheme(t.id as any)}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                  className={`py-2 rounded-xl text-xs font-bold border ${
                     theme === t.id ? "bg-forest text-white border-forest" : "bg-mint/40 text-forest border-forest/10"
                   }`}
                 >
@@ -273,7 +273,7 @@ END:VCARD`;
 
           <div
             ref={cardRef}
-            className={`mx-auto w-full max-w-md aspect-[1.75/1] rounded-3xl p-6 flex flex-col justify-between shadow-2xl border ${themeStyles[theme]} transition-all relative overflow-hidden`}
+            className={`mx-auto w-full max-w-md aspect-[1.75/1] rounded-3xl p-6 flex flex-col justify-between shadow-2xl border ${themeStyles[theme]} transition-colors relative overflow-hidden`}
           >
             {/* Header Content */}
             <div className="flex justify-between items-start gap-4">

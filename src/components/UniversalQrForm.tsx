@@ -418,7 +418,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
                   <input value={form.upiAmount} onChange={e => update("upiAmount", e.target.value)} placeholder="Amount ₹ (optional)" inputMode="decimal" className="rounded-2xl border border-forest/15 px-4 py-3" />
                   <input value={form.upiNote} onChange={e => update("upiNote", e.target.value)} placeholder="Note (optional)" className="rounded-2xl border border-forest/15 px-4 py-3" />
                 </div>
-                <p className="text-[11px] text-forest/60 leading-snug">
+                <p className="text-[11px] text-forest/65 leading-snug">
                   Encodes a standard <code className="font-mono">upi://pay</code> QR. PhonePe, GPay, Paytm, and BHIM can all scan it. For a shop standee with templates, use the{" "}
                   <a href="/#generator" className="font-semibold text-leaf underline">UPI poster generator</a>.
                 </p>
@@ -449,7 +449,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
                   rows={3} 
                   className="w-full rounded-2xl border border-forest/15 px-4 py-3 text-sm" 
                 />
-                <p className="text-[11px] text-forest/60 mt-1.5">
+                <p className="text-[11px] text-forest/65 mt-1.5">
                   A QR can hold one destination. The first URL is encoded. For a page of several links, host a short landing URL instead.
                 </p>
               </>
@@ -475,7 +475,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
                 <input value={form.appName} onChange={e => update("appName", e.target.value)} placeholder="App name (label only)" className="w-full rounded-2xl border px-3 py-2" />
                 <input value={form.appIos} onChange={e => update("appIos", e.target.value)} placeholder="iOS App Store URL" className="w-full rounded-2xl border px-3 py-2" />
                 <input value={form.appAndroid} onChange={e => update("appAndroid", e.target.value)} placeholder="Android Play Store URL" className="w-full rounded-2xl border px-3 py-2" />
-                <p className="text-[11px] text-forest/60">One QR, one store link. iOS URL is used if both are filled. For both stores, use a landing page URL instead.</p>
+                <p className="text-[11px] text-forest/65">One QR, one store link. iOS URL is used if both are filled. For both stores, use a landing page URL instead.</p>
               </div>
             )}
 
@@ -514,7 +514,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
 
 
             {/* Honest note */}
-            <div className="mt-4 text-[11px] text-forest/60 leading-snug">
+            <div className="mt-4 text-[11px] text-forest/65 leading-snug">
               Static QR code. All data is encoded directly in the image. Works offline and never expires.
             </div>
 
@@ -561,12 +561,12 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="flex flex-col sm:flex-row gap-6">
             {/* QR Code Preview */}
             <div className="flex-1">
-              <div ref={previewRef} className={`rounded-3xl p-6 transition-all h-full flex flex-col items-center justify-center ${currentTemplate.frame}`}>
+              <div ref={previewRef} className={`rounded-3xl p-6 transition-[color,background-color,border-color,border-width,box-shadow] h-full flex flex-col items-center justify-center ${currentTemplate.frame}`}>
                 <div className="flex justify-center">
                   <div className="relative">
                     <canvas ref={canvasRef} width={300} height={300} className="rounded-2xl bg-white shadow-sm" />
                     {!isValid && (
-                      <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-forest/50 bg-white/70 rounded-2xl">
+                      <div className="absolute inset-0 flex items-center justify-center text-center text-xs text-forest/65 bg-white/70 rounded-2xl">
                         Enter details to see your QR
                       </div>
                     )}
@@ -574,7 +574,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
                 </div>
 
                 {isValid && (
-                  <div className="mt-4 px-3 py-2 bg-white/70 rounded-xl text-[10px] text-forest/60 break-all font-mono max-w-[300px] text-center w-full">
+                  <div className="mt-4 px-3 py-2 bg-white/70 rounded-xl text-[10px] text-forest/65 break-all font-mono max-w-[300px] text-center w-full">
                     {payload.length > 180 ? payload.slice(0, 177) + "..." : payload}
                   </div>
                 )}
@@ -605,7 +605,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
           {/* Actions */}
           <div className="mt-5 flex flex-wrap gap-3 items-center">
             <button onClick={downloadPng} disabled={!isValid} className="rounded-[10px] bg-forest px-6 py-2.5 text-sm font-bold text-white hover:bg-graphite transition disabled:opacity-50">{tr("Download PNG")}</button>
-            <button onClick={downloadSvg} disabled={!isValid} className="rounded-[10px] border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download SVG</button>
+            <button onClick={downloadSvg} disabled={!isValid} className="rounded-[10px] border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-fog transition disabled:opacity-50">Download SVG</button>
             <button onClick={downloadStyledCard} disabled={!isValid} className="rounded-[10px] border border-forest/20 px-5 py-2.5 text-sm font-bold hover:bg-white transition">Download Card</button>
             {form.type === "upi" && (
               <a href="/#generator" className="rounded-[10px] border border-leaf/30 bg-mint/50 px-5 py-2.5 text-sm font-bold text-forest hover:bg-mint transition">Print UPI standee →</a>
@@ -619,7 +619,7 @@ export function UniversalQrForm({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
       </div>
 
-      <div className="mt-4 text-center text-xs text-forest/50">
+      <div className="mt-4 text-center text-xs text-forest/65">
         Generated entirely in your browser. Nothing is uploaded or stored.
       </div>
     </div>

@@ -7,6 +7,7 @@ const sans = ["Inter Variable", "Inter", "ui-sans-serif", "system-ui", "Segoe UI
 
 export default {
   content: ["./src/**/*.{astro,html,js,jsx,md,mdx,ts,tsx}"],
+  future: { hoverOnlyWhenSupported: true },
   theme: {
     extend: {
       colors: {
@@ -15,7 +16,7 @@ export default {
         obsidian: "#1c1d1f",
         graphite: "#232529",
         charcoal: "#3a3f47",
-        muted: "#6f7988",
+        muted: "#666f7d",
         pebble: "#cad0d9",
         hairline: "#e4e7ec",
         fog: "#f4f5f6",
@@ -46,6 +47,7 @@ export default {
         pop: "0 2px 6px rgba(28, 40, 64, 0.06), 0 12px 32px rgba(28, 40, 64, 0.1)"
       },
       transitionTimingFunction: {
+        DEFAULT: "cubic-bezier(0.23, 1, 0.32, 1)",
         out: "cubic-bezier(0.23, 1, 0.32, 1)",
         "in-out": "cubic-bezier(0.77, 0, 0.175, 1)",
         drawer: "cubic-bezier(0.32, 0.72, 0, 1)"

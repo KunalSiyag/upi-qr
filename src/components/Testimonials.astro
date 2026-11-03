@@ -33,11 +33,11 @@ const dateFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short
             </blockquote>
             <footer class="mt-5 text-sm">
               <p class="font-black text-forest">{item.name}</p>
-              <p class="text-forest/60">
+              <p class="text-forest/65">
                 {item.role}
                 {item.city ? ` · ${item.city}` : ""}
               </p>
-              <p class="mt-1 text-xs text-forest/50">
+              <p class="mt-1 text-xs text-forest/65">
                 <time datetime={item.date}>{dateFmt.format(new Date(`${item.date}T00:00:00+05:30`))}</time>
                 {item.sourceUrl ? (
                   <>

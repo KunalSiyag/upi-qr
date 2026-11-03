@@ -238,7 +238,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               <input aria-label="Item name" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="Quantity" type="number" value={item.qty} onChange={(e) => updateItem(item.id, "qty", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="Price" type="number" value={item.price} onChange={(e) => updateItem(item.id, "price", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/60 hover:text-red-600" aria-label="Remove item">×</button>
+              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/65 hover:text-red-600" aria-label="Remove item">×</button>
             </div>
           ))}
         </div>
@@ -260,7 +260,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         </header>
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Prepared for")}</p><p className="mt-2 text-lg font-black text-forest">{customer || tr("Customer")}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Prepared for")}</p><p className="mt-2 text-lg font-black text-forest">{customer || tr("Customer")}</p></div>
           <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-xs font-black uppercase tracking-[0.18em] text-white/60">{tr("Estimated total")}</p><p className="mt-2 text-3xl font-black">{money(totals.total)}</p></div>
         </section>
 
@@ -280,7 +280,7 @@ export function QuotationGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             {qrDataUrl && <div className="mt-3 flex items-center gap-3 rounded-2xl border border-dashed border-forest/20 p-3">{qrDataUrl && <img src={qrDataUrl} alt="UPI QR for advance payment" className="h-20 w-20 rounded-lg border border-forest/10" />}<p className="text-xs leading-5 text-forest/70"><strong className="text-forest">{tr("Advance payment:")}</strong> scan this QR to confirm the booking with a token advance.</p></div>}
           </div>
           <div className="rounded-2xl bg-cream p-4 text-xs leading-6 text-forest/75">
-            <p className="font-black uppercase tracking-wide text-forest/60">{tr("Terms")}</p>
+            <p className="font-black uppercase tracking-wide text-forest/65">{tr("Terms")}</p>
             <p className="mt-2 whitespace-pre-line">{terms || "—"}</p>
           </div>
         </section>

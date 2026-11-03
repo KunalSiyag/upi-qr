@@ -130,7 +130,7 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-1 text-2xl font-black text-forest">Price Your TReDS Bid</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("PDF")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50">{pdfState === "busy" ? tr("Generating...") : `${tr("PDF")}`}</button>
             <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
@@ -146,7 +146,7 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest sm:col-span-2">Platform / transaction charges {symbol} (optional)<input type="number" value={platformCharges} onChange={(e) => setPlatformCharges(e.target.value)} placeholder="If your platform quotes flat fees" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-4 text-xs leading-5 font-semibold text-forest/55">
+        <p className="mt-4 text-xs leading-5 font-semibold text-forest/65">
           Compare bids side-by-side: a lower headline rate over fewer days is not always cheaper — the effective annualised figure is what matters.
         </p>
       </div>
@@ -158,7 +158,7 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-2 text-2xl font-black text-forest">{money(calc.invoice)} invoice · {calc.days}-day tenor</h2>
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold text-forest/60">You receive today</p>
+            <p className="text-[10px] font-bold text-forest/65">You receive today</p>
             <p className="text-lg font-black text-forest">{money(calc.netProceeds)}</p>
           </div>
         </header>
@@ -168,7 +168,7 @@ export function TredsCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="flex justify-between"><span className="font-semibold text-forest/75">Financier discount @ {Number(discountRate) || 0}% for {calc.days} days</span><strong className="tabular-nums text-red-600">− {money(calc.discount)}</strong></div>
           {calc.charges > 0 && <div className="flex justify-between"><span className="font-semibold text-forest/75">Platform charges</span><strong className="tabular-nums text-red-600">− {money(calc.charges)}</strong></div>}
           <div className="flex justify-between border-t-2 border-forest pt-2 text-base"><span className="font-black text-forest">Net proceeds now</span><strong className="font-black tabular-nums text-forest">{money(calc.netProceeds)}</strong></div>
-          <div className="flex justify-between"><span className="font-semibold text-forest/60">Effective annualised cost of funds</span><strong className="tabular-nums text-forest">{calc.effectiveAnnual.toFixed(2)}%</strong></div>
+          <div className="flex justify-between"><span className="font-semibold text-forest/65">Effective annualised cost of funds</span><strong className="tabular-nums text-forest">{calc.effectiveAnnual.toFixed(2)}%</strong></div>
         </section>
 
         <section className="mt-4 rounded-xl bg-cream p-4 text-xs leading-5 text-forest/70">

@@ -259,7 +259,7 @@ Do NOT wrap output in markdown codeblocks or extra text.`
               type="button"
               onClick={generateMenuWithGroq}
               disabled={isAiGenerating}
-              className="w-full rounded-xl bg-forest py-2.5 text-xs font-black text-white hover:bg-graphite transition-all shadow-sm disabled:opacity-50"
+              className="w-full rounded-xl bg-forest py-2.5 text-xs font-black text-white hover:bg-graphite shadow-sm disabled:opacity-50"
             >
               {isAiGenerating ? "⚡ Parsing Menu with Groq AI..." : "✨ Auto-Generate Menu with Groq AI"}
             </button>

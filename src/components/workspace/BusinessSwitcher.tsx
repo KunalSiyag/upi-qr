@@ -127,7 +127,7 @@ export function BusinessSwitcher({ variant, books, active, planLabel, usage, onS
           aria-controls={open ? listId : undefined}
           onClick={() => setOpen(!open)}
           title={name}
-          className={`flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left transition-colors duration-150 hover:bg-white/70 ${open ? "bg-white ring-1 ring-hairline" : ""}`}
+          className={`flex w-full items-center gap-2.5 rounded-[10px] px-2 py-1.5 text-left hover:bg-white/70 ${open ? "bg-white ring-1 ring-hairline" : ""}`}
         >
           <Avatar name={current?.name ?? ""} size="md" strong />
           <span className="min-w-0 flex-1">
@@ -145,7 +145,7 @@ export function BusinessSwitcher({ variant, books, active, planLabel, usage, onS
           aria-expanded={open}
           aria-controls={open ? listId : undefined}
           onClick={() => setOpen(!open)}
-          className="flex h-11 items-center gap-1 rounded-[7px] bg-white pl-2 pr-1.5 ring-1 ring-inset ring-hairline transition-colors duration-150 hover:bg-fog"
+          className="flex h-11 items-center gap-1 rounded-[7px] bg-white pl-2 pr-1.5 ring-1 ring-inset ring-hairline hover:bg-fog"
         >
           <Avatar name={current?.name ?? ""} size="sm" strong />
           <span className="sr-only">{tr("Businesses")}: {name}</span>
@@ -168,7 +168,7 @@ export function BusinessSwitcher({ variant, books, active, planLabel, usage, onS
                   data-book-option={book.id}
                   tabIndex={-1}
                   onClick={() => choose(book.id)}
-                  className={`flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-sm outline-none transition-colors duration-100 focus-visible:bg-fog focus-visible:ring-2 focus-visible:ring-leaf/30 lg:min-h-9 ${selected ? "bg-fog" : "hover:bg-fog"}`}
+                  className={`flex min-h-11 cursor-pointer items-center gap-2.5 rounded-[8px] px-2 py-1.5 text-sm outline-none focus-visible:bg-fog focus-visible:ring-2 focus-visible:ring-leaf/30 lg:min-h-9 ${selected ? "bg-fog" : "hover:bg-fog"}`}
                 >
                   <Avatar name={book.name} size="sm" strong={selected} />
                   <span className="min-w-0 flex-1">
@@ -189,7 +189,7 @@ export function BusinessSwitcher({ variant, books, active, planLabel, usage, onS
               data-add-business
               disabled={usage.limit === null}
               onClick={() => { close(false); onAdd(); }}
-              className="flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-[13px] font-medium text-ink transition-colors duration-100 hover:bg-fog disabled:cursor-default disabled:text-muted disabled:hover:bg-transparent"
+              className="flex h-9 w-full items-center gap-2 rounded-[8px] px-2 text-left text-[13px] font-medium text-ink hover:bg-fog disabled:cursor-default disabled:text-muted disabled:hover:bg-transparent"
             >
               {tr("+ Add business")}
             </button>

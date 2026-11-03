@@ -83,5 +83,6 @@ Invoicing is only one step of the freelance money loop. Complete it with these f
 - **Polite payment chasing** — when an invoice ages past due, use these [payment reminder message templates](/blog/how-to-write-payment-reminder-message-overdue-invoice/) or generate one instantly with the [payment reminder tool](/payment-reminder-generator/)
 - **Proof of settlement** — acknowledge every payment with a [PAID-stamped receipt PDF](/receipt-generator/) so clients have zero room for "I already paid" confusion
 - **Mark old bills settled** — stamp PAID with date and signature on any bill photo via the [paid stamp generator](/paid-stamp-generator/)
+- **A payment QR for a client page** — see [which payment QR suits an invoice, a table or a counter](/payment-qr-code-generator/)
 
 All of them run entirely in your browser — no signup, nothing uploaded.

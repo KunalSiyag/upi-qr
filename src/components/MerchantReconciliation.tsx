@@ -284,8 +284,8 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
 
       {/* Upload */}
       {entries.length === 0 && (
-        <div className="rounded-3xl border-2 border-dashed border-leaf/30 hover:border-leaf bg-mint/30 p-8 text-center">
-          <input type="file" accept=".csv" onChange={handleFileInput} className="hidden" id="recon-file" />
+        <div className="rounded-3xl border-2 border-dashed border-leaf/30 bg-mint/30 p-8 text-center transition-colors hover:border-leaf has-[:focus-visible]:border-leaf has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-leaf/30">
+          <input type="file" accept=".csv" onChange={handleFileInput} className="sr-only" id="recon-file" />
           <label htmlFor="recon-file" className="cursor-pointer">
             <div className="w-16 h-16 mx-auto rounded-2xl bg-white border border-leaf/20 flex items-center justify-center text-leaf mb-3">
               <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
@@ -304,11 +304,11 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex-1">
             <h2 className="text-xl font-black text-forest">{monthLabel}</h2>
-            <p className="text-xs text-forest/60">{entries.length} entries · {totals.settled} settled · {totals.mdr} UPI MDR · {totals.mismatch} mismatch · {totals.pending} pending</p>
+            <p className="text-xs text-forest/65">{entries.length} entries · {totals.settled} settled · {totals.mdr} UPI MDR · {totals.mismatch} mismatch · {totals.pending} pending</p>
           </div>
           <div className="flex items-center gap-2">
-            <label className="cursor-pointer rounded-[7px] bg-mint border border-leaf/20 px-4 py-2 text-xs font-bold text-forest hover:bg-leaf/10 transition">
-              Upload CSV<input type="file" accept=".csv" onChange={handleFileInput} className="hidden" />
+            <label className="cursor-pointer rounded-[7px] bg-mint border border-leaf/20 px-4 py-2 text-xs font-bold text-forest hover:bg-leaf/10 transition active:scale-[0.97] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf">
+              Upload CSV<input type="file" accept=".csv" onChange={handleFileInput} className="sr-only" />
             </label>
             <button onClick={exportCsv} className="rounded-[7px] bg-white border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
             <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest text-white px-4 py-2 text-xs font-bold hover:bg-graphite transition disabled:opacity-50">
@@ -323,25 +323,25 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
       {entries.length > 0 && (
         <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
           <div className="rounded-2xl bg-mint/40 border border-leaf/20 p-4">
-            <p className="text-[10px] uppercase font-bold text-forest/60">Expected</p>
+            <p className="text-[10px] uppercase font-bold text-forest/65">Expected</p>
             <p className="text-lg font-black text-forest">{symbol}{fRs(totals.expected)}</p>
           </div>
           <div className="rounded-2xl bg-cream border border-forest/10 p-4">
-            <p className="text-[10px] uppercase font-bold text-forest/60">Received</p>
+            <p className="text-[10px] uppercase font-bold text-forest/65">Received</p>
             <p className="text-lg font-black text-forest">{symbol}{fRs(totals.received)}</p>
           </div>
           <div className={`rounded-2xl border p-4 ${totals.diff === 0 ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
-            <p className="text-[10px] uppercase font-bold text-forest/60">Difference</p>
+            <p className="text-[10px] uppercase font-bold text-forest/65">Difference</p>
             <p className={`text-lg font-black ${totals.diff === 0 ? "text-emerald-700" : "text-amber-700"}`}>
               {totals.diff >= 0 ? symbol : `-${symbol}`}{fRs(Math.abs(totals.diff))}
             </p>
           </div>
           <div className="rounded-2xl bg-white border border-forest/10 p-4">
-            <p className="text-[10px] uppercase font-bold text-forest/60">Settled</p>
+            <p className="text-[10px] uppercase font-bold text-forest/65">Settled</p>
             <p className="text-lg font-black text-emerald-600">{totals.settled}/{entries.length}</p>
           </div>
           <div className="rounded-2xl bg-white border border-forest/10 p-4">
-            <p className="text-[10px] uppercase font-bold text-forest/60">Unmatched</p>
+            <p className="text-[10px] uppercase font-bold text-forest/65">Unmatched</p>
             <p className="text-lg font-black text-red-600">{totals.mismatch + totals.pending}</p>
           </div>
         </div>
@@ -388,7 +388,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                           updateEntry(e.id, { receivedAmount: amt });
                         }
                       }}
-                      className="w-24 rounded-lg border border-forest/20 px-2 py-1 font-mono text-forest focus:border-leaf focus:outline-none"
+                      className="w-24 rounded-lg border border-forest/20 px-2 py-1 font-mono text-forest focus:border-leaf"
                     />
                   </td>
                   <td className={`px-3 py-2 font-mono font-bold ${e.difference == null ? "text-forest/40" : e.difference === 0 ? "text-emerald-600" : e.difference > 0 ? "text-emerald-600" : "text-red-600"}`}>
@@ -413,11 +413,11 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
                     ) : e.difference != null ? (
                       <span className="inline-flex items-center gap-1 rounded-[7px] bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">⚠ Mismatch</span>
                     ) : (
-                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-white border border-forest/20 px-2 py-0.5 text-[10px] font-bold text-forest/50">Pending</span>
+                      <span className="inline-flex items-center gap-1 rounded-[7px] bg-white border border-forest/20 px-2 py-0.5 text-[10px] font-bold text-forest/65">Pending</span>
                     )}
                   </td>
                   <td className="px-2 py-2">
-                    <button onClick={() => deleteEntry(e.id)} className="text-forest/30 hover:text-red-600 text-sm" title="Delete">✕</button>
+                    <button onClick={() => deleteEntry(e.id)} className="relative text-forest/30 hover:text-red-600 text-sm before:absolute before:-inset-2" title="Delete">✕</button>
                   </td>
                 </tr>
               ))}
@@ -435,7 +435,7 @@ export function MerchantReconciliation({ lang = "en" }: { lang?: DocLang } = {})
 
       {/* Privacy badge */}
       {entries.length > 0 && (
-        <div className="flex items-center gap-2 text-[10px] text-forest/50 font-medium">
+        <div className="flex items-center gap-2 text-[10px] text-forest/65 font-medium">
           <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
           100% private — all data stays in this browser. Nothing is uploaded to any server.
         </div>

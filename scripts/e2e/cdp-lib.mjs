@@ -23,11 +23,11 @@ export async function devToolsPort(profile) {
 
 // The argument is ignored: every browser gets an OS-assigned port so a leftover
 // Chrome from a crashed run can never be reused by mistake.
-export async function startBrowser(_unusedPort) {
+export async function startBrowser(_unusedPort, extraArgs = (process.env.E2E_CHROME_ARGS ? process.env.E2E_CHROME_ARGS.split(" ") : [])) {
   const profile = mkdtempSync(join(OUT, "profile-"));
   const chrome = spawn("google-chrome", [
     "--headless=new", "--remote-debugging-port=0", `--user-data-dir=${profile}`,
-    "--no-first-run", "--no-default-browser-check", "--window-size=1280,900",
+    "--no-first-run", "--no-default-browser-check", "--window-size=1280,900", ...extraArgs,
   ], { stdio: "ignore" });
   process.on("exit", () => chrome.kill());
   const port = await devToolsPort(profile);

@@ -294,7 +294,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
         onDragOver={(e) => e.preventDefault()}
         onDrop={handleDrop}
         onClick={() => fileInputRef.current?.click()}
-        className="relative border-2 border-dashed border-leaf/30 hover:border-leaf bg-mint/30 hover:bg-mint/50 transition-all rounded-3xl p-8 text-center cursor-pointer group shadow-sm"
+        className="relative border-2 border-dashed border-leaf/30 hover:border-leaf bg-mint/30 hover:bg-mint/50 transition-colors rounded-3xl p-8 text-center cursor-pointer group shadow-sm"
       >
         <input
           type="file"
@@ -335,7 +335,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
       )}
 
       {parsedData && verdict && (
-        <div className="rounded-3xl border border-leaf/20 bg-white p-6 shadow-md space-y-5">
+        <div className="ws-row-detail rounded-3xl border border-leaf/20 bg-white p-6 shadow-md space-y-5">
           <div className="flex items-center justify-between border-b border-forest/10 pb-4">
             <h3 className="text-xl font-black text-forest flex items-center gap-2">
               Decoded UPI QR — Safety Report
@@ -393,14 +393,14 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
                   alt="Scanned QR Code"
                   className="w-44 h-44 object-contain rounded-2xl border border-forest/10 shadow-inner bg-cream p-2"
                 />
-                <span className="text-[11px] text-forest/60 mt-2 font-medium">Uploaded QR Preview</span>
+                <span className="text-[11px] text-forest/65 mt-2 font-medium">Uploaded QR Preview</span>
               </div>
             )}
 
             <div className="md:col-span-2 space-y-4">
               {/* UPI ID (VPA) */}
               <div className="bg-mint/40 border border-leaf/20 p-4 rounded-2xl">
-                <p className="text-xs uppercase tracking-wider font-black text-forest/60">UPI ID / VPA (pa=)</p>
+                <p className="text-xs uppercase tracking-wider font-black text-forest/65">UPI ID / VPA (pa=)</p>
                 <div className="flex items-center justify-between mt-1">
                   <span className="font-mono text-lg font-bold text-forest break-all">
                     {parsedData.vpa || <span className="text-red-600 italic">Not specified — QR may be invalid</span>}
@@ -408,7 +408,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
                   {parsedData.vpa && (
                     <button
                       onClick={() => copyToClipboard(parsedData.vpa, "vpa")}
-                      className="ml-3 shrink-0 px-3 py-1.5 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold transition-all shadow-sm"
+                      className="ml-3 shrink-0 px-3 py-1.5 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold shadow-sm"
                     >
                       {copiedField === "vpa" ? `${"✓"} ${tr("Copied!")}` : "Copy VPA"}
                     </button>
@@ -419,14 +419,14 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
               {/* Payee Name & Amount */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="bg-cream border border-forest/10 p-3.5 rounded-2xl">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Payee Name (pn=)</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Payee Name (pn=)</p>
                   <p className="text-sm font-bold text-forest mt-0.5">
                     {parsedData.name || <span className="text-forest/40 italic">Not specified</span>}
                   </p>
                 </div>
 
                 <div className="bg-cream border border-forest/10 p-3.5 rounded-2xl">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Preset Amount (am=)</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Preset Amount (am=)</p>
                   <p className="text-sm font-bold text-forest mt-0.5">
                     {parsedData.amount ? `₹${parsedData.amount} ${parsedData.currency}` : "Any Amount (User Enters)"}
                   </p>
@@ -436,14 +436,14 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
               {/* Note, MCC, Merchant ID — shown if present */}
               <div className="grid sm:grid-cols-2 gap-3">
                 <div className="bg-cream border border-forest/10 p-3.5 rounded-2xl">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Payment Note (tn=)</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Payment Note (tn=)</p>
                   <p className="text-sm font-bold text-forest mt-0.5">
                     {parsedData.note || <span className="text-forest/40 italic">Not specified</span>}
                   </p>
                 </div>
 
                 <div className="bg-cream border border-forest/10 p-3.5 rounded-2xl">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Merchant Code (mc=)</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Merchant Code (mc=)</p>
                   <p className="text-sm font-bold text-forest mt-0.5">
                     {parsedData.mcc || <span className="text-forest/40 italic">Not specified</span>}
                   </p>
@@ -453,7 +453,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
               {/* Additional fields if present */}
               {(parsedData.merchantId || parsedData.transactionId || parsedData.url) && (
                 <div className="bg-cream border border-forest/10 p-3.5 rounded-2xl space-y-2">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Additional Fields</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Additional Fields</p>
                   <div className="grid grid-cols-3 gap-2 text-[11px] text-forest/70">
                     {parsedData.merchantId && (
                       <div><span className="font-bold">MID:</span> {parsedData.merchantId}</div>
@@ -471,7 +471,7 @@ export function UpiQrDecoder({ lang = "en" }: { lang?: DocLang } = {}) {
               {/* Raw URI */}
               <div className="bg-white border border-forest/10 p-3.5 rounded-2xl">
                 <div className="flex items-center justify-between mb-1">
-                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/60">Raw upi://pay URI</p>
+                  <p className="text-[11px] uppercase tracking-wider font-bold text-forest/65">Raw upi://pay URI</p>
                   <button
                     onClick={() => copyToClipboard(parsedData.rawUri, "raw")}
                     className="px-2.5 py-1 rounded-lg bg-forest/10 text-forest hover:bg-forest/20 text-[10px] font-bold transition-all"

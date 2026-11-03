@@ -164,7 +164,7 @@ export function WhatsappOrderGenerator({ lang = "en" }: { lang?: DocLang } = {})
             <button
               type="button"
               onClick={generateQr}
-              className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-mint hover:bg-forest/90 transition-all shadow-md"
+              className="flex-1 rounded-xl bg-forest py-3 text-xs font-bold text-mint hover:bg-forest/90 shadow-md"
             >
               Generate Payment QR & Link
             </button>

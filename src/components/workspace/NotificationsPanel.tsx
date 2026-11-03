@@ -106,7 +106,7 @@ export function NotificationsPanel({ signedIn, standalone, ios, onFlash, several
     <section className="rounded-[14px] bg-white ring-1 ring-forest/[0.07] shadow-[0_1px_2px_rgba(13,31,23,0.04),0_12px_32px_-18px_rgba(13,31,23,0.18)] p-5">
       <h2 className="text-lg font-semibold text-ink">{tr("Morning reminders")}</h2>
       <p className="mt-1 text-sm text-charcoal">{tr("At 9 am, a notification on this device lists the invoices to chase that day, and another arrives as soon as a client says they've paid through a pay link. They show names and amounts, so turn them off on shared devices.")}{severalBusinesses && <> {tr("Covers all your businesses.")}</>}</p>
-      <div className="mt-4 flex flex-wrap items-center gap-2" role="status">
+      <div className="mt-4 flex min-h-9 flex-wrap items-center gap-2" role="status">
         {status === "loading" && <span className="text-sm text-muted">{tr("Checking…")}</span>}
         {status === "unsupported" && <span className="text-sm text-charcoal">{tr("This browser doesn't support notifications.")}</span>}
         {status === "ios-install" && <span className="text-sm text-charcoal">{tr("On iPhone, first add the tracker to your Home Screen (Share → Add to Home Screen), then open it from there to turn this on.")}</span>}

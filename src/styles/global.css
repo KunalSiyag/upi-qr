@@ -34,17 +34,37 @@ table,
   font-variant-numeric: tabular-nums;
 }
 
+/* A quick double-tap on a stepper or button should not zoom the page. Pinch-zoom stays; sliders keep their own panning. */
+a,
+button,
+summary,
+label,
+select,
+textarea,
+input:not([type="range"]) {
+  touch-action: manipulation;
+}
+
 /* Pressable feedback (Emil): a quick 0.97 press, released fast. Hover lifts only on real pointers. */
 button,
-a[class*="inline-flex"][class*="px-"] {
+a[class*="inline-flex"][class*="px-"],
+a[class*="rounded-[10px]"][class*="px-"]:not(.block),
+a[class*="rounded-[7px]"][class*="px-"]:not(.block) {
   transition-property: color, background-color, border-color, box-shadow, transform, opacity;
   transition-duration: 160ms;
   transition-timing-function: cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 button:not(:disabled):active,
-a[class*="inline-flex"][class*="px-"]:active {
+a[class*="inline-flex"][class*="px-"]:active,
+a[class*="rounded-[10px]"][class*="px-"]:not(.block):active,
+a[class*="rounded-[7px]"][class*="px-"]:not(.block):active {
   transform: scale(0.97);
+}
+
+/* Buttons that opt into Tailwind's colour-only transition still animate the press transform. */
+button.transition-colors {
+  transition-property: color, background-color, border-color, box-shadow, transform, opacity;
 }
 
 p {
@@ -58,6 +78,7 @@ html {
 
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   -webkit-tap-highlight-color: rgba(17, 59, 44, 0.16);
 }
 
@@ -100,15 +121,16 @@ body {
 }
 
 .ws-backdrop {
-  animation: ws-fade 200ms ease-out;
+  animation: ws-fade 200ms cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 .ws-sheet {
   animation: ws-rise 280ms cubic-bezier(0.32, 0.72, 0, 1);
+  overscroll-behavior: contain;
 }
 
 @media (min-width: 640px) {
-  .ws-sheet {
+  .ws-backdrop > .ws-sheet {
     animation: ws-pop 200ms cubic-bezier(0.23, 1, 0.32, 1);
   }
 }
@@ -124,12 +146,24 @@ body {
 }
 
 .ws-row-detail {
-  animation: ws-fade 160ms ease-out;
+  animation: ws-fade 160ms cubic-bezier(0.23, 1, 0.32, 1);
+}
+
+/* The header is fixed (h-16): in-page jumps, #fragment landings (Google's "Jump to" links) and focus() keep targets clear of it. Elements that set their own scroll-mt-* still win, because utilities come after the base layer. */
+@layer base {
+  [id] {
+    scroll-margin-top: 5rem;
+  }
 }
 
 /* The old grid texture behind heroes: retired with the flat white canvas. */
 .grid-glow {
   display: none;
+}
+
+/* Full-width rows (list rows, menu items) visibly shrink at 0.97, so they get a subtler press. */
+button.w-full:is(.text-left, .justify-between):not(:disabled):active {
+  transform: scale(0.99);
 }
 
 /* Flat surfaces: a hairline instead of large soft shadows. */

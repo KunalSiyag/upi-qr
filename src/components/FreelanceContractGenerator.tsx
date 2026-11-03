@@ -414,7 +414,7 @@ ${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
             <button
               onClick={downloadPng}
               disabled={pngState === "busy"}
-              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
+              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf disabled:opacity-50"
             >
               {pngState === "busy" ? "..." : t.exportPng}
             </button>
@@ -835,26 +835,26 @@ ${t.copyForFreelancer}: ${freelancerSignatory} (${t.date}: ${agreementDate})`;
           </section>
 
           <section className="mt-7 pt-4 border-t-2 border-forest">
-            <p className="text-[10px] font-bold text-forest/60 mb-4">{t.witness}</p>
+            <p className="text-[10px] font-bold text-forest/65 mb-4">{t.witness}</p>
             <div className="grid grid-cols-2 gap-8 pt-4">
               <div className="border-t border-forest/30 pt-2">
                 <p className="font-bold text-forest">{clientSignatory}</p>
-                <p className="text-[10px] text-forest/60">{t.clientSign}</p>
-                <p className="text-[10px] text-forest/60">
+                <p className="text-[10px] text-forest/65">{t.clientSign}</p>
+                <p className="text-[10px] text-forest/65">
                   {t.date}: {agreementDate}
                 </p>
               </div>
               <div className="border-t border-forest/30 pt-2 text-right">
                 <p className="font-bold text-forest">{freelancerSignatory}</p>
-                <p className="text-[10px] text-forest/60">{t.contractorSign}</p>
-                <p className="text-[10px] text-forest/60">
+                <p className="text-[10px] text-forest/65">{t.contractorSign}</p>
+                <p className="text-[10px] text-forest/65">
                   {t.date}: {agreementDate}
                 </p>
               </div>
             </div>
           </section>
 
-          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/50">{t.footer}</footer>
+          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/65">{t.footer}</footer>
         </article>
       </div>
     </div>

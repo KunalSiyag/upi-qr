@@ -173,7 +173,7 @@ export function SponsorBooking({ email }: { email: string }) {
             {(["featured", "tile"] as const).map((t) => {
               const full = availability && (t === "tile" ? availability.tilesFree <= 0 : !availability.featuredBookable);
               return (
-                <label key={t} className={`cursor-pointer rounded-[12px] bg-white p-4 ring-1 transition ${tier === t ? "ring-2 ring-leaf" : "ring-hairline hover:ring-ink/30"}`}>
+                <label key={t} className={`cursor-pointer rounded-[12px] bg-white p-4 ring-1 transition has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf ${tier === t ? "ring-2 ring-leaf" : "ring-hairline hover:ring-ink/30"}`}>
                   <input type="radio" name="tier" value={t} checked={tier === t} onChange={() => setTier(t)} className="sr-only" />
                   <span className="block text-base font-semibold text-ink">{SPONSOR_TIERS[t].name}</span>
                   <span className="mt-1 block text-sm text-charcoal">{SPONSOR_TIERS[t].label} a month, cancel any time</span>

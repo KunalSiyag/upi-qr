@@ -58,7 +58,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
     <div className="grid gap-8 lg:grid-cols-[1fr_1fr] w-full min-w-0" lang={lang}>
       <div className="rounded-3xl border border-forest/10 bg-white p-5 sm:p-8 shadow-sm w-full min-w-0">
         <h3 className="text-xl font-black text-forest">Merchant savings calculator</h3>
-        <p className="mt-1 text-xs text-forest/60">
+        <p className="mt-1 text-xs text-forest/65">
           What you keep if that card/gateway mix moved to direct UPI after 15 Oct 2026 (0.4% MDR on P2M above ₹2,000).
         </p>
         <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-[11px] leading-5 font-semibold text-amber-950">
@@ -81,7 +81,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               value={monthlySales}
               onChange={(e) => setMonthlySales(e.target.value)}
               placeholder="100000"
-              className="w-full rounded-2xl border border-forest/10 bg-cream/30 px-4 py-3 text-sm font-bold text-forest outline-none focus-visible:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
+              className="w-full rounded-2xl border border-forest/10 bg-cream/30 px-4 py-3 text-sm font-bold text-forest outline-none focus-visible:border-leaf"
             />
             <div className="mt-1.5 flex gap-2">
               {["50000", "100000", "250000", "500000"].map((preset) => (
@@ -89,7 +89,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   key={preset}
                   type="button"
                   onClick={() => setMonthlySales(preset)}
-                  className="rounded-lg bg-mint/50 px-2 py-1 text-[10px] font-bold text-forest hover:bg-mint"
+                  className="relative rounded-lg bg-mint/50 px-2 py-1 text-[10px] font-bold text-forest hover:bg-mint before:absolute before:-inset-x-1 before:-inset-y-1.5"
                 >
                   ₹{(Number(preset) / 1000).toFixed(0)}k
                 </button>
@@ -113,7 +113,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               placeholder="500"
               className="w-full rounded-2xl border border-forest/10 bg-cream/30 px-4 py-3 text-sm font-bold text-forest outline-none focus-visible:border-leaf focus-visible:ring-2 focus-visible:ring-leaf"
             />
-            <p className="mt-1 text-[11px] text-forest/55">
+            <p className="mt-1 text-[11px] text-forest/65">
               Used for UPI MDR. Bills of ₹2,000 or less stay free. A ₹5,000 typical bill takes 0.4%.
             </p>
           </div>
@@ -133,7 +133,7 @@ export function UpiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               onChange={(e) => setCardPercentage(e.target.value)}
               className="w-full accent-leaf cursor-pointer"
             />
-            <div className="flex justify-between text-[10px] font-bold text-forest/50 mt-1">
+            <div className="flex justify-between text-[10px] font-bold text-forest/65 mt-1">
               <span>All UPI</span>
               <span>Half PG</span>
               <span>All PG</span>

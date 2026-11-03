@@ -14,7 +14,7 @@ interface Props {
 
 const { lang, class: className = "" } = Astro.props;
 const copy = SPONSOR_COPY[lang];
-const card = "flex min-h-[176px] flex-col rounded-[12px] bg-white p-4 shadow-card transition hover:shadow-pop focus-visible:outline focus-visible:outline-2 focus-visible:outline-leaf";
+const card = "flex min-h-[176px] flex-col rounded-[12px] bg-white p-4 shadow-card transition ease-out hover:shadow-pop active:scale-[0.98] focus-visible:outline focus-visible:outline-2 focus-visible:outline-leaf";
 ---
 
 {copy && (

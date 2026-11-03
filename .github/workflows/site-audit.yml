@@ -76,6 +76,9 @@ jobs:
       - name: Sponsor data checks
         run: npm run test:sponsors
 
+      - name: New tool logic tests (UPI ID, QR reader, amount in words, GSTIN)
+        run: npm run test:tools
+
       - name: RSS validity
         run: python3 -c "import xml.dom.minidom; xml.dom.minidom.parse('.vercel/output/static/rss.xml'); print('[rss] OK')"
 

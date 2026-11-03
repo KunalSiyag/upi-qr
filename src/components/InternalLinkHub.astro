@@ -101,7 +101,7 @@ function toolHref(href: string): string {
           {relatedTools.map((tool) => (
             <a
               href={toolHref(tool.href)}
-              class="group flex flex-col justify-between rounded-[10px] bg-fog p-5 transition-colors hover:bg-mint"
+              class="group flex flex-col justify-between rounded-[10px] bg-fog p-5 transition-[background-color,transform] ease-out hover:bg-hairline/60 active:scale-[0.98]"
             >
               <div>
                 <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors">
@@ -126,7 +126,7 @@ function toolHref(href: string): string {
           {relatedGuides.map((guide) => (
             <a
               href={guidePath(guide.id.replace(/\.mdx?$/, ""))}
-              class="group flex flex-col justify-between rounded-[10px] border border-forest/10 bg-white p-5 transition-colors hover:border-leaf/40"
+              class="group flex flex-col justify-between rounded-[10px] border border-forest/10 bg-white p-5 transition-[border-color,transform] ease-out hover:border-leaf/40 active:scale-[0.98]"
             >
               <div>
                 <h3 class="text-base font-black text-forest group-hover:text-leaf transition-colors line-clamp-2">

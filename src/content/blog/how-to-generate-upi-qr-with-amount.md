@@ -97,3 +97,5 @@ Yes. You can leave the amount field empty and only fill in the note field. In th
 
 ## Ready to Generate Your QR?
 Stop dealing with payment reconciliation problems. Design and download your custom [UPI QR Code with Amount](/google-pay-qr-generator/) now.
+
+Starting from a UPI ID? The [UPI ID to QR code generator](/upi-id-to-qr-code-generator/) explains what goes into the link, and the [payment QR code generator](/payment-qr-code-generator/) helps you pick where the code goes.

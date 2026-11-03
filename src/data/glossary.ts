@@ -60,7 +60,9 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/upi-qr-decoder/", label: "Decode a UPI QR to see its VPA" },
-      { href: "/upi-link-generator/", label: "Generate a UPI payment link" }
+      { href: "/upi-id-to-qr-code-generator/", label: "Turn a UPI ID into a QR code" },
+      { href: "/upi-link-generator/", label: "Generate a UPI payment link" },
+      { href: "/upi-id-generator/", label: "Check how a UPI ID is written" }
     ]
   },
   {
@@ -222,7 +224,9 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/", label: "Free static QR standee generator" },
-      { href: "/qr-sticker-generator/", label: "A4 sticker sheet printing" }
+      { href: "/payment-qr-code-generator/", label: "Which payment QR suits your shop" },
+      { href: "/qr-sticker-generator/", label: "A4 sticker sheet printing" },
+      { href: "/upi-qr-scanner/", label: "Scan a UPI QR and read its fields" }
     ]
   },
   {
@@ -262,6 +266,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/blog/how-upi-soundboxes-work-and-their-safety/", label: "How soundboxes work & their safety" },
+      { href: "/payment-qr-code-generator/", label: "Which payment QR goes with a soundbox" },
       { href: "/blog/setup-soundbox-announcements-for-shop-free/", label: "Free soundbox announcement guide" }
     ]
   },
@@ -305,7 +310,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/glossary/vpa/", label: "VPAs explained" },
-      { href: "/glossary/npci/", label: "Who is NPCI?" }
+      { href: "/glossary/npci/", label: "Who is NPCI?" },
+      { href: "/upi-id-generator/", label: "See which app a handle belongs to" }
     ]
   },
   {
@@ -381,7 +387,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     related: [
       { href: "/blog/npci-upi-qr-code-generator-explained/", label: "NPCI UPI QR vs Bharat QR" },
       { href: "/bhim-qr-generator/", label: "NPCI QR generator" },
-      { href: "/", label: "UPI QR code generator" }
+      { href: "/", label: "UPI QR code generator" },
+      { href: "/upi-qr-scanner/", label: "Read a Bharat QR or UPI QR before you pay" }
     ]
   },
   {
@@ -401,6 +408,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/invoice-generator/", label: "Generate GST, VAT and export invoices" },
+      { href: "/amount-in-words/", label: "Write the invoice total in words" },
       { href: "/credit-note-generator/", label: "Need to correct one? Credit notes" }
     ]
   },
@@ -481,6 +489,7 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/gst-calculator/", label: "GST amount calculator with QR" },
+      { href: "/gstin-validator/", label: "Check a GSTIN's format" },
       { href: "/invoice-generator/", label: "Invoices that print your GSTIN correctly" }
     ]
   },
@@ -561,7 +570,8 @@ export const GLOSSARY_TERMS: GlossaryTerm[] = [
     ],
     related: [
       { href: "/blog/upi-autopay-mandate-qr-recurring-payments/", label: "Recurring payments deep-dive" },
-      { href: "/payment-reminder-generator/", label: "Remind customers before renewals" }
+      { href: "/payment-reminder-generator/", label: "Remind customers before renewals" },
+      { href: "/upi-qr-scanner/", label: "Check whether a QR sets up AutoPay" }
     ]
   },
   {

@@ -72,4 +72,6 @@ Not banks, but free merchant QRs with business app KYC — see activation guides
 
 **[Build custom standee with your bank VPA &rarr;](/)**
 
+Not sure where your app shows the UPI ID? See [where each app keeps it](/upi-id-generator/).
+
 Related: [Without business account](/blog/how-to-create-upi-qr-without-business-account/) · [Change UPI ID on standee](/blog/how-to-change-upi-id-on-printed-qr-standee/)

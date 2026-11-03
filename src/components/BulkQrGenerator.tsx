@@ -256,7 +256,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             Sample CSV
           </button>
         </div>
-        <p className="mt-1 text-xs text-forest/60">Upload a CSV file or paste tabular data with columns: <code>Payee, UPI_ID, Amount, Note</code>.</p>
+        <p className="mt-1 text-xs text-forest/65">Upload a CSV file or paste tabular data with columns: <code>Payee, UPI_ID, Amount, Note</code>.</p>
 
         <div className="mt-4">
           <label className="block text-xs font-bold text-forest mb-1">Upload CSV File</label>
@@ -285,7 +285,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             type="button"
             onClick={handleDownloadZip}
             disabled={isGenerating || parsedItems.length === 0}
-            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-graphite active:scale-95 disabled:opacity-50"
+            className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-graphite disabled:opacity-50"
           >
             {isGenerating ? downloadProgress : `Download ZIP (${parsedItems.filter(i => i.status === "valid").length} PNGs)`}
           </button>
@@ -303,7 +303,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       {/* Live Preview List */}
       <div className="rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 shadow-sm w-full min-w-0">
         <div className="flex items-center justify-between mb-4">
-          <h4 className="text-xs font-black uppercase tracking-widest text-forest/50">
+          <h4 className="text-xs font-black uppercase tracking-widest text-forest/65">
             Batch Preview ({parsedItems.length} Records)
           </h4>
           <span className="text-[10px] font-bold text-leaf">
@@ -335,7 +335,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <span className="text-[10px] font-bold text-forest/40 uppercase">#{index + 1}</span>
                   <h5 className="font-black text-forest text-sm truncate">{item.payee}</h5>
                   <p className="text-xs font-mono text-neutral-500 truncate">{item.upiId}</p>
-                  {item.note && <p className="text-[10px] text-forest/60 italic truncate">Note: {item.note}</p>}
+                  {item.note && <p className="text-[10px] text-forest/65 italic truncate">Note: {item.note}</p>}
                 </div>
               </div>
 
@@ -357,7 +357,7 @@ export function BulkQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           ))}
 
           {parsedItems.length === 0 && (
-            <div className="p-8 text-center text-xs text-forest/50">
+            <div className="p-8 text-center text-xs text-forest/65">
               No items parsed. Paste or upload CSV data above.
             </div>
           )}

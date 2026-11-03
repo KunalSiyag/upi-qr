@@ -174,17 +174,20 @@ try {
   await b.go(`${DEV}/`, 4000);
   check("homepage: tile appears in the strip", await b.waitFor(`Boolean(document.querySelector('[data-sponsor-tile=${JSON.stringify(tid)}] a[rel~=sponsored][href*="utm_campaign=home-tile"]'))`));
   check("homepage: strip still offers a free tile", await b.eval("Boolean(document.querySelector('[data-sponsor-open]'))"));
+  check("homepage: desktop shows one strip, under the form card inside the generator", await b.eval("(() => { const shown = [...document.querySelectorAll('[data-sponsor-strip]')].filter((e) => e.offsetParent); return shown.length === 1 && document.querySelector('#generator').contains(shown[0]); })()"));
   check("homepage: tile logo loads", await b.waitFor(`(() => { const img = document.querySelector('[data-sponsor-tile=${JSON.stringify(tid)}] img'); return Boolean(img && img.complete && img.naturalWidth === 32); })()`));
   check("homepage: no console errors", b.errors.length === 0, b.errors.join(" | "));
   await b.shot("sponsors-home-desktop.png");
-  await b.eval("document.querySelector('[data-sponsor-strip]').scrollIntoView({ block: 'center' }); true");
+  // Two strips exist (under the form on desktop, after the featured card elsewhere); use the one on screen.
+  await b.eval("[...document.querySelectorAll('[data-sponsor-strip]')].find((e) => e.offsetParent).scrollIntoView({ block: 'center' }); true");
   await sleep(300);
   await b.shot("sponsors-strip-desktop.png");
   // Phones: generator first, then the featured card, then the strip.
   await b.mobile(true);
   await b.go(`${DEV}/`, 4000);
-  const order = JSON.parse(await b.eval("JSON.stringify(['#generator', '[data-sponsor-featured]', '[data-sponsor-strip]'].map((s) => Math.round(document.querySelector(s).getBoundingClientRect().top + scrollY)))"));
+  const order = JSON.parse(await b.eval("JSON.stringify(['#generator', '[data-sponsor-featured]', '[data-sponsor-strip]'].map((s) => Math.round((s === '[data-sponsor-strip]' ? [...document.querySelectorAll(s)].find((e) => e.offsetParent) : document.querySelector(s)).getBoundingClientRect().top + scrollY)))"));
   check("phone: generator, then featured card, then strip", order[0] < order[1] && order[1] < order[2], JSON.stringify(order));
+  check("phone: one strip shown, outside the generator", await b.eval("(() => { const shown = [...document.querySelectorAll('[data-sponsor-strip]')].filter((e) => e.offsetParent); return shown.length === 1 && !document.querySelector('#generator').contains(shown[0]); })()"));
   check("phone: no horizontal overflow", (await b.eval("document.documentElement.scrollWidth - document.documentElement.clientWidth")) <= 0);
   await b.eval("document.querySelector('[data-sponsor-featured]').scrollIntoView({ block: 'start' }); true");
   await sleep(300);

@@ -176,11 +176,11 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
           <div className="mt-4 grid grid-cols-2 gap-3">
             <button type="button" onClick={() => setSupply("intra")} aria-pressed={supply === "intra"} className={`rounded-2xl border px-3 py-3 text-left ${supply === "intra" ? "border-leaf bg-mint/40" : "border-forest/10 bg-cream/40"}`}>
               <div className="text-sm font-black text-forest">{tr("Intra-state")}</div>
-              <div className="text-[11px] text-forest/60">{tr("CGST + SGST, same state")}</div>
+              <div className="text-[11px] text-forest/65">{tr("CGST + SGST, same state")}</div>
             </button>
             <button type="button" onClick={() => setSupply("inter")} aria-pressed={supply === "inter"} className={`rounded-2xl border px-3 py-3 text-left ${supply === "inter" ? "border-leaf bg-mint/40" : "border-forest/10 bg-cream/40"}`}>
               <div className="text-sm font-black text-forest">{tr("Inter-state")}</div>
-              <div className="text-[11px] text-forest/60">{tr("IGST at the full slab")}</div>
+              <div className="text-[11px] text-forest/65">{tr("IGST at the full slab")}</div>
             </button>
           </div>
 
@@ -193,9 +193,9 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
             {lines.map((line, index) => (
               <div key={line.id} className="rounded-2xl border border-forest/10 bg-cream/40 p-4 space-y-3">
                 <div className="flex items-center justify-between">
-                  <p className="text-xs font-black uppercase tracking-wider text-forest/50">Item {index + 1}</p>
+                  <p className="text-xs font-black uppercase tracking-wider text-forest/65">Item {index + 1}</p>
                   {lines.length > 1 && (
-                    <button type="button" onClick={() => setLines((cur) => cur.filter((row) => row.id !== line.id))} className="text-[11px] font-bold text-red-600 hover:underline">
+                    <button type="button" onClick={() => setLines((cur) => cur.filter((row) => row.id !== line.id))} className="-mx-2 -my-2 px-2 py-2 text-[11px] font-bold text-red-600 hover:underline">
                       {tr("Remove")}
                     </button>
                   )}
@@ -224,7 +224,7 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
                         <button type="button" onClick={() => applyCatalog(line.id, item)} className="flex w-full items-start justify-between gap-3 px-3 py-2 text-left hover:bg-mint/50">
                           <span>
                             <span className="font-bold text-forest">{item.name}</span>
-                            <span className="block text-[11px] text-forest/55">{item.group}{item.hsn ? ` · HSN ${item.hsn}` : ""}</span>
+                            <span className="block text-[11px] text-forest/65">{item.group}{item.hsn ? ` · HSN ${item.hsn}` : ""}</span>
                           </span>
                           <span className="shrink-0 font-black text-leaf">{item.rate}%</span>
                         </button>
@@ -341,13 +341,13 @@ Generated via Pro UPI QR (https://www.proupiqr.in/gst-calculator/)`;
               <div className="mx-auto w-48 h-48 p-2 rounded-2xl bg-white border border-forest/15 shadow-md">
                 <img src={qrDataUrl} alt="UPI payment QR for GST total" className="w-full h-full object-contain" />
               </div>
-              <a href={qrDataUrl} download={`gst-payment-qr-${(computed.sum.totalPaise / 100).toFixed(0)}.png`} className="inline-block rounded-xl bg-leaf px-4 py-2 text-xs font-bold text-white hover:bg-leaf/90">
+              <a href={qrDataUrl} download={`gst-payment-qr-${(computed.sum.totalPaise / 100).toFixed(0)}.png`} className="inline-flex rounded-xl bg-leaf px-4 py-2 text-xs font-bold text-white hover:bg-leaf/90">
                 Download QR
               </a>
             </div>
           )}
         </div>
-        <p className="text-[11px] leading-5 text-forest/55">
+        <p className="text-[11px] leading-5 text-forest/65">
           Rates are GST 2.0 (from 22 Sep 2025) for common items, not a substitute for the HSN on{" "}
           <a className="font-bold text-leaf underline" href="https://services.gst.gov.in/services/searchhsnsac" rel="noopener noreferrer" target="_blank">gst.gov.in</a>.
           This page does not file returns.

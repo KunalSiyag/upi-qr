@@ -71,5 +71,15 @@ export function notifyExportError(message = "Export failed — please retry, or 
     "position:fixed;left:50%;bottom:24px;transform:translateX(-50%);z-index:9999;background:#7f1d1d;color:#fff;padding:12px 20px;border-radius:9999px;font-size:13px;font-weight:700;box-shadow:0 10px 30px rgba(0,0,0,.25);max-width:90vw;text-align:center;";
   toast.textContent = message;
   document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 5000);
+  const reduceMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  toast.animate?.(
+    reduceMotion
+      ? [{ opacity: 0 }, { opacity: 1 }]
+      : [{ opacity: 0, transform: "translateX(-50%) translateY(8px)" }, { opacity: 1, transform: "translateX(-50%) translateY(0)" }],
+    { duration: 220, easing: "cubic-bezier(0.23, 1, 0.32, 1)" }
+  );
+  setTimeout(() => {
+    const out = toast.animate?.([{ opacity: 1 }, { opacity: 0 }], { duration: 150, easing: "ease-out", fill: "forwards" });
+    if (out) out.onfinish = () => toast.remove(); else toast.remove();
+  }, 4850);
 }

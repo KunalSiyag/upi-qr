@@ -60,21 +60,21 @@ export function BillOfSupplyGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
           {[[true, "Composition dealer"], [false, "Exempt supply"]].map(([val, label]) => (<button key={String(val)} onClick={() => setIsComposition(val as boolean)} className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold transition ${isComposition === val ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-cream text-forest"}`}>{label}</button>))}
         </div>
       </div>
-      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
+      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="-mx-2 -my-2 rounded-[7px] px-2 py-2 text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
         {items.map((it, idx) => (<div key={it.id} className="mb-2 grid grid-cols-4 gap-1.5 rounded-xl bg-cream/60 p-2">
           <input value={it.name} onChange={e => upd(it.id, "name", e.target.value)} placeholder={tr("Item")} className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
           <input value={it.qty} onChange={e => upd(it.id, "qty", e.target.value)} placeholder={tr("Qty")} className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
-          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder={tr("Rate")} className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-red-500 text-xs font-bold">×</button>}</div>
+          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder={tr("Rate")} className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="relative text-red-500 text-xs font-bold before:absolute before:-inset-y-2 before:-left-1 before:-right-3">×</button>}</div>
         </div>))}
       </div>
     </div>
     <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="flex items-start justify-between border-b-2 border-forest pb-4">
-        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Bill of supply")}</p><h2 className="mt-2 text-2xl font-black text-forest">{bosNo}</h2><p className="text-xs font-semibold text-forest/60">{tr("Date")}: {bosDate}</p></div>
+        <div><p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Bill of supply")}</p><h2 className="mt-2 text-2xl font-black text-forest">{bosNo}</h2><p className="text-xs font-semibold text-forest/65">{tr("Date")}: {bosDate}</p></div>
       </header>
       <section className="mt-4 grid grid-cols-2 gap-4 text-xs leading-6">
-        <div><p className="font-black text-forest">{tr("Supplier")}</p><p className="font-semibold">{supplierName || "—"}</p><p className="text-forest/60">{supplierAddress}</p></div>
-        <div className="text-right"><p className="font-black text-forest">{tr("Buyer")}</p><p className="font-semibold">{buyerName || "—"}</p>{buyerGstin && <p className="text-forest/60">GSTIN: {buyerGstin}</p>}<p className="text-forest/60">{buyerAddress}</p></div>
+        <div><p className="font-black text-forest">{tr("Supplier")}</p><p className="font-semibold">{supplierName || "—"}</p><p className="text-forest/65">{supplierAddress}</p></div>
+        <div className="text-right"><p className="font-black text-forest">{tr("Buyer")}</p><p className="font-semibold">{buyerName || "—"}</p>{buyerGstin && <p className="text-forest/65">GSTIN: {buyerGstin}</p>}<p className="text-forest/65">{buyerAddress}</p></div>
       </section>
       {isComposition && <div className="mt-3 rounded-xl bg-amber-50 border border-amber-200 p-3 text-[10px] font-bold text-amber-800">Composition taxable person — not eligible to collect tax. Tax on supplies is paid by the supplier under composition levy.</div>}
       {!isComposition && <div className="mt-3 rounded-xl bg-mint border border-leaf/20 p-3 text-[10px] font-bold text-forest">Exempt supply — no GST chargeable under notification.</div>}
@@ -84,9 +84,9 @@ export function BillOfSupplyGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
       </table></div>
       <div className="mt-3 ml-auto w-60 space-y-1 text-xs">
         <div className="flex justify-between border-t-2 border-forest pt-1 text-sm"><span className="font-black">{tr("Total")}</span><strong className="font-black">{money(calc.total)}</strong></div>
-        <div className="flex justify-between text-[10px] text-forest/60"><span>No GST charged</span></div>
+        <div className="flex justify-between text-[10px] text-forest/65"><span>No GST charged</span></div>
       </div>
-      <footer className="mt-6 pt-3 border-t border-forest/10 text-[10px] text-forest/60 space-y-1">
+      <footer className="mt-6 pt-3 border-t border-forest/10 text-[10px] text-forest/65 space-y-1">
         <p>This is a bill of supply issued under Section 31(3)(c) of the CGST Act, 2017 read with Rule 49 of the CGST Rules. No input tax credit is available to the recipient on this document.</p>
         <p>Prepared using Pro UPI QR.</p>
       </footer>

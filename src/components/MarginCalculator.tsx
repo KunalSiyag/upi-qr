@@ -85,7 +85,7 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   key={rate}
                   type="button"
                   onClick={() => setGstRate(rate)}
-                  className={`py-2 rounded-xl text-xs font-bold border transition-all ${
+                  className={`py-2 rounded-xl text-xs font-bold border ${
                     gstRate === rate ? "bg-leaf text-white border-leaf" : "bg-mint/40 text-forest border-forest/10"
                   }`}
                 >
@@ -104,7 +104,7 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             />
             <span>
               Selling price is paid by UPI
-              <span className="mt-1 block font-semibold text-forest/55">
+              <span className="mt-1 block font-semibold text-forest/65">
                 Bills of ₹2,000 or less stay ₹0 MDR. Above that, 0.4% comes out of your margin — not the customer’s bill.
               </span>
             </span>
@@ -124,7 +124,7 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <button
                 type="button"
                 onClick={generateQr}
-                className="rounded-xl bg-forest px-4 py-2.5 text-xs font-bold text-mint hover:bg-forest/90 transition-colors"
+                className="rounded-xl bg-forest px-4 py-2.5 text-xs font-bold text-mint hover:bg-forest/90"
               >
                 Create QR
               </button>
@@ -166,7 +166,7 @@ export function MarginCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               <span className="font-mono font-black text-leaf">{money(netProfit, 2)}</span>
             </div>
             {upiPaid && mdrPaise > 0 && (
-              <p className="text-[11px] leading-5 text-forest/55">
+              <p className="text-[11px] leading-5 text-forest/65">
                 Do not add {formatInrPaise(mdrPaise)} as a UPI surcharge on the bill.{" "}
                 <a href="/upi-mdr-calculator/" className="font-bold text-leaf underline">MDR calculator</a>
               </p>

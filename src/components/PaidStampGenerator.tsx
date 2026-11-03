@@ -236,10 +236,10 @@ export function PaidStampGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </div>
 
-        <label className="mt-6 block cursor-pointer rounded-2xl border-2 border-dashed border-forest/20 bg-cream p-6 text-center transition hover:border-leaf/50">
+        <label className="mt-6 block cursor-pointer rounded-2xl border-2 border-dashed border-forest/20 bg-cream p-6 text-center transition hover:border-leaf/50 has-[:focus-visible]:border-leaf has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-leaf/30">
           <input type="file" accept="image/*" className="sr-only" onChange={(e) => handleFile(e.target.files?.[0])} />
           <span className="block text-sm font-black text-forest">{imageSrc ? "Replace invoice image" : "Upload invoice or bill photo"}</span>
-          <span className="mt-1 block text-xs font-semibold text-forest/60">PNG or JPG. Processed locally in your browser — nothing is uploaded.</span>
+          <span className="mt-1 block text-xs font-semibold text-forest/65">PNG or JPG. Processed locally in your browser — nothing is uploaded.</span>
         </label>
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">

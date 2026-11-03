@@ -146,6 +146,42 @@
       ]
     },
     {
+      "source": "/upi-qr-scanner",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
+      "source": "/upi-qr-scanner/",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
+      "source": "/(hi|ta|te|mr|es|pt|fr|de|id|ar|it|ja|zh)/upi-qr-scanner",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
+      "source": "/(hi|ta|te|mr|es|pt|fr|de|id|ar|it|ja|zh)/upi-qr-scanner/",
+      "headers": [
+        {
+          "key": "Permissions-Policy",
+          "value": "camera=(self), geolocation=(), microphone=()"
+        }
+      ]
+    },
+    {
       "source": "/embed",
       "headers": [
         {

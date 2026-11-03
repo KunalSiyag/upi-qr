@@ -19,7 +19,7 @@ const agg = aggregateFromTestimonials();
     {agg ? (
       <a
         href="/reviews/"
-        class="inline-flex items-center gap-2 rounded-[7px] border border-hairline bg-fog px-3 py-1.5 text-xs font-bold text-forest transition hover:bg-fog focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+        class="inline-flex items-center gap-2 rounded-[7px] border border-hairline bg-fog px-3 py-1.5 text-xs font-bold text-forest transition hover:border-pebble focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
       >
         <StarRating value={agg.ratingValue} size="sm" label={formatRatingLabel(agg)} />
         <span class="tabular-nums">{formatRatingLabel(agg)}</span>
@@ -38,7 +38,7 @@ const agg = aggregateFromTestimonials();
     <a
       href={`${PRODUCT_HUNT_URL}?utm_source=proupiqr&utm_medium=badge&utm_campaign=social-proof`}
       rel="noopener noreferrer"
-      class="inline-flex items-center gap-2 rounded-[7px] border border-[#da552f]/25 bg-[#da552f]/8 px-3 py-1.5 text-xs font-bold text-[#b33c1c] transition hover:bg-[#da552f] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
+      class="inline-flex items-center gap-2 rounded-[7px] border border-[#da552f]/25 bg-[#da552f]/10 px-3 py-1.5 text-xs font-bold text-[#b33c1c] transition hover:bg-[#da552f] hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-leaf"
     >
       <span class="inline-flex h-4 w-4 items-center justify-center rounded-sm bg-[#da552f] text-[9px] font-black text-white" aria-hidden="true">P</span>
       On Product Hunt
@@ -54,7 +54,7 @@ const agg = aggregateFromTestimonials();
     </span>
   </div>
   {!compact && !agg && (
-    <p class="text-xs leading-5 text-forest/60">
+    <p class="text-xs leading-5 text-forest/65">
       Public ratings live on Product Hunt. Named shop quotes appear here after we confirm them.
     </p>
   )}

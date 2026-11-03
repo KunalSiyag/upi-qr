@@ -160,7 +160,7 @@ export function MsmedInterestCalculator({ lang = "en" }: { lang?: DocLang } = {}
             <h2 className="mt-1 text-2xl font-black text-forest">Charge Late-Payment Interest</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={copyClaimText} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf transition">📋 Copy claim</button>
+            <button onClick={copyClaimText} className="rounded-[7px] border border-forest/15 px-4 py-2 text-xs font-bold text-forest hover:border-leaf">📋 Copy claim</button>
             <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : "Statement PDF"}</button>
           </div>
         </div>
@@ -175,14 +175,14 @@ export function MsmedInterestCalculator({ lang = "en" }: { lang?: DocLang } = {}
           <label className="text-sm font-bold text-forest">{tr("Invoice number")}<input value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">{tr("Bill amount ₹")}<input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Bill date<input type="date" value={billDate} onChange={(e) => setBillDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
-          <label className="text-sm font-bold text-forest">Agreed credit days<input type="number" min={0} max={180} value={creditDays} onChange={(e) => setCreditDays(Math.max(0, Math.min(180, Number(e.target.value) || 0)))} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /><span className="mt-1 block text-[11px] font-semibold text-forest/55">{calc.statutoryNote ? "⚠ Above 45 days — the Act deems the maximum credit period as 45 days before interest starts." : "Within 45 days — interest begins after agreed credit days."}</span></label>
+          <label className="text-sm font-bold text-forest">Agreed credit days<input type="number" min={0} max={180} value={creditDays} onChange={(e) => setCreditDays(Math.max(0, Math.min(180, Number(e.target.value) || 0)))} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /><span className="mt-1 block text-[11px] font-semibold text-forest/65">{calc.statutoryNote ? "⚠ Above 45 days — the Act deems the maximum credit period as 45 days before interest starts." : "Within 45 days — interest begins after agreed credit days."}</span></label>
           <label className="text-sm font-bold text-forest sm:col-span-2">Payment received on (leave empty if still unpaid)<input type="date" value={paidDate} onChange={(e) => setPaidDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
         <div className="mt-4 flex gap-2">
           {[["simple", "Simple interest"], ["compound", "Monthly compounding"]].map(([value, label]) => (
             <button key={value} type="button" onClick={() => setCompoundMode(value === "compound")} aria-pressed={(value === "compound") === compoundMode}
-              className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold transition ${(value === "compound") === compoundMode ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-cream text-forest"}`}>
+              className={`flex-1 rounded-xl border px-3 py-2.5 text-xs font-bold ${(value === "compound") === compoundMode ? "border-leaf bg-leaf text-white" : "border-forest/15 bg-cream text-forest"}`}>
               {label}
             </button>
           ))}
@@ -194,28 +194,28 @@ export function MsmedInterestCalculator({ lang = "en" }: { lang?: DocLang } = {}
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">Delayed payment interest statement</p>
             <h2 className="mt-2 text-2xl font-black text-forest">{invoiceNo}</h2>
-            {supplierName && <p className="text-xs font-semibold text-forest/60">Supplier: {supplierName}</p>}
-            {buyerName && <p className="text-xs font-semibold text-forest/60">Buyer: {buyerName}</p>}
+            {supplierName && <p className="text-xs font-semibold text-forest/65">Supplier: {supplierName}</p>}
+            {buyerName && <p className="text-xs font-semibold text-forest/65">Buyer: {buyerName}</p>}
           </div>
           <span className="rounded-lg border-2 border-red-500 bg-white px-3 py-1 text-xs font-black uppercase tracking-widest text-red-600">{RATE_PCT}% p.a.</span>
         </header>
 
         <section className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
-          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Bill amount</p><p className="font-black text-forest">{money(calc.P)}</p></div>
-          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">{tr("Due date")}</p><p className="font-black text-forest">{calc.dueDate}</p></div>
-          <div className={`rounded-xl p-3 ${calc.isOverdue ? "bg-red-50" : "bg-mint"}`}><p className="text-[10px] font-bold uppercase text-forest/55">Overdue by</p><p className={`font-black ${calc.isOverdue ? "text-red-600" : "text-green-700"}`}>{calc.overdueDays > 0 ? `${calc.overdueDays} days` : "Not due"}</p></div>
+          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">Bill amount</p><p className="font-black text-forest">{money(calc.P)}</p></div>
+          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">{tr("Due date")}</p><p className="font-black text-forest">{calc.dueDate}</p></div>
+          <div className={`rounded-xl p-3 ${calc.isOverdue ? "bg-red-50" : "bg-mint"}`}><p className="text-[10px] font-bold uppercase text-forest/65">Overdue by</p><p className={`font-black ${calc.isOverdue ? "text-red-600" : "text-green-700"}`}>{calc.overdueDays > 0 ? `${calc.overdueDays} days` : "Not due"}</p></div>
         </section>
 
         <section className="mt-4 space-y-2 rounded-xl border border-dashed border-forest/20 p-4 text-sm">
           <div className="flex justify-between"><span className="font-semibold text-forest/75">Principal outstanding</span><strong className="tabular-nums">{money(calc.P)}</strong></div>
           <div className="flex justify-between"><span className="font-semibold text-forest/75">Interest @ {RATE_PCT}% p.a. ({compoundMode ? "monthly compounding" : "simple"}) for {calc.overdueDays} days</span><strong className="tabular-nums text-red-600">+ {money(calc.interest)}</strong></div>
           {!compoundMode && calc.overdueDays > 0 && (
-            <div className="flex justify-between text-xs text-forest/60"><span>If compounded monthly (councils often award this)</span><strong className="tabular-nums">{money(calc.compoundInterest)}</strong></div>
+            <div className="flex justify-between text-xs text-forest/65"><span>If compounded monthly (councils often award this)</span><strong className="tabular-nums">{money(calc.compoundInterest)}</strong></div>
           )}
           <div className="flex justify-between border-t-2 border-forest pt-2 text-base"><span className="font-black text-forest">Total claimable</span><strong className="font-black tabular-nums text-forest">{money(calc.total)}</strong></div>
         </section>
 
-        <footer className="mt-4 space-y-2 text-[11px] leading-5 text-forest/60">
+        <footer className="mt-4 space-y-2 text-[11px] leading-5 text-forest/65">
           <p><strong className="text-forest">Basis:</strong> Section 16, Micro, Small and Medium Enterprises Development Act, 2006 — interest at three times the RBI bank rate ({RBI_BANK_RATE_PCT}% × 3 = {RATE_PCT}% p.a. at current rates).</p>
           <p><strong className="text-forest">Sources:</strong> <a href="https://msme.gov.in" class="underline hover:text-leaf" target="_blank" rel="noopener">msme.gov.in</a> · <a href="https://samadhaan.msme.gov.in" class="underline hover:text-leaf" target="_blank" rel="noopener">SAMADHAAN portal</a> · <a href="https://rbi.org.in" class="underline hover:text-leaf" target="_blank" rel="noopener">rbi.org.in</a> for current bank rate.</p>
           <p>This statement supports negotiation and MSE FC filing. It is not a legal notice; consult the SAMADHAAN portal or your counsel for enforcement. Last reviewed {LAST_REVIEWED}.</p>

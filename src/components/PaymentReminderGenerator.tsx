@@ -101,7 +101,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
           <h2 className="mt-1 text-2xl font-black text-forest">{tr("Chase Payments Politely")}</h2>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Tone")}</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Tone")}</p>
         <div className="mt-2 flex flex-wrap gap-2">
           {tones.map((t) => (
             <button key={t.id} type="button" onClick={() => setTone(t.id)} aria-pressed={t.id === tone}
@@ -147,7 +147,7 @@ export function PaymentReminderGenerator({ lang = "en" }: { lang?: DocLang } = {
           <button onClick={() => openWith("sms:?&body=")} className="rounded-[7px] bg-mint px-5 py-2.5 text-xs font-bold text-forest hover:bg-graphite hover:text-white transition">📱 SMS</button>
           <button onClick={() => openWith(`mailto:?subject=${encodeURIComponent(`Payment reminder - Invoice ${invoiceNo}`)}&body=`)} className="rounded-[7px] border border-forest/15 px-5 py-2.5 text-xs font-bold text-forest hover:bg-mint transition">✉️ Email</button>
         </div>
-        <p className="mt-4 text-xs leading-5 font-semibold text-forest/60">
+        <p className="mt-4 text-xs leading-5 font-semibold text-forest/65">
           Tip: pair the reminder with a scan-and-pay QR so customers can clear dues in one tap — create one with the UPI QR generator or attach an invoice PDF.
         </p>
       </div>

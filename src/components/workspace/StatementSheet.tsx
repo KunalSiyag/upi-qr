@@ -84,7 +84,7 @@ export function StatementSheet({ ws, today, claimedUtrs, businessName, onRecord,
         {tr("Download a CSV statement from your bank's net banking, then pick it here. It's read in this browser — the file is never uploaded.")}
       </p>
       {businessName && <p className="mt-2 text-[13px] text-muted">{tr("Credits are matched to {business}'s invoices.", { business: businessName })}</p>}
-      <label className={`${secondaryButton} mt-4 inline-block cursor-pointer`}>
+      <label className={`${secondaryButton} mt-4 inline-block cursor-pointer transition-[background-color,transform] duration-150 ease-out active:scale-[0.97]`}>
         {fileName ? tr("Choose another file") : tr("Choose CSV statement")}
         <input type="file" accept=".csv,.tsv,.txt,text/csv,text/plain" className="sr-only" onChange={choose} aria-label={tr("Bank statement CSV file")} />
       </label>

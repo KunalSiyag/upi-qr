@@ -207,7 +207,7 @@ export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
           <button
             type="button"
             onClick={() => setFilterType("all")}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${filterType === "all" ? "bg-forest text-white shadow-sm" : "text-forest/70 hover:text-forest"}`}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold ${filterType === "all" ? "bg-forest text-white shadow-sm" : "text-forest/70 hover:text-forest"}`}
           >
             All
           </button>
@@ -247,10 +247,10 @@ export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
                   <tr key={item.name} className="hover:bg-mint/20 transition-colors">
                     <td className="p-4 font-bold">
                       <div className="flex items-center gap-2">
-                        <span className={`h-2 w-2 rounded-full ${item.type === "bank" ? "bg-leaf" : "bg-gold"}`} />
+                        <span className={`h-2 w-2 rounded-full ${item.type === "bank" ? "bg-leaf" : "bg-muted"}`} />
                         <span>{item.name}</span>
                       </div>
-                      <div className="text-[10px] font-medium text-forest/60 mt-0.5">{item.notes}</div>
+                      <div className="text-[10px] font-medium text-forest/65 mt-0.5">{item.notes}</div>
                     </td>
                     <td className="p-4 font-mono font-bold text-forest">{item.dailyLimit}</td>
                     <td className="p-4 font-mono font-semibold text-forest/80">{item.perTxnLimit}</td>
@@ -276,7 +276,7 @@ export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-sm font-semibold text-forest/60">
+                  <td colSpan={5} className="p-8 text-center text-sm font-semibold text-forest/65">
                     No matching banks or apps found for "{query}".
                   </td>
                 </tr>
@@ -286,7 +286,7 @@ export function UpiLimitsChecker({ lang = "en" }: { lang?: DocLang } = {}) {
         </div>
       </div>
 
-      <p className="text-center text-[11px] text-forest/50 mt-4">
+      <p className="text-center text-[11px] text-forest/65 mt-4">
         Limits reviewed {LAST_REVIEWED}. {SOURCE_NOTE}
       </p>
     </div>

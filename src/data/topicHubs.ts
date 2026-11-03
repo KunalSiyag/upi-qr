@@ -163,6 +163,8 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/upi-qr-decoder/", name: "UPI QR validator & decoder", description: "Safety-check hidden fields — VPA, amount, tamper clues — before you print." },
           { href: "/upi-link-generator/", name: "UPI payment link generator", description: "Create upi://pay links for WhatsApp, SMS, and invoices." },
           { href: "/survey-qr-generator/", name: "Survey QR generator", description: "Feedback collection QRs with prefilled responses." },
+          { href: "/upi-id-to-qr-code-generator/", name: "UPI ID to QR code generator", description: "Turn a UPI ID (VPA) into a printable QR with an optional amount and note, and see what the upi://pay link inside it contains." },
+          { href: "/payment-qr-code-generator/", name: "Payment QR code generator", description: "Make a UPI payment QR for a shop, table or invoice, and compare a printed UPI QR with a provider merchant QR and a soundbox." },
         ],
       },
     ],
@@ -389,6 +391,8 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/upi-qr-decoder/", name: "UPI QR validator & decoder", description: "Safety-check the VPA, amount, and tamper clues before you trust or reprint." },
           { href: "/upi-mdr-calculator/", name: "UPI MDR calculator (Oct 2026)", description: "0.4% P2M above ₹2,000, small-merchant exemption, GST on MDR." },
           { href: "/upi-calculator/", name: "UPI vs gateway savings", description: "Compare gateway MDR with direct UPI after the October schedule." },
+          { href: "/upi-qr-scanner/", name: "UPI QR scanner and reader", description: "Scan or paste a UPI QR to read its UPI ID, payee name, amount and notes before you pay. Runs in the browser; it does not pay anything or upload the QR." },
+          { href: "/upi-id-generator/", name: "UPI ID name ideas & format check", description: "Get name ideas for a UPI ID, check that one is written correctly and see which app each handle belongs to. Format check only." },
         ],
       },
     ],
@@ -461,6 +465,7 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/payment-reminder-generator/", name: "Payment reminder generator", description: "Friendly, professional, or firm overdue copy for WhatsApp, SMS, email." },
           { href: "/receipt-generator/", name: "Payment receipt generator", description: "PAID-stamped receipts with mode, UTR, and UPI QR." },
           { href: "/paid-stamp-generator/", name: "Paid stamp generator", description: "Stamp PAID with date and signature on a bill photo, offline." },
+          { href: "/gstin-validator/", name: "GSTIN validator and decoder", description: "Check a GSTIN's format and check digit and read its state, PAN and entity number. Does not show registration." },
         ],
       },
       {
@@ -471,6 +476,7 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/rent-receipt-generator/", name: "Rent receipt generator", description: "HRA-ready monthly receipts with amount in words and a stamp box." },
           { href: "/salary-slip-generator/", name: "Salary slip generator", description: "Monthly payslips with PF/PT/TDS breakdowns." },
           { href: "/bill-of-supply-generator/", name: "Bill of supply generator", description: "Zero-GST bills for composition dealers and exempt supply." },
+          { href: "/amount-in-words/", name: "Amount in words converter", description: "Write a rupee amount in words with lakh, crore and paise, in English or Hindi." },
         ],
       },
       {

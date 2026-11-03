@@ -166,7 +166,7 @@ export function EmiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h2 className="mt-1 text-2xl font-black text-forest">{tr("Know Your EMI First")}</h2>
           </div>
           <div className="flex flex-wrap gap-2 pb-1">
-            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">{pdfState === "busy" ? tr("Generating...") : `${tr("Schedule PDF")}`}</button>
+            <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50">{pdfState === "busy" ? tr("Generating...") : `${tr("Schedule PDF")}`}</button>
             <button onClick={downloadPng} disabled={pngState === "busy"} className="rounded-[7px] bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white disabled:opacity-50 transition">{pngState === "busy" ? tr("Generating...") : `${tr("PNG")}`}</button>
           </div>
         </div>
@@ -188,8 +188,8 @@ export function EmiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="mt-6 grid gap-3 sm:grid-cols-3">
           <div className="rounded-2xl bg-forest p-4 text-white"><p className="text-[10px] font-black uppercase tracking-widest text-white/60">{tr("Monthly EMI")}</p><p className="mt-1 text-2xl font-black">{money(calc.emi)}</p></div>
-          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/50">{tr("Total interest")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.totalInterest)}</p></div>
-          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/50">{tr("Total payable")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.totalPayable)}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/65">{tr("Total interest")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.totalInterest)}</p></div>
+          <div className="rounded-2xl bg-cream p-4"><p className="text-[10px] font-black uppercase tracking-widest text-forest/65">{tr("Total payable")}</p><p className="mt-1 text-xl font-black text-forest">{money(calc.totalPayable)}</p></div>
         </div>
 
         <div className="mt-4">
@@ -209,22 +209,22 @@ export function EmiCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-leaf">{tr("Amortization schedule")}</p>
             <h2 className="mt-2 text-2xl font-black text-forest">{loanName || tr("Loan purpose")} — {tr("EMI plan")}</h2>
-            <p className="text-xs font-semibold text-forest/60">{tr("Starting")} {startDate}</p>
+            <p className="text-xs font-semibold text-forest/65">{tr("Starting")} {startDate}</p>
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold text-forest/60">{tr("Monthly EMI")}</p>
+            <p className="text-[10px] font-bold text-forest/65">{tr("Monthly EMI")}</p>
             <p className="text-lg font-black text-forest">{money(calc.emi)}</p>
           </div>
         </header>
 
         <section className="mt-4 grid grid-cols-3 gap-3 text-center text-sm">
-          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">{tr("Principal")}</p><p className="font-black text-forest">{money(Number(principal) || 0)}</p></div>
-          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/55">Interest @ {Number(rate) || 0}%</p><p className="font-black text-forest">{money(calc.totalInterest)}</p></div>
+          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">{tr("Principal")}</p><p className="font-black text-forest">{money(Number(principal) || 0)}</p></div>
+          <div className="rounded-xl bg-cream p-3"><p className="text-[10px] font-bold uppercase text-forest/65">Interest @ {Number(rate) || 0}%</p><p className="font-black text-forest">{money(calc.totalInterest)}</p></div>
           <div className="rounded-xl bg-forest p-3 text-white"><p className="text-[10px] font-bold uppercase text-white/60">{tr("Total payable")}</p><p className="font-black">{money(calc.totalPayable)}</p></div>
         </section>
 
         <table className="mt-5 w-full text-left text-sm">
-          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/55"><th className="py-2">{tr("Year")}</th><th className="py-2 text-right">{tr("Principal paid")}</th><th className="py-2 text-right">{tr("Interest paid")}</th><th className="py-2 text-right">{tr("Balance")}</th></tr></thead>
+          <thead><tr className="border-b border-forest/20 text-[10px] uppercase tracking-widest text-forest/65"><th className="py-2">{tr("Year")}</th><th className="py-2 text-right">{tr("Principal paid")}</th><th className="py-2 text-right">{tr("Interest paid")}</th><th className="py-2 text-right">{tr("Balance")}</th></tr></thead>
           <tbody>
             {calc.yearly.map((row) => (
               <tr key={row.year} className="border-b border-forest/5">

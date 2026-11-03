@@ -19,6 +19,19 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    month: "November 2026",
+    date: "2026-11",
+    title: "New free tools for UPI IDs, QR codes, GSTIN and amounts in words",
+    items: [
+      { text: "UPI QR scanner: read a UPI QR from your camera, a photo or pasted text and see the UPI ID, payee name and amount before you pay", href: "/upi-qr-scanner/" },
+      { text: "GSTIN validator and decoder: check a GSTIN's format and check digit, read its state, PAN and entity number, or check a list of up to 500 at once", href: "/gstin-validator/" },
+      { text: "Amount in words converter: rupees in words with lakh, crore and paise, in English or Hindi, plus a Google Sheets function", href: "/amount-in-words/" },
+      { text: "UPI ID generator: name ideas for a new UPI ID, a format check, and which app issues each handle", href: "/upi-id-generator/" },
+      { text: "UPI ID to QR code generator: turn your UPI ID into a QR, with a plain guide to the link inside it", href: "/upi-id-to-qr-code-generator/" },
+      { text: "Payment QR code generator: which payment QR suits a counter, a table or an invoice", href: "/payment-qr-code-generator/" },
+    ],
+  },
+  {
     month: "October 2026",
     date: "2026-10",
     title: "The payment tracker, free accounts and Pro",
