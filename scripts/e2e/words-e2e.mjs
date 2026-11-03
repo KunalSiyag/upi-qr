@@ -247,7 +247,7 @@ try {
   await type("125050.50");
   check("hi: default output is Hindi", nfc(await words()) === nfc("एक लाख पच्चीस हज़ार पचास रुपये और पचास पैसे मात्र"), await words());
   await type("1,50");
-  check("hi: errors are in Hindi", /अल्पविराम नहीं/.test(await text("[data-words-message]")), await text("[data-words-message]"));
+  check("hi: errors are in Hindi", /कॉमा नहीं/.test(await text("[data-words-message]")), await text("[data-words-message]"));
   await click("[data-words-language=en]");
   await type("125050.50");
   check("hi: English output is one tap away", (await words()) === "Rupees One Lakh Twenty Five Thousand Fifty and Fifty Paise Only");
