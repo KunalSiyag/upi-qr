@@ -56,22 +56,22 @@ export function CashMemoGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <label className="text-sm font-bold text-forest">{tr("Date")}<input type="date" value={cmDate} onChange={e => setCmDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         <label className="text-sm font-bold text-forest">{tr("Counter / staff")}<input value={counter} onChange={e => setCounter(e.target.value)} placeholder="Counter 1" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
       </div>
-      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
+      <div className="mt-5"><div className="flex items-center justify-between mb-2"><h3 className="text-xs font-black text-forest uppercase">{tr("Items")}</h3><button onClick={addItem} className="-mx-2 -my-2 rounded-[7px] px-2 py-2 text-[11px] font-bold text-leaf hover:text-forest">{tr("+ Add row")}</button></div>
         {items.map((it, idx) => (<div key={it.id} className="mb-2 grid grid-cols-4 gap-1.5 rounded-xl bg-cream/60 p-2">
           <input value={it.name} onChange={e => upd(it.id, "name", e.target.value)} placeholder={tr("Item")} className="col-span-2 rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
           <input value={it.qty} onChange={e => upd(it.id, "qty", e.target.value)} placeholder={tr("Qty")} className="rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
-          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder={tr("Rate")} className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="text-red-500 text-xs font-bold">×</button>}</div>
+          <div className="flex items-center gap-1"><input value={it.rate} onChange={e => upd(it.id, "rate", e.target.value)} placeholder={tr("Rate")} className="w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />{items.length > 1 && <button onClick={() => removeItem(it.id)} className="relative text-red-500 text-xs font-bold before:absolute before:-inset-y-2 before:-left-1 before:-right-3">×</button>}</div>
         </div>))}
       </div>
     </div>
     <article ref={paperRef} className="invoice-paper mx-auto h-fit w-full max-w-[780px] rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_24px_80px_rgba(17,59,44,0.12)] md:p-8">
       <header className="text-center border-b-2 border-forest pb-4">
         <h2 className="text-2xl font-black text-forest">{shopName || tr("Shop Name")}</h2>
-        {shopAddress && <p className="text-[11px] text-forest/60">{shopAddress}</p>}
-        {shopPhone && <p className="text-[11px] text-forest/60">{tr("Tel:")} {shopPhone}</p>}
+        {shopAddress && <p className="text-[11px] text-forest/65">{shopAddress}</p>}
+        {shopPhone && <p className="text-[11px] text-forest/65">{tr("Tel:")} {shopPhone}</p>}
       </header>
       <section className="mt-4 grid grid-cols-2 gap-3 text-xs">
-        <div><p className="font-black">{tr("Cash Memo")}</p><p className="font-semibold">{cmNo}</p><p className="text-forest/60">{tr("Date")}: {cmDate}</p>{counter && <p className="text-forest/60">{tr("Counter:")} {counter}</p>}</div>
+        <div><p className="font-black">{tr("Cash Memo")}</p><p className="font-semibold">{cmNo}</p><p className="text-forest/65">{tr("Date")}: {cmDate}</p>{counter && <p className="text-forest/65">{tr("Counter:")} {counter}</p>}</div>
         {customerName && <div className="text-right"><p className="font-black">{tr("Customer")}</p><p className="font-semibold">{customerName}</p></div>}
       </section>
       <div className="mt-5 overflow-x-auto"><table className="w-full text-xs">
@@ -80,9 +80,9 @@ export function CashMemoGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
       </table></div>
       <div className="mt-3 ml-auto w-60 space-y-1 text-xs">
         <div className="flex justify-between border-t-2 border-forest pt-1 text-sm"><span className="font-black">{tr("Total")}</span><strong className="font-black">{money(calc.total)}</strong></div>
-        <div className="flex justify-between text-[10px] text-forest/60"><span>Includes all taxes</span></div>
+        <div className="flex justify-between text-[10px] text-forest/65"><span>Includes all taxes</span></div>
       </div>
-      <footer className="mt-6 pt-3 border-t border-forest/10 text-[10px] text-forest/60 text-center space-y-1">
+      <footer className="mt-6 pt-3 border-t border-forest/10 text-[10px] text-forest/65 text-center space-y-1">
         <p>Goods once sold will not be taken back or exchanged. Disputes subject to local jurisdiction.</p>
         <p>This is a cash memo — a simplified retail billing slip. It is not a GST tax invoice. Prepared using Pro UPI QR.</p>
       </footer>

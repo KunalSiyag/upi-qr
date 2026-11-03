@@ -97,11 +97,11 @@ const toolGroups = [
 
   <nav aria-label="Main" class="hidden items-center gap-7 text-[15px] font-semibold text-forest lg:flex">
     <div class="group relative">
-      <button type="button" aria-haspopup="true" class="flex min-h-11 items-center gap-1 rounded-full hover:text-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf">
+      <button type="button" aria-haspopup="true" class="-mx-2 flex min-h-11 items-center gap-1 rounded-[10px] px-2 hover:text-leaf focus:outline-none focus-visible:ring-2 focus-visible:ring-leaf">
         <span>{chrome.toolsCol}</span>
         <svg class="h-3.5 w-3.5 transition-transform duration-200 group-hover:rotate-180" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" /></svg>
       </button>
-      <div class="absolute left-0 top-full z-50 hidden w-[min(46rem,calc(100vw-4rem))] pt-2 group-focus-within:block group-hover:block">
+      <div class="absolute left-0 top-full z-50 hidden w-[min(46rem,calc(100vw-4rem))] pt-2 group-focus-within:block [.group:hover_&]:block">
         <div class="rounded-[14px] border border-forest/10 bg-white p-6 shadow-[0_6px_20px_rgba(0,0,0,0.08)]">
           <div class="grid grid-cols-3 gap-6">
             {toolGroups.map((group) => (
@@ -123,7 +123,7 @@ const toolGroups = [
         </div>
       </div>
     </div>
-    <a href={p("payment-tracker")} class="hover:text-leaf">{hi("Payment tracker", "पेमेंट ट्रैकर")}</a>
+    <a href={p("payment-tracker")} class="transition-colors hover:text-leaf">{hi("Payment tracker", "पेमेंट ट्रैकर")}</a>
     <a href="/pricing/" class="hover:text-leaf">{hi("Pricing", "प्राइसिंग")}</a>
     <a href={p("blog")} class="hover:text-leaf">{chrome.guides}</a>
   </nav>
@@ -134,8 +134,8 @@ const toolGroups = [
         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" /></svg>
         <span class="uppercase">{activeLang.code}</span>
       </button>
-      <div class="absolute right-0 top-full z-50 hidden w-44 pt-2 group-focus-within:block group-hover:block">
-        <div class="space-y-0.5 rounded-[12px] border border-forest/10 bg-white p-1.5 text-sm font-semibold shadow-[0_6px_20px_rgba(0,0,0,0.08)]">
+      <div class="absolute right-0 top-full z-50 hidden w-44 pt-2 group-focus-within:block [.group:hover_&]:block">
+        <div class="max-h-[calc(100dvh-5rem)] space-y-0.5 overflow-y-auto overscroll-contain rounded-[12px] border border-forest/10 bg-white p-1.5 text-sm font-semibold shadow-[0_6px_20px_rgba(0,0,0,0.08)]">
           {languages.map((lang) => (
             <a href={lang.path} class={`flex items-center justify-between rounded-[10px] px-3 py-2 ${activeLang.code === lang.code ? "bg-forest text-white" : "text-forest hover:bg-mint"}`}>
               <span>{lang.label}</span>
@@ -153,9 +153,9 @@ const toolGroups = [
   </div>
 </header>
 
-<nav id="mobile-menu" aria-label={chrome.openMenu} hidden class="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-forest/10 bg-white shadow-[0_6px_20px_rgba(0,0,0,0.08)] lg:hidden">
+<nav id="mobile-menu" aria-label={chrome.openMenu} hidden class="absolute inset-x-0 top-full z-40 max-h-[calc(100dvh-4rem)] overflow-y-auto overscroll-contain border-b border-forest/10 bg-white shadow-[0_6px_20px_rgba(0,0,0,0.08)] animate-[ws-fade_160ms_cubic-bezier(0.23,1,0.32,1)] lg:hidden">
   <div class="mx-auto max-w-7xl space-y-5 px-4 py-4 md:px-6" style="padding-bottom:calc(1rem + env(safe-area-inset-bottom))">
-    <a href="/app/" class="flex h-12 items-center justify-between rounded-[10px] bg-forest px-5 text-base font-bold text-white">
+    <a href="/app/" class="flex h-12 items-center justify-between rounded-[10px] bg-forest px-5 text-base font-bold text-white transition-transform duration-150 ease-out active:scale-[0.97]">
       <span>{hi("Track payments — free", "पेमेंट ट्रैक करें — मुफ्त")}</span>
       <span aria-hidden="true">&rarr;</span>
     </a>

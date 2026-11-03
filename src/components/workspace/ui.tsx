@@ -98,7 +98,7 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="ws-sheet max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-t-[16px] bg-white p-5 shadow-[0_2px_6px_rgba(28,40,64,0.06),0_24px_64px_rgba(28,40,64,0.18)] sm:rounded-[14px] sm:p-6"
+        className="ws-sheet max-h-[92vh] supports-[height:1dvh]:max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-t-[16px] bg-white p-5 shadow-[0_2px_6px_rgba(28,40,64,0.06),0_24px_64px_rgba(28,40,64,0.18)] sm:rounded-[14px] sm:p-6"
         style={{ paddingBottom: "calc(1.25rem + env(safe-area-inset-bottom, 0px))" }}
       >
         <div className="mb-5 flex items-center justify-between gap-3">

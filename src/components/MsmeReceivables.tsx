@@ -403,9 +403,9 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
 
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <button onClick={addEntry} className="rounded-[7px] bg-leaf px-4 py-2 text-xs font-bold text-white hover:bg-graphite transition">+ Add invoice</button>
-          <label className="cursor-pointer rounded-[7px] border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">
+          <label className="cursor-pointer rounded-[7px] border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition active:scale-[0.97] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf">
             Upload CSV
-            <input type="file" accept=".csv" onChange={handleFileInput} className="hidden" />
+            <input type="file" accept=".csv" onChange={handleFileInput} className="sr-only" />
           </label>
           <button onClick={exportCsv} className="rounded-[7px] border border-forest/20 px-4 py-2 text-xs font-bold text-forest hover:bg-mint transition">Export CSV</button>
           <button onClick={downloadPdf} disabled={pdfState === "busy"} className="rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite disabled:opacity-50 transition">
@@ -418,7 +418,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
 
         {entries.length === 0 && (
           <div className="mt-6 rounded-2xl border-2 border-dashed border-forest/15 p-8 text-center">
-            <p className="text-sm font-semibold text-forest/50">No invoices yet. Add one manually or upload a CSV with Invoice and Amount columns.</p>
+            <p className="text-sm font-semibold text-forest/65">No invoices yet. Add one manually or upload a CSV with Invoice and Amount columns.</p>
             <p className="mt-1 text-[11px] text-forest/40">CSV header example: Buyer, Invoice, Date, Amount</p>
           </div>
         )}
@@ -431,31 +431,31 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
                 <div key={entry.id} className="rounded-xl border border-forest/10 bg-cream/60 p-3">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-[11px] font-black text-forest uppercase">Invoice {idx + 1}</span>
-                    <button onClick={() => removeEntry(entry.id)} className="text-[11px] font-bold text-red-500 hover:text-red-700">{tr("Remove")}</button>
+                    <button onClick={() => removeEntry(entry.id)} className="relative text-[11px] font-bold text-red-500 before:absolute before:-inset-2 hover:text-red-700">{tr("Remove")}</button>
                   </div>
                   <div className="grid gap-2 sm:grid-cols-3">
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Buyer
                       <input value={entry.buyer} onChange={(ev) => updateEntry(entry.id, { buyer: ev.target.value })} placeholder="Company name" className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Invoice #
                       <input value={entry.invoiceNo} onChange={(ev) => updateEntry(entry.id, { invoiceNo: ev.target.value })} placeholder="INV-001" className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Amount {symbol}
                       <input type="number" value={entry.amount || ""} onChange={(ev) => updateEntry(entry.id, { amount: Math.max(0, parseInt(ev.target.value, 10) || 0) })} className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Bill date
                       <input type="date" value={entry.billDate} onChange={(ev) => updateEntry(entry.id, { billDate: ev.target.value })} className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Credit days
                       <input type="number" min={0} max={180} value={entry.creditDays} onChange={(ev) => updateEntry(entry.id, { creditDays: parseInt(ev.target.value, 10) || 0 })} className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                       {es.over45 && <span className="text-[10px] text-red-600 font-semibold">Capped at 45d</span>}
                     </label>
-                    <label className="text-[10px] font-bold text-forest/60">
+                    <label className="text-[10px] font-bold text-forest/65">
                       Paid {symbol} (optional)
                       <input type="number" value={entry.paidAmount ?? ""} onChange={(ev) => { const v = ev.target.value; updateEntry(entry.id, { paidAmount: v ? Math.max(0, parseInt(v, 10) || 0) : null }); }} placeholder="" className="mt-1 w-full rounded-lg border border-forest/10 bg-white px-2 py-1.5 text-xs font-medium outline-none focus:border-leaf" />
                     </label>
@@ -489,19 +489,19 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
         {entries.length > 0 && (
           <div className="grid grid-cols-4 gap-2">
             <div className="rounded-xl bg-cream/80 p-2.5 text-center">
-              <p className="text-[10px] font-bold text-forest/55">Invoices</p>
+              <p className="text-[10px] font-bold text-forest/65">Invoices</p>
               <p className="text-xl font-black text-forest">{totals.total}</p>
             </div>
             <div className="rounded-xl bg-cream/80 p-2.5 text-center">
-              <p className="text-[10px] font-bold text-forest/55">{tr("Total")}</p>
+              <p className="text-[10px] font-bold text-forest/65">{tr("Total")}</p>
               <p className="text-lg font-black text-forest">{fmtMoney(totals.principal)}</p>
             </div>
             <div className={`rounded-xl p-2.5 text-center ${totals.overdue > 0 ? "bg-red-50" : "bg-mint"}`}>
-              <p className="text-[10px] font-bold text-forest/55">Overdue</p>
+              <p className="text-[10px] font-bold text-forest/65">Overdue</p>
               <p className={`text-xl font-black ${totals.overdue > 0 ? "text-red-600" : "text-emerald-700"}`}>{totals.overdue}</p>
             </div>
             <div className="rounded-xl bg-amber-50 p-2.5 text-center">
-              <p className="text-[10px] font-bold text-forest/55">Interest</p>
+              <p className="text-[10px] font-bold text-forest/65">Interest</p>
               <p className="text-lg font-black text-amber-700">{fmtRs(Math.round(totals.compoundInterest))}</p>
             </div>
           </div>
@@ -509,13 +509,13 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
 
         {agingBuckets.length > 0 && (
           <div className="rounded-2xl border border-forest/10 bg-white p-4">
-            <h3 className="text-xs font-black uppercase tracking-[0.15em] text-forest/50 mb-3">Aging buckets</h3>
+            <h3 className="text-xs font-black uppercase tracking-[0.15em] text-forest/65 mb-3">Aging buckets</h3>
             <div className="space-y-1.5">
               {agingBuckets.map(b => (
                 <div key={b.label} className="flex items-center justify-between rounded-lg bg-cream/50 px-3 py-2">
                   <span className="text-xs font-semibold text-forest">{b.label}</span>
                   <div className="flex items-center gap-3">
-                    <span className="text-[10px] font-bold text-forest/50">{b.count} invoice{b.count > 1 ? "s" : ""}</span>
+                    <span className="text-[10px] font-bold text-forest/65">{b.count} invoice{b.count > 1 ? "s" : ""}</span>
                     <span className="text-xs font-black tabular-nums text-forest">{fmtMoney(b.total)}</span>
                   </div>
                 </div>
@@ -532,7 +532,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
         {tab === "letter" && entries.length > 0 && (
           <div className="rounded-2xl border border-forest/10 bg-white p-4">
             <div className="flex items-center justify-between mb-2">
-              <h3 className="text-xs font-black uppercase tracking-[0.15em] text-forest/50">Demand letter draft</h3>
+              <h3 className="text-xs font-black uppercase tracking-[0.15em] text-forest/65">Demand letter draft</h3>
               <button onClick={copyDemandLetter} className="rounded-[7px] border border-forest/20 px-3 py-1.5 text-[11px] font-bold text-forest hover:bg-mint transition">Copy letter</button>
             </div>
             <pre className="text-[11px] leading-relaxed text-forest/80 font-mono whitespace-pre-wrap max-h-[40vh] overflow-y-auto bg-cream/50 rounded-xl p-3">{generateDemandLetter()}</pre>
@@ -541,7 +541,7 @@ NOTE: This demand letter is drafted using the Pro UPI QR MSME receivables tool. 
         )}
 
         {entries.length > 0 && (
-          <div className="flex items-center gap-2 text-[10px] text-forest/50 font-medium">
+          <div className="flex items-center gap-2 text-[10px] text-forest/65 font-medium">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
             100% private — all data stays in this browser. Nothing is uploaded to any server.
           </div>

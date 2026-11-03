@@ -87,7 +87,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
       setCategory("all");
       setActiveCode(match.code);
       requestAnimationFrame(() => {
-        document.getElementById(codeAnchor(match.code))?.scrollIntoView({ behavior: "smooth", block: "start" });
+        document.getElementById(codeAnchor(match.code))?.scrollIntoView({ behavior: "auto", block: "start" });
       });
     };
     applyHash();
@@ -100,7 +100,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
   return (
     <div className="space-y-6">
       <div className="rounded-3xl border border-forest/10 bg-white p-4 shadow-sm sm:p-5">
-        <label htmlFor={queryId} className="block text-xs font-bold uppercase tracking-wider text-forest/60">
+        <label htmlFor={queryId} className="block text-xs font-bold uppercase tracking-wider text-forest/65">
           {ui.searchLabel}
         </label>
         <div className="relative mt-2">
@@ -131,7 +131,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
             className="w-full rounded-2xl border border-forest/15 bg-white py-3 pl-10 pr-4 text-sm font-semibold text-forest outline-none focus-visible:border-leaf focus-visible:ring-2 focus-visible:ring-leaf/20"
           />
         </div>
-        <p className="mt-2 text-xs text-forest/55">
+        <p className="mt-2 text-xs text-forest/65">
           {UPI_ERROR_CODES.length} {ui.codesCount}
         </p>
       </div>
@@ -145,7 +145,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
               type="button"
               aria-pressed={pressed}
               onClick={() => setCategory(filter.id)}
-              className={`rounded-[7px] border px-3 py-1.5 text-xs font-bold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 ${
+              className={`rounded-[7px] border px-3 py-1.5 text-xs font-bold ${
                 pressed
                   ? "border-forest bg-forest text-mint"
                   : "border-forest/15 bg-white text-forest hover:border-leaf/40 hover:bg-mint/40"
@@ -164,7 +164,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
         </div>
       )}
 
-      <p id={resultsId} aria-live="polite" className="text-xs font-semibold text-forest/55">
+      <p id={resultsId} aria-live="polite" className="text-xs font-semibold text-forest/65">
         {filtered.length === 0
           ? ui.noMatch
           : `${filtered.length} ${ui.codesFound}`}
@@ -176,7 +176,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
           <p className="mt-2 text-sm text-forest/70">{ui.noMatchHint}</p>
           <button
             type="button"
-            className="mt-4 rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/40"
+            className="mt-4 rounded-[7px] bg-forest px-4 py-2 text-xs font-bold text-white hover:bg-graphite"
             onClick={() => {
               setQuery("");
               setCategory("all");
@@ -230,7 +230,7 @@ export function UpiErrorCodeResolver({ lang = "en" }: { lang?: SiteLang }) {
                   {lang === "en" && errorCodePath(item.code) && (
                     <a
                       href={errorCodePath(item.code)!}
-                      className="inline-flex text-[11px] font-bold text-leaf underline decoration-leaf/30 underline-offset-2 hover:text-forest focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-leaf/30 rounded"
+                      className="inline-flex text-[11px] font-bold text-leaf underline decoration-leaf/30 underline-offset-2 hover:text-forest rounded"
                     >
                       Full guide to {item.code}
                     </a>

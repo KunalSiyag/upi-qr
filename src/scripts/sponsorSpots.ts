@@ -45,7 +45,7 @@ function fillTiles(root: HTMLElement, tiles: PublicSponsor[], free: number) {
     a.rel = "sponsored noopener";
     a.target = "_blank";
     a.title = s.name;
-    a.className = "flex h-full min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-[10px] bg-white px-2 py-3 ring-1 ring-hairline transition hover:shadow-card";
+    a.className = "flex h-full min-h-[84px] flex-col items-center justify-center gap-1.5 rounded-[10px] bg-white px-2 py-3 ring-1 ring-hairline transition ease-out hover:shadow-card active:scale-[0.97]";
     const img = document.createElement("img");
     img.src = s.logo;
     img.alt = "";

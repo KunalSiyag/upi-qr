@@ -217,13 +217,13 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="mt-4">
         </div>
 
-        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Employer</p>
+        <p className="mt-3 text-xs font-black uppercase tracking-[0.18em] text-forest/65">Employer</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">Company name<input value={company} onChange={(e) => setCompany(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Company address<input value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Employee")}</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Employee")}</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <label className="text-sm font-bold text-forest">Full name<input value={employeeName} onChange={(e) => setEmployeeName(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Employee ID<input value={employeeId} onChange={(e) => setEmployeeId(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -233,7 +233,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">Date of joining<input type="date" value={doj} onChange={(e) => setDoj(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Pay period</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/65">Pay period</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           <label className="text-sm font-bold text-forest">Salary month<input type="month" value={payMonth} onChange={(e) => setPayMonth(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
           <label className="text-sm font-bold text-forest">Pay date<input type="date" value={payDate} onChange={(e) => setPayDate(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -241,10 +241,10 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <label className="text-sm font-bold text-forest">LOP days<input type="number" min={0} max={31} value={lopDays} onChange={(e) => setLopDays(e.target.value)} className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
         </div>
 
-        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/50">Earnings &amp; deductions ({moneySymbol(lang)})</p>
+        <p className="mt-5 text-xs font-black uppercase tracking-[0.18em] text-forest/65">Earnings &amp; deductions ({moneySymbol(lang)})</p>
         <div className="mt-2 grid gap-4 sm:grid-cols-2">
           <div className="space-y-2 rounded-2xl bg-mint/60 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-forest/60">{tr("Earnings")}</p>
+            <p className="text-xs font-black uppercase tracking-wide text-forest/65">{tr("Earnings")}</p>
             {([["basic", "Basic salary"], ["hra", "HRA"], ["conveyance", "Conveyance"], ["special", "Special allowance"], ["otherEarn", "Other / bonus"]] as const).map(([key, label]) => (
               <label key={key} className="flex items-center justify-between gap-2 text-xs font-bold text-forest">
                 <span>{label}</span>
@@ -254,7 +254,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <p className="flex justify-between border-t border-forest/10 pt-2 text-xs font-black text-forest"><span>Gross earnings</span><span>{money(totals.gross)}</span></p>
           </div>
           <div className="space-y-2 rounded-2xl bg-red-50/70 p-3">
-            <p className="text-xs font-black uppercase tracking-wide text-forest/60">{tr("Deductions")}</p>
+            <p className="text-xs font-black uppercase tracking-wide text-forest/65">{tr("Deductions")}</p>
             {([["pf", "Provident fund"], ["pt", "Professional tax"], ["tds", "TDS"], ["otherDed", "Other"]] as const).map(([key, label]) => (
               <label key={key} className="flex items-center justify-between gap-2 text-xs font-bold text-forest">
                 <span>{label}</span>
@@ -279,24 +279,24 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <header className="flex flex-col gap-3 border-b-2 border-forest pb-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h2 className="text-2xl font-black uppercase tracking-tight text-forest">{company || "Your Company"}</h2>
-            <p className="text-xs font-semibold text-forest/60">{companyAddress}</p>
+            <p className="text-xs font-semibold text-forest/65">{companyAddress}</p>
           </div>
           <div className="rounded-xl bg-mint p-3 text-right">
-            <p className="text-[10px] font-bold uppercase tracking-widest text-forest/55">{tr("Salary slip")}</p>
+            <p className="text-[10px] font-bold uppercase tracking-widest text-forest/65">{tr("Salary slip")}</p>
             <p className="text-sm font-black text-forest">{monthLabel(payMonth, DOC_DATE_LOCALE[lang])}</p>
           </div>
         </header>
 
         <section className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 rounded-xl bg-cream p-4 text-sm sm:grid-cols-3">
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">{tr("Employee")}</span><strong className="text-forest">{employeeName || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Employee ID</span><strong className="text-forest">{employeeId || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Designation</span><strong className="text-forest">{designation || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Department</span><strong className="text-forest">{department || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">PAN</span><strong className="text-forest">{pan || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Date of joining</span><strong className="text-forest">{doj || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Paid days</span><strong className="text-forest">{paidDays || "—"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">LOP days</span><strong className="text-forest">{lopDays || "0"}</strong></p>
-          <p><span className="block text-[10px] font-bold uppercase text-forest/50">Pay date</span><strong className="text-forest">{payDate}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">{tr("Employee")}</span><strong className="text-forest">{employeeName || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Employee ID</span><strong className="text-forest">{employeeId || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Designation</span><strong className="text-forest">{designation || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Department</span><strong className="text-forest">{department || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">PAN</span><strong className="text-forest">{pan || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Date of joining</span><strong className="text-forest">{doj || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Paid days</span><strong className="text-forest">{paidDays || "—"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">LOP days</span><strong className="text-forest">{lopDays || "0"}</strong></p>
+          <p><span className="block text-[10px] font-bold uppercase text-forest/65">Pay date</span><strong className="text-forest">{payDate}</strong></p>
         </section>
 
         <section className="mt-4 overflow-hidden rounded-xl border border-forest/10">
@@ -325,7 +325,7 @@ export function SalarySlipGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
         </section>
 
-        <footer className="mt-5 flex items-end justify-between text-xs text-forest/60">
+        <footer className="mt-5 flex items-end justify-between text-xs text-forest/65">
           <p>This is a computer-generated payslip and does not require a physical signature.</p>
           <p className="shrink-0 pl-4 text-[10px] font-semibold uppercase tracking-widest text-forest/40">Pro UPI QR</p>
         </footer>

@@ -104,7 +104,7 @@ export const MerchantSettings: React.FC = () => {
               <button 
                 type="button"
                 onClick={() => setRevealKey(!revealKey)}
-                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
+                className="px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg"
               >
                 {revealKey ? "Hide" : "Reveal"}
               </button>
@@ -129,7 +129,7 @@ export const MerchantSettings: React.FC = () => {
               maxLength={80}
               required
               placeholder="e.g. Sharma General Store"
-              className="w-full sm:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
+              className="w-full sm:w-96 px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-[border-color,box-shadow] duration-150"
             />
             <p className="text-xs text-gray-500 mt-1">Shown to customers on hosted checkout pages.</p>
           </div>
@@ -153,7 +153,7 @@ export const MerchantSettings: React.FC = () => {
             <button 
               type="submit" 
               disabled={saving}
-              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50 transition-colors"
+              className="px-6 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg shadow-sm disabled:opacity-50"
             >
               {saving ? "Saving..." : "Save Settings"}
             </button>

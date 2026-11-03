@@ -53,7 +53,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               value={vpa}
               onChange={(e) => setVpa(e.target.value)}
               placeholder="e.g. name@okicici or 9876543210@ybl"
-              className="w-full px-4 py-3 rounded-xl border border-forest/20 focus:border-leaf focus:ring-2 focus:ring-leaf/20 font-mono text-sm outline-none transition-all"
+              className="w-full px-4 py-3 rounded-xl border border-forest/20 focus:border-leaf focus:ring-2 focus:ring-leaf/20 font-mono text-sm outline-none transition-[border-color,box-shadow]"
             />
           </div>
 
@@ -106,7 +106,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h4 className="text-base font-black text-forest flex items-center gap-2">
               🔗 Raw UPI Intent Link
             </h4>
-            <p className="text-xs text-forest/60 mt-1">
+            <p className="text-xs text-forest/65 mt-1">
               Works directly on mobile browsers to launch Google Pay, PhonePe, Paytm, or BHIM.
             </p>
             <div className="mt-3 p-3 bg-mint/50 border border-leaf/20 rounded-2xl">
@@ -119,7 +119,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="flex gap-2">
             <button
               onClick={() => copyToClipboard(upiUri, "uri")}
-              className="flex-1 py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold transition-all"
+              className="flex-1 py-2.5 px-4 rounded-xl bg-forest text-white hover:bg-graphite text-xs font-bold"
             >
               {copiedField === "uri" ? "✓ Copied Link!" : "Copy Intent URI"}
             </button>
@@ -128,7 +128,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               href={whatsappShareUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="py-2.5 px-4 rounded-xl bg-[#25D366] text-white hover:opacity-90 text-xs font-bold transition-all flex items-center gap-1.5"
+              className="py-2.5 px-4 rounded-xl bg-[#25D366] text-white hover:opacity-90 text-xs font-bold transition-opacity flex items-center gap-1.5"
             >
               Share via WhatsApp
             </a>
@@ -141,7 +141,7 @@ export function UpiLinkGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <h4 className="text-base font-black text-forest flex items-center gap-2">
               HTML Payment Button Code
             </h4>
-            <p className="text-xs text-forest/60 mt-1">
+            <p className="text-xs text-forest/65 mt-1">
               Paste this HTML snippet into your website, invoice email, or HTML landing page.
             </p>
             <div className="mt-3 p-3 bg-slate-900 text-slate-100 rounded-2xl font-mono text-[11px] overflow-x-auto select-all">

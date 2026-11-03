@@ -389,7 +389,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               <input aria-label="Entry description" value={item.name} onChange={(e) => updateItem(item.id, "name", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="Quantity" type="number" value={item.qty} onChange={(e) => updateItem(item.id, "qty", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="Price" type="number" value={item.price} onChange={(e) => updateItem(item.id, "price", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/60 hover:text-red-600" aria-label="Remove entry">×</button>
+              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/65 hover:text-red-600" aria-label="Remove entry">×</button>
             </div>
           ))}
         </div>
@@ -415,7 +415,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <section className="mt-6 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl bg-cream p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{t.receivedFrom}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">{t.receivedFrom}</p>
             <p className="mt-2 text-lg font-black text-forest">{customer || t.customerFallback}</p>
             {customerPhone && <p className="text-sm font-semibold text-forest/65">{customerPhone}</p>}
           </div>
@@ -446,7 +446,7 @@ export function ReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="max-w-md"><strong className="text-forest">{t.notes}</strong> {notes}</div>
           <div className="text-center">
             <p className="border-t border-forest/30 pt-2 font-bold text-forest">{receivedBy}</p>
-            <p className="text-xs text-forest/55">{t.authorised}</p>
+            <p className="text-xs text-forest/65">{t.authorised}</p>
           </div>
         </footer>
       </article>

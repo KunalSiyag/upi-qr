@@ -72,7 +72,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="flex gap-2">
           <button
             onClick={() => setActiveTab("builder")}
-            className={`px-5 py-2.5 rounded-2xl text-xs font-black transition-all ${
+            className={`px-5 py-2.5 rounded-2xl text-xs font-black ${
               activeTab === "builder"
                 ? "bg-forest text-white shadow-md"
                 : "bg-cream text-forest/70 hover:bg-mint"
@@ -144,7 +144,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                     placeholder="https://g.page/r/your-google-review-link"
                     className="w-full px-4 py-2.5 rounded-xl border border-forest/20 text-xs font-mono text-forest outline-none focus:border-leaf"
                   />
-                  <p className="text-[11px] text-forest/60 mt-1">
+                  <p className="text-[11px] text-forest/65 mt-1">
                     The QR opens this HTTPS review link directly. No tracking redirect is inserted.
                   </p>
                 </div>
@@ -225,7 +225,7 @@ export function SurveyQrGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                   <a
                     href={qrDataUrl}
                     download="feedback-survey-qr.png"
-                    className="block w-full py-2.5 rounded-xl bg-mint border border-leaf/20 text-forest text-xs font-bold hover:bg-graphite hover:text-white transition-all"
+                    className="block w-full py-2.5 rounded-xl bg-mint border border-leaf/20 text-forest text-xs font-bold hover:bg-graphite hover:text-white transition-colors"
                   >
                     Download PNG QR
                   </a>

@@ -245,10 +245,10 @@ export function CreditNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
               <input aria-label="Quantity" type="number" value={item.qty} onChange={(e) => updateItem(item.id, "qty", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="Rate" type="number" value={item.rate} onChange={(e) => updateItem(item.id, "rate", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
               <input aria-label="GST percent" type="number" value={item.gst} onChange={(e) => updateItem(item.id, "gst", e.target.value)} className="rounded-xl border border-forest/10 px-3 py-2" />
-              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/60 hover:text-red-600" aria-label="Remove item">×</button>
+              <button onClick={() => removeItem(item.id)} className="rounded-xl bg-white text-forest/65 hover:text-red-600" aria-label="Remove item">×</button>
             </div>
           ))}
-          <p className="text-[11px] font-semibold text-forest/50">{tr("Columns: description · qty · rate ₹ · GST %")}</p>
+          <p className="text-[11px] font-semibold text-forest/65">{tr("Columns: description · qty · rate ₹ · GST %")}</p>
         </div>
 
         <label className="mt-4 block text-sm font-bold text-forest">{tr("Notes")}<textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={2} placeholder="Extra details for the reason above…" className="mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-medium outline-none focus:border-leaf" /></label>
@@ -271,13 +271,13 @@ export function CreditNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <section className="mt-5 grid gap-4 sm:grid-cols-2">
           <div className="rounded-2xl bg-cream p-4">
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Credited to")}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Credited to")}</p>
             <p className="mt-1 text-lg font-black text-forest">{recipientName || "Customer"}</p>
             {recipientGstin && <p className="text-xs font-semibold text-forest/65">GSTIN: {recipientGstin}</p>}
             {recipientAddress && <p className="text-xs font-semibold text-forest/65">{recipientAddress}</p>}
           </div>
           <div className={`rounded-2xl p-4 ${missingInvoiceRef ? "border-2 border-dashed border-red-300 bg-red-50" : "bg-cream"}`}>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/50">{tr("Original invoice")}</p>
+            <p className="text-xs font-black uppercase tracking-[0.18em] text-forest/65">{tr("Original invoice")}</p>
             <p className={`mt-1 text-lg font-black ${missingInvoiceRef ? "text-red-600" : "text-forest"}`}>{missingInvoiceRef ? "Reference required" : origInvoiceNo}</p>
             {origInvoiceDate && <p className="text-xs font-semibold text-forest/65">{tr("Dated:")} {origInvoiceDate}</p>}
             {missingInvoiceRef && <p className="mt-1 text-[11px] font-semibold leading-4 text-red-600">A credit note must reference the original tax invoice number under Section 34(1).</p>}
@@ -311,7 +311,7 @@ export function CreditNoteGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
           <div className="shrink-0 text-center">
             <p className="border-t border-forest/30 pt-2 font-bold text-forest">{signatory}</p>
-            <p className="text-[10px] uppercase tracking-wide text-forest/50">for {supplierName || "Your Business"}</p>
+            <p className="text-[10px] uppercase tracking-wide text-forest/65">for {supplierName || "Your Business"}</p>
           </div>
         </footer>
       </article>

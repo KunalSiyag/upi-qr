@@ -74,7 +74,7 @@ export function ReviewForm() {
             return (
               <label
                 key={star}
-                className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[10px] border px-3 text-sm font-black transition ${
+                className={`inline-flex min-h-11 min-w-11 cursor-pointer items-center justify-center rounded-[10px] border px-3 text-sm font-black transition active:scale-[0.97] has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-leaf ${
                   star <= rating
                     ? "border-sun bg-sun/15 text-forest"
                     : "border-forest/10 bg-cream text-forest/40"
@@ -96,7 +96,7 @@ export function ReviewForm() {
             );
           })}
         </div>
-        <p className="text-xs font-semibold tabular-nums text-forest/60">{rating} out of 5</p>
+        <p className="text-xs font-semibold tabular-nums text-forest/65">{rating} out of 5</p>
       </fieldset>
 
       <div className="mt-5 grid gap-4 sm:grid-cols-2">
@@ -109,7 +109,7 @@ export function ReviewForm() {
             value={name}
             onChange={(event) => setName(event.target.value)}
             placeholder="e.g. Ananya"
-            className="mt-1.5 w-full rounded-2xl border border-forest/15 bg-cream px-3.5 py-2.5 text-sm font-medium text-forest outline-none transition focus-visible:ring-2 focus-visible:ring-leaf"
+            className="mt-1.5 w-full rounded-2xl border border-forest/15 bg-cream px-3.5 py-2.5 text-base font-medium text-forest outline-none transition focus-visible:ring-2 focus-visible:ring-leaf sm:text-sm"
             required
             minLength={2}
           />
@@ -169,7 +169,7 @@ export function ReviewForm() {
       </label>
 
       {error && (
-        <p className="mt-3 text-sm font-semibold text-coral" role="alert">
+        <p className="mt-3 text-sm font-semibold text-[#a8321d]" role="alert">
           {error}
         </p>
       )}
@@ -194,7 +194,7 @@ export function ReviewForm() {
           Or review on Product Hunt
         </a>
       </div>
-      <p className="mt-3 text-xs leading-5 text-forest/55">
+      <p className="mt-3 text-xs leading-5 text-forest/65">
         Reviews stay in your mail app until you send them. We do not store the form on our servers. Quotes go live only after a reply from us.
       </p>
     </form>

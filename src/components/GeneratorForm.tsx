@@ -842,7 +842,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
           </div>
         )}
         {!generated && (
-          <p className="mx-auto mt-3 max-w-[15rem] text-[11px] leading-relaxed text-forest/60">
+          <p className="mx-auto mt-3 max-w-[15rem] text-[11px] leading-relaxed text-forest/65">
             {t.enterDetailsClick}
           </p>
         )}
@@ -905,18 +905,18 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                 
                 <div className="grid grid-cols-2 gap-3 text-xs">
                   <div className="rounded-xl bg-forest/5 p-2.5" style={labelBgStyle}>
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Amount</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>Amount</p>
                     <p className="mt-0.5 font-extrabold text-forest text-sm" style={textColorStyle}>{amountLabel}</p>
                   </div>
                   <div className="rounded-xl bg-forest/5 p-2.5" style={labelBgStyle}>
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>UPI ID</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>UPI ID</p>
                     <p className="mt-0.5 font-extrabold text-forest truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
 
                 {form.note.trim() && (
                   <div className="rounded-xl bg-forest/5 p-2.5 text-xs" style={labelBgStyle}>
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Message</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>Message</p>
                     <p className="mt-0.5 font-semibold text-forest truncate" style={textColorStyle}>{noteLabel}</p>
                   </div>
                 )}
@@ -1076,22 +1076,22 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                 style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
               >
                 <div className="text-center border-b border-coral/10 pb-2" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
-                  <p className="text-[10px] uppercase tracking-wider text-forest/50 font-bold" style={textSubColorStyle}>Merchant Partner</p>
+                  <p className="text-[10px] uppercase tracking-wider text-forest/65 font-bold" style={textSubColorStyle}>Merchant Partner</p>
                   <p className="text-lg font-black text-forest truncate" style={textColorStyle}>{payeeLabel}</p>
                 </div>
 
                 <div className="space-y-1.5 text-xs text-forest/80" style={textColorStyle}>
                   <div className="flex justify-between">
-                    <span className="font-semibold text-forest/60" style={textSubColorStyle}>Amount Payable:</span>
+                    <span className="font-semibold text-forest/65" style={textSubColorStyle}>Amount Payable:</span>
                     <span className="font-bold text-forest" style={textColorStyle}>{amountLabel}</span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="font-semibold text-forest/60" style={textSubColorStyle}>VPA Address:</span>
+                    <span className="font-semibold text-forest/65" style={textSubColorStyle}>VPA Address:</span>
                     <span className="font-bold text-forest truncate max-w-[120px]" style={textColorStyle}>{upiLabel}</span>
                   </div>
                   {form.note.trim() && (
                     <div className="flex justify-between pt-1 border-t border-coral/10" style={isCustomTheme ? { borderColor: `${form.customTextColor}15` } : {}}>
-                      <span className="font-semibold text-forest/60" style={textSubColorStyle}>Order Note:</span>
+                      <span className="font-semibold text-forest/65" style={textSubColorStyle}>Order Note:</span>
                       <span className="font-bold text-forest truncate max-w-[120px]" style={textColorStyle}>{noteLabel}</span>
                     </div>
                   )}
@@ -1118,7 +1118,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
               {coverTopBlock}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-leaf animate-pulse" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
+                  <span className="w-2 h-2 rounded-full bg-leaf" style={isCustomTheme ? { backgroundColor: form.customTextColor } : {}} />
                   <p className="text-[10px] font-black uppercase tracking-[0.2em] text-leaf" style={textSubColorStyle}>
                     {activeTemplate.kicker}
                   </p>
@@ -1145,7 +1145,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                   className="rounded-xl border border-leaf/10 bg-mint/20 p-3"
                   style={isCustomTheme ? { backgroundColor: `${form.customTextColor}08`, borderColor: `${form.customTextColor}15` } : {}}
                 >
-                  <p className="text-[9px] uppercase tracking-wider text-forest/50 font-bold" style={textSubColorStyle}>Recipient</p>
+                  <p className="text-[9px] uppercase tracking-wider text-forest/65 font-bold" style={textSubColorStyle}>Recipient</p>
                   <p className="text-base font-black text-forest truncate" style={textColorStyle}>{payeeLabel}</p>
                   {customLabel ? (
                     <p className="text-xs font-bold text-leaf mt-1 truncate" style={textColorStyle}>
@@ -1163,14 +1163,14 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                     className="rounded-xl border border-forest/10 p-2.5 bg-white"
                     style={isCustomTheme ? { backgroundColor: `${form.customBgColor}`, borderColor: `${form.customTextColor}15` } : {}}
                   >
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Requested Amount</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>Requested Amount</p>
                     <p className="mt-0.5 font-bold text-forest text-sm" style={textColorStyle}>{amountLabel}</p>
                   </div>
                   <div 
                     className="rounded-xl border border-forest/10 p-2.5 bg-white"
                     style={isCustomTheme ? { backgroundColor: `${form.customBgColor}`, borderColor: `${form.customTextColor}15` } : {}}
                   >
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>UPI Address</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>UPI Address</p>
                     <p className="mt-0.5 font-bold text-forest truncate text-sm" style={textColorStyle}>{upiLabel}</p>
                   </div>
                 </div>
@@ -1180,7 +1180,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                     className="rounded-xl border border-forest/10 p-2.5 text-xs bg-mint/5"
                     style={isCustomTheme ? { backgroundColor: `${form.customTextColor}05`, borderColor: `${form.customTextColor}15` } : {}}
                   >
-                    <p className="font-bold uppercase tracking-[0.1em] text-forest/50 text-[9px]" style={textSubColorStyle}>Reference Note</p>
+                    <p className="font-bold uppercase tracking-[0.1em] text-forest/65 text-[9px]" style={textSubColorStyle}>Reference Note</p>
                     <p className="mt-0.5 font-medium text-forest truncate" style={textColorStyle}>{noteLabel}</p>
                   </div>
                 )}
@@ -1697,9 +1697,9 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
             </div>
             {form.themeType === "custom" && (
               <div className="grid grid-cols-3 gap-2">
-                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Background</span><input type="color" value={form.customBgColor} onChange={(event) => updateField("customBgColor", event.target.value)} className="h-9 w-full rounded" /></label>
-                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Text</span><input type="color" value={form.customTextColor} onChange={(event) => updateField("customTextColor", event.target.value)} className="h-9 w-full rounded" /></label>
-                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/60">Accent</span><input type="color" value={form.customAccentColor} onChange={(event) => updateField("customAccentColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/65">Background</span><input type="color" value={form.customBgColor} onChange={(event) => updateField("customBgColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/65">Text</span><input type="color" value={form.customTextColor} onChange={(event) => updateField("customTextColor", event.target.value)} className="h-9 w-full rounded" /></label>
+                <label className="grid gap-1"><span className="text-[10px] font-bold text-forest/65">Accent</span><input type="color" value={form.customAccentColor} onChange={(event) => updateField("customAccentColor", event.target.value)} className="h-9 w-full rounded" /></label>
               </div>
             )}
           </div>
@@ -1726,7 +1726,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
               type="button"
               onClick={tab.onClick}
               aria-pressed={tab.active}
-              className={`min-w-0 flex-1 truncate rounded-[8px] px-2 py-2 text-center text-xs font-medium xl:px-3 transition-colors duration-150 ${tab.className} ${
+              className={`min-w-0 flex-1 truncate rounded-[8px] px-2 py-2 text-center text-xs font-medium xl:px-3 ${tab.className} ${
                 tab.active ? "bg-graphite text-white" : "text-charcoal hover:text-ink"
               }`}
             >
@@ -1805,7 +1805,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
             </div>
 
             {form.logoType === "custom" && (
-              <div className="space-y-2 bg-cream/40 p-3 rounded-2xl border border-forest/10 animate-fadeIn">
+              <div className="space-y-2 bg-cream/40 p-3 rounded-2xl border border-forest/10 ws-row-detail">
                 <span className="text-xs font-semibold text-forest block">{t.uploadCustomLogo}</span>
                 <input
                   type="file"
@@ -1882,7 +1882,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                 <span className="flex items-center gap-2">
                   {t.addAmountNote}
                 </span>
-                <span className="text-forest/60 text-[10px]">
+                <span className="text-forest/65 text-[10px]">
                   {showOptionalFields ? t.hide : t.configure}
                 </span>
               </button>
@@ -1911,7 +1911,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                       />
                     </label>
                   </div>
-                  <div className="text-[10px] text-forest/60 leading-tight overflow-hidden">
+                  <div className="text-[10px] text-forest/65 leading-tight overflow-hidden">
                     {t.amountHelper}
                   </div>
                 </div>
@@ -1977,7 +1977,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                   <p className="text-xs text-forest/70 font-semibold">
                     {form.upiId.trim() || t.yourNameBank}
                   </p>
-                  <p className="truncate text-[10px] text-forest/50">{upiUrl}</p>
+                  <p className="truncate text-[10px] text-forest/65">{upiUrl}</p>
                 </div>
               </div>
             ) : (
@@ -1988,7 +1988,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
                 <p className="text-sm font-semibold text-forest/80">
                   {t.enterDetailsClick}
                 </p>
-                <p className="text-xs text-forest/60 max-w-[220px]">
+                <p className="text-xs text-forest/65 max-w-[220px]">
                   {t.instantScanToPay}
                 </p>
               </div>
@@ -2027,7 +2027,7 @@ export function GeneratorForm({ presetType, lang = "en", fullScreen = false, chi
               ref={previewCustomizeRef}
               type="button"
               onClick={() => (showBrandingFields || panel === "customize" ? closeCustomize(true) : openCustomize())}
-              className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-medium ring-1 ring-inset transition-colors duration-150 ${showBrandingFields || panel === "customize" ? "bg-graphite text-white ring-graphite" : "bg-white text-ink ring-hairline hover:bg-fog"}`}
+              className={`inline-flex items-center gap-1.5 rounded-[8px] px-3 py-1.5 text-xs font-medium ring-1 ring-inset ${showBrandingFields || panel === "customize" ? "bg-graphite text-white ring-graphite" : "bg-white text-ink ring-hairline hover:bg-fog"}`}
               aria-expanded={showBrandingFields || panel === "customize"}
             >
               <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} aria-hidden="true"><path strokeLinecap="round" strokeLinejoin="round" d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0M14 4v4M8 10v4M16 16v4" /></svg>

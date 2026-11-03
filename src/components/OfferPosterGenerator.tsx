@@ -89,7 +89,7 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
                   key={t.id}
                   type="button"
                   onClick={() => setTheme(t.id as any)}
-                  className={`py-2 rounded-xl text-xs font-bold transition-all border ${
+                  className={`py-2 rounded-xl text-xs font-bold border ${
                     theme === t.id ? "bg-forest text-white border-forest" : "bg-mint/40 text-forest border-forest/10"
                   }`}
                 >
@@ -197,7 +197,7 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           
           <div
             ref={posterRef}
-            className={`mx-auto max-w-sm rounded-3xl border-4 p-6 text-center space-y-5 shadow-2xl transition-all ${
+            className={`mx-auto max-w-sm rounded-3xl border-4 p-6 text-center space-y-5 shadow-2xl transition-colors ${
               theme === "festive" ? "border-amber-700 bg-amber-50" :
               theme === "clearance" ? "border-red-700 bg-red-50" :
               theme === "cashback" ? "border-emerald-700 bg-emerald-50" : "border-slate-800 bg-white"
@@ -226,7 +226,7 @@ export function OfferPosterGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
             <div>
               <div className="text-xs font-black text-forest uppercase">Scan to Pay via UPI</div>
-              <div className="text-[10px] text-forest/60 mt-0.5 font-mono">{vpa}</div>
+              <div className="text-[10px] text-forest/65 mt-0.5 font-mono">{vpa}</div>
             </div>
           </div>
         </div>

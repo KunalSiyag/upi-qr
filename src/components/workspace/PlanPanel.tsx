@@ -86,7 +86,7 @@ export function PlanPanel({ signedIn, onFlash, businesses, onPlanChange }: {
     const upgrade = new URLSearchParams(location.search).get("upgrade");
     if (upgrade === "monthly" || upgrade === "yearly") {
       setIntent(upgrade);
-      setTimeout(() => panel.current?.scrollIntoView({ behavior: "smooth", block: "center" }), 300);
+      setTimeout(() => panel.current?.scrollIntoView({ behavior: "auto", block: "center" }), 300);
     }
   }, []);
 

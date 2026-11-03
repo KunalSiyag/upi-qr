@@ -72,11 +72,11 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
         <div className="mt-5 space-y-3">
           <label className="flex items-start gap-3 rounded-2xl bg-cream p-4 text-sm font-semibold text-forest">
             <input type="checkbox" checked={coveredByAct} onChange={(e) => setCoveredByAct(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#15803d]" />
-            <span>Employer covered by the Payment of Gratuity Act, 1972<br /><span className="text-xs font-medium text-forest/60">Most factories, shops &amp; establishments with 10+ employees are.</span></span>
+            <span>Employer covered by the Payment of Gratuity Act, 1972<br /><span className="text-xs font-medium text-forest/65">Most factories, shops &amp; establishments with 10+ employees are.</span></span>
           </label>
           <label className="flex items-start gap-3 rounded-2xl bg-cream p-4 text-sm font-semibold text-forest">
             <input type="checkbox" checked={applyCeiling} onChange={(e) => setApplyCeiling(e.target.checked)} className="mt-0.5 h-4 w-4 accent-[#15803d]" />
-            <span>Cap at the ₹20 lakh statutory ceiling<br /><span className="text-xs font-medium text-forest/60">Employers may pay above the cap; only ₹20L is tax-exempt.</span></span>
+            <span>Cap at the ₹20 lakh statutory ceiling<br /><span className="text-xs font-medium text-forest/65">Employers may pay above the cap; only ₹20L is tax-exempt.</span></span>
           </label>
         </div>
 
@@ -116,7 +116,7 @@ export function GratuityCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           </p>
         </div>
 
-        <p className="mt-auto pt-5 text-xs font-semibold text-forest/55">
+        <p className="mt-auto pt-5 text-xs font-semibold text-forest/65">
           Planning a farewell? Send the leaving letter with your final invoice via the <a href="/hi/invoice-generator/" className="font-bold text-leaf hover:underline">invoice tool</a> — or explore all <a href="/tools/" className="font-bold text-leaf hover:underline">money tools</a>.
         </p>
       </div>

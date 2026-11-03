@@ -28,7 +28,7 @@ const MONTHLY_PRESETS: { labelKey: string; monthly: string; ticket: string; cate
 const EXAMPLE_BILLS = [1500_00, 3000_00, 5000_00, 50000_00, 75000_00, 100000_00];
 
 function fieldClass() {
-  return "mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-mono text-lg font-bold text-forest outline-none focus-visible:border-leaf focus-visible:ring-2 focus-visible:ring-leaf";
+  return "mt-2 w-full rounded-2xl border border-forest/10 bg-cream px-4 py-3 font-mono text-lg font-bold text-forest outline-none focus-visible:border-leaf";
 }
 
 export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
@@ -163,7 +163,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               role="tab"
               aria-selected={tab === "single"}
               onClick={() => setTab("single")}
-              className={`rounded-xl py-2.5 text-sm font-bold transition-colors ${tab === "single" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
+              className={`rounded-xl py-2.5 text-sm font-bold ${tab === "single" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
             >
               {tr("One bill")}
             </button>
@@ -172,7 +172,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
               role="tab"
               aria-selected={tab === "monthly"}
               onClick={() => setTab("monthly")}
-              className={`rounded-xl py-2.5 text-sm font-bold transition-colors ${tab === "monthly" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
+              className={`rounded-xl py-2.5 text-sm font-bold ${tab === "monthly" ? "bg-forest text-white shadow" : "text-forest/70 hover:text-forest"}`}
             >
               {tr("This month")}
             </button>
@@ -203,7 +203,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                     type="button"
                     onClick={() => setAmount(preset)}
                     aria-pressed={amount === preset}
-                    className={`rounded-[7px] border px-3 py-1.5 text-[11px] font-bold transition-colors hover:border-leaf ${amount === preset ? "border-leaf bg-mint/60 text-forest" : "border-forest/15 bg-cream text-forest"}`}
+                    className={`rounded-[7px] border px-3 py-1.5 text-[11px] font-bold hover:border-leaf ${amount === preset ? "border-leaf bg-mint/60 text-forest" : "border-forest/15 bg-cream text-forest"}`}
                   >
                     {formatInrPaise(rupeesToPaise(preset), 0)}
                   </button>
@@ -223,7 +223,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                       setCategory(p.category);
                       setSmallMerchant(false);
                     }}
-                    className="rounded-[7px] border border-forest/15 bg-cream px-3 py-1.5 text-[11px] font-bold text-forest transition-colors hover:border-leaf"
+                    className="rounded-[7px] border border-forest/15 bg-cream px-3 py-1.5 text-[11px] font-bold text-forest hover:border-leaf"
                   >
                     {tr(p.labelKey)}
                   </button>
@@ -264,14 +264,14 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                   placeholder="5000"
                   className={fieldClass()}
                 />
-                <p className="mt-1.5 text-[11px] leading-5 text-forest/60">
+                <p className="mt-1.5 text-[11px] leading-5 text-forest/65">
                   {tr("What a usual UPI scan is. We count how many of those fit in the month. For one large payment, use One bill.")}
                 </p>
               </div>
             </div>
           )}
 
-          <p className="mt-5 text-xs font-black uppercase tracking-wider text-forest/50">{tr("What kind of payment?")}</p>
+          <p className="mt-5 text-xs font-black uppercase tracking-wider text-forest/65">{tr("What kind of payment?")}</p>
           <div className="mt-2 grid gap-2 sm:grid-cols-2">
             {CATEGORIES.map((c) => (
               <button
@@ -279,10 +279,10 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                 type="button"
                 onClick={() => setCategory(c.id)}
                 aria-pressed={category === c.id}
-                className={`rounded-2xl border px-3 py-2.5 text-left transition-colors ${category === c.id ? "border-leaf bg-mint/50" : "border-forest/10 bg-cream/40 hover:border-forest/25"}`}
+                className={`rounded-2xl border px-3 py-2.5 text-left ${category === c.id ? "border-leaf bg-mint/50" : "border-forest/10 bg-cream/40 hover:border-forest/25"}`}
               >
                 <div className="text-sm font-black text-forest">{c.label}</div>
-                <div className="text-[11px] text-forest/60">{c.hint}</div>
+                <div className="text-[11px] text-forest/65">{c.hint}</div>
               </button>
             ))}
           </div>
@@ -302,7 +302,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
                     {tr("Exemption only holds up to ₹1 lakh/month. This month is over that, so MDR is still applied.")}
                   </span>
                 ) : tab === "monthly" && underLakh && !smallMerchant ? (
-                  <span className="mt-1 block font-semibold text-forest/55">
+                  <span className="mt-1 block font-semibold text-forest/65">
                     {tr("Monthly UPI is under ₹1 lakh. Tick this only if the app/bank listed you as a small QR merchant.")}
                   </span>
                 ) : tab === "monthly" && !underLakh && monthlyPaise > 0 ? (
@@ -370,7 +370,7 @@ export function UpiMdrCalculator({ lang = "en" }: { lang?: DocLang } = {}) {
           <div className="mt-3 overflow-x-auto">
             <table className="w-full text-left text-xs tabular-nums">
               <thead>
-                <tr className="text-forest/50">
+                <tr className="text-forest/65">
                   <th className="pb-2 font-bold">{tr("Bill")}</th>
                   <th className="pb-2 font-bold">MDR</th>
                 </tr>

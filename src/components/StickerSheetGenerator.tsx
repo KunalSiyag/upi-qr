@@ -206,7 +206,7 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
 
       <div className="rounded-3xl border border-forest/10 bg-white p-4 sm:p-6 md:p-8 shadow-sm w-full min-w-0">
         <h2 className="text-xl font-black text-forest">{tr("Shop QR sticker")}</h2>
-        <p className="mt-1 text-xs text-forest/60">
+        <p className="mt-1 text-xs text-forest/65">
           PhonePe / GPay look on the sticker. The code is a normal UPI QR — any app can scan it.
         </p>
 
@@ -422,7 +422,7 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
             type="button"
             onClick={handleDownloadPng}
             disabled={isGenerating}
-            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-graphite focus-visible:ring-2 focus-visible:ring-leaf active:scale-95 disabled:opacity-50"
+            className="inline-flex items-center justify-center gap-2 rounded-2xl bg-forest px-6 py-3.5 text-xs font-black text-white shadow-lg transition hover:bg-graphite focus-visible:ring-2 focus-visible:ring-leaf disabled:opacity-50"
           >
             {isGenerating ? tr("Generating...") : "Download sticker PNG"}
           </button>
@@ -438,7 +438,7 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
       </div>
 
       <div className="flex flex-col items-center justify-center rounded-3xl border border-forest/10 bg-cream/20 p-4 sm:p-6 shadow-sm w-full min-w-0">
-        <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/50">A4 printable preview</h3>
+        <h3 className="mb-3 text-xs font-black uppercase tracking-widest text-forest/65">A4 printable preview</h3>
 
         <div className="w-full max-w-[420px] aspect-[1/1.414] bg-neutral-200 border border-black/10 shadow-2xl rounded-xl p-2 overflow-hidden relative">
           <div ref={sheetRef} className={`w-full h-full bg-white grid ${gridClassMap[layout]} p-1`}>
@@ -526,7 +526,7 @@ export function StickerSheetGenerator({ lang = "en" }: { lang?: DocLang } = {}) 
           </div>
         </div>
 
-        <p className="mt-3 max-w-xs text-center text-[10px] text-forest/50">
+        <p className="mt-3 max-w-xs text-center text-[10px] text-forest/65">
           Print on matte sticker paper. Test-scan at the counter before you laminate.
         </p>
       </div>

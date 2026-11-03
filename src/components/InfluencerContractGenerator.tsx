@@ -325,7 +325,7 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
             <button
               onClick={downloadPng}
               disabled={pngState === "busy"}
-              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf"
+              className="rounded-[7px] border border-forest/15 px-3.5 py-1.5 text-xs font-bold text-forest transition hover:border-leaf disabled:opacity-50"
             >
               {pngState === "busy" ? "..." : tr("Export PNG")}
             </button>
@@ -731,24 +731,24 @@ For Creator: ${creatorSignatory} (Date: ${agreementDate})`;
 
           {/* 5. Signatures */}
           <section className="mt-7 pt-4 border-t-2 border-forest">
-            <p className="text-[10px] font-bold text-forest/60 mb-4">
+            <p className="text-[10px] font-bold text-forest/65 mb-4">
               IN WITNESS WHEREOF, the parties hereto have executed this Collaboration Agreement as of the Effective Date.
             </p>
             <div className="grid grid-cols-2 gap-8 pt-4">
               <div className="border-t border-forest/30 pt-2">
                 <p className="font-bold text-forest">{brandSignatory}</p>
-                <p className="text-[10px] text-forest/60">Authorized Signatory (Brand)</p>
-                <p className="text-[10px] text-forest/60">{tr("Date")}: {agreementDate}</p>
+                <p className="text-[10px] text-forest/65">Authorized Signatory (Brand)</p>
+                <p className="text-[10px] text-forest/65">{tr("Date")}: {agreementDate}</p>
               </div>
               <div className="border-t border-forest/30 pt-2 text-right">
                 <p className="font-bold text-forest">{creatorSignatory}</p>
-                <p className="text-[10px] text-forest/60">Creator / Influencer</p>
-                <p className="text-[10px] text-forest/60">{tr("Date")}: {agreementDate}</p>
+                <p className="text-[10px] text-forest/65">Creator / Influencer</p>
+                <p className="text-[10px] text-forest/65">{tr("Date")}: {agreementDate}</p>
               </div>
             </div>
           </section>
 
-          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/50">
+          <footer className="mt-6 pt-3 border-t border-forest/10 text-center text-[9px] text-forest/65">
             Prepared with Pro UPI QR Influencer Contract Generator &bull; Private, client-side, legal-ready document.
           </footer>
         </article>

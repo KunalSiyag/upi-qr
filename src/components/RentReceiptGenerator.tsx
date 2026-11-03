@@ -224,7 +224,7 @@ export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
 
         <div className="mt-5 flex flex-wrap items-center gap-3">
           <button onClick={nextMonth} className="rounded-[7px] border border-forest/15 bg-mint px-4 py-2 text-xs font-bold text-forest hover:bg-graphite hover:text-white transition">📅 {tr("Next month + new number")}</button>
-          <p className="text-xs font-semibold text-forest/60">{tr("Tenants claiming HRA usually need one signed receipt per month.")}</p>
+          <p className="text-xs font-semibold text-forest/65">{tr("Tenants claiming HRA usually need one signed receipt per month.")}</p>
         </div>
       </div>
 
@@ -248,7 +248,7 @@ export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
             <p className="mt-2 text-3xl font-black">{money(amount)}</p>
             <p className="mt-1 text-sm font-semibold text-sun">{amountInWords(amount, docLang)}</p>
           </div>
-          {qrDataUrl && <div className="rounded-2xl border border-dashed border-forest/20 p-3 text-center"><img src={qrDataUrl} alt={tr("Scan to pay next rent")} className="mx-auto h-24 w-24 rounded-lg border border-forest/10" /><p className="mt-1 text-[10px] font-bold text-forest/60">{tr("Scan to pay next rent")}</p></div>}
+          {qrDataUrl && <div className="rounded-2xl border border-dashed border-forest/20 p-3 text-center"><img src={qrDataUrl} alt={tr("Scan to pay next rent")} className="mx-auto h-24 w-24 rounded-lg border border-forest/10" /><p className="mt-1 text-[10px] font-bold text-forest/65">{tr("Scan to pay next rent")}</p></div>}
         </section>
 
         <section className="mt-6 space-y-3 rounded-2xl bg-cream p-5 text-base leading-8 text-forest/85">
@@ -261,7 +261,7 @@ export function RentReceiptGenerator({ lang = "en" }: { lang?: DocLang } = {}) {
           </div>
           <div className="text-right">
             <p className="border-t border-forest/40 pt-2 text-lg font-black text-forest">{landlord || tr("Landlord")}</p>
-            <p className="text-xs font-semibold text-forest/60">{tr("Landlord")}{landlordPan ? ` · PAN: ${landlordPan}` : ""}</p>
+            <p className="text-xs font-semibold text-forest/65">{tr("Landlord")}{landlordPan ? ` · PAN: ${landlordPan}` : ""}</p>
           </div>
         </footer>
       </article>

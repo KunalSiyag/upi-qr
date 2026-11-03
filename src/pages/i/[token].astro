@@ -235,7 +235,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
           {statement && sections.length > 0 && statement.lines.length > 0 && <p class="text-sm font-black">Rupee invoices · pay by UPI</p>}
           {statement && statement.lines.length > 0 && (
             <table class="w-full text-left text-sm">
-              <thead><tr class="text-xs text-forest/50"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
+              <thead><tr class="text-xs text-forest/65"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
               <tbody>
                 {statement.lines.map((line) => (
                   <tr class="border-t border-forest/5">
@@ -262,21 +262,21 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
             <>
               <a href={upiIntent} class="block rounded-2xl bg-forest px-4 py-4 text-center text-base font-black text-white hover:bg-graphite">Pay {formatPaise(view.balancePaise)} with any UPI app</a>
               <div class="text-center">
-                <p class="text-xs font-bold text-forest/60">On a computer? Scan with your phone</p>
+                <p class="text-xs font-bold text-forest/65">On a computer? Scan with your phone</p>
                 <img src={qr} alt={`UPI QR code to pay ${formatPaise(view.balancePaise)} to ${view.merchantName}`} width="224" height="224" class="mx-auto mt-2 rounded-2xl border border-forest/10" />
-                <p class="mt-2 text-xs text-forest/60">UPI ID: <strong class="select-all font-mono text-forest">{view.upiId}</strong></p>
-                <p class="mt-1 text-[11px] text-forest/50">Check the payee name and amount in your UPI app before entering your PIN.</p>
+                <p class="mt-2 text-xs text-forest/65">UPI ID: <strong class="select-all font-mono text-forest">{view.upiId}</strong></p>
+                <p class="mt-1 text-[11px] text-forest/65">Check the payee name and amount in your UPI app before entering your PIN.</p>
               </div>
 
               {!claimed && (
                 <form method="POST" class="rounded-2xl border border-forest/10 bg-cream p-4">
                   <p class="text-sm font-black">Already paid?</p>
-                  <p class="mt-1 text-xs text-forest/60">Send the UTR from your UPI app so {view.merchantName} can match your payment.</p>
+                  <p class="mt-1 text-xs text-forest/65">Send the UTR from your UPI app so {view.merchantName} can match your payment.</p>
                   {claimError && <p role="alert" class="mt-2 text-xs font-bold text-[#a8321d]">{claimError}</p>}
                   <label for="utr" class="mt-3 block text-xs font-bold text-forest/70">UTR / reference number</label>
                   <input id="utr" name="utr" required minlength="10" maxlength="35" pattern="[A-Za-z0-9]{10,35}" inputmode="numeric" autocomplete="off" placeholder="412345678901" class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
                   <label for="amount" class="mt-3 block text-xs font-bold text-forest/70">{sections.length > 0 ? "Amount paid (₹)" : `Amount paid${statement ? "" : " (optional)"}`}</label>
-                  {sections.length > 0 && <p class="mt-0.5 text-[11px] text-forest/50">For the UPI / ₹ part only.</p>}
+                  {sections.length > 0 && <p class="mt-0.5 text-[11px] text-forest/65">For the UPI / ₹ part only.</p>}
                   <input id="amount" name="amount" inputmode="decimal" autocomplete="off" maxlength="14" required={Boolean(statement)} placeholder={upiAmount(view.balancePaise)} class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 text-sm outline-none focus:border-leaf" />
                   <button type="submit" class="mt-3 w-full rounded-xl bg-white px-4 py-2.5 text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Send payment reference</button>
                 </form>
@@ -292,7 +292,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
               <section class="space-y-3 border-t border-forest/10 pt-5" aria-label={`${section.currency} invoices`}>
                 <p class="text-sm font-black">{section.currency} invoices · pay by bank transfer</p>
                 <table class="w-full text-left text-sm">
-                  <thead><tr class="text-xs text-forest/50"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
+                  <thead><tr class="text-xs text-forest/65"><th class="pb-1 font-bold">Invoice</th><th class="pb-1 font-bold">Due</th><th class="pb-1 text-right font-bold">Amount</th></tr></thead>
                   <tbody>
                     {section.lines.map((line) => (
                       <tr class="border-t border-forest/5">
@@ -309,7 +309,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
                     {sectionPay.url && <a href={sectionPay.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {sectionPay.host}</a>}
                     {sectionPay.rows.length > 0 && (
                       <dl class="space-y-1 rounded-2xl bg-cream p-4 text-sm">
-                        {sectionPay.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                        {sectionPay.rows.map(([label, value]) => <div><dt class="text-xs text-forest/65">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
                       </dl>
                     )}
                     {!sectionPay.url && sectionPay.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
@@ -323,21 +323,21 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
               {sharedBlock.url && <a href={sharedBlock.url} target="_blank" rel="noopener noreferrer nofollow" class="block rounded-2xl bg-white px-4 py-3 text-center text-sm font-black text-forest ring-1 ring-forest/15 hover:bg-mint">Pay on {sharedBlock.host}</a>}
               {sharedBlock.rows.length > 0 && (
                 <dl class="space-y-1 rounded-2xl bg-cream p-4 text-sm">
-                  {sharedBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                  {sharedBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/65">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
                 </dl>
               )}
               {!sharedBlock.url && sharedBlock.rows.length === 0 && <p class="text-sm text-forest/70">The sender hasn't added payment details yet. Contact them to pay.</p>}
             </div>
           )}
           {sections.length > 0 && (
-            <p class="text-xs text-forest/60">After a bank transfer, send the transfer reference to {view.merchantName}. Use the invoice numbers as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
+            <p class="text-xs text-forest/65">After a bank transfer, send the transfer reference to {view.merchantName}. Use the invoice numbers as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
           )}
           {sections.length > 0 && statement?.exportNote && exportNumbers.length > 0 && (
-            <p class="text-[11px] leading-4 text-forest/50">{allExport ? statement.exportNote : `${exportNumbers.join(", ")}: ${statement.exportNote}`}</p>
+            <p class="text-[11px] leading-4 text-forest/65">{allExport ? statement.exportNote : `${exportNumbers.join(", ")}: ${statement.exportNote}`}</p>
           )}
         </div>
 
-        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
+        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/65">
           {sections.length > 0 ? (
             <Fragment>Money goes straight to {view.merchantName}'s UPI, bank or payment account. Pro UPI QR never holds or processes payments, and only {view.merchantName} can mark these invoices paid.</Fragment>
           ) : (
@@ -367,7 +367,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
         </div>
 
         <div class="space-y-5 p-6">
-          {foreign.exportNote && <p class="text-[11px] leading-4 text-forest/50">{foreign.exportNote}</p>}
+          {foreign.exportNote && <p class="text-[11px] leading-4 text-forest/65">{foreign.exportNote}</p>}
           {foreign.state === "paid" && <p class="text-center text-sm text-forest/70">This invoice is fully paid. Thank you!</p>}
           {foreign.state === "void" && <p class="text-center text-sm text-forest/70">The sender cancelled this invoice. Nothing is due.</p>}
 
@@ -387,9 +387,9 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
                 <div>
                   <p class="text-sm font-black">{foreignBlock.url ? "Or pay by bank transfer" : "Pay by bank transfer"}</p>
                   <dl class="mt-2 space-y-1 rounded-2xl bg-cream p-4 text-sm">
-                    {foreignBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/60">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
+                    {foreignBlock.rows.map(([label, value]) => <div><dt class="text-xs text-forest/65">{label}</dt><dd class="select-all whitespace-pre-line break-words font-mono">{value}</dd></div>)}
                   </dl>
-                  <p class="mt-2 text-xs text-forest/60">Use {foreign.invoiceNumber} as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
+                  <p class="mt-2 text-xs text-forest/65">Use {foreign.invoiceNumber} as the payment reference. International transfers can take 1–5 working days, and banks may charge fees.</p>
                 </div>
               )}
               {!foreignBlock.url && foreignBlock.rows.length === 0 && (
@@ -399,7 +399,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
               {!claimed && (foreignBlock.url || foreignBlock.rows.length > 0) && (
                 <form method="POST" class="rounded-2xl border border-forest/10 bg-cream p-4">
                   <p class="text-sm font-black">Sent the payment?</p>
-                  <p class="mt-1 text-xs text-forest/60">Send the transfer reference so {foreign.merchantName} can match your payment.</p>
+                  <p class="mt-1 text-xs text-forest/65">Send the transfer reference so {foreign.merchantName} can match your payment.</p>
                   {claimError && <p role="alert" class="mt-2 text-xs font-bold text-[#a8321d]">{claimError}</p>}
                   <label for="ref" class="mt-3 block text-xs font-bold text-forest/70">Transfer reference (from your bank, PayPal or Wise)</label>
                   <input id="ref" name="ref" required minlength="6" maxlength="40" pattern="[A-Za-z0-9][A-Za-z0-9\/\-]{5,39}" autocomplete="off" class="mt-1 w-full rounded-xl border border-forest/15 bg-white px-3 py-2.5 font-mono text-sm outline-none focus:border-leaf" />
@@ -413,7 +413,7 @@ const card = "overflow-hidden rounded-[14px] border border-forest/10 bg-white sh
           {claimError && !foreignPayable && !claimed && <p role="alert" class="text-center text-xs font-bold text-[#a8321d]">{claimError}</p>}
         </div>
 
-        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/60">
+        <div class="border-t border-forest/5 bg-cream/60 px-6 py-4 text-center text-[11px] leading-5 text-forest/65">
           Money goes straight to {foreign.merchantName}'s bank or payment account. Pro UPI QR never handles it.
         </div>
       </div>

@@ -161,7 +161,7 @@ const help = "mt-2 text-sm leading-6 text-charcoal";
 const primary =
   "inline-flex min-h-[44px] items-center justify-center rounded-[10px] bg-forest px-5 py-3 text-sm font-semibold text-white transition hover:bg-graphite";
 const secondary =
-  "inline-flex min-h-[44px] cursor-pointer items-center justify-center rounded-[10px] bg-white px-5 py-3 text-sm font-semibold text-forest ring-1 ring-forest/15 transition hover:ring-forest/30";
+  "inline-flex min-h-[44px] cursor-pointer items-center justify-center rounded-[10px] bg-white px-5 py-3 text-sm font-semibold text-forest ring-1 ring-forest/15 transition hover:ring-forest/30 active:scale-[0.97]";
 const field =
   "mt-2 w-full rounded-[10px] border border-forest/15 bg-white px-4 py-3 text-base text-forest placeholder:text-forest/65 focus:border-leaf";
 const focusRing = "peer-focus-visible:outline peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-leaf";
