@@ -1,0 +1,150 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { DepositCalculator } from "../components/DepositCalculator";
+
+const title = "FD Calculator: Maturity, Monthly Payout and Interest | Pro UPI QR";
+const description = "Fixed deposit maturity value and interest for cumulative, monthly, quarterly or yearly payout, with a year-by-year table and an after-tax estimate. Free.";
+
+const faqs = [
+  {
+    "question": "How is the maturity value of an FD calculated?",
+    "answer": "For a cumulative FD, interest is worked out each compounding period and added to the deposit. ₹5 lakh at 7% for 3 years, compounded every quarter, grows to about ₹6,15,720, which is ₹1,15,720 of interest and a yearly return of about 7.19%."
+  },
+  {
+    "question": "How much does a monthly payout FD pay?",
+    "answer": "Each payout is the deposit × the rate ÷ 12, and the deposit comes back at maturity. On ₹10 lakh at 7% that is about ₹5,833 a month, or about ₹70,000 over a year. Some banks pay slightly less on monthly and quarterly payouts, so ask yours."
+  },
+  {
+    "question": "Which earns more, a payout FD or a cumulative FD?",
+    "answer": "A cumulative FD earns more in total because interest earns interest. ₹10 lakh at 7.25% for 2 years, compounded monthly, earns about ₹1,55,535, while the same deposit paying interest out earns about ₹1,45,000. The payout FD gives you income along the way instead."
+  },
+  {
+    "question": "How much of the interest goes in tax?",
+    "answer": "Enter your own tax rate and the calculator shows a rough after-tax figure. At 30%, about ₹34,716 of the ₹1,15,720 interest in the first example goes in tax, leaving about ₹81,004. It ignores cess, surcharge and when tax is deducted, so check the current rules."
+  },
+  {
+    "question": "Why might my bank show a slightly different figure?",
+    "answer": "Banks differ in how often they compound, how they round, and they often count exact days. This calculator works in whole months and rounds each credit to the paisa, so a bank's figure can differ by a few rupees."
+  },
+  {
+    "question": "Does it cover early withdrawal or senior citizen rates?",
+    "answer": "No. It models a deposit held to maturity at the rate you enter. For a senior citizen rate, enter that rate. Early-withdrawal penalties are set by each bank, so check yours."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "FD Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/fd-calculator/",
+      description,
+      featureList: ["Maturity value and interest for a cumulative FD", "Monthly, quarterly, half-yearly or yearly interest payout", "Monthly, quarterly, half-yearly or yearly compounding", "Year-by-year table and an after-tax estimate", "Schedule PDF and PNG export", "Browser-only, no signup"],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out a fixed deposit return",
+      step: [
+        {
+          "@type": "HowToStep",
+          "name": "Enter the deposit amount, interest rate and tenure"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Choose how you get the interest: at maturity or as a payout"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Read the maturity value, interest and year-by-year table"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Add your tax rate for a rough after-tax figure, then download the schedule"
+        }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">FD Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">FD calculator: maturity value and interest payout</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Enter the amount, the rate and the tenure to see what your fixed deposit pays at maturity, or what you receive every month, quarter or year.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#deposit-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Calculate my FD</a>
+            <a href="/rd-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Saving monthly? RD calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="deposit-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <DepositCalculator client:visible mode="fd" />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Money is worked in whole paise. In a cumulative FD each period's interest is rounded to the paisa and added to the balance; leftover months at the end earn simple interest.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">In a payout FD each payout is the deposit × the rate ÷ the payouts a year, and the deposit comes back at maturity. Leftover months earn simple interest, paid at maturity.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Tenure is counted in whole months, and the rate is fixed for the whole term.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The tax figure is your own rate applied to the interest, as a rough guide only.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Fixed deposit questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/fd-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

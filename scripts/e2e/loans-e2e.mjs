@@ -1,4 +1,4 @@
-// scripts/e2e/loans-e2e.mjs: the home loan, education loan and education cost calculators in a real browser. Static suite: serve the build and run
+// scripts/e2e/loans-e2e.mjs: the home loan, education loan, education cost, FD and RD calculators in a real browser. Static suite: serve the build and run
 //   BASE=http://localhost:4400 node scripts/e2e/loans-e2e.mjs
 // Expected figures come from the independent Python Decimal vectors used by `npm run test:loan` (2026-11-06), with the
 // course/first-EMI month pinned to Nov 2026 so the month labels do not depend on today's date. It covers the built pages in
@@ -25,6 +25,13 @@ const setSelect = (root, suffix, value) => b.eval(`(() => {
   Object.getOwnPropertyDescriptor(HTMLSelectElement.prototype, 'value').set.call(el, ${JSON.stringify(value)});
   el.dispatchEvent(new Event('change', { bubbles: true }));
   return true;
+})()`);
+const clickIn = (root, groupLabel, label) => b.eval(`(() => {
+  const g = [...document.querySelector(${JSON.stringify(root)}).querySelectorAll('[role=group]')].find((x) => x.getAttribute('aria-label') === ${JSON.stringify(groupLabel)});
+  if (!g) throw new Error('no group ${groupLabel}');
+  const el = [...g.querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)});
+  if (!el) throw new Error('no button ${label}');
+  el.click(); return true;
 })()`);
 const clickText = (root, label) => b.eval(`(() => {
   const el = [...document.querySelector(${JSON.stringify(root)}).querySelectorAll('button')].find((x) => x.textContent.trim() === ${JSON.stringify(label)});
@@ -64,7 +71,7 @@ try {
   await b.send("Network.setBlockedURLs", { urls: ["*clerk.accounts.dev*", "*clerk.browser.js*", "*_vercel/insights*", "*_vercel/speed-insights*"] });
 
   /* ---------------- built pages ---------------- */
-  for (const slug of ["home-loan-calculator", "education-loan-calculator", "education-cost-calculator"]) {
+  for (const slug of ["home-loan-calculator", "education-loan-calculator", "education-cost-calculator", "fd-calculator", "rd-calculator"]) {
     for (const lang of ["", "hi/", "ta/", "te/", "mr/"]) {
       const res = await fetch(`${BASE}/${lang}${slug}/`);
       check(`/${lang}${slug}/ is served`, res.status === 200);
@@ -200,6 +207,65 @@ try {
   await b.go(`${BASE}/education-cost-calculator/`, 1200); await b.eval(`document.querySelector('${P} input[id$="-cost"]').scrollIntoView(), true`); await hydrated(P); await sleep(400);
   check("education cost: the draft (currency and figures) survives a reload", (await b.eval(`document.querySelector('${P} [id$="-currency"]').value`)) === "GBP" && (await b.eval(`document.querySelector('${P} [id$="-cost"]').value`)) === "1000000");
 
+  /* ---------------- fixed deposit ---------------- */
+  const D = "#deposit-tool";
+  await open("/fd-calculator/", D);
+  check("FD: hydrates", await hydrated(D));
+  await setField(D, "start", "2026-11");
+  await clickIn(D, "How you get the interest", "At maturity"); await clickIn(D, "Interest is added to the deposit", "Every quarter");
+  await setField(D, "amount", "500000"); await setField(D, "rate", "7"); await setField(D, "years", "3"); await setField(D, "months", "0"); await setField(D, "tax", "0"); await sleep(350);
+  t = await text(D);
+  check("FD: ₹5L @ 7% for 3 years, quarterly → maturity ₹6,15,720", rx(t, /Maturity value\s*₹([\d,]+)/) === "6,15,720", t.slice(0, 500));
+  check("FD: …interest ₹1,15,720 on ₹5,00,000 invested", rx(t, /Interest earned\s*₹([\d,]+)/) === "1,15,720" && rx(t, /You invest\s*₹([\d,]+)/) === "5,00,000");
+  check("FD: …a 7.19% yearly return and it matures Nov 2029", /yearly return of 7\.19%/.test(t) && /Matures Nov 2029\./.test(t));
+  check("FD: three yearly rows, the last closing at ₹6,15,720", (await b.eval(`document.querySelectorAll('${D} tbody tr').length`)) === 3 && (await b.eval(`document.querySelector('${D} tbody tr:last-child').innerText`)).includes("₹6,15,720"));
+
+  await setField(D, "amount", "1000000"); await setField(D, "rate", "7.25"); await setField(D, "years", "2"); await clickIn(D, "Interest is added to the deposit", "Every month"); await sleep(350);
+  t = await text(D);
+  check("FD: ₹10L @ 7.25% for 2 years, monthly compounding → ₹11,55,535, interest ₹1,55,535", rx(t, /Maturity value\s*₹([\d,]+)/) === "11,55,535" && rx(t, /Interest earned\s*₹([\d,]+)/) === "1,55,535");
+
+  await setField(D, "rate", "7"); await setField(D, "years", "1"); await clickIn(D, "How you get the interest", "Every month"); await sleep(350);
+  t = await text(D);
+  check("FD: ₹10L @ 7% monthly payout → ₹5,833 a month, ₹70,000 in the year", /You receive ₹5,833 every month\./.test(t) && rx(t, /Interest you receive in all\s*₹([\d,]+)/) === "70,000");
+  check("FD: …the deposit comes back at maturity and no compounding choice is shown", /Your ₹10,00,000 comes back at maturity\./.test(t) && !/Interest is added to the deposit/.test(t));
+
+  await setField(D, "months", "2"); await clickIn(D, "How you get the interest", "Every quarter"); await sleep(350);
+  t = await text(D);
+  check("FD: 14 months, quarterly payout → ₹17,500 each, ₹11,667 for the last 2 months, ₹81,667 in all", /You receive ₹17,500 every quarter\./.test(t) && /Interest for the last 2 months is ₹11,667, paid at maturity\./.test(t) && rx(t, /Interest you receive in all\s*₹([\d,]+)/) === "81,667");
+
+  await clickIn(D, "How you get the interest", "At maturity"); await clickIn(D, "Interest is added to the deposit", "Every quarter");
+  await setField(D, "amount", "500000"); await setField(D, "years", "3"); await setField(D, "months", "0"); await setField(D, "tax", "30"); await sleep(350);
+  t = await text(D);
+  check("FD: a 30% tax rate leaves ₹81,004 of interest and ₹5,81,004 in all", /After tax at 30% the interest is ₹81,004, so you keep ₹5,81,004 in all\./.test(t));
+
+  await setField(D, "amount", "abc"); await setField(D, "rate", "26"); await setField(D, "years", "11"); await setField(D, "tax", "51"); await sleep(300);
+  t = await text(D);
+  check("FD: a bad amount, a 26% rate, 11 years and a 51% tax rate are refused", /Enter an amount between/.test(t) && /Enter a rate from 0 to 25/.test(t) && /Enter a tenure from 1 month to 10 years/.test(t) && /Enter a tax rate from 0 to 50/.test(t) && /Fix the highlighted fields/.test(t));
+  await setField(D, "amount", "500000"); await setField(D, "rate", "7"); await setField(D, "years", "3"); await setField(D, "tax", "0"); await sleep(300);
+  check("FD: fixing the inputs restores the result", rx(await text(D), /Maturity value\s*₹([\d,]+)/) === "6,15,720");
+
+  await exportsWork(D, "FD", "fixed-deposit-schedule.png");
+
+  await setField(D, "amount", "750000"); await clickIn(D, "How you get the interest", "Every year"); await sleep(300);
+  await b.go(`${BASE}/fd-calculator/`, 1200); await b.eval(`document.querySelector('${D} input[id$="-amount"]').scrollIntoView(), true`); await hydrated(D); await sleep(400);
+  check("FD: the draft (amount and payout choice) survives a reload", (await b.eval(`document.querySelector('${D} [id$="-amount"]').value`)) === "750000" && /You receive ₹52,500 every year\./.test(await text(D)));
+
+  /* ---------------- recurring deposit ---------------- */
+  await open("/rd-calculator/", D);
+  check("RD: hydrates", await hydrated(D));
+  await setField(D, "start", "2026-11"); await setField(D, "amount", "5000"); await setField(D, "rate", "7"); await setField(D, "years", "5"); await setField(D, "months", "0"); await setField(D, "tax", "0"); await sleep(350);
+  t = await text(D);
+  check("RD: ₹5,000 a month @ 7% for 5 years → maturity ₹3,59,664", rx(t, /Maturity value\s*₹([\d,]+)/) === "3,59,664", t.slice(0, 500));
+  check("RD: …₹3,00,000 deposited, ₹59,664 interest", rx(t, /You deposit\s*₹([\d,]+)/) === "3,00,000" && rx(t, /Interest earned\s*₹([\d,]+)/) === "59,664" && /Over 5 years you deposit ₹3,00,000 in all\./.test(t));
+  check("RD: five yearly rows, matures Nov 2031, no payout or compounding choice", (await b.eval(`document.querySelectorAll('${D} tbody tr').length`)) === 5 && /Matures Nov 2031\./.test(t) && !/How you get the interest/.test(t));
+  await setField(D, "amount", "10000"); await setField(D, "rate", "6.5"); await setField(D, "years", "2"); await sleep(350);
+  t = await text(D);
+  check("RD: ₹10,000 a month @ 6.5% for 2 years → ₹2,56,851, interest ₹16,851", rx(t, /Maturity value\s*₹([\d,]+)/) === "2,56,851" && rx(t, /Interest earned\s*₹([\d,]+)/) === "16,851");
+  await setField(D, "months", "12"); await sleep(250);
+  check("RD: more than 11 extra months is refused", /Enter a tenure from 1 month to 10 years/.test(await text(D)));
+  await setField(D, "months", "0"); await sleep(250);
+  await exportsWork(D, "RD", "recurring-deposit-schedule.png");
+
   /* ---------------- regional languages ---------------- */
   const M = "main";
   await open("/hi/home-loan-calculator/", M);
@@ -218,6 +284,15 @@ try {
   await setField(M, "cost", "1000000"); await setField(M, "until", "10"); await setField(M, "course", "4"); await setField(M, "rise", "8"); await setField(M, "ret", "10"); await setField(M, "saved", "500000"); await sleep(350);
   t = await text(M);
   check("education cost (hi): translated UI with the same numbers", /पढ़ाई के खर्च का प्लानर/.test(t) && /हर महीने बचाएँ\s*₹34,156/.test(t) && /₹40,199 हो जाती है/.test(t));
+  await open("/hi/fd-calculator/", M);
+  await clickIn(M, "ब्याज कैसे मिलेगा", "परिपक्वता पर"); await clickIn(M, "ब्याज जमा राशि में जुड़ता है", "हर तिमाही");
+  await setField(M, "start", "2026-11"); await setField(M, "amount", "500000"); await setField(M, "rate", "7"); await setField(M, "years", "3"); await setField(M, "months", "0"); await setField(M, "tax", "0"); await sleep(350);
+  t = await text(M);
+  check("FD (hi): translated UI with the same numbers", /FD प्लानर/.test(t) && /परिपक्वता राशि\s*₹6,15,720/.test(t) && /कमाया हुआ ब्याज\s*₹1,15,720/.test(t) && /Nov 2029 में परिपक्व होगा/.test(t));
+  await open("/hi/rd-calculator/", M);
+  await setField(M, "amount", "5000"); await setField(M, "rate", "7"); await setField(M, "years", "5"); await setField(M, "months", "0"); await sleep(350);
+  t = await text(M);
+  check("RD (hi): translated UI with the same numbers", /RD प्लानर/.test(t) && /परिपक्वता राशि\s*₹3,59,664/.test(t));
   for (const [lang, marker] of [["ta", "கல்விக் கடன் திட்டமிடல்"], ["te", "విద్యా రుణ ప్లానర్"], ["mr", "शैक्षणिक कर्ज प्लॅनर"]]) {
     await open(`/${lang}/education-loan-calculator/`, M);
     check(`education loan (${lang}): translated UI`, (await text(M)).includes(marker) && (await b.eval("document.documentElement.lang")) === lang);
@@ -225,7 +300,7 @@ try {
 
   /* ---------------- phone width ---------------- */
   await b.mobile(true);
-  for (const [path, root] of [["/home-loan-calculator/", H], ["/education-loan-calculator/", E], ["/education-cost-calculator/", P]]) {
+  for (const [path, root] of [["/home-loan-calculator/", H], ["/education-loan-calculator/", E], ["/education-cost-calculator/", P], ["/fd-calculator/", D], ["/rd-calculator/", D]]) {
     await open(path, root);
     await sleep(300);
     check(`${path} at 390px: no horizontal overflow`, (await overflow()) <= 1, String(await overflow()));

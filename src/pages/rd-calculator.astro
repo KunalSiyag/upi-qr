@@ -1,0 +1,150 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { DepositCalculator } from "../components/DepositCalculator";
+
+const title = "RD Calculator: Recurring Deposit Maturity and Interest | Pro UPI QR";
+const description = "Recurring deposit maturity value with quarterly compounding, interest earned, a year-by-year table and an after-tax estimate. Free, runs in your browser.";
+
+const faqs = [
+  {
+    "question": "How is the maturity value of an RD calculated?",
+    "answer": "Each monthly deposit earns interest, compounded every quarter, from the month it is made until maturity. ₹5,000 a month for 5 years at 7% puts in ₹3,00,000 and grows to about ₹3,59,664, which is about ₹59,664 of interest."
+  },
+  {
+    "question": "What does ₹10,000 a month grow to?",
+    "answer": "At 6.5% for 2 years, ₹10,000 a month puts in ₹2,40,000 and matures at about ₹2,56,851, about ₹16,851 of interest. Change the amount, rate and tenure above to see your own numbers."
+  },
+  {
+    "question": "What is the difference between an RD and an FD?",
+    "answer": "An FD takes the whole amount at once; an RD takes a fixed amount each month. An RD suits steady saving from a regular income. See the FD calculator for a lump sum."
+  },
+  {
+    "question": "What if I miss a monthly instalment?",
+    "answer": "This calculator assumes every instalment is paid on time. Banks usually charge a penalty for a missed or late instalment, so check your bank's terms."
+  },
+  {
+    "question": "How much of the interest goes in tax?",
+    "answer": "Enter your own tax rate and the calculator shows a rough after-tax figure. It ignores cess, surcharge and when tax is deducted, so check the current rules."
+  },
+  {
+    "question": "Why might my bank show a slightly different figure?",
+    "answer": "Banks differ in how they compound and round, and they often count exact days. This calculator uses whole months and the usual quarterly-compounding formula, so a bank's figure can differ by a few rupees."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "RD Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/rd-calculator/",
+      description,
+      featureList: ["Maturity value and interest for a monthly recurring deposit", "Quarterly compounding, the usual bank convention", "Year-by-year table and an after-tax estimate", "Schedule PDF and PNG export", "Browser-only, no signup"],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out a recurring deposit return",
+      step: [
+        {
+          "@type": "HowToStep",
+          "name": "Enter the monthly deposit, interest rate and tenure"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Read the maturity value and the interest earned"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Check the year-by-year table"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Add your tax rate for a rough after-tax figure, then download the schedule"
+        }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">RD Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">RD calculator: recurring deposit maturity and interest</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Enter what you will deposit each month, the rate and how long, and see what your recurring deposit is worth at maturity.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#deposit-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Calculate my RD</a>
+            <a href="/fd-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Lump sum instead? FD calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="deposit-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <DepositCalculator client:visible mode="rd" />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">A deposit is made at the start of every month, and each one earns interest compounded quarterly until maturity: the maturity value is the monthly deposit × the sum of (1 + rate ÷ 4)^(k ÷ 3) for k = 1 to the number of months.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The result is rounded to the paisa once, at the end. Tenure is counted in whole months and the rate is fixed.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Every instalment is assumed to be paid on time.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The tax figure is your own rate applied to the interest, as a rough guide only.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Recurring deposit questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/rd-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

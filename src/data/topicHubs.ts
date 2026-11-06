@@ -567,6 +567,8 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/home-loan-calculator/", name: "Home loan calculator", description: "EMI, prepayment savings, and how much loan your income supports." },
           { href: "/education-loan-calculator/", name: "Education loan calculator", description: "Moratorium interest, what paying it saves, and the EMI after the course." },
           { href: "/education-cost-calculator/", name: "Education cost calculator", description: "Future tuition with fee rises, what to have saved by the start, and the monthly saving." },
+          { href: "/fd-calculator/", name: "FD calculator", description: "Fixed deposit maturity, or a monthly, quarterly or yearly interest payout." },
+          { href: "/rd-calculator/", name: "RD calculator", description: "Recurring deposit maturity with quarterly compounding and a year-by-year table." },
         ],
       },
       {
