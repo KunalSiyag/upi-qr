@@ -564,6 +564,9 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/gratuity-calculator/", name: "Gratuity calculator", description: "Payment of Gratuity Act 15/26 formula, eligibility, and cap." },
           { href: "/msmed-interest-calculator/", name: "MSMED interest calculator", description: "RBI-linked delayed-payment interest for MSME suppliers." },
           { href: "/treds-calculator/", name: "TReDS discounting calculator", description: "Net proceeds when you discount a large-buyer invoice." },
+          { href: "/home-loan-calculator/", name: "Home loan calculator", description: "EMI, prepayment savings, and how much loan your income supports." },
+          { href: "/education-loan-calculator/", name: "Education loan calculator", description: "Moratorium interest, what paying it saves, and the EMI after the course." },
+          { href: "/education-cost-calculator/", name: "Education cost calculator", description: "Future tuition with fee rises, what to have saved by the start, and the monthly saving." },
         ],
       },
       {

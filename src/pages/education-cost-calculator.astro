@@ -1,0 +1,145 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { EducationCostPlanner } from "../components/EducationCostPlanner";
+
+const title = "Education Cost Calculator: Future Tuition and Savings | Pro UPI QR";
+const description = "Estimate future tuition with fee rises, how much you need saved by the start, and the monthly saving to get there. Works in rupees, dollars, pounds and more.";
+
+const faqs = [
+  {
+    question: "How is the future cost of an education calculated?",
+    answer: "Each course year's cost is today's yearly cost grown by your yearly rise for every year until that course year begins. For example, ₹10 lakh a year today, a course that starts in 10 years and an 8% yearly rise make the first year cost about ₹21.59 lakh, and a four-year course costs about ₹97.28 lakh in all when each year falls due."
+  },
+  {
+    question: "How much do I need saved by the day the course starts?",
+    answer: "It is what the yearly payments are worth on the start date, because money you have not spent yet keeps earning. In the example above, with a 10% return, about ₹83.50 lakh is enough, which is less than the ₹97.28 lakh total."
+  },
+  {
+    question: "How much should I save each month?",
+    answer: "The calculator works out the monthly amount that, together with what you have already saved, reaches that target. In the example, with ₹5 lakh already saved and a 10% return, it is about ₹34,156 a month for 10 years. Waiting a year to start raises it to about ₹40,199."
+  },
+  {
+    question: "What yearly rise and return should I enter?",
+    answer: "Both are your assumptions, not forecasts. Check how much the fees of your course have risen in recent years and enter a rate near that. Returns are not guaranteed, so a lower return is the safer plan: try a few and see how the monthly amount changes."
+  },
+  {
+    question: "Does it work for other currencies?",
+    answer: "Yes. Pick rupees, dollars, pounds, euros, Australian or Canadian dollars and enter your figures in that currency. The calculator does not convert between currencies or model exchange-rate changes, which matters if you save in one currency and pay fees in another."
+  },
+  {
+    question: "Does it include scholarships, education loans or tax benefits?",
+    answer: "No. It models cost, inflation and savings only. If you plan to borrow, see the education loan calculator to compare the moratorium and EMI. Tax treatment depends on your country and the year's rules, so check it separately."
+  },
+  {
+    question: "Is my data stored anywhere?",
+    answer: "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Education Cost Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/education-cost-calculator/",
+      description,
+      featureList: [
+        "Future tuition and living cost for each course year with your yearly fee rise",
+        "Amount to have saved by the day the course starts",
+        "Monthly saving needed, and how waiting a year changes it",
+        "Rupees, US dollars, pounds, euros, Australian and Canadian dollars",
+        "Plan PDF and PNG export",
+        "Browser-only, no signup"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to plan for the cost of an education",
+      step: [
+        { "@type": "HowToStep", name: "Enter today's yearly cost, the years until the course starts and its length" },
+        { "@type": "HowToStep", name: "Set your assumed yearly fee rise and return on savings" },
+        { "@type": "HowToStep", name: "Add what you have already saved" },
+        { "@type": "HowToStep", name: "Read the total cost, the amount needed by the start and the monthly saving, then download the plan" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Education Cost Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Education cost calculator: what tuition will cost and what to save</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Fees rise every year. Enter today's cost and when the course starts to see what each year will cost, what you need saved by then, and the monthly amount to get there.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#education-cost-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Plan the cost</a>
+            <a href="/education-loan-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Borrowing instead? Education loan calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="education-cost-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <EducationCostPlanner client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Each course year's cost is today's cost grown by your yearly rise, rounded to the smallest unit of the currency, and falls due at the start of that year.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Savings earn your expected return, compounded monthly, both before the course and while you draw on them during it. The amount needed by the start is what the yearly payments are worth that day.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The monthly amount is paid at the end of each month and is the smallest amount that closes the gap after your existing savings have grown. Amounts are rounded up so the plan is never short.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Fee rises and returns are your assumptions. Nothing here is a forecast or a guarantee, and there is no currency conversion.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Education cost questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/education-cost-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

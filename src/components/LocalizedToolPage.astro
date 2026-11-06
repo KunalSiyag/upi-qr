@@ -16,6 +16,9 @@ import { SplitBillCalculator } from "./SplitBillCalculator";
 import { CashDenominationCalculator } from "./CashDenominationCalculator";
 import { CreditNoteGenerator } from "./CreditNoteGenerator";
 import { EmiCalculator } from "./EmiCalculator";
+import { HomeLoanCalculator } from "./HomeLoanCalculator";
+import { EducationLoanCalculator } from "./EducationLoanCalculator";
+import { EducationCostPlanner } from "./EducationCostPlanner";
 import { GratuityCalculator } from "./GratuityCalculator";
 import { SipCalculator } from "./SipCalculator";
 import { SalarySlipGenerator } from "./SalarySlipGenerator";
@@ -131,6 +134,9 @@ const moreToolsLabel: Partial<Record<SupportedToolLanguage, string>> = {
         {tool.component === "cashDenomination" && <CashDenominationCalculator client:visible lang={lang} />}
         {tool.component === "creditNote" && <CreditNoteGenerator client:visible lang={lang} />}
         {tool.component === "emiCalculator" && <EmiCalculator client:visible lang={lang} />}
+        {tool.component === "homeLoan" && <HomeLoanCalculator client:visible lang={lang} />}
+        {tool.component === "educationLoan" && <EducationLoanCalculator client:visible lang={lang} />}
+        {tool.component === "educationCost" && <EducationCostPlanner client:visible lang={lang} />}
         {tool.component === "gratuity" && <GratuityCalculator client:visible lang={lang} />}
         {tool.component === "sipCalculator" && <SipCalculator client:visible lang={lang} />}
         {tool.component === "salarySlip" && <SalarySlipGenerator client:visible lang={lang} />}
