@@ -1,0 +1,158 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { PpfCalculator } from "../components/PpfCalculator";
+import { PPF_REVIEWED_ON, PPF_SOURCES } from "../lib/ppf";
+
+const title = "PPF Calculator: Maturity Value and Interest | Pro UPI QR";
+const description = "PPF maturity value and interest with the 5th-of-the-month rule, deposit limits and 5-year extensions, plus a year-by-year table. Free, runs in your browser.";
+
+const faqs = [
+  {
+    "question": "How is PPF interest calculated?",
+    "answer": "For each month, interest is worked out on the lowest balance between the 5th and the end of the month, at one twelfth of the yearly rate, and the twelve months are added and credited once, at the end of the financial year. It does not compound inside the year, so what you hold during April to March earns interest only on the balance at the start of the year plus your deposits."
+  },
+  {
+    "question": "How much does ₹1.5 lakh a year grow to in 15 years?",
+    "answer": "At 7.1%, depositing ₹1,50,000 by 5 April each year gives about ₹40,68,209 after 15 years: ₹22,50,000 deposited and ₹18,18,209 of interest. The rate is reset every quarter, so a real account will differ from any single-rate figure."
+  },
+  {
+    "question": "Does it matter when in the month I deposit?",
+    "answer": "Yes. ₹12,500 deposited every month by the 5th grows to about ₹39,44,599 in 15 years at 7.1%, but the same deposits made after the 5th grow to about ₹39,22,125, roughly ₹22,000 less, because each deposit starts earning a month later. Depositing the whole ₹1.5 lakh by 5 April gives about ₹1,23,610 more than monthly deposits."
+  },
+  {
+    "question": "What is the current PPF interest rate?",
+    "answer": "7.1% for October to December 2026, unchanged from July to September, according to the Finance Ministry and Department of Posts orders of 30 September 2026 and press reports. The government announces the rate every quarter, with the next announcement due around the end of December 2026, so change the rate in the calculator when it moves."
+  },
+  {
+    "question": "What are the deposit limits?",
+    "answer": "At least ₹500 and at most ₹1,50,000 in a financial year, in multiples of ₹50. The calculator checks this for the pattern you choose: ₹12,500 a month is the most you can deposit monthly."
+  },
+  {
+    "question": "What happens after 15 years?",
+    "answer": "The account matures 15 years after the end of the financial year it was opened in. It can be extended in blocks of 5 years, with or without deposits, if you ask within a year of maturity. Choose a longer account length to see the effect: ₹5,000 a month by the 5th grows to about ₹25,82,392 over 20 years at 7.1%."
+  },
+  {
+    "question": "Can I withdraw before maturity?",
+    "answer": "Partial withdrawals are allowed after the 5th year from the end of the opening year, up to 50% of the lower of the balance at the end of the 4th preceding year and the preceding year, once a year, according to the scheme text. The calculator does not model withdrawals; check with your bank or post office."
+  },
+  {
+    "question": "Is PPF interest taxable?",
+    "answer": "PPF interest and the maturity amount are exempt from tax under current rules. Check the current rules and the limits that apply to you."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "PPF Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/ppf-calculator/",
+      description,
+      featureList: ["PPF maturity value and interest", "Interest on the lowest balance between the 5th and month end, credited yearly", "Monthly or yearly deposits, by or after the 5th", "Deposit limits of Rs 500 to Rs 1,50,000 checked", "5-year extensions up to 50 years", "Year-by-year table, plan PDF and PNG export", "Browser-only, no signup"],
+            offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out your PPF maturity value",
+      step: [
+        { "@type": "HowToStep", "name": "Choose how you deposit and enter the amount" },
+        { "@type": "HowToStep", "name": "Enter the interest rate and the account length" },
+        { "@type": "HowToStep", "name": "Read the maturity value, interest and year-by-year table" },
+        { "@type": "HowToStep", "name": "Change the deposit timing to see how the 5th of the month changes the result" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">PPF Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">PPF calculator: what your Public Provident Fund grows to</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See what monthly or yearly PPF deposits become, with the interest worked the way the scheme works it: on the lowest balance between the 5th and the end of each month.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#ppf-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Calculate my PPF</a>
+            <a href="/fd-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Compare an FD →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="ppf-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <PpfCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Interest for a month is the lowest balance between the 5th and the month end times one twelfth of the yearly rate. A deposit made by the 5th counts for that month; one made after it starts earning the next month.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The twelve months of a financial year are added and credited once at the end of it, rounded to the paisa. Post offices and banks round to the rupee, so a statement can differ by about a rupee a year.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The account is assumed to be opened in April, so year 1 is a full financial year. The real maturity date counts 15 years from the end of the financial year of opening.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The rate you enter is used for every year. The government resets it every quarter, so treat the result as a projection.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">Sources</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Where the rules and the rate come from</h2>
+        <p class="mt-4 text-base leading-7 text-forest/75">Checked on {PPF_REVIEWED_ON}. The official India Post and NSI pages could not be read when this was checked, so the scheme text and the rate come from reproductions and press reports; check them against your bank or post office. The rate changes every quarter.</p>
+        <ul class="mt-4 grid gap-2 text-base leading-7 text-forest/75">
+          {PPF_SOURCES.map((s) => <li class="rounded-[10px] bg-fog px-5 py-3"><a class="font-semibold text-leaf underline" href={s.url} rel="noopener">{s.label}</a></li>)}
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">PPF questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/ppf-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

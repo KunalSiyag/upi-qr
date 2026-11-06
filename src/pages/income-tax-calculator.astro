@@ -1,0 +1,162 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { IncomeTaxCalculator } from "../components/IncomeTaxCalculator";
+import { SECTION_MAP, TAX_RULES_REVIEWED_ON, TAX_SOURCES } from "../lib/incomeTax";
+
+const title = "Income Tax Calculator 2026-27: New vs Old Regime | Pro UPI QR";
+const description = "Compare tax under the new and old regimes for tax year 2026-27, with rebate, surcharge, cess and deductions. Free, runs in your browser, rules checked and dated.";
+
+const faqs = [
+  {
+    "question": "Which regime leaves less tax, new or old?",
+    "answer": "It depends on your deductions, which is why the calculator shows both. A ₹12 lakh salary pays nothing in the new regime. Even with ₹6.47 lakh of old-regime deductions (80C, NPS, health insurance, HRA, home loan interest and so on), the old regime still leaves about ₹23,941 of tax. Large deductions can tip a higher salary the other way, so try your own numbers."
+  },
+  {
+    "question": "Why is there no tax up to about ₹12.75 lakh of salary in the new regime?",
+    "answer": "The new regime gives a standard deduction of ₹75,000, and a rebate of up to ₹60,000 when taxable income is ₹12 lakh or less, which cancels the tax on those slabs. A salary of ₹12.75 lakh becomes ₹12 lakh of taxable income and leaves no tax."
+  },
+  {
+    "question": "What happens just above ₹12 lakh of taxable income?",
+    "answer": "Marginal relief keeps the tax from jumping: the tax cannot exceed the income above ₹12 lakh. On a ₹12.85 lakh salary (taxable income ₹12.10 lakh) the slab tax is ₹61,500 but only ₹10,000 plus 4% cess, ₹10,400, is payable."
+  },
+  {
+    "question": "How is the tax worked out on a ₹15 lakh salary in the new regime?",
+    "answer": "After the ₹75,000 standard deduction the taxable income is ₹14.25 lakh. The slabs give ₹93,750, and 4% cess makes it ₹97,500. Add the deductions that apply to you, such as employer NPS, to see how it moves."
+  },
+  {
+    "question": "Is the old-regime rebate a cliff?",
+    "answer": "Yes. In the old regime the rebate wipes out the tax up to ₹5 lakh of taxable income, but there is no marginal relief just above it: one rupee over ₹5 lakh brings about ₹13,000 of tax with cess."
+  },
+  {
+    "question": "What does it leave out?",
+    "answer": "Capital gains and other special-rate income, business income, non-residents, alternative minimum tax and relief under section 89 are not included, and neither is the rounding on the tax return. It is an estimate for salary and slab-rate income, not tax advice."
+  },
+  {
+    "question": "The Income-tax Act changed: are these the right sections?",
+    "answer": "The Income-tax Act, 2025 replaced the 1961 Act from 1 April 2026 and renumbered the sections (for example 115BAC is now 202, 87A is 156, 80C is 123 and 80D is 126). The Finance Act 2026 left these individual rates and limits unchanged. The sources and checking date are listed below."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Income Tax Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/income-tax-calculator/",
+      description,
+      featureList: ["New and old regime tax side by side for tax year 2026-27", "Rebate, marginal relief, surcharge with marginal relief and cess", "Standard deduction, 80C, NPS, 80D, HRA, home loan and other old-regime deductions", "Age-based slabs for senior and super senior citizens", "Plan PDF and PNG export", "Browser-only, no signup"],
+            offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to compare the new and old tax regimes",
+      step: [
+        { "@type": "HowToStep", "name": "Enter your age, yearly salary and other income" },
+        { "@type": "HowToStep", "name": "Add employer NPS and any old-regime deductions you claim" },
+        { "@type": "HowToStep", "name": "Read the tax under the new regime and the old regime side by side" },
+        { "@type": "HowToStep", "name": "See which leaves less tax and download the comparison" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Income Tax Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Income tax calculator 2026-27: new regime or old regime?</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See your tax under both regimes side by side, with the rebate, surcharge and cess worked out, and which one leaves less. Rules are from the Finance Act 2026 and the Income-tax Act, 2025, checked and dated below.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#tax-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Compare my tax</a>
+            <a href="/freelance-rate-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Freelancing? Rate calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="tax-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <IncomeTaxCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Tax year 2026-27 is the old FY 2026-27. The calculator is for a resident individual with salary and other income taxed at slab rates.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Slab tax comes first, then the rebate (or marginal relief just above the new-regime limit), then surcharge with marginal relief, then 4% health and education cess.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The new regime allows the standard deduction and employer NPS only. The old regime allows the deductions you enter, each capped at its limit.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Every rate and limit is listed with its source below and carries the date it was checked. Capital gains, business income and special reliefs are not included.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">Sources</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Where the rules come from</h2>
+        <p class="mt-4 text-base leading-7 text-forest/75">Rules last checked on {TAX_RULES_REVIEWED_ON}. If a Finance Act or notification changes a rate or limit, this page and the calculator are updated together.</p>
+        <ul class="mt-4 grid gap-2 text-base leading-7 text-forest/75">
+          {TAX_SOURCES.map((s) => <li class="rounded-[10px] bg-fog px-5 py-3"><a class="font-semibold text-leaf underline" href={s.url} rel="noopener">{s.label}</a></li>)}
+        </ul>
+        <div class="mt-6 overflow-x-auto rounded-[10px] border border-hairline">
+          <table class="w-full text-left text-sm">
+            <thead><tr class="border-b border-pebble text-xs text-muted"><th class="px-4 py-2 font-semibold">Rule</th><th class="px-4 py-2 font-semibold">1961 Act section</th><th class="px-4 py-2 font-semibold">Income-tax Act, 2025 section</th></tr></thead>
+            <tbody>
+              {SECTION_MAP.map(([rule, old, now]) => <tr class="border-b border-hairline"><td class="px-4 py-2 font-semibold text-forest">{rule}</td><td class="px-4 py-2 tabular-nums">{old}</td><td class="px-4 py-2 tabular-nums">{now}</td></tr>)}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Income tax questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/income-tax-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

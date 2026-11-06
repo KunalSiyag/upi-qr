@@ -20,6 +20,14 @@ import { HomeLoanCalculator } from "./HomeLoanCalculator";
 import { EducationLoanCalculator } from "./EducationLoanCalculator";
 import { EducationCostPlanner } from "./EducationCostPlanner";
 import { DepositCalculator } from "./DepositCalculator";
+import { FreelanceRateCalculator } from "./FreelanceRateCalculator";
+import { MortgageCalculator } from "./MortgageCalculator";
+import { IncomeTaxCalculator } from "./IncomeTaxCalculator";
+import { HraCalculator } from "./HraCalculator";
+import { SalaryCalculator } from "./SalaryCalculator";
+import { PpfCalculator } from "./PpfCalculator";
+import { RetirementPlanner } from "./RetirementPlanner";
+import { StampDutyCalculator } from "./StampDutyCalculator";
 import { GratuityCalculator } from "./GratuityCalculator";
 import { SipCalculator } from "./SipCalculator";
 import { SalarySlipGenerator } from "./SalarySlipGenerator";
@@ -140,6 +148,14 @@ const moreToolsLabel: Partial<Record<SupportedToolLanguage, string>> = {
         {tool.component === "educationCost" && <EducationCostPlanner client:visible lang={lang} />}
         {tool.component === "fdCalculator" && <DepositCalculator client:visible mode="fd" lang={lang} />}
         {tool.component === "rdCalculator" && <DepositCalculator client:visible mode="rd" lang={lang} />}
+        {tool.component === "freelanceRate" && <FreelanceRateCalculator client:visible lang={lang} />}
+        {tool.component === "mortgage" && <MortgageCalculator client:visible lang={lang} />}
+        {tool.component === "incomeTax" && <IncomeTaxCalculator client:visible lang={lang} />}
+        {tool.component === "hraCalculator" && <HraCalculator client:visible lang={lang} />}
+        {tool.component === "salaryCalculator" && <SalaryCalculator client:visible lang={lang} />}
+        {tool.component === "ppfCalculator" && <PpfCalculator client:visible lang={lang} />}
+        {tool.component === "retirementPlanner" && <RetirementPlanner client:visible lang={lang} />}
+        {tool.component === "stampDuty" && <StampDutyCalculator client:visible lang={lang} />}
         {tool.component === "gratuity" && <GratuityCalculator client:visible lang={lang} />}
         {tool.component === "sipCalculator" && <SipCalculator client:visible lang={lang} />}
         {tool.component === "salarySlip" && <SalarySlipGenerator client:visible lang={lang} />}
