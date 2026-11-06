@@ -5,12 +5,15 @@
 // all five languages, hydration, both modes, validation, exports (downloads are denied and the blobs are inspected instead),
 // draft persistence, a 390px phone width, and that nothing typed is requested or leaves the page.
 import { checker, sleep, startBrowser } from "./cdp-lib.mjs";
+import { get as httpGet } from "node:http";
 
 const BASE = process.env.BASE || "http://localhost:4400";
 const b = await startBrowser();
 const check = checker();
 // A JavaScript string literal that is also safe inside HTML and old line terminators.
 const lit = (v) => JSON.stringify(v).replace(/[<>\u2028\u2029]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
+// node:http rather than fetch: undici in some Node 22 patches asserts on the python static server's closed connections.
+const httpStatus = (url) => new Promise((resolve, reject) => { httpGet(url, (res) => { res.resume(); res.on("end", () => resolve(res.statusCode)); }).on("error", reject); });
 const text = (root) => b.eval(`document.querySelector(${JSON.stringify(root)}).innerText`);
 const hydrated = (root, ms = 10000) =>
   b.waitFor(`(() => { const r = document.querySelector(${lit(root)}); return !!r && !!r.querySelector('input[id$="-amount"], input[id$="-takeHome"], input[id$="-price"], input[id$="-salary"], input[id$="-basic"], input[id$="-ctc"], select[id$="-pattern"], input[id$="-age"], input[id$="-value"]') && ![...document.querySelectorAll('astro-island')].some((i) => i.hasAttribute('ssr')); })()`, ms);
@@ -82,8 +85,8 @@ try {
   /* ---------------- built pages ---------------- */
   for (const slug of ["home-loan-calculator", "education-loan-calculator", "education-cost-calculator", "fd-calculator", "rd-calculator", "freelance-rate-calculator", "mortgage-calculator", "income-tax-calculator", "hra-calculator", "salary-calculator", "ppf-calculator", "retirement-calculator", "stamp-duty-calculator"]) {
     for (const lang of ["", "hi/", "ta/", "te/", "mr/"]) {
-      const res = await fetch(`${BASE}/${lang}${slug}/`);
-      check(`/${lang}${slug}/ is served`, res.status === 200);
+      const status = await httpStatus(`${BASE}/${lang}${slug}/`);
+      check(`/${lang}${slug}/ is served`, status === 200, String(status));
     }
   }
 

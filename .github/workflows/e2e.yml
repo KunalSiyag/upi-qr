@@ -68,6 +68,9 @@ jobs:
           # The runner's Chrome sandbox needs user namespaces, which Ubuntu 24.04 restricts.
           E2E_CHROME_ARGS: --no-sandbox --disable-dev-shm-usage
           E2E_OUT: ${{ runner.temp }}/e2e-out
+          # Without a real Clerk key the two checks that need Clerk to answer are skipped (printed as SKIP).
+          # Add a Clerk *development* key as the PUBLIC_CLERK_PUBLISHABLE_KEY repo secret to run them.
+          E2E_NO_CLERK: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY == '' && '1' || '' }}
           SUITES: ${{ github.event.inputs.suites }}
           PROD: ${{ github.event.inputs.prod }}
         run: |
