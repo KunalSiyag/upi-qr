@@ -141,7 +141,7 @@ function inline(node, ctx) {
       const text = clean(inner());
       if ((node.attrs.href ?? "").startsWith("#")) return "";
       const href = absolute(node.attrs.href, ctx.url);
-      return href && text ? `[${text.replace(/([\[\]])/g, "\\$1")}](${href})` : text;
+      return href && text ? `[${text.replace(/[\\[\]]/g, "\\$&")}](${href})` : text;
     }
     case "strong": case "b": { const t = clean(inner()); return t ? `**${t}**` : ""; }
     case "em": case "i": { const t = clean(inner()); return t ? `*${t}*` : ""; }
@@ -175,7 +175,7 @@ function listMd(el, ctx, depth) {
 }
 
 function tableMd(el, ctx) {
-  const rows = find(el, (n) => n.tag === "tr").map((tr) => tr.children.filter((c) => c.type === "el" && (c.tag === "td" || c.tag === "th")).map((c) => clean(inline(c, ctx)).replace(/\|/g, "\\|")));
+  const rows = find(el, (n) => n.tag === "tr").map((tr) => tr.children.filter((c) => c.type === "el" && (c.tag === "td" || c.tag === "th")).map((c) => clean(inline(c, ctx)).replace(/\\/g, "\\\\").replace(/\|/g, "\\|")));
   const filled = rows.filter((r) => r.length > 0);
   if (filled.length === 0) return "";
   const width = Math.max(...filled.map((r) => r.length));
@@ -277,7 +277,7 @@ export function pageToTwin(html, fileUrl) {
   if (metas.some((m) => attr(m, "http-equiv").toLowerCase() === "refresh")) return null;
   const canonical = find(head, (n) => n.tag === "link" && attr(n, "rel") === "canonical")[0];
   const canonicalUrl = attr(canonical, "href");
-  if (!canonicalUrl.startsWith(SITE) || canonicalUrl !== fileUrl) return null;
+  if (canonicalUrl !== fileUrl) return null;
   const main = find(root, (n) => n.tag === "main")[0];
   if (!main) return null;
   const title = clean(textOf(find(head, (n) => n.tag === "title")[0] ?? { type: "text", text: "" }));

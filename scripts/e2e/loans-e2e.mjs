@@ -9,9 +9,11 @@ import { checker, sleep, startBrowser } from "./cdp-lib.mjs";
 const BASE = process.env.BASE || "http://localhost:4400";
 const b = await startBrowser();
 const check = checker();
+// A JavaScript string literal that is also safe inside HTML and old line terminators.
+const lit = (v) => JSON.stringify(v).replace(/[<>\u2028\u2029]/g, (c) => `\\u${c.charCodeAt(0).toString(16).padStart(4, "0")}`);
 const text = (root) => b.eval(`document.querySelector(${JSON.stringify(root)}).innerText`);
 const hydrated = (root, ms = 10000) =>
-  b.waitFor(`(() => { const r = document.querySelector(${JSON.stringify(root)}); return !!r && !!r.querySelector('input[id$="-amount"], input[id$="-takeHome"], input[id$="-price"], input[id$="-salary"], input[id$="-basic"], input[id$="-ctc"], select[id$="-pattern"], input[id$="-age"], input[id$="-value"]') && ![...document.querySelectorAll('astro-island')].some((i) => i.hasAttribute('ssr')); })()`, ms);
+  b.waitFor(`(() => { const r = document.querySelector(${lit(root)}); return !!r && !!r.querySelector('input[id$="-amount"], input[id$="-takeHome"], input[id$="-price"], input[id$="-salary"], input[id$="-basic"], input[id$="-ctc"], select[id$="-pattern"], input[id$="-age"], input[id$="-value"]') && ![...document.querySelectorAll('astro-island')].some((i) => i.hasAttribute('ssr')); })()`, ms);
 const open = async (path, root) => { await b.go(`${BASE}${path}`, 1200); await b.eval(`(document.querySelector('input[id$="-amount"], input[id$="-takeHome"], input[id$="-price"], input[id$="-salary"], input[id$="-basic"], input[id$="-ctc"], select[id$="-pattern"], input[id$="-age"], input[id$="-value"]') || document.querySelector(${JSON.stringify(root)})).scrollIntoView(), true`); await hydrated(root); };
 const setField = (root, suffix, value) => b.eval(`(() => {
   const el = document.querySelector(${JSON.stringify(root)}).querySelector('[id$="-${suffix}"]');
@@ -34,8 +36,8 @@ const clickIn = (root, groupLabel, label) => b.eval(`(() => {
   el.click(); return true;
 })()`);
 const setCheck = (root, labelText, on) => b.eval(`(() => {
-  const label = [...document.querySelector(${JSON.stringify(root)}).querySelectorAll('label')].find((l) => l.textContent.includes(${JSON.stringify(labelText)}));
-  if (!label) throw new Error('no checkbox ' + ${JSON.stringify(labelText)});
+  const label = [...document.querySelector(${lit(root)}).querySelectorAll('label')].find((l) => l.textContent.includes(${lit(labelText)}));
+  if (!label) throw new Error('no checkbox ' + ${lit(labelText)});
   const box = label.querySelector('input[type=checkbox]');
   if (box.checked !== ${on}) box.click();
   return box.checked === ${on};
