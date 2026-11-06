@@ -56,13 +56,15 @@ jobs:
       - name: Build production site
         run: npx astro build
         env:
-          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          # The suites block Clerk's network and sign in with a throwaway JWT key, so a placeholder is enough.
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_e2e_placeholder' }}
 
       - name: Run the e2e suites
         env:
-          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY }}
-          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          # The suites block Clerk's network and sign in with a throwaway JWT key, so a placeholder is enough.
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_e2e_placeholder' }}
           # The runner's Chrome sandbox needs user namespaces, which Ubuntu 24.04 restricts.
           E2E_CHROME_ARGS: --no-sandbox --disable-dev-shm-usage
           E2E_OUT: ${{ runner.temp }}/e2e-out
