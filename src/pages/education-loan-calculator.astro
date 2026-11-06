@@ -1,0 +1,145 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { EducationLoanCalculator } from "../components/EducationLoanCalculator";
+
+const title = "Education Loan EMI Calculator with Moratorium | Pro UPI QR";
+const description = "Education loan EMI with the moratorium: see how interest builds up while you study, what paying it saves, and your repayment schedule. Free, in your browser.";
+
+const faqs = [
+  {
+    question: "What is the moratorium on an education loan?",
+    answer: "It is the period when no EMI is due: the course plus a grace period after it. Lenders commonly allow the grace period to run for six months to a year after the course ends or you get a job, but yours may differ. Interest is still charged during the moratorium, so the loan grows unless you pay it."
+  },
+  {
+    question: "What happens if I do not pay the interest while studying?",
+    answer: "It builds up and is added to the loan when the moratorium ends, and your EMIs are then worked out on that larger amount. On ₹20 lakh at 9.5% paid out at the start, with a 4-year course, 6 months of grace and 10 years to repay, about ₹8.55 lakh builds up, the EMI is about ₹36,943 and total interest is about ₹24.33 lakh."
+  },
+  {
+    question: "How much does paying the interest during the course save?",
+    answer: "In the same example, paying about ₹15,833 a month in interest while studying leaves the EMI at about ₹25,880 and total interest at about ₹19.61 lakh, roughly ₹4.73 lakh less and an EMI about ₹11,063 lower. The calculator shows both plans side by side for your numbers."
+  },
+  {
+    question: "Does it matter if the loan is paid out at once or each year?",
+    answer: "Yes. Interest is charged only on money already paid out, so paying it out each year costs less. In the example above, paying out ₹5 lakh a year instead of ₹20 lakh at the start means about ₹5.70 lakh of interest builds up instead of ₹8.55 lakh."
+  },
+  {
+    question: "Is the unpaid interest simple or compound?",
+    answer: "Lenders differ, so check your sanction letter. The calculator lets you choose. With monthly compounding, the same example builds up about ₹10.62 lakh instead of ₹8.55 lakh."
+  },
+  {
+    question: "Does this include fees, insurance or tax benefits?",
+    answer: "No. It models principal and interest only. Processing fees, insurance and any rate change come on top, and the tax treatment of education loan interest depends on your tax regime and the rules for that year, so check it separately."
+  },
+  {
+    question: "Is my data stored anywhere?",
+    answer: "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Education Loan Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/education-loan-calculator/",
+      description,
+      featureList: [
+        "Moratorium interest: course period plus grace period",
+        "Interest built up versus interest paid during study, side by side",
+        "Loan paid out at the start or each year, simple or compound interest",
+        "EMI after the moratorium and a year-by-year repayment schedule",
+        "Plan PDF and PNG export",
+        "Browser-only, no signup"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to plan an education loan",
+      step: [
+        { "@type": "HowToStep", name: "Enter the loan amount, interest rate and course length" },
+        { "@type": "HowToStep", name: "Set the grace period and how long you will take to repay" },
+        { "@type": "HowToStep", name: "Compare letting the interest build up with paying it while you study" },
+        { "@type": "HowToStep", name: "Read your EMI and repayment schedule, then download the plan" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Education Loan Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Education loan calculator with moratorium</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">No EMI while you study, but the interest keeps running. See how much builds up, what paying it saves, and the EMI you will owe after the course.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#education-loan-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Plan my loan</a>
+            <a href="/home-loan-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Home loan calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="education-loan-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <EducationLoanCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Money is worked in whole paise, so totals add up exactly. Each month's interest is the amount paid out so far × annual rate ÷ 12, rounded to the paisa.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The moratorium is the course plus the grace period. If you do not pay the interest, it is added to the loan when the moratorium ends, and the EMIs are worked out on the larger amount.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">If you pay the interest every month during the moratorium, nothing builds up and the EMIs are worked out on the amount paid out.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The rate is fixed for the whole loan. Lenders differ in when interest starts, how it is added and in fees, so treat the result as a plan and check your sanction letter.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Education loan questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/education-loan-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

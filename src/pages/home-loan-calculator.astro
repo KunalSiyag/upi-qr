@@ -1,0 +1,141 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { HomeLoanCalculator } from "../components/HomeLoanCalculator";
+
+const title = "Home Loan EMI Calculator with Prepayment | Pro UPI QR";
+const description = "Home loan EMI, total interest and yearly schedule, plus how much prepaying saves and how much loan your income supports. Free, runs in your browser.";
+
+const faqs = [
+  {
+    question: "How is a home loan EMI calculated?",
+    answer: "EMI = P × r × (1+r)^n ÷ ((1+r)^n − 1), where P is the loan amount, r is the monthly rate (annual rate ÷ 12 ÷ 100) and n is the number of months. A ₹10 lakh loan at 9% for 20 years has an EMI of about ₹8,997. Each month's interest is charged on the balance left, so early EMIs are mostly interest."
+  },
+  {
+    question: "How much interest does prepaying save?",
+    answer: "A lot, and the earlier you do it the more. On ₹10 lakh at 9% for 20 years, paying ₹5,000 extra every month ends the loan after 103 instalments instead of 240 and cuts the interest from about ₹11.59 lakh to about ₹4.38 lakh. Enter your own amounts above to see your numbers."
+  },
+  {
+    question: "Does prepaying lower my EMI or shorten the loan?",
+    answer: "This calculator keeps your EMI the same and shortens the loan, which is the more common way to prepay. Some lenders let you lower the EMI instead. Ask yours, and check your loan agreement for any prepayment charge before you pay."
+  },
+  {
+    question: "How much home loan can I get on my salary?",
+    answer: "Lenders limit your total EMIs to a share of your income, often 40 to 60 percent (the fixed obligation to income ratio, or FOIR). With a take-home income of ₹1 lakh, ₹10,000 of existing EMIs and a 50% limit, you can carry an EMI of ₹40,000, which supports a loan of about ₹46.09 lakh at 8.5% for 20 years. It is an estimate: lenders also check your credit score, age, job stability and the property's value."
+  },
+  {
+    question: "Does this include processing fees, insurance or tax benefits?",
+    answer: "No. The schedule is pure principal and interest, which is what your lender's EMI is built on. Fees, insurance and any floating-rate change come on top, and tax deductions depend on your tax regime and the rules for that year, so check them separately."
+  },
+  {
+    question: "Is my data stored anywhere?",
+    answer: "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Home Loan Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/home-loan-calculator/",
+      description,
+      featureList: [
+        "Monthly EMI, total interest and total payable",
+        "Year-by-year repayment schedule",
+        "Prepayment savings: extra every month or one lump sum",
+        "How much home loan your income supports",
+        "Schedule PDF and PNG export",
+        "Browser-only, no signup"
+      ],
+      offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to plan a home loan",
+      step: [
+        { "@type": "HowToStep", name: "Enter the loan amount, interest rate and tenure" },
+        { "@type": "HowToStep", name: "Read your monthly EMI, total interest and yearly schedule" },
+        { "@type": "HowToStep", name: "Add a monthly extra or a one-time prepayment to see the interest you save" },
+        { "@type": "HowToStep", name: "Switch to the borrowing view to see how much loan your income supports" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Home Loan Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Home loan calculator with prepayment and eligibility</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See your EMI, how much interest a prepayment saves, and how much loan your income supports, before you talk to a lender.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#home-loan-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Calculate my EMI</a>
+            <a href="/emi-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Other loans: EMI calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="home-loan-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <HomeLoanCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Money is worked in whole paise, so totals add up exactly. Interest each month is the balance × annual rate ÷ 12, rounded to the paisa.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The last instalment clears whatever is left, as lenders do, so it can differ from your EMI by a few rupees.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">The rate is fixed for the whole loan. On a floating-rate loan your EMI or tenure moves when the rate does, so treat the result as a plan, not a promise.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">A prepayment goes straight to principal and your EMI stays the same. The borrowing view is an estimate from the share of income a lender allows for EMIs.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Home loan questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/home-loan-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>
