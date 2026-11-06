@@ -184,7 +184,9 @@ try {
   }
   check("INR-only book: two INR invoices with one number show no duplicate note", rows >= 2 && !noted, `rows=${rows}`);
 
-  check("no console errors", b.errors.length === 0, b.errors.join(" | "));
+  // Without a working Clerk key (E2E_NO_CLERK=1, set by CI when no key secret exists) ClerkJS logs an init error.
+  const consoleErrors = process.env.E2E_NO_CLERK === "1" ? b.errors.filter((e) => !/clerk/i.test(e)) : b.errors;
+  check("no console errors", consoleErrors.length === 0, consoleErrors.join(" | "));
 } catch (error) {
   check("test script ran to completion", false, String(error).slice(0, 500));
 } finally {
