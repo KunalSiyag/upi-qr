@@ -6,6 +6,14 @@ Pro UPI QR (proupiqr.in) is a free, privacy-first, client-side Universal UPI QR 
 
 It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) defined by the National Payments Corporation of India (NPCI). Static QR, document, calculator, and image tools render locally in the user's browser. Optional account-backed dynamic redirects and hosted checkout features store only the limited records described in the Privacy Policy.
 
+## Agent-friendly access
+- **Markdown for every page**: add `index.md` to any page's URL, for example https://www.proupiqr.in/hra-calculator/index.md. The HTML page points to it with `<link rel="alternate" type="text/markdown">`. The Markdown has the page text, the assumptions behind each calculator, worked examples and the FAQ, with a front matter of title, description, canonical URL, language and hreflang alternates. The interactive tool itself runs in the browser.
+- **This file and /llms-full.txt**: the index below lists every tool and guide with a link to its Markdown version, and `/llms-full.txt` is the full text of every English tool page.
+- **MCP server**: `https://www.proupiqr.in/mcp/` exposes calculators as read-only tools (see below).
+- **Structured data**: tool pages carry schema.org JSON-LD (WebApplication, FAQPage, HowTo).
+- **Crawling**: `robots.txt` allows GPTBot, ClaudeBot, PerplexityBot, Google-Extended and other AI crawlers. Sitemap: https://www.proupiqr.in/sitemap.xml
+- **Sources and corrections**: tax, HRA and savings calculators name their sources and the date the rules were last checked on the page. Material corrections are logged at https://www.proupiqr.in/corrections/
+
 ## Key Features & Capabilities
 - **Universal Multi-App Support**: QR codes generated work across all Indian UPI applications including Google Pay (GPay), PhonePe, Paytm, BHIM UPI, CRED, Mobikwik, Navi, and banking apps (YONO SBI, HDFC Mobile, ICICI iMobile, Axis Bank, PNB).
 - **Direct Bank Account Connection**: Allows linking any personal savings or current bank account VPA (e.g. `name@sbi`, `name@okicici`, `name@ybl`) to accept payments straight to the bank account, without a payment gateway's fees.
@@ -112,3 +120,7 @@ It generates standard-compliant `upi://pay` Unified Resource Identifiers (URIs) 
 - Donation & NGO QR Preset: https://www.proupiqr.in/donation-qr-generator/
 - Temple Donation QR Preset: https://www.proupiqr.in/temple-qr-generator/
 - Doctor & Clinic QR Generator: https://www.proupiqr.in/doctor-clinic-upi-qr-generator/
+
+## Tool and guide index
+
+<!-- AUTO:INDEX -->

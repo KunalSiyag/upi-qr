@@ -1,0 +1,159 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { StampDutyCalculator } from "../components/StampDutyCalculator";
+
+
+const title = "Stamp Duty and Registration Calculator | Pro UPI QR";
+const description = "Stamp duty and registration charges on a property purchase, on the higher of the price and the circle rate. Enter your state's rates. Free, runs in your browser.";
+
+const faqs = [
+  {
+    "question": "How is stamp duty calculated?",
+    "answer": "Stamp duty is a percentage of the property's value, charged on the higher of the price in the agreement and the circle rate (also called the ready-reckoner value) in many states. For example, on an ₹80,00,000 price with a ₹90,00,000 circle rate and 5% duty, you pay ₹4,50,000, because the ₹90,00,000 circle rate is higher."
+  },
+  {
+    "question": "What else is charged besides stamp duty?",
+    "answer": "Registration fee, often about 1% and sometimes capped, and in some places a surcharge, cess or local body tax. In the example above, a 1% surcharge adds ₹90,000, a 1% registration fee would be ₹90,000 but a ₹30,000 cap limits it to ₹30,000, and ₹15,000 of other charges bring the total to ₹5,85,000, which is about 7.31% of the price. The price plus charges is ₹85,85,000."
+  },
+  {
+    "question": "What is the circle rate?",
+    "answer": "The minimum value the state treats a property as worth in an area, also called the guidance value or ready-reckoner rate depending on the state. Buying below it usually does not lower the duty, because duty is charged on the higher figure; the tool shows which one it used."
+  },
+  {
+    "question": "Why are the state rates not filled in?",
+    "answer": "Because they differ by state, buyer and property, and change, and a wrong pre-filled rate would give you a wrong total. Enter the rates from your state's registration department or sub-registrar's office; the default rates on the page are examples only."
+  },
+  {
+    "question": "Do women buyers pay less?",
+    "answer": "In some states, yes, with a lower rate or a rebate. The tool does not know which; if you qualify, enter the lower rate you have been told."
+  },
+  {
+    "question": "Can I pay stamp duty in instalments or finance it?",
+    "answer": "Stamp duty and registration are paid when the document is registered. Whether a lender will finance them depends on the lender, so ask; the home loan calculator covers the loan itself."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Stamp Duty Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/stamp-duty-calculator/",
+      description,
+      featureList: ["Stamp duty, surcharge or cess and registration fee on a property purchase", "Charged on the higher of the agreement price and the circle rate, switchable", "Registration fee cap", "Other fixed charges", "Total charges and price plus charges", "Estimate PDF and PNG export", "Browser-only, no signup"],
+            offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out stamp duty and registration charges on a property",
+      step: [
+        {
+          "@type": "HowToStep",
+          "name": "Enter the price in the agreement and, if you know it, the circle rate"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Enter your state's stamp duty, surcharge and registration rates"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Add any registration cap and fixed charges"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Read the total charges and the price plus charges"
+        }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Stamp Duty Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Stamp duty calculator: what to pay on top of the price of a property</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Enter your state's stamp duty and registration rates, the price in the agreement and the circle rate, and see the charges and the full cost, with duty on whichever of the two values is higher.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#stamp-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Work out my stamp duty</a>
+            <a href="/home-loan-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Plan the home loan →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="stamp-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <StampDutyCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">The rates are yours. They differ by state, buyer (some states charge women buyers less) and property, and they change, so the tool has no state table. Take them from your state's registration department or the sub-registrar's office.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">When the switch is on, duty and the registration fee are charged on the higher of the price in the agreement and the circle rate (ready-reckoner value). Many states apply this rule; turn the switch off if yours does not.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Each charge is rounded to the paisa. Some offices round duty up to the next ₹10 or ₹100, and some charge extra for particular buyers or properties; this does not.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Other fixed charges, such as a document writer or e-stamp fee, are added as you enter them, with no rate.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">Sources</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Where the rates come from</h2>
+        <p class="mt-4 text-base leading-7 text-forest/75">There is no state table on this page on purpose. Stamp duty, surcharges, registration fees, caps and concessions differ by state, buyer and property, and they change, and a wrong pre-filled rate would give a wrong total. Take the rates from your state registration department's website, the sub-registrar's office or a registered document writer, and enter them here. The calculation does the rest.</p>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Stamp duty questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/stamp-duty-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

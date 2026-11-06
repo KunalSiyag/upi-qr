@@ -1,0 +1,170 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { RetirementPlanner } from "../components/RetirementPlanner";
+import { NPS_SOURCES, RETIREMENT_REVIEWED_ON } from "../lib/retirement";
+
+const title = "Retirement Calculator: How Much Corpus You Need | Pro UPI QR";
+const description = "Retirement calculator for India: the corpus you need, whether your savings last, the extra to save monthly, with inflation and an NPS exit split. Free, in your browser.";
+
+const faqs = [
+  {
+    "question": "How much money do I need to retire?",
+    "answer": "It depends on what you spend, how long you live, inflation and what your money earns. For example, if you are 30, spend ₹50,000 a month, expect 6% inflation, retire at 60 and want the money to last to 85 with 8% returns in retirement, you need about ₹6,49,87,807 on the day you retire, because ₹50,000 a month today becomes about ₹2,87,175 a month by then."
+  },
+  {
+    "question": "Will ₹20,000 a month be enough?",
+    "answer": "In that example, saving ₹20,000 a month for 30 years at 12% a year grows to about ₹7,05,98,275, which is ₹56,10,469 more than the ₹6,49,87,807 needed. Cut the saving to ₹5,000 a month and the corpus is about ₹1,76,49,569, which runs out at about age 65.6; you would need to save about ₹13,411 more every month. The result moves a lot with the return you assume."
+  },
+  {
+    "question": "Why is the corpus I need so much bigger than today's spending?",
+    "answer": "Inflation. At 6%, prices multiply by about 5.7 in 30 years, so ₹50,000 a month today is about ₹2,87,175 a month at 60. The same ₹7,05,98,275 corpus is worth about ₹1,22,91,875 in today's money."
+  },
+  {
+    "question": "What return should I assume?",
+    "answer": "Use a figure you would be comfortable missing. A lower return after you retire than before is normal, because most people hold safer assets then. Try a few values: the result changes a lot between 8% and 12%, and no tool can know the actual returns."
+  },
+  {
+    "question": "What does the step-up do?",
+    "answer": "It raises your monthly saving by the chosen percentage once a year, to match income growth. In the same example, starting at ₹5,000 a month with a 10% yearly step-up grows to about ₹4,41,70,660 instead of ₹1,76,49,569, leaving a shortfall of about ₹2,08,17,147 instead of ₹4,73,38,238."
+  },
+  {
+    "question": "How does the NPS exit split work?",
+    "answer": "Tick the NPS box to split your projected corpus. For non-government subscribers at normal exit, at least 20% must buy an annuity and up to 80% can be taken as a lump sum, after PFRDA's December 2025 change. Government subscribers must put at least 40% into an annuity. On the ₹7,05,98,275 corpus, a 20% annuity is about ₹1,41,19,655, which at 6% pays about ₹70,598 a month, and the lump sum is about ₹5,64,78,620."
+  },
+  {
+    "question": "Is the NPS annuity rate fixed?",
+    "answer": "No. Annuity rates depend on the provider, the plan and your age, and change over time, so the tool asks you to enter the one you are quoted. The monthly pension shown is the annuity amount times the rate divided by 12, for a life annuity that does not return the purchase price."
+  },
+  {
+    "question": "Does this include tax, EPF, PPF or a pension?",
+    "answer": "No. It treats everything you save as one pot growing at the return you enter. If part of it is in EPF or PPF, use their calculators to see what they grow to and add it to your savings so far."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Retirement Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/retirement-calculator/",
+      description,
+      featureList: ["Corpus needed at retirement, worked backwards from the age your money must last", "Projected savings with a yearly step-up", "Shortfall or surplus and the extra monthly saving that closes it", "Age your savings run out", "Optional NPS exit split into lump sum and annuity", "Year-by-year table, plan PDF and PNG export", "Browser-only, no signup"],
+            offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out the retirement corpus you need",
+      step: [
+        {
+          "@type": "HowToStep",
+          "name": "Enter your age, the age you want to retire and the age your money must last to"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Enter today's monthly spending, inflation, savings and returns"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Read the corpus you need, your projected corpus and any shortfall"
+        },
+        {
+          "@type": "HowToStep",
+          "name": "Change the saving or retirement age until the gap closes"
+        }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Retirement Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Retirement calculator: how much corpus you need and whether you will have it</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">Enter your spending, inflation, savings and returns to see the corpus you need on the day you retire, what your savings will grow to, and how much more to save each month if there is a gap.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#retirement-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Plan my retirement</a>
+            <a href="/ppf-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Check your PPF →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="retirement-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <RetirementPlanner client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Every rate is yours: inflation, the return before retirement, the return after it and the yearly step-up. The tool does not assume any of them, so try a cautious and an optimistic set.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Savings are added at the start of each month and earn a month's return at one twelfth of the yearly rate. Existing savings grow at the same return.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Spending is taken at the start of each month of retirement and grows with inflation once a year. The corpus you need is worked backwards, month by month, from the age your money must last to.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Tax, fees, a pension, rent or any other income are not included. Treat the answer as a planning number, not advice.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">Sources</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">Where the NPS rules come from</h2>
+        <p class="mt-4 text-base leading-7 text-forest/75">Checked on {RETIREMENT_REVIEWED_ON}. The retirement maths needs no outside source, because every rate is yours. The NPS exit split follows the PFRDA changes of December 2025 as reported below; the official PFRDA text could not be read when this was checked, so confirm the current rules with your fund manager or PFRDA before you rely on them.</p>
+        <ul class="mt-4 grid gap-2 text-base leading-7 text-forest/75">
+          {NPS_SOURCES.map((s) => <li class="rounded-[10px] bg-fog px-5 py-3"><a class="font-semibold text-leaf underline" href={s.url} rel="noopener">{s.label}</a></li>)}
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Retirement questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/retirement-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>

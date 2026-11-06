@@ -554,6 +554,10 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/margin-calculator/", name: "Profit margin calculator", description: "Cost, margin, and markup for retailers." },
           { href: "/break-even-calculator/", name: "Break-even calculator", description: "Survival units, target-profit units, and margin of safety." },
           { href: "/upi-calculator/", name: "UPI vs gateway savings", description: "Direct UPI versus 2.36% gateway fees, with the October MDR netted." },
+          { href: "/freelance-rate-calculator/", name: "Freelance rate calculator", description: "The hourly and day rate you need, from take-home, costs, tax and billable time." },
+          { href: "/income-tax-calculator/", name: "Income tax calculator", description: "New versus old regime for tax year 2026-27, with rebate, surcharge and cess." },
+          { href: "/hra-calculator/", name: "HRA calculator", description: "Tax-free house rent allowance: the least of three amounts, 50% in eight cities." },
+          { href: "/salary-calculator/", name: "Salary calculator", description: "CTC to in-hand salary: PF, gratuity, professional tax and income tax." },
         ],
       },
       {
@@ -569,6 +573,10 @@ export const TOPIC_HUBS: TopicHub[] = [
           { href: "/education-cost-calculator/", name: "Education cost calculator", description: "Future tuition with fee rises, what to have saved by the start, and the monthly saving." },
           { href: "/fd-calculator/", name: "FD calculator", description: "Fixed deposit maturity, or a monthly, quarterly or yearly interest payout." },
           { href: "/rd-calculator/", name: "RD calculator", description: "Recurring deposit maturity with quarterly compounding and a year-by-year table." },
+          { href: "/mortgage-calculator/", name: "Mortgage calculator", description: "Payment with tax, insurance and fees, extra payments, and what you could afford." },
+          { href: "/ppf-calculator/", name: "PPF calculator", description: "PPF maturity with the 5th-of-the-month rule, extensions and a year-by-year table." },
+          { href: "/retirement-calculator/", name: "Retirement calculator", description: "The corpus you need, whether your savings last, and an NPS exit split." },
+          { href: "/stamp-duty-calculator/", name: "Stamp duty calculator", description: "Stamp duty and registration on a property, with the higher-of-circle-rate rule." },
         ],
       },
       {

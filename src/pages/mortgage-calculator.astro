@@ -1,0 +1,139 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import InternalLinkHub from "../components/InternalLinkHub.astro";
+import { MortgageCalculator } from "../components/MortgageCalculator";
+
+const title = "Mortgage Calculator: Taxes, Insurance, Extra Payments | Pro UPI QR";
+const description = "Mortgage payment with property tax, insurance, fees and extra payments, plus how much house you can afford. Dollars, pounds, euros, rupees and more. Free.";
+
+const faqs = [
+  {
+    "question": "How is a mortgage payment calculated?",
+    "answer": "The loan is the price less the down payment, and the monthly principal and interest is the standard annuity amount. On a $400,000 home with 20% down ($320,000 borrowed) at 6.5% over 30 years that is $2,022.62. Adding $4,400 a year of property tax and $1,200 a year of home insurance makes the whole payment $2,489.29 a month, and the interest over the loan is about $408,141."
+  },
+  {
+    "question": "What does mortgage insurance add, and when does it stop?",
+    "answer": "Lenders often charge it when the down payment is small, as a yearly rate on the loan paid monthly, and many let it stop once you owe a set share of the price. With 10% down, a 0.6% rate that stops at 80% of the price and a $150 monthly HOA fee, the first payment in the example is $3,072.11 and mortgage insurance runs for about 7 years 11 months, about $17,100 in all. Set the rate and the stopping share to match your lender."
+  },
+  {
+    "question": "How much do extra payments save?",
+    "answer": "Extra principal shortens the loan and cuts interest. Adding $300 a month to the 10%-down example ends the loan after 262 payments instead of 360, 8 years 2 months sooner, and saves about $144,407 in interest, plus the mortgage insurance and the tax and insurance you stop paying."
+  },
+  {
+    "question": "How much house can I afford?",
+    "answer": "Lenders often cap housing at about 28% of gross income and housing plus other debts at about 36%, but they differ, so both limits are yours to set. With $120,000 of income, $500 a month of other debts, 20% down, 6.5% over 30 years, property tax of 1.1% and insurance of 0.3% of the price a year, the budget is $2,800 a month and the price comes to about $449,929."
+  },
+  {
+    "question": "Do taxes and insurance stay the same for the whole loan?",
+    "answer": "In this calculator, yes: property tax, home insurance and fees are held flat. In reality they change, so treat the payment as a starting point and update the figures when your bills change."
+  },
+  {
+    "question": "Does it work in other currencies and countries?",
+    "answer": "Yes. Pick US dollars, pounds, euros, Canadian or Australian dollars or rupees and enter your figures in that currency. There is no conversion, and country rules such as tax relief or stamp duty are not modelled."
+  },
+  {
+    "question": "Is my data stored anywhere?",
+    "answer": "No. The calculation runs in your browser and your inputs stay on your device. A draft is kept in your browser's local storage so you can come back to it; clear your site data to remove it."
+  }
+];
+
+const schema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebApplication",
+      name: "Mortgage Calculator by Pro UPI QR",
+      applicationCategory: "FinanceApplication",
+      operatingSystem: "Any",
+      url: "https://www.proupiqr.in/mortgage-calculator/",
+      description,
+      featureList: ["Monthly payment with property tax, home insurance, mortgage insurance and fees", "Extra monthly and one-time payments: interest and time saved", "How much house you can afford from income and debts", "Year-by-year schedule", "Dollars, pounds, euros, Canadian and Australian dollars, and rupees", "Schedule PDF and PNG export", "Browser-only, no signup"],
+            offers: { "@type": "Offer", price: "0", priceCurrency: "INR" }
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.question,
+        acceptedAnswer: { "@type": "Answer", text: faq.answer }
+      }))
+    },
+    {
+      "@type": "HowTo",
+      name: "How to work out a mortgage payment",
+      step: [
+        { "@type": "HowToStep", "name": "Enter the home price, down payment, interest rate and loan term" },
+        { "@type": "HowToStep", "name": "Add property tax, home insurance, mortgage insurance and fees" },
+        { "@type": "HowToStep", "name": "Read the monthly payment, total interest and year-by-year schedule" },
+        { "@type": "HowToStep", "name": "Add extra payments to see the interest saved, or switch to the affordability view" }
+      ]
+    }
+  ]
+};
+---
+
+<BaseLayout title={title} description={description} schema={schema}>
+  <main>
+    <section class="relative overflow-hidden px-4 pb-12 pt-12 md:px-6 lg:px-8">
+      <div class="relative mx-auto max-w-7xl">
+        <nav aria-label="Breadcrumb" class="mb-4 flex flex-wrap items-center gap-2 text-xs font-semibold text-forest/65">
+          <a href="/" class="hover:text-leaf transition-colors">Home</a>
+          <span>/</span>
+          <a href="/tools/" class="hover:text-leaf transition-colors">All Tools</a>
+          <span>/</span>
+          <span class="text-forest font-bold" aria-current="page">Mortgage Calculator</span>
+        </nav>
+        <div class="max-w-4xl">
+          <p class="inline-flex text-sm font-semibold text-leaf">Money tools</p>
+          <h1 class="mt-5 text-4xl font-black leading-tight tracking-tight text-forest md:text-6xl">Mortgage calculator: your real monthly payment and what you can afford</h1>
+          <p class="mt-5 max-w-3xl text-lg leading-8 text-forest/75 md:text-xl">See the whole payment, not just principal and interest: property tax, insurance, fees and mortgage insurance, and how extra payments shorten the loan.</p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <a href="#mortgage-tool" class="rounded-[10px] bg-forest px-6 py-3 text-sm font-bold text-white transition hover:bg-graphite">Calculate my payment</a>
+            <a href="/home-loan-calculator/" class="rounded-[10px] border border-forest/10 px-6 py-3 text-sm font-bold text-forest transition hover:bg-white">Buying in India? Home loan calculator →</a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section id="mortgage-tool" class="scroll-mt-28 px-4 py-10 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <MortgageCalculator client:visible />
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">How it works</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-4xl">What the numbers assume</h2>
+        <ul class="mt-6 grid gap-3 text-base leading-7 text-forest/75">
+          <li class="rounded-[10px] bg-fog px-5 py-4">Money is worked in whole minor units (cents, pence, paise). Each month's interest is the balance × the yearly rate ÷ 12, rounded to the smallest unit; the last payment clears the balance.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Property tax and home insurance are yearly amounts charged one twelfth each month, and fees are a flat monthly amount. None of them grow over time.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Mortgage insurance is a yearly rate on the original loan, charged monthly while the balance is above the share of the price you set, then it stops. A rate of 0 means none.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">Extra monthly and one-time payments go to principal and the regular payment stays the same, so the loan ends sooner.</li>
+          <li class="rounded-[10px] bg-fog px-5 py-4">How much you could afford is the largest price whose first month fits the smaller of your two income limits, less existing debts. It is an estimate, not an offer.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="px-4 py-14 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-5xl">
+        <p class="text-sm font-semibold text-leaf">FAQ</p>
+        <h2 class="mt-3 text-3xl font-black tracking-tight text-forest md:text-5xl">Mortgage questions</h2>
+        <div class="mt-8 grid gap-4">
+          {faqs.map((faq) => (
+            <details class="rounded-[10px] bg-fog px-5 py-4">
+              <summary class="cursor-pointer list-none text-lg font-black text-forest">{faq.question}</summary>
+              <p class="mt-3 max-w-3xl text-base leading-7 text-forest/72">{faq.answer}</p>
+            </details>
+          ))}
+        </div>
+      </div>
+    </section>
+
+    <section class="px-4 pb-16 md:px-6 lg:px-8">
+      <div class="mx-auto max-w-7xl">
+        <InternalLinkHub currentPath="/mortgage-calculator/" />
+      </div>
+    </section>
+  </main>
+</BaseLayout>
