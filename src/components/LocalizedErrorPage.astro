@@ -13,6 +13,7 @@ const { lang } = Astro.props;
 const copy = ERROR_PAGE[lang];
 const localeTag = `${lang}-IN`;
 const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString(localeTag, {
+  timeZone: "Asia/Kolkata",
   year: "numeric",
   month: "long",
   day: "numeric",

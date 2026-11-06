@@ -8,7 +8,7 @@ interface Props {
 
 const { heading = "What merchants say" } = Astro.props;
 const agg = aggregateFromTestimonials();
-const dateFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric" });
+const dateFmt = new Intl.DateTimeFormat("en-IN", { day: "numeric", month: "short", year: "numeric", timeZone: "Asia/Kolkata" });
 ---
 
 {TESTIMONIALS.length > 0 && (

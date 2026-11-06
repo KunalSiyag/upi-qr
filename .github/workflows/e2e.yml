@@ -1,0 +1,88 @@
+name: Full E2E Suite
+
+# Runs every headless-Chrome suite in scripts/e2e (the same thing as `npm run test:e2e` locally),
+# against a production build with fake KV, Dodo and Razorpay servers. Nothing talks to production.
+# It is slow, so it is not part of the per-PR quality gate: start it by hand from the Actions tab,
+# or let it run after merges to main and nightly.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    # Only when this workflow itself changes, so it tests itself.
+    paths: ['.github/workflows/e2e.yml']
+  schedule:
+    - cron: '30 3 * * *'
+  workflow_dispatch:
+    inputs:
+      suites:
+        description: 'Optional: only these suites, space separated (for example "loans-e2e hindi-e2e"). Empty runs all.'
+        required: false
+        default: ''
+      prod:
+        description: 'Run the server suites against the real production bundle (--prod)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Show browser and Python versions
+        run: |
+          google-chrome --version
+          python3 --version
+
+      - name: Build production site
+        run: npx astro build
+        env:
+          # The suites block Clerk's network and sign in with a throwaway JWT key, so a placeholder is enough.
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_e2e_placeholder' }}
+
+      - name: Run the e2e suites
+        env:
+          # The suites block Clerk's network and sign in with a throwaway JWT key, so a placeholder is enough.
+          PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY || 'pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk' }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY || 'sk_test_e2e_placeholder' }}
+          # The runner's Chrome sandbox needs user namespaces, which Ubuntu 24.04 restricts.
+          E2E_CHROME_ARGS: --no-sandbox --disable-dev-shm-usage
+          E2E_OUT: ${{ runner.temp }}/e2e-out
+          # Without a real Clerk key the two checks that need Clerk to answer are skipped (printed as SKIP).
+          # Add a Clerk *development* key as the PUBLIC_CLERK_PUBLISHABLE_KEY repo secret to run them.
+          E2E_NO_CLERK: ${{ secrets.PUBLIC_CLERK_PUBLISHABLE_KEY == '' && '1' || '' }}
+          SUITES: ${{ github.event.inputs.suites }}
+          PROD: ${{ github.event.inputs.prod }}
+        run: |
+          args=""
+          if [ "$PROD" = "true" ]; then args="--prod"; fi
+          node scripts/e2e/run.mjs $args $SUITES
+
+      - name: Upload e2e output (screenshots, logs)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: e2e-output
+          path: ${{ runner.temp }}/e2e-out
+          if-no-files-found: ignore
+          retention-days: 7

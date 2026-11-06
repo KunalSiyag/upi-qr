@@ -155,6 +155,12 @@ try {
     failed += f.length + (result.status !== 0 && f.length === 0 ? 1 : 0);
     console.log(`${f.length || result.status ? "✗" : "✓"} ${suite}: ${p} passed${f.length ? `, ${f.length} failed` : ""}`);
     for (const line of f) console.log(`    ${line}`);
+    // A suite that exits non-zero without a FAIL line crashed: show why instead of "0 passed".
+    if (result.status !== 0 && f.length === 0) {
+      const why = lines.filter((l) => l.trim() && !l.startsWith("PASS")).slice(-15);
+      for (const line of why) console.log(`    ${line.slice(0, 300)}`);
+      if (result.signal || result.error) console.log(`    (${result.signal ?? result.error?.message})`);
+    }
     if (EXTRAS.includes(suite)) for (const line of lines.filter((l) => l.trim() && !l.startsWith("PASS") && !l.startsWith("FAIL"))) console.log(`    ${line}`);
   }
 } catch (error) {

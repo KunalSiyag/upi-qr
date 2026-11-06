@@ -16,6 +16,7 @@ const description =
   "Look up UPI error codes U16, Z9, U09, XY and ZM on GPay, PhonePe or BHIM. See bank vs NPCI vs app, plus RBI refund TAT.";
 
 const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  timeZone: "Asia/Kolkata",
   year: "numeric",
   month: "long",
   day: "numeric",

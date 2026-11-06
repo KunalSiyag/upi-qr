@@ -56,6 +56,7 @@ const description = firstFitting(
 const shownAs = item.aliases.filter((alias) => alias.toLowerCase() !== item.code.toLowerCase() && alias.length > 3);
 
 const reviewedLabel = new Date(`${ERROR_CODE_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  timeZone: "Asia/Kolkata",
   year: "numeric",
   month: "long",
   day: "numeric",
