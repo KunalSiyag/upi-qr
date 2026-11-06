@@ -10,6 +10,7 @@ const description =
   "Convert a rupee amount to words in the Indian system for cheques and invoices: lakh, crore, paise, English and Hindi. Free and private, it runs in your browser.";
 
 const reviewedLabel = new Date(`${WORDS_REVIEWED_ON}T00:00:00+05:30`).toLocaleDateString("en-IN", {
+  timeZone: "Asia/Kolkata",
   year: "numeric",
   month: "long",
   day: "numeric",

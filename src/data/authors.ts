@@ -72,6 +72,7 @@ export function formatEnIn(date: Date): string {
     day: "numeric",
     month: "long",
     year: "numeric",
+    timeZone: "Asia/Kolkata",
   });
 }
 

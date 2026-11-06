@@ -40,5 +40,5 @@ export interface LandingFaq {
 
 /** "1 November 2026", the way the rest of the site prints a review date. */
 export function reviewedLabel(iso: string = QR_LANDING_REVIEWED_ON): string {
-  return new Date(`${iso}T00:00:00+05:30`).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric" });
+  return new Date(`${iso}T00:00:00+05:30`).toLocaleDateString("en-IN", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Kolkata" });
 }
